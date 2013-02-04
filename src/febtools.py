@@ -60,7 +60,7 @@ class Xpltreader:
         'domain_header':   17047809,  # 0x01042101
         'elem_type':       17047810,  # 0x01042102
         'mat_id':          17047811,  # 0x01042103
-        'elements':        17047812,  # 0x01042104
+        'elements':        16982276,  # 0x01032104
         'element_list':    17048064,  # 0x01042200
         'element':         17048065,  # 0x01042201
         'surface_section': 17051648,  # 0x01043000
