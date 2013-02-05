@@ -133,13 +133,10 @@ class Xpltreader:
             end = len(self.fdata) - 8
         result = []
         self.cursor = start
-        print('\nBlockpath: ' + '/'.join(blockpath))
-        print('Cursor: ' + str(start) + '--' + str(end))
         while self.cursor < end:
             name, data = self._readblock()
             print('Read ' + str(name))
             if name == blockpath[0]:
-                print('^^^ *MATCHED*')
                 s = self.cursor + 8
                 e = s + len(data)
                 if len(blockpath) > 1:
@@ -151,34 +148,6 @@ class Xpltreader:
             else:
                 self._mvcursor(8 + len(data))
         return result
-
-    def _parseblock(self, stop, path = None):
-        print "\nCalled parseblock()."
-        print "Cursor = " + str(self.cursor)
-        print "Stop at: " + str(stop)
-        print "Current path: " + str(path)
-        if path is None:
-            path = []
-        while self.cursor < stop:
-            blockstart = self.cursor
-            w = self._dword()
-            sz = self._dword()
-            blockend = blockstart + 8  + sz
-            if w in self.tag2id:
-                # found block
-                print "The dword is " + str(w) + ", " + str(self.tag2id[w])
-                print "Block: ", str(blockstart), "--", str(blockend)
-                print "Cursor = " + str(self.cursor)
-                self._parseblock(blockend, path + [self.tag2id[w]])
-            else:
-                # found data
-                print "Found data."
-                print "Cursor = " + str(self.cursor)
-                print "Path: ", str(path)
-                key = '/'.join([str(a) for a in path])
-                self.loc[key] = blockstart
-                print "Logged ", str(blockstart), ' at key ', key
-                self.cursor = stop
 
     def _readblock(self):
         """Reads a block starting at the current cursor location."""
