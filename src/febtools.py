@@ -109,6 +109,44 @@ class Xpltreader:
         finally:
             f.close()
 
+    def block(self, pathstr, cursor = 4):
+        """Get data from block(s).
+
+        `pathstr` should be a sequence of block IDs, delimited by
+        forward slashes, specifying the path to the target block.  For
+        example, to obtain the nodest data dictiory, call
+
+        `block('root/dictionary/nodeset_var')`
+
+        `cursor` is the position at which `block()` will start
+        searching.
+
+        If any ID is non-unique, `block()` will expand it into a list.
+
+        ID names are given in the table at the end of the FEBio
+        binary database specification.
+        
+        """
+        blockpath = pathstr.split('/')
+        level = 0
+        self.cursor = cursor
+        while self.cursor < len(self.fdata) - 8:
+            name, data = self._readblock()
+            if name == blockpath[level]:
+                # Block is on path
+                if level == len(blockpath) - 1:
+                    # Found target block
+                    return data
+                else:
+                    # Go down a level
+                    level = level + 1
+                    self._mvcursor(8)
+            else:
+                # Keep looking at the current level
+                self._mvcursor(8 + len(data))
+        print('Could not find ' + pathstr)
+        return ''
+
     def _parseblock(self, stop, path = None):
         print "\nCalled parseblock()."
         print "Cursor = " + str(self.cursor)
@@ -136,6 +174,30 @@ class Xpltreader:
                 self.loc[key] = blockstart
                 print "Logged ", str(blockstart), ' at key ', key
                 self.cursor = stop
+
+    def _readblock(self):
+        """Reads a block starting at the current cursor location."""
+        name, size = struct.unpack(self.endian + 'II',
+                                   self.fdata[self.cursor:self.cursor+8])
+        if self.cursor > len(self.fdata) - 8:
+            raise Exception('The cursor is within 8 bytes of the end of the '
+                            'file. There cannot be a valid block at this '
+                            'position.')
+        try:
+            name = self.tag2id[name]
+        except KeyError as e:
+            print('_readblock did not find an expected tag at '
+                  'cursor position ' + str(self.cursor))
+        data = self.fdata[self.cursor+8:self.cursor+8+size]
+        return name, data
+
+    def _mvcursor(self, v):
+        """Moves the cursor the specified number of bytes."""
+        self.cursor = self.cursor + v
+        if self.cursor < 0:
+            raise Exception('Tried to move cursor before beginning of file.')
+        elif self.cursor > len(self.fdata):
+            raise Exception('Tried to move cursor after end of file.')
 
     def _dword(self):
         dword = struct.unpack(self.endian+'I',
