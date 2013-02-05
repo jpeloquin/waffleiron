@@ -109,43 +109,48 @@ class Xpltreader:
         finally:
             f.close()
 
-    def block(self, pathstr, cursor = 4):
-        """Get data from block(s).
+    def _lblock(self, pathstr, start = 4, end = None):
+        """List data from block(s).
 
-        `pathstr` should be a sequence of block IDs, delimited by
-        forward slashes, specifying the path to the target block.  For
-        example, to obtain the nodest data dictiory, call
+        `block()` searches fdata from the byte at `start` to the byte
+        at `end` for all blocks matching the provided path and returns
+        a flattened list of the data contained in those blocks.  Use
+        caution if you expect multiple matches on multiple levels;
+        this shouldn't happen in an FEBio file, but the spec doesn't
+        forbid it.
+
+        `pathstr` is a `/`-delimited sequence of block IDs. For
+        example, to obtain the nodeset data dictiory, call
 
         `block('root/dictionary/nodeset_var')`
-
-        `cursor` is the position at which `block()` will start
-        searching.
-
-        If any ID is non-unique, `block()` will expand it into a list.
 
         ID names are given in the table at the end of the FEBio
         binary database specification.
         
         """
         blockpath = pathstr.split('/')
-        level = 0
-        self.cursor = cursor
-        while self.cursor < len(self.fdata) - 8:
+        if end is None:
+            end = len(self.fdata) - 8
+        result = []
+        self.cursor = start
+        print('\nBlockpath: ' + '/'.join(blockpath))
+        print('Cursor: ' + str(start) + '--' + str(end))
+        while self.cursor < end:
             name, data = self._readblock()
-            if name == blockpath[level]:
-                # Block is on path
-                if level == len(blockpath) - 1:
-                    # Found target block
-                    return data
+            print('Read ' + str(name))
+            if name == blockpath[0]:
+                print('^^^ *MATCHED*')
+                s = self.cursor + 8
+                e = s + len(data)
+                if len(blockpath) > 1:
+                    data = self._lblock('/'.join(blockpath[1:]), s, e)
                 else:
-                    # Go down a level
-                    level = level + 1
-                    self._mvcursor(8)
+                    data = [data]
+                result = result + data
+                self.cursor = e
             else:
-                # Keep looking at the current level
                 self._mvcursor(8 + len(data))
-        print('Could not find ' + pathstr)
-        return ''
+        return result
 
     def _parseblock(self, stop, path = None):
         print "\nCalled parseblock()."
