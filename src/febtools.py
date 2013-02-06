@@ -1,14 +1,20 @@
+#! /usr/bin/env python2.7
+
 import xml.etree.ElementTree as ET
 import struct
 import numpy as np
 
+
 class Mesh:
     """Stores a mesh geometry."""
-    
+
+    node = []
+    element = []
+
     def __init__(self):
         # Leave mesh blank
-        self.nodes = []
-        self.elements = []
+        self.node = []
+        self.element = []
 
     def readfeb(self, f):
         """Read .feb file geometry"""
@@ -16,28 +22,47 @@ class Mesh:
         if root.tag != "febio_spec":
             raise Exception("Root node is not 'febio_spec': '" +
                             fpath + "' is not a valid .feb file.")
-        self.nodes = [tuple([float(a) for a in b.text.split(",")])
+        self.node = [tuple([float(a) for a in b.text.split(",")])
                       for b in root.findall("./Geometry/Nodes/*")]
-        self.elements = [tuple([int(a) for a in b.text.split(",")])
+        self.element = [tuple([int(a) for a in b.text.split(",")])
                          for b in root.findall("./Geometry/Elements/*")]
-        
+
+    def elemcentroid(self):
+        """Generator for element centroids."""
+        for i in range(len(self.element)):
+            x = [self.node[inode] for inode in self.element[i]]
+            c = [sum(v) / len(v) for v in zip(*x)]
+            yield tuple(c)
+
+
 class MeshSolution(Mesh):
     """Stores a mesh and its FEA solution."""
 
     node = []
     element = []
     step = []
+    index = 0
 
-    def __init__(self):
-        # Set up blank Xplt
-        pass
-        
-    def readxplt(f):
-        # Read data from .xplt file into Xplt
-        reader = Xpltreader(f)
+    def __init__(self, f):
+        if isinstance(f, str):
+            reader = Xpltreader(f)
+        elif isinstance(f, Xpltreader):
+            reader = f
         self.node, self.element = reader.mesh()
         self.step = reader.solution()
-        time,
+
+    def __getitem__(self, i):
+        return self.step[i]
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.index == len(self.step):
+            raise StopIteration
+        self.index = self.index - 1
+        return self.step[self.index]
+    
         
 class Xpltreader:
     """Assists in reading an FEBio xplt file."""
@@ -111,15 +136,18 @@ class Xpltreader:
         2: 'mult'
         }
 
+    fpath = ''
+    fdata = ''
+    cursor = 0
+    endian = ''
+
     def __init__(self, fpath):
         """Read xplt data from file"""
-        f = open(fpath,'rb')
+        self.fpath = fpath
+        print('Reading ' + fpath)
         try:
-            # init
+            f = open(fpath,'rb')
             self.fdata = f.read()
-            self.cursor = 0
-            self.loc = {}
-            # check endianness
             self.endian = '<' # initial assumption
             s = struct.pack('<I', self._dword())
             if s == 'BEF\x00':
@@ -132,19 +160,13 @@ class Xpltreader:
                                 "it is not a valid .feb file.")
         finally:
             f.close()
-    
 
     def mesh(self):
         """Reads node and element lists"""
-        # elem_type = self.tag2elem_type[
-        #     struct.unpack(self.endian + 'I', 
-        #                   self._lblock('root/geometry/domain_section/'
-        #                                'domain/domain_header/'
-        #                                'elem_type')[0])[0]]
-        # nnodes = int(elem_type[-1])
-        element = [struct.unpack('I' * (len(s) / 4), s) for s in                
-                   self._lblock('root/geometry/domain_section/domain/'
-                                'element_list/element')]
+        element = [struct.unpack('I' * (len(s) / 4), s) 
+                   for s in self._lblock('root/geometry/'
+                                         'domain_section/domain/'
+                                         'element_list/element')]
         s = self._lblock('root/geometry/'
                          'node_section/node_coords')[0]
         node = []
