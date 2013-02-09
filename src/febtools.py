@@ -163,10 +163,13 @@ class Xpltreader:
 
     def mesh(self):
         """Reads node and element lists"""
-        element = [struct.unpack('I' * (len(s) / 4), s) 
-                   for s in self._lblock('root/geometry/'
-                                         'domain_section/domain/'
-                                         'element_list/element')]
+        data = self._lblock('root/geometry/'
+                          'domain_section/domain/'
+                          'element_list/element')
+        element = []
+        for s in data:
+            v = struct.unpack('I' * (len(s) / 4), s)
+            element.append(v[1:])
         s = self._lblock('root/geometry/'
                          'node_section/node_coords')[0]
         node = []
