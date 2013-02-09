@@ -67,6 +67,10 @@
 		</loadcurve>
 	</LoadData>
 	<Output>
+		<logfile>
+         <node_data data="x;y;z;ux;uy;uz" delim="," file="simple_uniax_node_data.txt"/>
+         <element_data data="x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fx;Fy;Fz;Fxy;Fyz;Fxz;J" delim="," file="simple_uniax_elem_data.txt"/>
+		</logfile>
 		<plotfile type="febio">
 			<var type="displacement"/>
 			<var type="stress"/>

@@ -1,0 +1,582 @@
+===========================================================================
+         ________    _________   _________     __     _________            
+        |        |\ |        |\ |        |\   |  |\  /         \\          
+        |    ____|| |    ____|| |    __  ||   |__|| |    ___    ||         
+        |   |\___\| |   |\___\| |   |\_| ||    \_\| |   //  \   ||         
+        |   ||      |   ||      |   || | ||    __   |  ||    |  ||         
+        |   ||__    |   ||__    |   ||_| ||   |  |\ |  ||    |  ||         
+        |       |\  |       |\  |         \\  |  || |  ||    |  ||         
+        |    ___||  |    ___||  |    ___   || |  || |  ||    |  ||         
+        |   |\__\|  |   |\__\|  |   |\__|  || |  || |  ||    |  ||         
+        |   ||      |   ||      |   ||  |  || |  || |  ||    |  ||         
+        |   ||      |   ||___   |   ||__|  || |  || |   \\__/   ||         
+        |   ||      |        |\ |          || |  || |           ||         
+        |___||      |________|| |__________|| |__||  \_________//          
+                                                                           
+      F I N I T E   E L E M E N T S   F O R   B I O M E C H A N I C S      
+                                                                           
+                 --- v e r s i o n - 1 . 5 . 0 ---                 
+                                                                           
+                                                                           
+  Musculoskeletal Research Laboratory                                      
+  University of Utah                                                       
+  http://mrl.sci.utah.edu                                                  
+                                                                           
+  copyright (c) 2006-2011 - All rights reserved                            
+                                                                              
+ This is the NON-COMMERCIAL version of FEBio or the commercial license        
+ key file could not be found. If you have a key file make sure it is          
+ placed in the same directory as the executable. This version may only        
+ be used for non-commercial purposes as described in the license agreement.   
+ The functionality of this version may be limited compared to the commercial  
+ version. If you wish to obtain a valid commercial license file, please       
+ contact the developers.                                                      
+                                                                           
+===========================================================================
+
+
+
+
+ FILES USED
+===========================================================================
+	Input file : simple_uniax.feb
+	Plot file  : simple_uniax.xplt
+	Log file   : simple_uniax.log
+
+
+ CONTROL DATA
+===========================================================================
+Module type ...................................... : 0
+	   eq. 0: solid mechanics
+	   eq. 1: solid-fluid mixture
+	   eq. 2: heat transfer
+	   eq. 3: solid-fluid-solute(s) mixture
+	Analysis type .................................. : 0
+	   eq. 0: quasi-static
+	   eq. 1: dynamic
+	   eq. 2: steady-state
+	Plane strain mode .............................. : no
+	Number of materials ............................ : 1
+	Number of nodes ................................ : 16
+	Number of solid elements ....................... : 3
+	Number of shell elements ....................... : 0
+	Number of truss elements ....................... : 0
+	Number of timesteps ............................ : 10
+	Time step size ................................. : 0.1
+	Auto time stepper activated .................... : yes
+	  Optimal nr of iterations ..................... : 10
+	  Minimum allowable step size .................. : 0.01
+	  Maximum allowable step size .................. : 0.1
+	Number of loadcurves ........................... : 1
+	Number of displacement boundary conditions ..... : 4
+	Number of concentrated nodal forces ............ : 0
+	Max nr of stiffness reformations ............... : 15
+	per time steps
+	Max nr of Quasi-Newton iterations .............. : 10
+	between stiffness matrix reformations
+	Displacement convergence tolerance ............. : 0.001
+	Energy convergence tolerance ................... : 0.01
+	Residual convergence tolerance ................. : 0
+	Minimal residual value ......................... : 1e-020
+	Linesearch convergence tolerance ............... : 0.9
+	Minimum line search size ....................... : 0.01
+	Maximum number of line search iterations ....... : 5
+	Max condition number ........................... : 100000
+
+
+ OUTPUT DATA
+===========================================================================
+	plot level ................................ : major iterations
+	plotfile format ........................... : FEBIO
+		Nodal Variables:
+			displacement         (type = vec3f, format = NODE)
+		Domain Variables:
+			stress               (type = mat3f, format = ITEM)
+
+
+ MATERIAL DATA
+===========================================================================
+  1 - isotropic elastic (Material1)
+	density ........................................... :  : 1
+	E ................................................. :  : 1e+009
+	v ................................................. :  : 0.49
+
+
+ LOADCURVE DATA
+===========================================================================
+  1
+         0         0
+         1         1
+
+
+ LINEAR SOLVER DATA
+===========================================================================
+	Solver type ............................... : Pardiso
+
+
+===== reforming stiffness matrix:
+	Nr of equations ........................... : 35
+	Nr of nonzeroes in stiffness matrix ....... : 430
+
+
+===== beginning time step 1 : 0.1 =====
+ 1
+ Nonlinear solution status: time= 0.1
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.188248e+013   1.535593e+007   0.000000e+000 
+	   energy             1.258557e+004   2.999779e+000   1.258557e+002 
+	   displacement       3.182622e-006   3.182622e-006   3.182622e-012 
+ 2
+ Nonlinear solution status: time= 0.1
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.188248e+013   6.413744e+000   0.000000e+000 
+	   energy             1.258557e+004   1.295501e-006   1.258557e+002 
+	   displacement       3.182622e-006   5.329505e-013   3.184054e-012 
+
+convergence summary
+    number of iterations   : 2
+    number of reformations : 1
+
+
+------- converged at time : 0.1
+
+
+Data Record #1
+===========================================================================
+Step = 1
+Time = 0.1
+Data = x;y;z;ux;uy;uz
+File = center-crack-0.5mm_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 1
+Time = 0.1
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fx;Fy;Fz;Fxy;Fyz;Fxz;J
+File = center-crack-0.5mm_elem_data.txt
+
+===== beginning time step 2 : 0.2 =====
+ 1
+ Nonlinear solution status: time= 0.2
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.210394e+013   1.537098e+007   0.000000e+000 
+	   energy             1.261126e+004   3.005728e+000   1.261126e+002 
+	   displacement       3.185489e-006   3.185489e-006   3.185489e-012 
+ 2
+ Nonlinear solution status: time= 0.2
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.210394e+013   6.457726e+000   0.000000e+000 
+	   energy             1.261126e+004   1.302441e-006   1.261126e+002 
+	   displacement       3.185489e-006   5.345215e-013   3.186925e-012 
+
+convergence summary
+    number of iterations   : 2
+    number of reformations : 1
+
+
+------- converged at time : 0.2
+
+
+Data Record #1
+===========================================================================
+Step = 2
+Time = 0.2
+Data = x;y;z;ux;uy;uz
+File = center-crack-0.5mm_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 2
+Time = 0.2
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fx;Fy;Fz;Fxy;Fyz;Fxz;J
+File = center-crack-0.5mm_elem_data.txt
+
+===== beginning time step 3 : 0.3 =====
+ 1
+ Nonlinear solution status: time= 0.3
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.232577e+013   1.538607e+007   0.000000e+000 
+	   energy             1.263697e+004   3.011687e+000   1.263697e+002 
+	   displacement       3.188363e-006   3.188363e-006   3.188363e-012 
+ 2
+ Nonlinear solution status: time= 0.3
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.232577e+013   6.501963e+000   0.000000e+000 
+	   energy             1.263697e+004   1.309415e-006   1.263697e+002 
+	   displacement       3.188363e-006   5.360989e-013   3.189804e-012 
+
+convergence summary
+    number of iterations   : 2
+    number of reformations : 1
+
+
+------- converged at time : 0.3
+
+
+Data Record #1
+===========================================================================
+Step = 3
+Time = 0.3
+Data = x;y;z;ux;uy;uz
+File = center-crack-0.5mm_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 3
+Time = 0.3
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fx;Fy;Fz;Fxy;Fyz;Fxz;J
+File = center-crack-0.5mm_elem_data.txt
+
+===== beginning time step 4 : 0.4 =====
+ 1
+ Nonlinear solution status: time= 0.4
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.254798e+013   1.540120e+007   0.000000e+000 
+	   energy             1.266270e+004   3.017660e+000   1.266270e+002 
+	   displacement       3.191247e-006   3.191247e-006   3.191247e-012 
+ 2
+ Nonlinear solution status: time= 0.4
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.254798e+013   6.546488e+000   0.000000e+000 
+	   energy             1.266270e+004   1.316424e-006   1.266270e+002 
+	   displacement       3.191247e-006   5.376841e-013   3.192692e-012 
+
+convergence summary
+    number of iterations   : 2
+    number of reformations : 1
+
+
+------- converged at time : 0.4
+
+
+Data Record #1
+===========================================================================
+Step = 4
+Time = 0.4
+Data = x;y;z;ux;uy;uz
+File = center-crack-0.5mm_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 4
+Time = 0.4
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fx;Fy;Fz;Fxy;Fyz;Fxz;J
+File = center-crack-0.5mm_elem_data.txt
+
+===== beginning time step 5 : 0.5 =====
+ 1
+ Nonlinear solution status: time= 0.5
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.277055e+013   1.541638e+007   0.000000e+000 
+	   energy             1.268846e+004   3.023648e+000   1.268846e+002 
+	   displacement       3.194139e-006   3.194139e-006   3.194139e-012 
+ 2
+ Nonlinear solution status: time= 0.5
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.277055e+013   6.591303e+000   0.000000e+000 
+	   energy             1.268846e+004   1.323468e-006   1.268846e+002 
+	   displacement       3.194139e-006   5.392772e-013   3.195588e-012 
+
+convergence summary
+    number of iterations   : 2
+    number of reformations : 1
+
+
+------- converged at time : 0.5
+
+
+Data Record #1
+===========================================================================
+Step = 5
+Time = 0.5
+Data = x;y;z;ux;uy;uz
+File = center-crack-0.5mm_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 5
+Time = 0.5
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fx;Fy;Fz;Fxy;Fyz;Fxz;J
+File = center-crack-0.5mm_elem_data.txt
+
+===== beginning time step 6 : 0.6 =====
+ 1
+ Nonlinear solution status: time= 0.6
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.299350e+013   1.543160e+007   0.000000e+000 
+	   energy             1.271425e+004   3.029651e+000   1.271425e+002 
+	   displacement       3.197039e-006   3.197039e-006   3.197039e-012 
+ 2
+ Nonlinear solution status: time= 0.6
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.299350e+013   6.636421e+000   0.000000e+000 
+	   energy             1.271425e+004   1.330550e-006   1.271425e+002 
+	   displacement       3.197039e-006   5.408782e-013   3.198492e-012 
+
+convergence summary
+    number of iterations   : 2
+    number of reformations : 1
+
+
+------- converged at time : 0.6
+
+
+Data Record #1
+===========================================================================
+Step = 6
+Time = 0.6
+Data = x;y;z;ux;uy;uz
+File = center-crack-0.5mm_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 6
+Time = 0.6
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fx;Fy;Fz;Fxy;Fyz;Fxz;J
+File = center-crack-0.5mm_elem_data.txt
+
+===== beginning time step 7 : 0.7 =====
+ 1
+ Nonlinear solution status: time= 0.7
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.321683e+013   1.544686e+007   0.000000e+000 
+	   energy             1.274006e+004   3.035669e+000   1.274006e+002 
+	   displacement       3.199948e-006   3.199948e-006   3.199948e-012 
+ 2
+ Nonlinear solution status: time= 0.7
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.321683e+013   6.681828e+000   0.000000e+000 
+	   energy             1.274006e+004   1.337667e-006   1.274006e+002 
+	   displacement       3.199948e-006   5.424871e-013   3.201406e-012 
+
+convergence summary
+    number of iterations   : 2
+    number of reformations : 1
+
+
+------- converged at time : 0.7
+
+
+Data Record #1
+===========================================================================
+Step = 7
+Time = 0.7
+Data = x;y;z;ux;uy;uz
+File = center-crack-0.5mm_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 7
+Time = 0.7
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fx;Fy;Fz;Fxy;Fyz;Fxz;J
+File = center-crack-0.5mm_elem_data.txt
+
+===== beginning time step 8 : 0.8 =====
+ 1
+ Nonlinear solution status: time= 0.8
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.344053e+013   1.546217e+007   0.000000e+000 
+	   energy             1.276590e+004   3.041701e+000   1.276590e+002 
+	   displacement       3.202866e-006   3.202866e-006   3.202866e-012 
+ 2
+ Nonlinear solution status: time= 0.8
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.344053e+013   6.727543e+000   0.000000e+000 
+	   energy             1.276590e+004   1.344821e-006   1.276590e+002 
+	   displacement       3.202866e-006   5.441041e-013   3.204328e-012 
+
+convergence summary
+    number of iterations   : 2
+    number of reformations : 1
+
+
+------- converged at time : 0.8
+
+
+Data Record #1
+===========================================================================
+Step = 8
+Time = 0.8
+Data = x;y;z;ux;uy;uz
+File = center-crack-0.5mm_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 8
+Time = 0.8
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fx;Fy;Fz;Fxy;Fyz;Fxz;J
+File = center-crack-0.5mm_elem_data.txt
+
+===== beginning time step 9 : 0.9 =====
+ 1
+ Nonlinear solution status: time= 0.9
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.366460e+013   1.547753e+007   0.000000e+000 
+	   energy             1.279176e+004   3.047749e+000   1.279176e+002 
+	   displacement       3.205792e-006   3.205792e-006   3.205792e-012 
+ 2
+ Nonlinear solution status: time= 0.9
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.366460e+013   6.773554e+000   0.000000e+000 
+	   energy             1.279176e+004   1.352012e-006   1.279176e+002 
+	   displacement       3.205792e-006   5.457290e-013   3.207259e-012 
+
+convergence summary
+    number of iterations   : 2
+    number of reformations : 1
+
+
+------- converged at time : 0.9
+
+
+Data Record #1
+===========================================================================
+Step = 9
+Time = 0.9
+Data = x;y;z;ux;uy;uz
+File = center-crack-0.5mm_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 9
+Time = 0.9
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fx;Fy;Fz;Fxy;Fyz;Fxz;J
+File = center-crack-0.5mm_elem_data.txt
+
+===== beginning time step 10 : 1 =====
+ 1
+ Nonlinear solution status: time= 1
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.388905e+013   1.549293e+007   0.000000e+000 
+	   energy             1.281765e+004   3.053812e+000   1.281765e+002 
+	   displacement       3.208728e-006   3.208728e-006   3.208728e-012 
+ 2
+ Nonlinear solution status: time= 1
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           9.388905e+013   6.819862e+000   0.000000e+000 
+	   energy             1.281765e+004   1.359239e-006   1.281765e+002 
+	   displacement       3.208728e-006   5.473621e-013   3.210198e-012 
+
+convergence summary
+    number of iterations   : 2
+    number of reformations : 1
+
+
+------- converged at time : 1
+
+
+Data Record #1
+===========================================================================
+Step = 10
+Time = 1
+Data = x;y;z;ux;uy;uz
+File = center-crack-0.5mm_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 10
+Time = 1
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fx;Fy;Fz;Fxy;Fyz;Fxz;J
+File = center-crack-0.5mm_elem_data.txt
+
+
+N O N L I N E A R   I T E R A T I O N   I N F O R M A T I O N
+
+	Number of time steps completed .................... : 10
+
+	Total number of equilibrium iterations ............ : 20
+
+	Average number of equilibrium iterations .......... : 2
+
+	Total number of right hand evaluations ............ : 30
+
+	Total number of stiffness reformations ............ : 10
+
+	Time in solver: 0:00:00
+
+
+ Elapsed time : 0:00:00
+
+
+ N O R M A L   T E R M I N A T I O N
+
