@@ -3,7 +3,7 @@
 import xml.etree.ElementTree as ET
 import struct
 import numpy as np
-
+import hex8
 
 class Mesh:
     """Stores a mesh geometry."""
@@ -34,6 +34,11 @@ class Mesh:
             c = [sum(v) / len(v) for v in zip(*x)]
             yield tuple(c)
 
+    def elemcoord(self):
+        """Generator for element coordinates."""
+        for idx in self.element:
+            yield tuple([self.node[i] for i in idx])
+
 
 class MeshSolution(Mesh):
     """Stores a mesh and its FEA solution."""
@@ -62,6 +67,26 @@ class MeshSolution(Mesh):
             raise StopIteration
         self.index = self.index - 1
         return self.step[self.index]
+
+    def f(self, istep = -1, r = 0, s = 0, t = 0):
+        """Generator for F tensors for each element.
+        
+        Global coordinates: x, y, z
+        Natural coordinates: r, s, t
+        Displacements (global): u, v, w
+        """
+        for i in range(len(self.element)):
+            neln = len(self.element[i])
+            X = [self.node[a] for a in self.element[i]]
+            u = [self[istep]['displacement'][a] 
+                 for a in self.element[i]]
+            if neln == 8:
+                dN_dR = hex8.dshpfun(*(0, 0, 0))
+            du_dR = np.dot(dN_dR, u)
+            J = np.dot(dN_dR, X)
+            du_dX = np.linalg.inv(J) * du_dR
+            f = du_dX + np.eye(3)
+            yield f
     
         
 class Xpltreader:
