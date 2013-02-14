@@ -5,6 +5,52 @@ import struct
 import numpy as np
 import hex8
 
+def readlog(fpath):
+    """Reads FEBio logfile as a list of the steps' data.
+
+    The function returns a list of dictionaries, one per solution
+    step.  The keys are the variable names (e.g. x, sxy, J,
+    etc.). Each dictionary value is a list of variable values over all
+    the nodes.  The indexing of this list is the same as in the
+    original file.
+    
+    This function can be used for both node and element data.
+
+    """
+    try:
+        f = open(fpath, 'rU')
+        allsteps = []
+        stepdata = None
+        for line in f:
+            if line[0:5] == '*Data':
+                keys = line[8:].strip().split(';')
+                if stepdata is not None:
+                    allsteps.append(stepdata)
+                stepdata = {}
+            elif line[0] != '*':
+                linedata = [float(s) for s in 
+                            line.strip().split(',')[1:]]
+                for k, v in zip(keys, linedata):
+                    stepdata.setdefault(k, []).append(v)
+        allsteps += [stepdata] # append last step
+    finally:
+        f.close()
+    return allsteps
+    
+
+def readfeb(fpath):
+    import xml.etree.ElementTree as ET
+    tree = ET.parse(fpath)
+    root = tree.getroot()
+    if root.tag != "febio_spec":
+        raise Exception("Root node is not 'febio_spec': "
+                        "not a valid .feb file.")
+    nodes = [tuple([float(a) for a in b.text.split(",")])
+             for b in root.findall("./Geometry/Nodes/*")]
+    elements = [tuple([int(a) for a in b.text.split(",")])
+                for b in root.findall("./Geometry/Elements/*")]
+    return nodes, elements
+
 class Mesh:
     """Stores a mesh geometry."""
 
@@ -170,8 +216,8 @@ class Xpltreader:
         """Read xplt data from file"""
         self.fpath = fpath
         print('Reading ' + fpath)
+        f = open(fpath,'rb')
         try:
-            f = open(fpath,'rb')
             self.fdata = f.read()
             self.endian = '<' # initial assumption
             s = struct.pack('<I', self._dword())
