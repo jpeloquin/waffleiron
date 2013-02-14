@@ -28,8 +28,13 @@ def readlog(fpath):
                     allsteps.append(stepdata)
                 stepdata = {}
             elif line[0] != '*':
-                linedata = [float(s) for s in 
-                            line.strip().split(',')[1:]]
+                linedata = []
+                for i, s in enumerate(line.strip().split(',')[1:]):
+                    try:
+                        v = float(s)
+                    except ValueError as e:
+                        v = float('nan')
+                    linedata.append(v)
                 for k, v in zip(keys, linedata):
                     stepdata.setdefault(k, []).append(v)
         allsteps += [stepdata] # append last step
