@@ -1,11 +1,20 @@
 import numpy as np
 
 def shpfun(r, s, t):
-    """Shape functions for hex8 (brick elements)."""
-    
+    """Shape functions for brick (hex8) elements."""
+    n = np.zeros((8, 1))
+    n[0] = 1. / 8. * (1 - r) * (1 - s) * (1 - t)
+    n[1] = 1. / 8. * (1 + r) * (1 - s) * (1 - t)
+    n[2] = 1. / 8. * (1 + r) * (1 - s) * (1 - t)
+    n[3] = 1. / 8. * (1 - r) * (1 - s) * (1 - t)
+    n[4] = 1. / 8. * (1 - r) * (1 - s) * (1 - t)
+    n[5] = 1. / 8. * (1 + r) * (1 - s) * (1 - t)
+    n[6] = 1. / 8. * (1 + r) * (1 - s) * (1 - t)
+    n[7] = 1. / 8. * (1 - r) * (1 - s) * (1 - t)
+    return n.T
 
 def dshpfun(r, s, t):
-    """Shape function derivatives.
+    """Shape function derivatives for brick (hex8) elements.
 
     The node order follows FEBio's convention.
     """

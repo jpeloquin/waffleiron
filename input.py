@@ -128,16 +128,17 @@ class MeshSolution(Mesh):
         """
         for i in range(len(self.element)):
             neln = len(self.element[i])
-            X = [self.node[a] for a in self.element[i]]
-            u = [self[istep]['displacement'][a] 
-                 for a in self.element[i]]
+            X = np.array([self.node[a] 
+                         for a in self.element[i]])
+            u = np.array([self[istep]['displacement'][a]
+                 for a in self.element[i]])
             if neln == 8:
-                dN_dR = hex8.dshpfun(*(0, 0, 0))
-            du_dR = np.dot(dN_dR, u)
+                dN_dR = hex8.dshpfun(*(r, s, t))
             J = np.dot(dN_dR, X)
-            du_dX = np.linalg.inv(J) * du_dR
+            du_dR = np.dot(dN_dR, u)
+            du_dX = np.dot(np.linalg.inv(J), du_dR)
             f = du_dX + np.eye(3)
-            yield f
+            yield f.T
     
         
 class Xpltreader:
