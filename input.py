@@ -99,13 +99,14 @@ class MeshSolution(Mesh):
     step = []
     index = 0
 
-    def __init__(self, f):
-        if isinstance(f, str):
-            reader = Xpltreader(f)
-        elif isinstance(f, Xpltreader):
-            reader = f
-        self.node, self.element = reader.mesh()
-        self.step = reader.solution()
+    def __init__(self, f = None):
+        if f != None:
+            if isinstance(f, str):
+                reader = Xpltreader(f)
+            elif isinstance(f, Xpltreader):
+                reader = f
+            self.node, self.element = reader.mesh()
+            self.step = reader.solution()
 
     def __getitem__(self, i):
         return self.step[i]
@@ -139,7 +140,19 @@ class MeshSolution(Mesh):
             du_dX = np.dot(np.linalg.inv(J), du_dR)
             f = du_dX + np.eye(3)
             yield f.T
-    
+            
+    def s(self, istep = -1):
+        """1st Piola-Kirchoff stress for each element.
+        
+        The stress is calculated at the center of each element by
+        transforming FEBio's Cauchy stress output.
+        """
+        for t, f in zip(self[istep]['stress'], self.f()):
+            # 1/J F S transpose(F) = t
+            J = np.linalg.det(f)
+            x = np.linalg.solve(1 / J * f, t)
+            yield np.linalg.solve(f, x.T)
+            
         
 class Xpltreader:
     """Assists in reading an FEBio xplt file."""

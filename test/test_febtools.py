@@ -6,16 +6,17 @@ import numpy as np
 from nose.tools import with_setup
 import febtools
 
-"""Tests:
-* Read xplt file, read log file, and compare
-* Check calculated F tensor values against those read from log file
-"""
-
-print(dir(febtools))
-
 class MeshSolutionTest(unittest.TestCase):
-    xpltsol = febtools.MeshSolution('test/complex_loading.xplt')
-    elemdata = febtools.readlog('test/complex_loading_elem_data.txt')
+    """Tests `MeshSolution.f`
+
+    This test also depends on `readlog` and `Xpltreader` functioning
+    correctly.  Results from an FEBio simulation are read from the
+    text log and the binary file.  F tensors are computed for each
+    element based on the binary file data and compared to those
+    recorded in the text log.
+    """
+    xpltsol = febtools.MeshSolution('test/complex_loading.xplt') 
+    elemdata = febtools.readlog('test/complex_loading_elem_data.txt') 
     nodedata = febtools.readlog('test/complex_loading_node_data.txt')
 
     def cmp_f(self, row, col, key):
@@ -56,3 +57,36 @@ class MeshSolutionTest(unittest.TestCase):
 
     def test_fzy(self):
         self.cmp_f(2, 1, 'Fzy')
+
+class MeshSolution1PKTest(unittest.TestCase):
+    """Tests MeshSolution.s
+
+    A known deformation gradient and cauchy stress is provided to
+    `MeshSolution.s`, which calculates 1st Piola-Kirchoff stress
+    $s$. The Cauchy stress is then recalculated based on $s$ and
+    checked against the reference.
+    """
+    # Construct minimal instance of MeshSolution
+    a = febtools.MeshSolution()
+    def f():
+        f = []
+        f.append(
+            np.array([[ 1.17006749, -0.02775013,  0.02736336],
+                      [ 0.07567887, -0.93846805, -0.13324592],
+                      [-0.06877768,  0.13129845, -0.94069371]]))
+        return f
+    a.f = f
+    a.step.append(
+        {'stress': 
+         [np.array([[ 45.576931  , -13.9562149 ,   2.88448954],
+                    [-13.9562149 ,   8.23718643,  -0.69315594],
+                    [  2.88448954,  -0.69315594,   4.93684435]])]})
+
+    def test_cauchy_from_1pk(self):
+        """Check transformation of stress back to Cauchy"""
+        s = list(self.a.s())[0]
+        f = self.a.f()[0]
+        J = np.linalg.det(f)
+        t_actual = 1 / J * np.dot(np.dot(f, s), f.T)
+        t_desired = self.a[0]['stress'][0]
+        npt.assert_allclose(t_actual, t_desired)
