@@ -83,7 +83,6 @@ class MeshSolution1PKTest(unittest.TestCase):
                     [  2.88448954,  -0.69315594,   4.93684435]])]})
 
     def test_cauchy_from_1pk(self):
-        """Check transformation of stress back to Cauchy"""
         s = list(self.a.s())[0]
         f = self.a.f()[0]
         J = np.linalg.det(f)
