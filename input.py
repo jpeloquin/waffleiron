@@ -151,7 +151,7 @@ class MeshSolution(Mesh):
             # 1/J F S transpose(F) = t
             J = np.linalg.det(f)
             x = np.linalg.solve(1 / J * f, t)
-            yield np.linalg.solve(f, x.T)
+            yield np.linalg.solve(f, x.T).T
             
         
 class Xpltreader:
