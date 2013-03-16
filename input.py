@@ -44,7 +44,6 @@ def readlog(fpath):
     
 
 def readfeb(fpath):
-    import xml.etree.ElementTree as ET
     tree = ET.parse(fpath)
     root = tree.getroot()
     if root.tag != "febio_spec":
