@@ -14,10 +14,13 @@ class MeshSolutionTest(unittest.TestCase):
     text log and the binary file.  F tensors are computed for each
     element based on the binary file data and compared to those
     recorded in the text log.
+
     """
     xpltsol = febtools.MeshSolution('test/complex_loading.xplt') 
-    elemdata = febtools.readlog('test/complex_loading_elem_data.txt') 
-    nodedata = febtools.readlog('test/complex_loading_node_data.txt')
+    elemdata = febtools.readlog(
+        'test/complex_loading_elem_data.txt') 
+    nodedata = febtools.readlog(
+        'test/complex_loading_node_data.txt')
 
     def cmp_f(self, row, col, key):
         "Helper function for f tensor tests."
@@ -58,6 +61,7 @@ class MeshSolutionTest(unittest.TestCase):
     def test_fzy(self):
         self.cmp_f(2, 1, 'Fzy')
 
+
 class MeshSolution1PKTest(unittest.TestCase):
     """Tests MeshSolution.s
 
@@ -65,9 +69,10 @@ class MeshSolution1PKTest(unittest.TestCase):
     `MeshSolution.s`, which calculates 1st Piola-Kirchoff stress
     $s$. The Cauchy stress is then recalculated based on $s$ and
     checked against the reference.
+
     """
     # Construct minimal instance of MeshSolution
-    a = febtools.MeshSolution()
+    a = febtools.MeshSolution(None, -1)
     def f():
         f = []
         f.append(
@@ -76,16 +81,16 @@ class MeshSolution1PKTest(unittest.TestCase):
                       [-0.06877768,  0.13129845, -0.94069371]]))
         return f
     a.f = f
-    a.step.append(
-        {'stress': 
-         [np.array([[ 45.576931  , -13.9562149 ,   2.88448954],
-                    [-13.9562149 ,   8.23718643,  -0.69315594],
-                    [  2.88448954,  -0.69315594,   4.93684435]])]})
+    a.data['stress'] = \
+        [np.array([[ 45.576931  , -13.9562149 ,   2.88448954],
+                   [-13.9562149 ,   8.23718643,  -0.69315594],
+                   [  2.88448954,  -0.69315594,   4.93684435]])]
+    print 'Setup completed'
 
     def test_cauchy_from_1pk(self):
         s = list(self.a.s())[0]
         f = self.a.f()[0]
         J = np.linalg.det(f)
         t_actual = 1 / J * np.dot(np.dot(f, s), f.T)
-        t_desired = self.a[0]['stress'][0]
+        t_desired = self.a.data['stress'][0]
         npt.assert_allclose(t_actual, t_desired)

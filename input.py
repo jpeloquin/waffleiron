@@ -91,33 +91,27 @@ class Mesh:
 
 
 class MeshSolution(Mesh):
-    """Stores a mesh and its FEA solution."""
+    """Analysis of a solution step"""
 
     node = []
     element = []
-    step = []
-    index = 0
+    data = {}
+    fpath = ''
 
-    def __init__(self, f = None):
-        if f != None:
+    def __init__(self, f = None, istep = -1):
+        if f is None:
+            # This is a minal instance for debugging.
+            pass
+        else:
             if isinstance(f, str):
+                self.fpath = f
                 reader = Xpltreader(f)
             elif isinstance(f, Xpltreader):
                 reader = f
+                self.fpath = reader.fpath
             self.node, self.element = reader.mesh()
-            self.step = reader.solution()
-
-    def __getitem__(self, i):
-        return self.step[i]
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self.index == len(self.step):
-            raise StopIteration
-        self.index = self.index - 1
-        return self.step[self.index]
+            self.fpath = reader.fpath
+            self.data = reader.solution(istep)
 
     def f(self, istep = -1, r = 0, s = 0, t = 0):
         """Generator for F tensors for each element.
@@ -130,7 +124,7 @@ class MeshSolution(Mesh):
             neln = len(self.element[i])
             X = np.array([self.node[a] 
                          for a in self.element[i]])
-            u = np.array([self[istep]['displacement'][a]
+            u = np.array([self.data['displacement'][a]
                  for a in self.element[i]])
             if neln == 8:
                 dN_dR = hex8.dshpfun(*(r, s, t))
@@ -140,13 +134,13 @@ class MeshSolution(Mesh):
             f = du_dX + np.eye(3)
             yield f.T
             
-    def s(self, istep = -1):
+    def s(self):
         """1st Piola-Kirchoff stress for each element.
         
         The stress is calculated at the center of each element by
         transforming FEBio's Cauchy stress output.
         """
-        for t, f in zip(self[istep]['stress'], self.f()):
+        for t, f in zip(self.data['stress'], self.f()):
             # 1/J F S transpose(F) = t
             J = np.linalg.det(f)
             x = np.linalg.solve(1 / J * f, t)
@@ -154,7 +148,9 @@ class MeshSolution(Mesh):
             
         
 class Xpltreader:
-    """Assists in reading an FEBio xplt file."""
+    """Parses an FEBio xplt file.
+
+    """
     id2tag = {
         'root':            16777216,  # 0x01000000
         'header':          16842752,  # 0x01010000
@@ -225,10 +221,12 @@ class Xpltreader:
         2: 'mult'
         }
 
-    fpath = ''
+    fpath = '' # file path
     fdata = ''
-    cursor = 0
-    endian = ''
+    cursor = 0 # bytes from start of file
+    endian = '' # little-endian: '<'
+                # big-endian:    '>'
+    time = [] # solution time of each step
 
     def __init__(self, fpath):
         """Read xplt data from file"""
@@ -249,6 +247,9 @@ class Xpltreader:
                                 "it is not a valid .feb file.")
         finally:
             f.close()
+        self.time = [struct.unpack(self.endian + 'f', s)[0] for s in
+                self._lblock('state_section/state_header/time')]
+        self.nsteps = len(self.time)
 
     def mesh(self):
         """Reads node and element lists"""
@@ -266,103 +267,126 @@ class Xpltreader:
             node.append(struct.unpack('f' * 3, s[i:i+12]))
         return node, element
 
-    def solution(self):
-        # Read dictionary into `var`, a dictionary mapping strings to
-        # lists of tuples (type, format, name)
-        def rdict(name):
-            dict = 'root/dictionary/' + name + '_var/dict_item'
-            def trim(s): 
-                return s[0:s.find('\x00')]
-            if self._lblock(dict + '/item_type'):
-                typ = [self.tag2item_type[self._dword(s)] for s 
-                        in self._lblock(dict + '/item_type')]
-                fmt = [self.tag2item_format[self._dword(s)] for s 
-                          in self._lblock(dict + '/item_format')]
-                name = [trim(s) for s 
-                        in self._lblock(dict + '/item_name')]
-                return zip(typ, fmt, name)
-            else:
-                return None
+    def solution(self, istep):
+        """Retrieve data for step istep
+
+        The solution data is returned as a dictionary.  The data names
+        (e.g. stress, displacement) are the keys.  These keys are read
+        from the file's dictionary section.  Data is formatted into a
+        list of floats, vectors, or tensors according to the data type
+        specified in the file's dictionary section.
+
+        """
         var = {}
-        var['node'] = rdict('nodeset')
-        var['domain'] = rdict('domain')
-        var['surface'] = rdict('surface')
-        # Read solution steps into `step`, a list of dictionaries with
-        # keys = data names and values = lists of
-        # floats/vectors/tensors
-        time = [struct.unpack(self.endian + 'f', s)[0] for s in
-                self._lblock('state_section/state_header/time')]
-        def numerify(s, typ):
-            if len(s) == 0:
-                raise Exception('Input data has zero length.')
-            # Discard the 8 junk bytes
-            s = s[8:]
-            if typ == 'float':
-                v = struct.unpack(self.endian + 'f' * (len(s) / 4), s)
-            elif typ == 'vec3f':
-                if len(s) % 12 != 0:
-                    raise Exception('Input data cannot be evenly divided '
-                                    'into vectors.')
-                v = []
-                for i in range(0, len(s), 12):
-                    v.append(np.array(
-                            struct.unpack(self.endian + 'f' * 3,
-                                          s[i:i+12])))
-            elif typ == 'mat3fs':
-                v = []
-                if len(s) % 24 != 0:
-                    raise Exception('Input data cannot be evenly divided '
-                                    'into tensors.')
-                for i in range(0, len(s), 24):
-                    a = struct.unpack(self.endian + 'f' * 6, s[i:i+24])
-                    # The FEBio database spec does not document the
-                    # tensor order, but this is correct.
-                    v.append(np.array([[a[0], a[3], a[5]],
-                                       [a[3], a[1], a[4]],
-                                       [a[5], a[4], a[2]]]))
-            else:
-                raise Exception('Type ' + typ + ' not recognized.')
-            v = tuple(v)
-            return v
-        nsteps = len(time)
-        step = []
-        for istep in range(0, nsteps):
-            print('Step ' + str(istep) + ':')
-            this_step = {}
-            for k, v in var.iteritems():
-                if v:
-                    path = ('state_section/state_data/' + k + '_data'
-                            '/state_var/variable_data')
-                    data = self._lblock(path)
-                    for i in range(0, len(v)):
-                        s = data[istep * len(v) + i]
-                        typ = v[i][0]
-                        fmt = v[i][1]
-                        name = v[i][2]
-                        print('Found data named "' + name + '" in '
-                              + k + ' section.')
-                        this_step[name] = numerify(s, typ)
-            this_step['time'] = time[istep]
-            step.append(this_step)
-        return step
+        var['node'] = self._rdict('nodeset')
+        var['domain'] = self._rdict('domain')
+        var['surface'] = self._rdict('surface')
+        nsteps = len(self.time)
+        this_step = {}
+        if istep == -1:
+            istep = nsteps - 1
+        for k, v in var.iteritems():
+            if v:
+                path = ('state_section/state_data/' + k + '_data'
+                        '/state_var/variable_data')
+                data = self._lblock(path)
+                for i in range(0, len(v)):
+                    s = data[istep * len(v) + i]
+                    typ = v[i][0]
+                    fmt = v[i][1]
+                    name = v[i][2]
+                    print('Found data named "' + name + '" in '
+                          + k + ' section, '
+                          'step ' + str(istep) + '.')
+                    this_step[name] = self._unpackblock(s, typ)
+        this_step['time'] = self.time[istep]
+        return this_step
+
+    def _rdict(self, name):
+        """Find a dictionary section and read it.
+
+        name = name of dictionary section to read: 'global',
+        'material', 'nodeset', 'domain', or 'surface'.
+
+        Returns a list of tuples: (type, format, name)
+
+        type = 'float', 'vec3f' or 'mat3fs'
+        format = 'node', 'item', or 'mult'
+        name = a textual description of the data
+
+        """
+        dict = 'root/dictionary/' + name + '_var/dict_item'
+        def trim(s): 
+            return s[0:s.find('\x00')]
+        if self._lblock(dict + '/item_type'):
+            typ = [self.tag2item_type[self._dword(s)] for s 
+                    in self._lblock(dict + '/item_type')]
+            fmt = [self.tag2item_format[self._dword(s)] for s 
+                      in self._lblock(dict + '/item_format')]
+            name = [trim(s) for s 
+                    in self._lblock(dict + '/item_name')]
+            return zip(typ, fmt, name)
+        else:
+            return None
+
+    def _unpackblock(self, s, typ):
+        """Unpack binary data into floats, vectors, or matrices.
+
+        s = the data
+
+        type = the data type: 'float', 'vec3f' (vector), or
+        'mat3fs' (matrix)
+
+        Returns a tuple.
+
+        """
+        if len(s) == 0:
+            raise Exception('Input data has zero length.')
+        s = s[8:] # discard the 8 junk bytes at the start
+        if typ == 'float':
+            v = struct.unpack(self.endian + 'f' * (len(s) / 4), s)
+        elif typ == 'vec3f':
+            if len(s) % 12 != 0:
+                raise Exception('Input data cannot be evenly divided '
+                                'into vectors.')
+            v = []
+            for i in range(0, len(s), 12):
+                v.append(np.array(
+                        struct.unpack(self.endian + 'f' * 3,
+                                      s[i:i+12])))
+        elif typ == 'mat3fs':
+            v = []
+            if len(s) % 24 != 0:
+                raise Exception('Input data cannot be evenly divided '
+                                'into tensors.')
+            for i in range(0, len(s), 24):
+                a = struct.unpack(self.endian + 'f' * 6, s[i:i+24])
+                # The FEBio database spec does not document the
+                # tensor order, but this is correct (for now).
+                v.append(np.array([[a[0], a[3], a[5]],
+                                   [a[3], a[1], a[4]],
+                                   [a[5], a[4], a[2]]]))
+        else:
+            raise Exception('Type ' + typ + ' not recognized.')
+        return tuple(v)
 
     def _lblock(self, pathstr, start = 4, end = None):
         """List data from block(s).
 
-        `block()` searches fdata from the byte at `start` to the byte
-        at `end` for all blocks matching the provided path and returns
-        a flattened list of the data contained in those blocks.  Use
-        caution if you expect multiple matches on multiple levels;
-        this shouldn't happen in an FEBio file, but the spec doesn't
-        forbid it.
+        `_lblock()` searches fdata from the byte at `start` to the
+        byte at `end` for all blocks matching the provided path and
+        returns a flattened list of the data contained in those
+        blocks.  Use caution if you expect multiple matches on
+        multiple levels; this shouldn't happen in an FEBio file, but
+        the spec doesn't forbid it.
 
         `pathstr` is a `/`-delimited sequence of block IDs. For
         example, to obtain the nodeset data dictiory, call
 
         `block('root/dictionary/nodeset_var')`
 
-        ID names are given in the table at the end of the FEBio
-        binary database specification.
+        ID names are given in the table at the end of the FEBio binary
+        database specification.
         
         """
         blockpath = pathstr.split('/')
