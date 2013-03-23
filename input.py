@@ -100,13 +100,13 @@ class MeshSolution(Mesh):
 
     def __init__(self, f = None, istep = -1):
         if f is None:
-            # This is a minal instance for debugging.
+            # This is a minimal instance for debugging.
             pass
         else:
             if isinstance(f, str):
                 self.fpath = f
-                reader = Xpltreader(f)
-            elif isinstance(f, Xpltreader):
+                reader = XpltReader(f)
+            elif isinstance(f, XpltReader):
                 reader = f
                 self.fpath = reader.fpath
             self.node, self.element = reader.mesh()
@@ -232,8 +232,7 @@ class Xpltreader:
         """Read xplt data from file"""
         self.fpath = fpath
         print('Reading ' + fpath)
-        f = open(fpath,'rb')
-        try:
+        with open(fpath,'rb') as f:
             self.fdata = f.read()
             self.endian = '<' # initial assumption
             s = struct.pack('<I', self._dword())
@@ -245,26 +244,29 @@ class Xpltreader:
                 raise Exception("The first 4 bytes of " + fpath + " "
                                 "do not match the FEBio spec: "
                                 "it is not a valid .feb file.")
-        finally:
-            f.close()
-        self.time = [struct.unpack(self.endian + 'f', s)[0] for s in
-                self._lblock('state_section/state_header/time')]
+        data, loc = self._lblock('state_section/state_header/time')
+        self.time = [struct.unpack(self.endian + 'f', s)[0] for s in data]
         self.nsteps = len(self.time)
 
     def mesh(self):
         """Reads node and element lists"""
-        data = self._lblock('root/geometry/'
-                          'domain_section/domain/'
-                          'element_list/element')
+        d, l = self._lblock('root/geometry/domain_section/domain/'
+                                 'element_list')
         element = []
-        for s in data:
-            v = struct.unpack('I' * (len(s) / 4), s)
-            element.append(v[1:])
-        s = self._lblock('root/geometry/'
-                         'node_section/node_coords')[0]
+        for loc in l:
+            self.cursor = loc + 8
+            name, data = self._readblock()
+            self.cursor += 8 + len(data)
+            while name == 'element':
+                v = struct.unpack('I' * (len(data) / 4), data)
+                element.append(v[1:])
+                name, data = self._readblock()
+                self.cursor += 8 + len(data)
+        data, loc = self._fblock('root/geometry/node_section/'
+                                 'node_coords')
         node = []
-        for i in range(0, len(s), 12):
-            node.append(struct.unpack('f' * 3, s[i:i+12]))
+        for i in xrange(0, len(data), 12):
+            node.append(struct.unpack('f' * 3, data[i:i+12]))
         return node, element
 
     def solution(self, istep):
@@ -289,7 +291,7 @@ class Xpltreader:
             if v:
                 path = ('state_section/state_data/' + k + '_data'
                         '/state_var/variable_data')
-                data = self._lblock(path)
+                data, loc = self._lblock(path)
                 for i in range(0, len(v)):
                     s = data[istep * len(v) + i]
                     typ = v[i][0]
@@ -318,13 +320,14 @@ class Xpltreader:
         dict = 'root/dictionary/' + name + '_var/dict_item'
         def trim(s): 
             return s[0:s.find('\x00')]
-        if self._lblock(dict + '/item_type'):
+        data, loc = self._lblock(dict + '/item_type')
+        if data:
             typ = [self.tag2item_type[self._dword(s)] for s 
-                    in self._lblock(dict + '/item_type')]
+                    in self._lblock(dict + '/item_type')[0]]
             fmt = [self.tag2item_format[self._dword(s)] for s 
-                      in self._lblock(dict + '/item_format')]
+                      in self._lblock(dict + '/item_format')[0]]
             name = [trim(s) for s 
-                    in self._lblock(dict + '/item_name')]
+                    in self._lblock(dict + '/item_name')[0]]
             return zip(typ, fmt, name)
         else:
             return None
@@ -393,35 +396,43 @@ class Xpltreader:
         if end is None:
             end = len(self.fdata) - 8
         result = []
+        location = []
         self.cursor = start
         while self.cursor < end:
+            loc = self.cursor
             name, data = self._readblock()
             if name == blockpath[0]:
                 s = self.cursor + 8
                 e = s + len(data)
                 if len(blockpath) > 1:
-                    data = self._lblock('/'.join(blockpath[1:]), s, e)
+                    data, loc = self._lblock('/'.join(blockpath[1:]), s, e)
                 else:
-                    data = [data]
+                     data = [data]
+                     loc = [loc]
                 result = result + data
+                location = location + loc
                 self.cursor = e
             else:
                 self.cursor = self.cursor + 8 + len(data)
-        return result
+        return result, location
 
     def _fblock(self, pathstr, start = 4, end = None):
-        """Returns data from first occurrence of block."""
-        block = self._lblock(pathstr, start, end)
+        """Returns data from first occurrence of block.
+
+        """
+        block, loc = self._lblock(pathstr, start, end)
         if len(block) > 1:
             raise Exception('Found multiple matches to ' 
                             + pathstr + '; only expected one.')
         if block:
-            return block[0]
+            return block[0], loc[0]
         else:
             return None
 
     def _readblock(self):
-        """Reads a block starting at the current cursor location."""
+        """Reads a block starting at the current cursor location.
+
+        """
         name, size = struct.unpack(self.endian + 'II',
                                    self.fdata[self.cursor:self.cursor+8])
         if self.cursor > len(self.fdata) - 8:
