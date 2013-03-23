@@ -78,11 +78,13 @@ class Mesh:
                          for b in root.findall("./Geometry/Elements/*")]
 
     def elemcentroid(self):
-        """Generator for element centroids."""
+        """List of element centroids (reference coordinates)."""
+        centroid = []
         for i in range(len(self.element)):
             x = [self.node[inode] for inode in self.element[i]]
             c = [sum(v) / len(v) for v in zip(*x)]
-            yield tuple(c)
+            centroid.append(c)
+        return centroid
 
     def elemcoord(self):
         """Generator for element coordinates."""
@@ -140,14 +142,22 @@ class MeshSolution(Mesh):
         The stress is calculated at the center of each element by
         transforming FEBio's Cauchy stress output.
         """
+        s = []
         for t, f in zip(self.data['stress'], self.f()):
             # 1/J F S transpose(F) = t
             J = np.linalg.det(f)
             x = np.linalg.solve(1 / J * f, t)
-            yield np.linalg.solve(f, x.T).T
-            
+            s.append(np.linalg.solve(f, x.T).T)
+        return s
+
+    def t(self):
+        """Cauchy stress tensor for each element.
+
+        The Cauchy stress is read directly from the xplt file.
+        """
+        return self.data['stress']
         
-class Xpltreader:
+class XpltReader:
     """Parses an FEBio xplt file.
 
     """
