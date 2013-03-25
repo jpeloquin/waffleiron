@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 import febtools
 import matplotlib.mlab as mlab
 import numpy as np
+import math
+import gc
 
 def midplane_stress(soln, type='1pk'):
     """Finds stress at z = 0 plane from MeshSolution.
@@ -58,7 +60,7 @@ def relative_stress(va, vb):
         raise Exception('Element coordinates do not match between '
                         'inputs (tolerance %s)' % str(tol))
     stress = [(a[0] / b[0]) for a, b in zip(va, vb)]
-    return zip(stress, list(x2[:,0]), list(x2[:,1]), list(x2[:,2]))
+    return zip(stress, x2[:,0], x2[:,1], x2[:,2])
 
 def plot_stress(s, x, y, title, fsave, delta=50e-6, clabel=""):
     """Shaded plot of stress.
@@ -67,10 +69,13 @@ def plot_stress(s, x, y, title, fsave, delta=50e-6, clabel=""):
     xi = np.arange(min(x), max(x), delta)
     yi = np.arange(min(y), max(y), delta)
     v = mlab.griddata(x, y, s, xi, yi, interp='nn')
-    i = int(v.max()**(0.1) / 3)
-    if i > 1:
-        v = v * (i * 1e-3)
-    scaleprefix = ['', 'k', 'M', 'G', 'T'][i]
+    if clabel:
+        i = int(math.log(v.max(), 10) / 3)
+        if i >= 1:
+            v = v * (i * 1e-3)
+        scaleprefix = ["", 'k', 'M', 'G', 'T'][i]
+    else:
+        scaleprefix = ""
     hf = plt.figure()
     plt.imshow(v, interpolation='bilinear',
                extent=[min(x), max(x), min(y), max(y)],
@@ -84,9 +89,9 @@ def plot_stress(s, x, y, title, fsave, delta=50e-6, clabel=""):
     plt.savefig(fout, dpi=300)
     print('Wrote ' + fout)
     fout = fsave + '.pdf'
-    plt.savefig(fout)
+    plt.savefig(fout, dpi=300)
     print('Wrote ' + fout)
-    plt.close(hf)
+    plt.close()
 
 def stressplot(v, title, fsave, clabel=""):
     """Plots s_11, s_22, and s_33 in a 2D plane.
@@ -113,4 +118,5 @@ def stressplot(v, title, fsave, clabel=""):
         thisf = os.path.join(fsave + s_f)
         s = [t[0][i] for t in v]
         plot_stress(s, np.array(x)*10**3, np.array(y)*10**3,
-                    title + s_title, thisf, delta=50e-3, clabel=clabel)
+                    title + s_title, thisf,
+                    delta=50e-3, clabel=clabel)

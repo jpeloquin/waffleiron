@@ -4,6 +4,8 @@ import xml.etree.ElementTree as ET
 import struct
 import numpy as np
 import hex8
+import os
+import pdb
 
 def readlog(fpath):
     """Reads FEBio logfile as a list of the steps' data.
@@ -83,8 +85,7 @@ class Mesh:
         for i in range(len(self.element)):
             x = [self.node[inode] for inode in self.element[i]]
             c = [sum(v) / len(v) for v in zip(*x)]
-            centroid.append(c)
-        return centroid
+            yield c
 
     def elemcoord(self):
         """Generator for element coordinates."""
@@ -98,22 +99,20 @@ class MeshSolution(Mesh):
     node = []
     element = []
     data = {}
-    fpath = ''
+    reader = None
 
-    def __init__(self, f = None, istep = -1):
+    
+    def __init__(self, f = None, step = -1):
         if f is None:
             # This is a minimal instance for debugging.
             pass
         else:
             if isinstance(f, str):
-                self.fpath = f
-                reader = XpltReader(f)
+                self.reader = XpltReader(f)
             elif isinstance(f, XpltReader):
-                reader = f
-                self.fpath = reader.fpath
-            self.node, self.element = reader.mesh()
-            self.fpath = reader.fpath
-            self.data = reader.solution(istep)
+                self.reader = f
+            self.node, self.element = self.reader.mesh()
+            self.data = self.reader.solution(step)
 
     def f(self, istep = -1, r = 0, s = 0, t = 0):
         """Generator for F tensors for each element.
@@ -147,21 +146,23 @@ class MeshSolution(Mesh):
             # 1/J F S transpose(F) = t
             J = np.linalg.det(f)
             x = np.linalg.solve(1 / J * f, t)
-            s.append(np.linalg.solve(f, x.T).T)
-        return s
+            s = np.linalg.solve(f, x.T).T
+            yield s
 
     def t(self):
         """Cauchy stress tensor for each element.
 
         The Cauchy stress is read directly from the xplt file.
         """
-        return self.data['stress']
-        
+        for v in self.data['stress']:
+            yield v
+
+
 class XpltReader:
     """Parses an FEBio xplt file.
 
     """
-    id2tag = {
+    str2tag = {
         'root':            16777216,  # 0x01000000
         'header':          16842752,  # 0x01010000
         'version':         16842753,  # 0x01010001
@@ -211,7 +212,7 @@ class XpltReader:
         'domain_data':     33686528,  # 0x02020400
         'surface_data':    33686784   # 0x02020500
         }
-    tag2id = dict((v, k) for k, v in id2tag.items())
+    tag2str = dict((v, k) for k, v in str2tag.items())
     tag2elem_type = {
         0: 'hex8',
         1: 'penta6',
@@ -231,56 +232,67 @@ class XpltReader:
         2: 'mult'
         }
 
-    fpath = '' # file path
-    fdata = ''
-    cursor = 0 # bytes from start of file
+    fhandle = None
     endian = '' # little-endian: '<'
                 # big-endian:    '>'
-    time = [] # solution time of each step
-
+    time = []
+    
     def __init__(self, fpath):
         """Read xplt data from file"""
-        self.fpath = fpath
         print('Reading ' + fpath)
         with open(fpath,'rb') as f:
-            self.fdata = f.read()
+            self.f = f
             self.endian = '<' # initial assumption
-            s = struct.pack('<I', self._dword())
+            s = f.read(4)
             if s == 'BEF\x00':
                 self.endian = '<'
             elif s == '\x00FEB':
                 self.endian = '>'
             else:
-                raise Exception("The first 4 bytes of " + fpath + " "
+                raise Exception("The first 4 bytes of %s "
                                 "do not match the FEBio spec: "
-                                "it is not a valid .feb file.")
-        data, loc = self._lblock('state_section/state_header/time')
-        self.time = [struct.unpack(self.endian + 'f', s)[0] for s in data]
-        self.nsteps = len(self.time)
-
+                                "it is not a valid .feb file."
+                                % (fpath,))
+            time = []
+            a = self._findall('state_section')
+            self.steploc = [loc for loc, sz in a]
+            for l in self.steploc:
+                a = self._findall('state_header/time', l)
+                self.f.seek(a[0][0])
+                s = self.f.read(a[0][1])
+                time.append(struct.unpack(self.endian + 'f', s))
+            self.time = time
+    
     def mesh(self):
-        """Reads node and element lists"""
-        d, l = self._lblock('root/geometry/domain_section/domain/'
-                                 'element_list')
-        element = []
-        for loc in l:
-            self.cursor = loc + 8
-            name, data = self._readblock()
-            self.cursor += 8 + len(data)
-            while name == 'element':
-                v = struct.unpack('I' * (len(data) / 4), data)
-                element.append(v[1:])
-                name, data = self._readblock()
-                self.cursor += 8 + len(data)
-        data, loc = self._fblock('root/geometry/node_section/'
-                                 'node_coords')
-        node = []
-        for i in xrange(0, len(data), 12):
-            node.append(struct.unpack('f' * 3, data[i:i+12]))
+        """Reads node and element lists.
+
+        """
+        if self.f.closed:
+            self.f = open(self.f.name, 'rb')
+        try:
+            element = []
+            a = self._findall('root/geometry/domain_section/domain/'
+                              'element_list/element')
+            for loc, sz in a:
+                self.f.seek(loc)
+                s = self.f.read(sz)
+                idx = struct.unpack(self.endian+'I', s[0:4])
+                v = struct.unpack('I' * ((sz - 1) / 4), s[4:])
+                element.append(v)
+            node = []
+            a = self._findall('root/geometry/node_section/'
+                              'node_coords')
+            for loc, sz in a:
+                self.f.seek(loc)
+                v = struct.unpack('f' * (sz / 4), self.f.read(sz))
+                for i in xrange(0, len(v), 3):
+                    node.append(tuple(v[i:i+3]))
+        finally:
+            self.f.close()
         return node, element
 
-    def solution(self, istep):
-        """Retrieve data for step istep
+    def solution(self, step):
+        """Retrieve data for step (1 indexed).
 
         The solution data is returned as a dictionary.  The data names
         (e.g. stress, displacement) are the keys.  These keys are read
@@ -294,23 +306,24 @@ class XpltReader:
         var['domain'] = self._rdict('domain')
         var['surface'] = self._rdict('surface')
         nsteps = len(self.time)
-        this_step = {}
-        if istep == -1:
+        if step == -1:
             istep = nsteps - 1
+        else:
+            istep = step - 1
+        this_step = {}
+        steploc = self.steploc[istep]
         for k, v in var.iteritems():
             if v:
-                path = ('state_section/state_data/' + k + '_data'
+                path = ('state_data/' + k + '_data'
                         '/state_var/variable_data')
-                data, loc = self._lblock(path)
-                for i in range(0, len(v)):
-                    s = data[istep * len(v) + i]
-                    typ = v[i][0]
-                    fmt = v[i][1]
-                    name = v[i][2]
-                    print('Found data named "' + name + '" in '
-                          + k + ' section, '
-                          'step ' + str(istep) + '.')
-                    this_step[name] = self._unpackblock(s, typ)
+                a = self._findall(path, steploc)
+                for (loc, sz), (typ, fmt, name) in zip(a, v):
+                    self.f.seek(loc)
+                    s = self.f.read(sz)
+                    print('Found data named %s in  %s section'
+                          ', step %s.' % (name, k, str(istep)))
+                    this_step[name] = \
+                        self._unpack_variable_data(s, typ)
         this_step['time'] = self.time[istep]
         return this_step
 
@@ -327,22 +340,29 @@ class XpltReader:
         name = a textual description of the data
 
         """
-        dict = 'root/dictionary/' + name + '_var/dict_item'
+        path = 'root/dictionary/' + name + '_var/dict_item'
         def trim(s): 
             return s[0:s.find('\x00')]
-        data, loc = self._lblock(dict + '/item_type')
-        if data:
-            typ = [self.tag2item_type[self._dword(s)] for s 
-                    in self._lblock(dict + '/item_type')[0]]
-            fmt = [self.tag2item_format[self._dword(s)] for s 
-                      in self._lblock(dict + '/item_format')[0]]
-            name = [trim(s) for s 
-                    in self._lblock(dict + '/item_name')[0]]
-            return zip(typ, fmt, name)
-        else:
-            return None
+        a = self._findall(path)
+        typ = []
+        fmt = []
+        name = []
+        for loc, sz in a:
+            for label, data in self.children(loc - 8):
+                if label == 'item_type':
+                    typ.append(self.tag2item_type[
+                        struct.unpack(self.endian + 'I', data)[0]])
+                elif label == 'item_format':
+                    fmt.append(self.tag2item_format[
+                        struct.unpack(self.endian + 'I', data)[0]])
+                elif label == 'item_name':
+                    name.append(trim(data))
+                else:
+                    raise Exception('%s block not expected as '
+                                    'child of dict_item.' % (label,))
+        return zip(typ, fmt, name)
 
-    def _unpackblock(self, s, typ):
+    def _unpack_variable_data(self, s, typ):
         """Unpack binary data into floats, vectors, or matrices.
 
         s = the data
@@ -380,64 +400,72 @@ class XpltReader:
                                    [a[3], a[1], a[4]],
                                    [a[5], a[4], a[2]]]))
         else:
-            raise Exception('Type ' + typ + ' not recognized.')
+            raise Exception('Type %s  not recognized.' % (str(typ),))
         return tuple(v)
 
-    def _lblock(self, pathstr, start = 4, end = None):
-        """List data from block(s).
-
-        `_lblock()` searches fdata from the byte at `start` to the
-        byte at `end` for all blocks matching the provided path and
-        returns a flattened list of the data contained in those
-        blocks.  Use caution if you expect multiple matches on
-        multiple levels; this shouldn't happen in an FEBio file, but
-        the spec doesn't forbid it.
+    def _findall(self, pathstr, start = 0):
+        """Finds position and size of blocks.
+        
+        self._findall(pathstr[, start])
 
         `pathstr` is a `/`-delimited sequence of block IDs. For
-        example, to obtain the nodeset data dictiory, call
+        example, to obtain the nodeset data dictiory, use
+        `root/dictionary/nodeset_var`.
 
-        `block('root/dictionary/nodeset_var')`
+        `start` is where `_findall` starts searching.  Make sure it
+        matches up with the start of a block _data section_.  For
+        example, start at bit 12 to search only within root data.  The
+        default is to search the entire file (bit 4 to end).
 
-        ID names are given in the table at the end of the FEBio binary
-        database specification.
-        
+        The function returns a list of tuples (start, length)
+        specifying, for each matching block, the start bit of the data
+        section and its size in bits.  All possible matches are
+        returned, considering each level of the search path.  Multiple
+        eturns are listed in the same order they appear in the file.
+
         """
         blockpath = pathstr.split('/')
-        if end is None:
-            end = len(self.fdata) - 8
-        result = []
-        location = []
-        self.cursor = start
-        while self.cursor < end:
-            loc = self.cursor
-            name, data = self._readblock()
-            if name == blockpath[0]:
-                s = self.cursor + 8
-                e = s + len(data)
-                if len(blockpath) > 1:
-                    data, loc = self._lblock('/'.join(blockpath[1:]), s, e)
+        out = []
+        if self.f.closed:
+            self.f = open(self.f.name, 'rb')
+        self.f.seek(start)
+        # Look for block(s).
+        if start == 0 or start == 4:
+            end = os.path.getsize(self.f.name)
+            self.f.seek(4)
+        else:
+            self.f.seek(-8, 1)
+            label, size = self._bprops()
+            end = self.f.tell() + size
+        tlabel = blockpath[0]
+        while self.f.tell() < end:
+            label, size = self._bprops()
+            if label == tlabel:
+                if blockpath[1:]:
+                    a = self._findall('/'.join(blockpath[1:]),
+                                      self.f.tell())
+                    out += a
                 else:
-                     data = [data]
-                     loc = [loc]
-                result = result + data
-                location = location + loc
-                self.cursor = e
+                    loc = self.f.tell()
+                    out += [(loc, size)]
+                    self.f.seek(size, 1)
             else:
-                self.cursor = self.cursor + 8 + len(data)
-        return result, location
+                 self.f.seek(size, 1)
+        return out
 
-    def _fblock(self, pathstr, start = 4, end = None):
-        """Returns data from first occurrence of block.
+    def children(self, start):
+        """Generator for children of a block.
 
         """
-        block, loc = self._lblock(pathstr, start, end)
-        if len(block) > 1:
-            raise Exception('Found multiple matches to ' 
-                            + pathstr + '; only expected one.')
-        if block:
-            return block[0], loc[0]
-        else:
-            return None
+        if self.f.closed:
+            self.f = open(self.f.name, 'rb')
+        self.f.seek(start)
+        label, size = self._bprops()
+        end = self.f.tell() + size
+        while self.f.tell() < end:
+            label, size = self._bprops()
+            data = self.f.read(size)
+            yield label, data
 
     def _readblock(self):
         """Reads a block starting at the current cursor location.
@@ -457,20 +485,29 @@ class XpltReader:
         data = self.fdata[self.cursor+8:self.cursor+8+size]
         return name, data
 
-    def _mvcursor(self, v):
-        """Moves the cursor the specified number of bytes."""
-        self.cursor = self.cursor + v
-        if self.cursor < 0:
-            raise Exception('Tried to move cursor before beginning of file.')
-        elif self.cursor > len(self.fdata):
-            raise Exception('Tried to move cursor after end of file.')
+    def _dword(self):
+        """Reads a 4-bit integer from the file.
 
-    def _dword(self, s = None):
+        """
+        s = self.f.read(4)
         if s:
             dword = struct.unpack(self.endian + 'I', s)[0]
-        else:
-            dword = struct.unpack(self.endian+'I',
-                                  self.fdata[self.cursor:self.cursor+4]
-                                  )[0]
-            self.cursor = self.cursor + 4
         return dword
+
+    def _bprops(self):
+        """Reads label and size of a block.
+        
+        Returns (label, size) based on the next 2 dwords in the file.
+        Label is in its string form and size is an integer.
+
+        If less than 8 bits (2 dwords) remain in the file, returns
+        None.
+
+        """
+        s = self.f.read(8)
+        if len(s) == 8:
+            d = struct.unpack(self.endian + 'II', s)
+            return self.tag2str[d[0]], d[1]
+        else:
+            return None
+
