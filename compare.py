@@ -72,7 +72,7 @@ def plot_stress(s, x, y, title, fsave, delta=50e-6, clabel=""):
     if clabel:
         i = int(math.log(v.max(), 10) / 3)
         if i >= 1:
-            v = v * (i * 1e-3)
+            v = v * (1e-3**i)
         scaleprefix = ["", 'k', 'M', 'G', 'T'][i]
     else:
         scaleprefix = ""
