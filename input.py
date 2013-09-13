@@ -370,7 +370,7 @@ class XpltReader:
         fmt = []
         name = []
         for loc, sz in a:
-            for label, data in self.children(loc - 8):
+            for label, data in self._children(loc - 8):
                 if label == 'item_type':
                     typ.append(self.tag2item_type[
                         struct.unpack(self.endian + 'I', data)[0]])
@@ -475,7 +475,7 @@ class XpltReader:
                  self.f.seek(size, 1)
         return out
 
-    def children(self, start):
+    def _children(self, start):
         """Generator for children of a block.
 
         """
