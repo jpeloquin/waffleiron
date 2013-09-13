@@ -101,6 +101,19 @@ class Mesh:
         for idx in self.element:
             yield tuple([self.node[i] for i in idx])
 
+    def find_nearest_node(x, y, z=None):
+        """Find node nearest (x, y, z)
+
+        """
+        if z is None:
+            p = (x, y)
+        else:
+            p = (x, y, z)
+        d = np.array(self.node) - p
+        d = np.sum(d**2., axis=1)**0.5
+        idx = np.argmin(abs(d))
+        return idx
+
 
 class MeshSolution(Mesh):
     """Analysis of a solution step"""
