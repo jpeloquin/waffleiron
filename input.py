@@ -63,10 +63,19 @@ class Mesh:
     node = []
     element = []
 
-    def __init__(self):
-        # Leave mesh blank
-        self.node = []
-        self.element = []
+    def __init__(self, node=None, element=None):
+
+        # Node list
+        if node is None:
+            self.node = []
+        else:
+            self.node = node
+
+        # Element list
+        if element is None:
+            self.element = []
+        else:
+            self.element = element
 
     def readfeb(self, f):
         """Read .feb file geometry"""
