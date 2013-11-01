@@ -4,6 +4,7 @@ import unittest
 import numpy.testing as npt
 import numpy as np
 from nose.tools import with_setup
+
 import febtools
 
 class MeshSolutionTest(unittest.TestCase):
@@ -23,7 +24,7 @@ class MeshSolutionTest(unittest.TestCase):
         'test/complex_loading_node_data.txt')
 
     def cmp_f(self, row, col, key):
-        "Helper function for f tensor tests."
+        "Helper function for comparing f tensors."
         for i, f in enumerate(self.xpltsol.f()):
             if np.isnan(self.elemdata[-1]['s1'][i]):
                 # Likely a rigid body
