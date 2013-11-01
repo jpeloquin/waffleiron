@@ -59,11 +59,26 @@ class Mesh:
         idx = np.argmin(abs(d))
         return idx
 
-    def find_conn_elem(idx):
-        """Find indices of elements containing node(s).
+    def node_to_elem(self, idx):
+        """Find indices of elements containing node.
 
         """
-        
+        celem = [] # connected elements
+        for (ii, r) in enumerate(self.element):
+            if idx in r:
+                celem.append(ii)
+        return set(celem)
+
+    def elem_to_elem(self, idx):
+        """Find elements connected to elements.
+
+        """
+        idx = list(idx)
+        nodes = [jj for ii in idx for jj in self.element[ii]]
+        elements = []
+        for idx in nodes:
+            elements = elements + list(self.node_to_elem(idx))
+        return set(elements)
 
 
 class MeshSolution(Mesh):
