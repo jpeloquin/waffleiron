@@ -11,7 +11,7 @@ def jintegral(soln, x):
         (x, y) or (x, y, z) position of node at notch tip.
     """
     node_id = soln.find_nearest_node(*x)
-    area1 = soln.node_to_elem(node_id)
-    area2 = soln.elem_to_elem(area1)    
+    area1 = soln.elem_of_node(node_id)
+    area2 = soln.conn_elem(area1)    
     print(area1)
     print(area2)
