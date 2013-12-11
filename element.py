@@ -1,5 +1,23 @@
 import numpy as np
 
+def f(r, X, u, f_dN):
+    """Calculate F tensor from nodal values and shape functions.
+
+    r = target coordinates in natural basis (tuple)
+    X = nodal coordinates in reference configuration (n x 3)
+    u = nodal displacements (n x 3)
+    f_dN = 1st derivative shape function (function)
+    
+    """
+    dN = f_dN(*r)
+    J = np.dot(X.T, dN)
+    Jinv = np.linalg.inv(J)
+    Jdet = np.linalg.det(J)
+    du = np.dot(u.T, dN)
+    # Push from natural basis to reference configuration
+    f = np.dot(Jinv, du) + np.eye(3)
+    return f
+
 class Hex8:
     """Shape functions for hex8 trilinear elements.
 
@@ -55,7 +73,7 @@ class Hex8:
         nt[6] =  1. / 8. * (1 - r) * (1 - s)
         nt[7] =  1. / 8. * (1 - r) * (1 - s)
         
-        return np.vstack((nr.T, ns.T, nt.T))
+        return np.hstack((nr, ns, nt))
 
     @staticmethod
     def ddN(r, s, t):
@@ -97,7 +115,7 @@ class quad4:
         ns[2] =  0.25 * (1 + r)
         ns[3] =  0.25 * (1 - r)
 
-        return np.vstack((nr.T, ns.T))
+        return np.hstack((nr, ns))
 
     @staticmethod
     def ddN(r, s):

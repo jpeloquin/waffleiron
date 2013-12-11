@@ -120,11 +120,11 @@ class MeshSolution(Mesh):
                 dN_dR = element.Hex8.dN(*(r, s, t))
             elif neln == 4:
                 dN_dR = element.Quad4.dN(*(r, s))
-            J = np.dot(dN_dR, X)
-            du_dR = np.dot(dN_dR, u)
+            J = np.dot(X.T, dN_dR)
+            du_dR = np.dot(u.T, dN_dR)
             du_dX = np.dot(np.linalg.inv(J), du_dR)
             f = du_dX + np.eye(3)
-            yield f.T
+            yield f
             
     def s(self):
         """1st Piola-Kirchoff stress for each element.
