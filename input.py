@@ -3,7 +3,6 @@
 import xml.etree.ElementTree as ET
 import struct
 import numpy as np
-import hex8
 import os
 
 def readlog(fpath):

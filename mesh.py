@@ -1,7 +1,6 @@
 import numpy as np
-import hex8
-import quad4
 from febtools import XpltReader
+from . import element
 
 class Mesh:
     """Stores a mesh geometry."""
@@ -118,9 +117,9 @@ class MeshSolution(Mesh):
                  for a in self.element[i]])
             # displacements are exported for each node
             if neln == 8:
-                dN_dR = hex8.dshpfun(*(r, s, t))
+                dN_dR = element.Hex8.dN(*(r, s, t))
             elif neln == 4:
-                dN_dR = quad4.dshpfun(*(r, s))
+                dN_dR = element.Quad4.dN(*(r, s))
             J = np.dot(dN_dR, X)
             du_dR = np.dot(dN_dR, u)
             du_dX = np.dot(np.linalg.inv(J), du_dR)

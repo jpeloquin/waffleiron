@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<febio_spec version="1.3">
+	<Globals>
+		<Constants>
+			<T>0</T>
+			<R>0</R>
+			<Fc>0</Fc>
+		</Constants>
+	</Globals>
+	<Material>
+		<material id="1" name="Material1" type="isotropic elastic">
+			<density>1</density>
+			<E>1e+006</E>
+			<v>0.4</v>
+		</material>
+	</Material>
+	<Geometry>
+		<Nodes>
+			<node id="1">-5.0000000e-001,-5.0000000e-001, 0.0000000e+000</node>
+			<node id="2">-5.0000000e-001,-5.0000000e-001, 1.0000000e+000</node>
+			<node id="3">-5.0000000e-001, 5.0000000e-001, 0.0000000e+000</node>
+			<node id="4">-5.0000000e-001, 5.0000000e-001, 1.0000000e+000</node>
+			<node id="5"> 5.0000000e-001,-5.0000000e-001, 0.0000000e+000</node>
+			<node id="6"> 5.0000000e-001,-5.0000000e-001, 1.0000000e+000</node>
+			<node id="7"> 5.0000000e-001, 5.0000000e-001, 0.0000000e+000</node>
+			<node id="8"> 5.0000000e-001, 5.0000000e-001, 1.0000000e+000</node>
+		</Nodes>
+		<Elements type="hex8" mat="1" elset="Part1">
+			<elem id="1">     1,     5,     7,     3,     2,     6,     8,     4</elem>
+		</Elements>
+	</Geometry>
+	<Boundary>
+		<fix>
+			<node id="1" bc="xyz"/>
+			<node id="2" bc="xyz"/>
+			<node id="3" bc="xyz"/>
+			<node id="4" bc="xyz"/>
+		</fix>
+	</Boundary>
+	<LoadData>
+		<loadcurve id="1" type="smooth">
+			<loadpoint>0,0</loadpoint>
+			<loadpoint>1,1</loadpoint>
+		</loadcurve>
+		<loadcurve id="2" type="smooth">
+			<loadpoint>0,0</loadpoint>
+			<loadpoint>1,1</loadpoint>
+		</loadcurve>
+		<loadcurve id="3" type="smooth">
+			<loadpoint>0,0</loadpoint>
+			<loadpoint>1,1</loadpoint>
+		</loadcurve>
+	</LoadData>
+	<Output>
+		<logfile>
+			<node_data data="x;y;z;ux;uy;uz" delim="," file="isotropic_elastic_node_data.txt"/>
+			<element_data data="x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J" delim="," file="isotropic_elastic_elem_data.txt"/>
+		</logfile>
+		<plotfile type="febio">
+			<var type="displacement"/>
+			<var type="stress"/>
+		</plotfile>
+	</Output>
+	<Step name="Step01">
+		<Module type="solid"/>
+		<Control>
+			<time_steps>10</time_steps>
+			<step_size>0.1</step_size>
+			<max_refs>15</max_refs>
+			<max_ups>10</max_ups>
+			<dtol>0.001</dtol>
+			<etol>0.01</etol>
+			<rtol>0</rtol>
+			<lstol>0.9</lstol>
+			<time_stepper>
+				<dtmin>0.01</dtmin>
+				<dtmax>0.1</dtmax>
+				<max_retries>5</max_retries>
+				<opt_iter>10</opt_iter>
+			</time_stepper>
+			<analysis type="static"/>
+		</Control>
+		<Boundary>
+			<prescribe>
+				<node id="5" bc="x" lc="1">0.1</node>
+				<node id="6" bc="x" lc="1">0.1</node>
+				<node id="7" bc="x" lc="1">0.1</node>
+				<node id="8" bc="x" lc="1">0.1</node>
+			</prescribe>
+			<prescribe>
+				<node id="5" bc="y" lc="2">0.2</node>
+				<node id="6" bc="y" lc="2">0.2</node>
+				<node id="7" bc="y" lc="2">0.2</node>
+				<node id="8" bc="y" lc="2">0.2</node>
+			</prescribe>
+			<prescribe>
+				<node id="5" bc="z" lc="3">0.3</node>
+				<node id="6" bc="z" lc="3">0.3</node>
+				<node id="7" bc="z" lc="3">0.3</node>
+				<node id="8" bc="z" lc="3">0.3</node>
+			</prescribe>
+		</Boundary>
+	</Step>
+</febio_spec>

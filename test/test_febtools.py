@@ -24,7 +24,12 @@ class MeshSolutionTest(unittest.TestCase):
         'test/complex_loading_node_data.txt')
 
     def cmp_f(self, row, col, key):
-        "Helper function for comparing f tensors."
+        """"Helper function for comparing f tensors.
+
+        Check the F tensor read from the xplt file against the text
+        data in the logfile.
+
+        """
         for i, f in enumerate(self.xpltsol.f()):
             if np.isnan(self.elemdata[-1]['s1'][i]):
                 # Likely a rigid body
