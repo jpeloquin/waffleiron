@@ -85,7 +85,18 @@ class Hex8:
 class quad4:
     """Shape functions for quad4 bilinear shell element.
 
+    This definition uses Guass point integration.  FEBio also has a
+    nodal integration-type quad4 element defined; I'm not exactly sure
+    which is used in the solver.
+
     """
+    a = 1.0 / 3.0**0.5
+    gloc = ((-a, -a),           # Guass point locations
+          ( a, -a),
+          ( a, a),
+          (-a, a))
+    gwt = (1, 1, 1, 1)          # Guass weights
+
     @staticmethod
     def N(r, s):
         """Shape functions.
