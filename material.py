@@ -16,6 +16,15 @@ class IsotropicElastic:
         return y, mu
 
     @staticmethod
+    def ymprparam(y, u):
+        """Convert Lamé parameters to modulus & Poisson's ratio.
+
+        """
+        E = u / (y + u) * (2.0 * u + 3.0 * y)
+        v = 0.5 * y / (y + u)
+        return E, v
+
+    @staticmethod
     def w(F, y, mu):
         """Strain energy for isotropic elastic material.
         
