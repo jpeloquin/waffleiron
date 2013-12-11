@@ -1,15 +1,15 @@
 import numpy as np
 
-def f(r, X, u, f_dN):
+def f(r, X, u, elem_type):
     """Calculate F tensor from nodal values and shape functions.
 
     r = target coordinates in natural basis (tuple)
     X = nodal coordinates in reference configuration (n x 3)
     u = nodal displacements (n x 3)
-    f_dN = 1st derivative shape function (function)
+    elem_type = element class (Hex8 or Quad4)
     
     """
-    dN = f_dN(*r)
+    dN = elem_type.dN(*r)
     J = np.dot(X.T, dN)
     Jinv = np.linalg.inv(J)
     Jdet = np.linalg.det(J)
