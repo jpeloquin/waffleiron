@@ -40,16 +40,16 @@ class IsotropicElasticTest(unittest.TestCase):
         F = np.array([[Fxx, Fxy, Fxz],
                       [Fyx, Fyy, Fyz],
                       [Fzx, Fzy, Fzz]])
-        sx = elemdata[-1]['sx'][0]
-        sy = elemdata[-1]['sy'][0]
-        sz = elemdata[-1]['sz'][0]
-        sxy = elemdata[-1]['sxy'][0]
-        sxz = elemdata[-1]['sxz'][0]
-        syz = elemdata[-1]['syz'][0]
-        s_true = np.array([[sx, sxy, sxz],
-                           [sxy, sy, syz],
-                           [sxz, syz, sz]])
-        s_try = mat.IsotropicElastic.s(F, y, mu)
-        npt.assert_allclose(s_try, s_true, rtol=1e-5)
+        tx = elemdata[-1]['sx'][0]
+        ty = elemdata[-1]['sy'][0]
+        tz = elemdata[-1]['sz'][0]
+        txy = elemdata[-1]['sxy'][0]
+        txz = elemdata[-1]['sxz'][0]
+        tyz = elemdata[-1]['syz'][0]
+        t_true = np.array([[tx, txy, txz],
+                           [txy, ty, tyz],
+                           [txz, tyz, tz]])
+        t_try = mat.IsotropicElastic.tstress(F, y, mu)
+        npt.assert_allclose(t_try, t_true, rtol=1e-5)
         
         

@@ -39,7 +39,7 @@ class IsotropicElastic:
         return W
 
     @staticmethod
-    def s(F, y, mu):
+    def tstress(F, y, mu):
         """Cauchy stress.
 
         """
