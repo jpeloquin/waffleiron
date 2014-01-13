@@ -14176,6 +14176,11 @@
          </element>
       </ElementData>
    </Geometry>
+   <Boundary>
+		<fix>
+			<node bc="z" id="1" />
+		</fix>
+	</Boundary>
    <Output>
       <plotfile type="febio">
          <var type="displacement" />
