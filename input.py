@@ -269,8 +269,6 @@ class XpltReader:
 
         """
         path = 'root/dictionary/' + name + '_var/dict_item'
-        def trim(s): 
-            return s[0:s.find('\x00')]
         a = self._findall(path)
         typ = []
         fmt = []
@@ -284,7 +282,7 @@ class XpltReader:
                     fmt.append(self.tag2item_format[
                         struct.unpack(self.endian + 'I', data)[0]])
                 elif label == 'item_name':
-                    name.append(trim(data))
+                    name.append(nstrip(data))
                 else:
                     raise Exception('%s block not expected as '
                                     'child of dict_item.' % (label,))
