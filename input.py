@@ -5,6 +5,16 @@ import struct
 import numpy as np
 import os
 
+def nstrip(string):
+    """Remove trailing nulls from string.
+
+    """
+    for i, c in enumerate(string):
+        if c == '\x00':
+            return string[:i]
+    return string
+
+
 def readlog(fpath):
     """Reads FEBio logfile as a list of the steps' data.
 
@@ -188,6 +198,26 @@ class XpltReader:
         finally:
             self.f.close()
         return node, element
+
+    def material(self):
+        """Read material codes (integer -> name)
+
+        """
+        matl_index = []
+        matloc = self._findall('root/materials/material')
+        for loc, sz in matloc:
+            st, sz = self._findall('material_id', loc)[0]
+            if not sz == 4:
+                raise Exception('Expected 4 byte integer as material id; '
+                                'found {} byte sequence.'.format(sz))
+            self.f.seek(st)
+            mat_id = struct.unpack(self.endian + 'i', self.f.read(sz))[0]
+            st, sz = self._findall('material_name', loc)[0]
+            self.f.seek(st)
+            mat_name = nstrip(self.f.read(sz))
+            matl_index.append({'material_id': mat_id,
+                              'material_name': mat_name})
+        return matl_index
 
     def solution(self, step):
         """Retrieve data for step (1 indexed).

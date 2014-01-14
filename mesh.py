@@ -88,9 +88,10 @@ class MeshSolution(Mesh):
     element = []
     data = {}
     reader = None
+    material_index = []
 
     
-    def __init__(self, f = None, step = -1):
+    def __init__(self, f=None, step=-1, matl_map=None):
         if f is None:
             # This is a minimal instance for debugging.
             pass
@@ -101,6 +102,7 @@ class MeshSolution(Mesh):
                 self.reader = f
             self.node, self.element = self.reader.mesh()
             self.data = self.reader.solution(step)
+            self.material_index = self.reader.material()
 
     def f(self, istep = -1, r = 0, s = 0, t = 0):
         """Generator for F tensors for each element.
