@@ -127,6 +127,13 @@ class Quad4:
     gwt = (1, 1, 1, 1)          # Guass weights
 
     @staticmethod
+    def integrate(f):
+        """Integrate f(r, s) over the element area.
+
+        """
+        pass
+
+    @staticmethod
     def N(r, s):
         """Shape functions.
 
