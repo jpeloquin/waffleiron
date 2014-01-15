@@ -1,6 +1,6 @@
 import numpy as np
+import febtools.element
 from febtools import XpltReader
-from . import element
 
 class Mesh:
     """Stores a mesh geometry."""
@@ -65,7 +65,7 @@ class Mesh:
         """
         celem = [] # connected elements
         for (ii, r) in enumerate(self.element):
-            if idx in r:
+            if idx in r.nodes:
                 celem.append(ii)
         return set(celem)
 
@@ -74,7 +74,7 @@ class Mesh:
 
         """
         idx = list(idx)
-        nodes = [jj for ii in idx for jj in self.element[ii]]
+        nodes = [jj for ii in idx for jj in self.element[ii].nodes]
         elements = []
         for idx in nodes:
             elements = elements + list(self.elem_of_node(idx))
@@ -104,24 +104,30 @@ class MeshSolution(Mesh):
             self.data = self.reader.solution(step)
             self.material_index = self.reader.material()
 
+    def assign_materials(self, mat_map):
+        """Assign materials from integer codes.
+
+        mat_map : a dictionary mapping integers to material classes
+
+        """
+        for i, e in enumerate(self.element):
+            matname = mat_map[e.mat_id]
+            self.element[i].material = feb.material.getclass(matname)
+
     def f(self, istep = -1, r = 0, s = 0, t = 0):
         """Generator for F tensors for each element.
         
         Global coordinates: x, y, z
         Natural coordinates: r, s, t
         Displacements (global): u, v, w
+    
         """
-        for i in range(len(self.element)):
-            neln = len(self.element[i])
-            X = np.array([self.node[a] 
-                         for a in self.element[i]])
+        for e in self.element:
+            X = np.array([self.node[a] for a in e.nodes])
             u = np.array([self.data['displacement'][a]
-                 for a in self.element[i]])
+                          for a in e.nodes])
             # displacements are exported for each node
-            if neln == 8:
-                dN_dR = element.Hex8.dN(*(r, s, t))
-            elif neln == 4:
-                dN_dR = element.Quad4.dN(*(r, s))
+            dN_dR = e.etype.dN(*(r, s, t))
             J = np.dot(X.T, dN_dR)
             du_dR = np.dot(u.T, dN_dR)
             du_dX = np.dot(np.linalg.inv(J), du_dR)

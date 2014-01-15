@@ -4,6 +4,7 @@ import xml.etree.ElementTree as ET
 import struct
 import numpy as np
 import os
+import febtools.element
 
 def nstrip(string):
     """Remove trailing nulls from string.
@@ -122,10 +123,10 @@ class XpltReader:
         }
     tag2str = dict((v, k) for k, v in str2tag.items())
     tag2elem_type = {
-        0: 'hex8',
+        0: febtools.element.Hex8,
         1: 'penta6',
         2: 'tet4',
-        3: 'quad4',
+        3: febtools.element.Quad4,
         4: 'tri3',
         5: 'truss2'
         }
@@ -174,19 +175,34 @@ class XpltReader:
     def mesh(self):
         """Reads node and element lists.
 
+        Although FEBio splits elements into domains, here they are all
+        concatenated into one list.  The domain classification in
+        FEBio seems to map 1:1 to the material name anyway.
+
         """
         if self.f.closed:
             self.f = open(self.f.name, 'rb')
         try:
             element = []
-            a = self._findall('root/geometry/domain_section/domain/'
-                              'element_list/element')
-            for loc, sz in a:
-                self.f.seek(loc)
-                s = self.f.read(sz)
-                idx = struct.unpack(self.endian+'I', s[0:4])
-                v = struct.unpack('I' * ((sz - 1) / 4), s[4:])
-                element.append(v)
+            domains =  self._findall('root/geometry/domain_section/domain')
+            for loc, sz in domains:
+                # Determine element type
+                l, s = self._findall('domain_header/elem_type', loc)[0]
+                self.f.seek(l)
+                ecode = struct.unpack(self.endian + 'I', self.f.read(s))[0]
+                etype = self.tag2elem_type[ecode]
+                # Determine material id
+                l, s = self._findall('domain_header/mat_id', loc)[0]
+                self.f.seek(l)
+                mat_id = struct.unpack(self.endian + 'I', self.f.read(s))
+                # Read elements
+                elements = self._findall('element_list/element', loc)
+                for l, s in elements:
+                    self.f.seek(l)
+                    data = self.f.read(s)
+                    elem_idx = struct.unpack(self.endian + 'I', data[0:4])
+                    nodes = struct.unpack(self.endian + 'I' * ((s - 1) / 4), data[4:])
+                    element.append(febtools.element.Element(nodes, etype, mat_id))
             node = []
             a = self._findall('root/geometry/node_section/'
                               'node_coords')
@@ -347,7 +363,7 @@ class XpltReader:
         specifying, for each matching block, the start bit of the data
         section and its size in bits.  All possible matches are
         returned, considering each level of the search path.  Multiple
-        eturns are listed in the same order they appear in the file.
+        matches are listed in the same order they appear in the file.
 
         """
         blockpath = pathstr.split('/')

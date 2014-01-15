@@ -7,7 +7,7 @@ def f(r, X, u, elem_type):
     X = nodal coordinates in reference configuration (n x 3)
     u = nodal displacements (n x 3)
     elem_type = element class (Hex8 or Quad4)
-    
+
     """
     dN = elem_type.dN(*r)
     J = np.dot(X.T, dN)
@@ -18,10 +18,37 @@ def f(r, X, u, elem_type):
     f = np.dot(Jinv, du) + np.eye(3)
     return f
 
-class Hex8:
-    """Shape functions for hex8 trilinear elements.
+
+class Element:
+    """Data and metadata for an element.
 
     """
+    etype = None # element type class
+    mat_id = 0 # material integer code (real codes are > 0)
+    material = None # material definition class
+    nodes = [] # list of node indices
+
+    def __init__(self, nodes, elem_type, mat_id):
+        self.nodes = nodes
+        self.etype = elem_type
+        self.mat_id = mat_id
+
+
+# Element type classes should implement the following:
+#
+#     n : number of vertices
+#     N(r, s, t) : shape function
+#    dN(r, s, t) : 1st derivative of shape function
+
+
+class Hex8:
+    """Functions for hex8 trilinear elements.
+
+    """
+    # gwt
+    # gloc
+    n = 8 # number of vertices
+
     @staticmethod
     def N(r, s, t):
         """Shape functions.
@@ -41,7 +68,7 @@ class Hex8:
     @staticmethod
     def dN(r, s, t):
         """Shape functions 1st derivatives.
-        
+
         """
         nr = np.zeros((8, 1))
         nr[0] = -1. / 8. * (1 - s) * (1 - t)
@@ -52,7 +79,7 @@ class Hex8:
         nr[5] =  1. / 8. * (1 - s) * (1 - t)
         nr[6] =  1. / 8. * (1 - s) * (1 - t)
         nr[7] = -1. / 8. * (1 - s) * (1 - t)
-        
+
         ns = np.zeros((8, 1))
         ns[0] = -1. / 8. * (1 - r) * (1 - t)
         ns[1] = -1. / 8. * (1 - r) * (1 - t)
@@ -62,7 +89,7 @@ class Hex8:
         ns[5] = -1. / 8. * (1 - r) * (1 - t)
         ns[6] =  1. / 8. * (1 - r) * (1 - t)
         ns[7] =  1. / 8. * (1 - r) * (1 - t)
-        
+
         nt = np.zeros((8, 1))
         nt[0] = -1. / 8. * (1 - r) * (1 - s)
         nt[1] = -1. / 8. * (1 - r) * (1 - s)
@@ -72,7 +99,7 @@ class Hex8:
         nt[5] =  1. / 8. * (1 - r) * (1 - s)
         nt[6] =  1. / 8. * (1 - r) * (1 - s)
         nt[7] =  1. / 8. * (1 - r) * (1 - s)
-        
+
         return np.hstack((nr, ns, nt))
 
     @staticmethod
@@ -82,7 +109,7 @@ class Hex8:
         """
         pass
 
-class quad4:
+class Quad4:
     """Shape functions for quad4 bilinear shell element.
 
     This definition uses Guass point integration.  FEBio also has a
@@ -90,6 +117,8 @@ class quad4:
     which is used in the solver.
 
     """
+    n = 4
+
     a = 1.0 / 3.0**0.5
     gloc = ((-a, -a),           # Guass point locations
           ( a, -a),

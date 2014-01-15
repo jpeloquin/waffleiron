@@ -14,5 +14,5 @@ from febtools import material
 f = 'test/j-integral/center-crack-2d-1mm.xplt'
 mat = {'Mat1': material.IsotropicElastic}
 soln = febtools.MeshSolution(f, matl_map=mat)
-j = jintegral(soln, (1e-3, 0))
+# j = jintegral(soln, (1e-3, 0))
 #  return

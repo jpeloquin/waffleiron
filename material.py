@@ -2,6 +2,17 @@
 
 import numpy as np
 
+def getclass(matname):
+    """Return reference to a material's class from its name.
+
+    The material names are those used by FEBio.  These names are
+    listed in the type attribute of each `material` tag in an `.feb`
+    file.
+
+    """
+    d = {'isotropic elastic': IsotropicElastic}
+    return d[matname]
+
 class IsotropicElastic:
     """Isotropic elastic material definition.
 
