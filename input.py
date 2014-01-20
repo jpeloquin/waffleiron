@@ -183,18 +183,32 @@ class XpltReader:
         if self.f.closed:
             self.f = open(self.f.name, 'rb')
         try:
+            # Read nodes
+            node_list = []
+            a = self._findall('root/geometry/node_section/'
+                              'node_coords')
+            for loc, sz in a:
+                self.f.seek(loc)
+                v = struct.unpack('f' * (sz / 4), self.f.read(sz))
+                for i in xrange(0, len(v), 3):
+                    node_list.append(tuple(v[i:i+3]))
+
             element_list = []
             domains =  self._findall('root/geometry/domain_section/domain')
             for loc, sz in domains:
                 # Determine element type
                 l, s = self._findall('domain_header/elem_type', loc)[0]
                 self.f.seek(l)
-                ecode = struct.unpack(self.endian + 'I', self.f.read(s))[0]
+                ecode = struct.unpack(self.endian
+                                      + 'I',
+                                      self.f.read(s))[0]
                 etype = self.tag2elem_type[ecode]
                 # Determine material id
                 l, s = self._findall('domain_header/mat_id', loc)[0]
                 self.f.seek(l)
-                mat_id = struct.unpack(self.endian + 'I', self.f.read(s))[0]
+                mat_id = struct.unpack(self.endian
+                                       + 'I',
+                                       self.f.read(s))[0]
                 # Read elements
                 elements = self._findall('element_list/element', loc)
                 for l, s in elements:
@@ -203,22 +217,17 @@ class XpltReader:
                     elem_id = struct.unpack(self.endian
                                             + 'I',
                                             data[0:4])[0]
-                    nodes = struct.unpack(self.endian 
+                    node_id = struct.unpack(self.endian 
                                           + 'I' * ((s - 1) / 4),
                                           data[4:])
-                    element = etype(elem_id, nodes, mat_id)
+                    # nodes = [node_list[i] for i in node_id]
+                    element = etype(node_id, node_list,
+                                    elem_id=elem_id,
+                                    mat_id=mat_id)
                     element_list.append(element)
-            node = []
-            a = self._findall('root/geometry/node_section/'
-                              'node_coords')
-            for loc, sz in a:
-                self.f.seek(loc)
-                v = struct.unpack('f' * (sz / 4), self.f.read(sz))
-                for i in xrange(0, len(v), 3):
-                    node.append(tuple(v[i:i+3]))
         finally:
             self.f.close()
-        return node, element_list
+        return node_list, element_list
 
     def material(self):
         """Read material codes (integer -> name)

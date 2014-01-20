@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 
 def f(r, X, u, elem_type):
@@ -31,17 +32,32 @@ class Element:
     material = None # material definition class
     nodes = [] # list of node indices
 
-    def __init__(self, elem_id, nodes, mat_id):
+    def __init__(self, nodes, node_list, elem_id=None, mat_id=None):
         self.eid = elem_id
         self.nodes = nodes
+        self.node_list = node_list # List of node coordinate tuples
         self.mat_id = mat_id
 
+    def j(self, r):
+        """Jacobian matrix (∂x_i/∂r_j) evaluated at r
 
-# Element type classes should implement the following:
-#
-#     n : number of vertices
-#     N(r, s, t) : shape function
-#    dN(r, s, t) : 1st derivative of shape function
+        """
+        dN_dR = self.dN(*r)
+        x = np.array([self.node_list[i] for i in self.nodes])
+        J = np.dot(x.T, dN_dR)
+        return J
+
+    def integrate(self, f):
+        """Integrate a function over the element.
+
+        f := The function to integrate.  Must be callable as `f(x)`,
+            with x being a 2d or 3d coordinate vector.
+
+        """
+        s = 0
+        for r, w in zip(self.gloc, self.gwt):
+            s += f(r) * np.linalg.det(self.j(r)) * w
+        return s
 
 
 class Hex8(Element):
@@ -128,13 +144,6 @@ class Quad4(Element):
           ( a, a),
           (-a, a))
     gwt = (1, 1, 1, 1)          # Guass weights
-
-    @staticmethod
-    def integrate(f):
-        """Integrate f(r, s) over the element area.
-
-        """
-        pass
 
     @staticmethod
     def N(r, s):

@@ -123,14 +123,11 @@ class MeshSolution(Mesh):
     
         """
         for e in self.element:
-            X = np.array([self.node[a] for a in e.nodes])
-            u = np.array([self.data['displacement'][a]
-                          for a in e.nodes])
+            u = np.array([self.data['displacement'][i]
+                          for i in e.nodes])
             # displacements are exported for each node
-            dN_dR = e.dN(*(r, s, t))
-            J = np.dot(X.T, dN_dR)
-            du_dR = np.dot(u.T, dN_dR)
-            du_dX = np.dot(np.linalg.inv(J), du_dR)
+            du_dR = np.dot(u.T, e.dN(r, s, t))
+            du_dX = np.dot(np.linalg.inv(e.j((r, s, t))), du_dR)
             f = du_dX + np.eye(3)
             yield f
             
