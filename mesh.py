@@ -127,7 +127,7 @@ class MeshSolution(Mesh):
             u = np.array([self.data['displacement'][a]
                           for a in e.nodes])
             # displacements are exported for each node
-            dN_dR = e.etype.dN(*(r, s, t))
+            dN_dR = e.dN(*(r, s, t))
             J = np.dot(X.T, dN_dR)
             du_dR = np.dot(u.T, dN_dR)
             du_dX = np.dot(np.linalg.inv(J), du_dR)

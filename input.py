@@ -183,7 +183,7 @@ class XpltReader:
         if self.f.closed:
             self.f = open(self.f.name, 'rb')
         try:
-            element = []
+            element_list = []
             domains =  self._findall('root/geometry/domain_section/domain')
             for loc, sz in domains:
                 # Determine element type
@@ -200,10 +200,14 @@ class XpltReader:
                 for l, s in elements:
                     self.f.seek(l)
                     data = self.f.read(s)
-                    elem_id = struct.unpack(self.endian + 'I',
+                    elem_id = struct.unpack(self.endian
+                                            + 'I',
                                             data[0:4])[0]
-                    nodes = struct.unpack(self.endian + 'I' * ((s - 1) / 4), data[4:])
-                    element.append(febtools.element.Element(elem_id, nodes, etype, mat_id))
+                    nodes = struct.unpack(self.endian 
+                                          + 'I' * ((s - 1) / 4),
+                                          data[4:])
+                    element = etype(elem_id, nodes, mat_id)
+                    element_list.append(element)
             node = []
             a = self._findall('root/geometry/node_section/'
                               'node_coords')
@@ -214,7 +218,7 @@ class XpltReader:
                     node.append(tuple(v[i:i+3]))
         finally:
             self.f.close()
-        return node, element
+        return node, element_list
 
     def material(self):
         """Read material codes (integer -> name)

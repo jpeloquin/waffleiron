@@ -27,15 +27,13 @@ class Element:
     eid := element id
 
     """
-    etype = None # element type class
     mat_id = 0 # material integer code (real codes are > 0)
     material = None # material definition class
     nodes = [] # list of node indices
 
-    def __init__(self, elem_id, nodes, elem_type, mat_id):
+    def __init__(self, elem_id, nodes, mat_id):
         self.eid = elem_id
         self.nodes = nodes
-        self.etype = elem_type
         self.mat_id = mat_id
 
 
@@ -46,7 +44,7 @@ class Element:
 #    dN(r, s, t) : 1st derivative of shape function
 
 
-class Hex8:
+class Hex8(Element):
     """Functions for hex8 trilinear elements.
 
     """
@@ -114,7 +112,7 @@ class Hex8:
         """
         pass
 
-class Quad4:
+class Quad4(Element):
     """Shape functions for quad4 bilinear shell element.
 
     This definition uses Guass point integration.  FEBio also has a
