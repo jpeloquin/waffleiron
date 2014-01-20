@@ -194,7 +194,7 @@ class XpltReader:
                 # Determine material id
                 l, s = self._findall('domain_header/mat_id', loc)[0]
                 self.f.seek(l)
-                mat_id = struct.unpack(self.endian + 'I', self.f.read(s))
+                mat_id = struct.unpack(self.endian + 'I', self.f.read(s))[0]
                 # Read elements
                 elements = self._findall('element_list/element', loc)
                 for l, s in elements:
