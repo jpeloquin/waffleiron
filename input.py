@@ -200,9 +200,10 @@ class XpltReader:
                 for l, s in elements:
                     self.f.seek(l)
                     data = self.f.read(s)
-                    elem_idx = struct.unpack(self.endian + 'I', data[0:4])
+                    elem_id = struct.unpack(self.endian + 'I',
+                                            data[0:4])[0]
                     nodes = struct.unpack(self.endian + 'I' * ((s - 1) / 4), data[4:])
-                    element.append(febtools.element.Element(nodes, etype, mat_id))
+                    element.append(febtools.element.Element(elem_id, nodes, etype, mat_id))
             node = []
             a = self._findall('root/geometry/node_section/'
                               'node_coords')

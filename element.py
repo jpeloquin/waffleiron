@@ -22,13 +22,18 @@ def f(r, X, u, elem_type):
 class Element:
     """Data and metadata for an element.
 
+    Attributes
+    ----------
+    eid := element id
+
     """
     etype = None # element type class
     mat_id = 0 # material integer code (real codes are > 0)
     material = None # material definition class
     nodes = [] # list of node indices
 
-    def __init__(self, nodes, elem_type, mat_id):
+    def __init__(self, elem_id, nodes, elem_type, mat_id):
+        self.eid = elem_id
         self.nodes = nodes
         self.etype = elem_type
         self.mat_id = mat_id
