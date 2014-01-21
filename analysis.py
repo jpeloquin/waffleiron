@@ -1,21 +1,19 @@
 import numpy as np
 
-def jintegral(soln, x):
-    """Calculate J integral centered on node
+def jintegral(elements, q):
+    """Calculate J integral over elements
 
     Parameters
     ----------
-    soln : MeshSolution object
-        The object (from `febtools`) containing the FEA solution.
-    x : 2- or 3- element array-like
-        (x, y) or (x, y, z) position of node at notch tip.
+    elements : list of element objects
+       The elements in this list define the domain for evaluation
+       of the J integral.
+
+    q : function
+       Must be callable as q(x).
+
     """
-    node_id = soln.find_nearest_node(*x)
-    area1 = soln.elem_of_node(node_id)
-    area2 = soln.conn_elem(area1)
-    print(area1)
-    print(area2)
-    for element in area1:
+    for e in elements:
         sigma = 0
         for p, wp in zip(element.gloc, element.wp):
             t = element.t(p)
