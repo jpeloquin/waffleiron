@@ -60,21 +60,20 @@ class Mesh:
         return idx
 
     def elem_of_node(self, idx):
-        """Find indices of elements containing node.
+        """Return elements containing a node
+
+        idx := node id
 
         """
-        celem = [] # connected elements
-        for (ii, r) in enumerate(self.element):
-            if idx in r.nodes:
-                celem.append(ii)
-        return set(celem)
+        return set((ii for (ii, r) in enumerate(self.element)
+                    if idx in r.inode))
 
     def conn_elem(self, idx):
         """Find elements connected to elements.
 
         """
         idx = list(idx)
-        nodes = [jj for ii in idx for jj in self.element[ii].nodes]
+        nodes = [jj for ii in idx for jj in self.element[ii].inode]
         elements = []
         for idx in nodes:
             elements = elements + list(self.elem_of_node(idx))
@@ -124,7 +123,7 @@ class MeshSolution(Mesh):
         """
         for e in self.element:
             u = np.array([self.data['displacement'][i]
-                          for i in e.nodes])
+                          for i in e.inode])
             # displacements are exported for each node
             du_dR = np.dot(u.T, e.dN(r, s, t))
             du_dX = np.dot(np.linalg.inv(e.j((r, s, t))), du_dR)

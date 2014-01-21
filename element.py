@@ -30,12 +30,12 @@ class Element:
     """
     mat_id = 0 # material integer code (real codes are > 0)
     material = None # material definition class
-    nodes = [] # list of node indices
+    inode = [] # list of node indices
 
-    def __init__(self, nodes, node_list, elem_id=None, mat_id=None):
+    def __init__(self, inode, xnode, elem_id=None, mat_id=None):
         self.eid = elem_id
-        self.nodes = nodes
-        self.node_list = node_list # List of node coordinate tuples
+        self.inode = inode
+        self.xnode = xnode # List of node coordinate tuples
         self.mat_id = mat_id
 
     def j(self, r):
@@ -43,21 +43,34 @@ class Element:
 
         """
         dN_dR = self.dN(*r)
-        x = np.array([self.node_list[i] for i in self.nodes])
+        x = np.array([self.xnode[i] for i in self.inode])
         J = np.dot(x.T, dN_dR)
         return J
 
     def integrate(self, f):
         """Integrate a function over the element.
 
-        f := The function to integrate.  Must be callable as `f(x)`,
-            with x being a 2d or 3d coordinate vector.
+        f := The function to integrate.  Must be callable as `f(r)`,
+            with r being a 2d or 3d coordinate vector.
 
         """
-        s = 0
-        for r, w in zip(self.gloc, self.gwt):
-            s += f(r) * np.linalg.det(self.j(r)) * w
-        return s
+        return sum((f(r) * np.linalg.det(self.j(r)) * w 
+                    for r, w in zip(self.gloc, self.gwt)))
+
+    def interpolate(self, r, values):
+        """Interpolate values (defined per node) at r
+
+        values := A list with a 1:1 mapping to the list of nodes in
+        the mesh.  The list elements can be scalar or vector valued
+        (but must be consistent).
+
+        For example, to obtain the centroid of a 2d element:
+
+            element.interpolate((0, 0), element.xnode)
+
+        """
+        v_node = np.array([values[i] for i in self.inode])
+        return np.dot(self.N(*r), v_node)
 
 
 class Hex8(Element):
