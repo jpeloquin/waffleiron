@@ -61,7 +61,6 @@ for i in domain_crack:
 for i in domain_interior:
     q[i] = 1.0
 
-import pdb; pdb.set_trace()
 
 # j = jintegral(area2, q)
 #  return

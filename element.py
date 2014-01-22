@@ -42,9 +42,9 @@ class Element:
         """Jacobian matrix (∂x_i/∂r_j) evaluated at r
 
         """
-        dN_dR = self.dN(*r)
-        x = np.array([self.xnode[i] for i in self.inode])
-        J = np.dot(x.T, dN_dR)
+        ddr = self.dN(*r)
+        x_node = [self.xnode[i] for i in self.inode]
+        J = sum(np.outer(x, d) for x, d in zip(x_node, ddr))
         return J
 
     def integrate(self, f):
@@ -72,6 +72,18 @@ class Element:
         v_node = np.array([values[i] for i in self.inode])
         return np.dot(self.N(*r), v_node)
 
+    def dinterp(self, r, values):
+        """Evalute d/dx of node-valued data at r
+
+        """
+        v_node = [values[i] for i in self.inode]
+        j = self.j(r)
+        jinv = np.linalg.inv(j)
+        ddr = self.dN(*r)
+        dvdr = (d * v for d, v in zip(ddr, v_node))
+        dvdx = sum(np.dot(jinv, d) for d in dvdr)
+        return dvdx
+
 
 class Hex8(Element):
     """Functions for hex8 trilinear elements.
@@ -85,8 +97,10 @@ class Hex8(Element):
     def N(r, s, t):
         """Shape functions.
 
+        8-element vector
+
         """
-        n = np.zeros((8, 1))
+        n = [0.0] * 8
         n[0] = 1. / 8. * (1 - r) * (1 - s) * (1 - t)
         n[1] = 1. / 8. * (1 + r) * (1 - s) * (1 - t)
         n[2] = 1. / 8. * (1 + r) * (1 - s) * (1 - t)
@@ -95,44 +109,43 @@ class Hex8(Element):
         n[5] = 1. / 8. * (1 + r) * (1 - s) * (1 - t)
         n[6] = 1. / 8. * (1 + r) * (1 - s) * (1 - t)
         n[7] = 1. / 8. * (1 - r) * (1 - s) * (1 - t)
-        return n.T
+        return n
 
     @staticmethod
     def dN(r, s, t):
-        """Shape functions 1st derivatives.
+        """Shape functions' 1st derivatives.
 
         """
-        nr = np.zeros((8, 1))
-        nr[0] = -1. / 8. * (1 - s) * (1 - t)
-        nr[1] =  1. / 8. * (1 - s) * (1 - t)
-        nr[2] =  1. / 8. * (1 - s) * (1 - t)
-        nr[3] = -1. / 8. * (1 - s) * (1 - t)
-        nr[4] = -1. / 8. * (1 - s) * (1 - t)
-        nr[5] =  1. / 8. * (1 - s) * (1 - t)
-        nr[6] =  1. / 8. * (1 - s) * (1 - t)
-        nr[7] = -1. / 8. * (1 - s) * (1 - t)
+        dn = [np.zeros(3) for i in xrange(8)]
+        # d/dr
+        dn[0][0] = -1. / 8. * (1 - s) * (1 - t)
+        dn[1][0] =  1. / 8. * (1 - s) * (1 - t)
+        dn[2][0] =  1. / 8. * (1 - s) * (1 - t)
+        dn[3][0] = -1. / 8. * (1 - s) * (1 - t)
+        dn[4][0] = -1. / 8. * (1 - s) * (1 - t)
+        dn[5][0] =  1. / 8. * (1 - s) * (1 - t)
+        dn[6][0] =  1. / 8. * (1 - s) * (1 - t)
+        dn[7][0] = -1. / 8. * (1 - s) * (1 - t)
+        # d/ds
+        dn[0][1] = -1. / 8. * (1 - r) * (1 - t)
+        dn[1][1] = -1. / 8. * (1 - r) * (1 - t)
+        dn[2][1] =  1. / 8. * (1 - r) * (1 - t)
+        dn[3][1] =  1. / 8. * (1 - r) * (1 - t)
+        dn[4][1] = -1. / 8. * (1 - r) * (1 - t)
+        dn[5][1] = -1. / 8. * (1 - r) * (1 - t)
+        dn[6][1] =  1. / 8. * (1 - r) * (1 - t)
+        dn[7][1] =  1. / 8. * (1 - r) * (1 - t)
+        # d/dt
+        dn[0][2] = -1. / 8. * (1 - r) * (1 - s)
+        dn[1][2] = -1. / 8. * (1 - r) * (1 - s)
+        dn[2][2] = -1. / 8. * (1 - r) * (1 - s)
+        dn[3][2] = -1. / 8. * (1 - r) * (1 - s)
+        dn[4][2] =  1. / 8. * (1 - r) * (1 - s)
+        dn[5][2] =  1. / 8. * (1 - r) * (1 - s)
+        dn[6][2] =  1. / 8. * (1 - r) * (1 - s)
+        dn[7][2] =  1. / 8. * (1 - r) * (1 - s)
 
-        ns = np.zeros((8, 1))
-        ns[0] = -1. / 8. * (1 - r) * (1 - t)
-        ns[1] = -1. / 8. * (1 - r) * (1 - t)
-        ns[2] =  1. / 8. * (1 - r) * (1 - t)
-        ns[3] =  1. / 8. * (1 - r) * (1 - t)
-        ns[4] = -1. / 8. * (1 - r) * (1 - t)
-        ns[5] = -1. / 8. * (1 - r) * (1 - t)
-        ns[6] =  1. / 8. * (1 - r) * (1 - t)
-        ns[7] =  1. / 8. * (1 - r) * (1 - t)
-
-        nt = np.zeros((8, 1))
-        nt[0] = -1. / 8. * (1 - r) * (1 - s)
-        nt[1] = -1. / 8. * (1 - r) * (1 - s)
-        nt[2] = -1. / 8. * (1 - r) * (1 - s)
-        nt[3] = -1. / 8. * (1 - r) * (1 - s)
-        nt[4] =  1. / 8. * (1 - r) * (1 - s)
-        nt[5] =  1. / 8. * (1 - r) * (1 - s)
-        nt[6] =  1. / 8. * (1 - r) * (1 - s)
-        nt[7] =  1. / 8. * (1 - r) * (1 - s)
-
-        return np.hstack((nr, ns, nt))
+        return dn
 
     @staticmethod
     def ddN(r, s, t):
@@ -163,31 +176,30 @@ class Quad4(Element):
         """Shape functions.
 
         """
-        n = np.zeros((4, 1))
+        n = [0.0] * 4
         n[0] = 0.25 * (1 - r) * (1 - s)
         n[1] = 0.25 * (1 + r) * (1 - s)
         n[2] = 0.25 * (1 + r) * (1 + s)
         n[3] = 0.25 * (1 - r) * (1 + s)
-        return n.T
+        return n
 
     @staticmethod
     def dN(r, s):
-        """Shape function 1st derivatives.
+        """Shape function' 1st derivatives.
 
         """
-        nr = np.zeros((4, 1))
-        nr[0] = -0.25 * (1 - s)
-        nr[1] =  0.25 * (1 - s)
-        nr[2] =  0.25 * (1 + s)
-        nr[3] = -0.25 * (1 + s)
+        dn = [np.zeros(2) for i in xrange(4)]
+        dn[0][0] = -0.25 * (1 - s)
+        dn[1][0] =  0.25 * (1 - s)
+        dn[2][0] =  0.25 * (1 + s)
+        dn[3][0] = -0.25 * (1 + s)
 
-        ns = np.zeros((4, 1))
-        ns[0] = -0.25 * (1 - r)
-        ns[1] = -0.25 * (1 + r)
-        ns[2] =  0.25 * (1 + r)
-        ns[3] =  0.25 * (1 - r)
+        dn[0][1] = -0.25 * (1 - r)
+        dn[1][1] = -0.25 * (1 + r)
+        dn[2][1] =  0.25 * (1 + r)
+        dn[3][1] =  0.25 * (1 - r)
 
-        return np.hstack((nr, ns))
+        return dn
 
     @staticmethod
     def ddN(r, s):
