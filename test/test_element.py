@@ -11,7 +11,7 @@ def test_integration():
     nodes = (0, 1, 2, 3)
     element = febtools.element.Quad4(nodes, node_list)
     # compute area
-    actual = element.integrate(lambda r: 1.0)
+    actual = element.integrate(lambda e, r: 1.0)
     desired = 3.0 # A_trapezoid = 0.5 * (b1 + b2) * h
     npt.assert_approx_equal(actual, desired)
 

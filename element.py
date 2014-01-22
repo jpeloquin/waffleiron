@@ -50,11 +50,13 @@ class Element:
     def integrate(self, f):
         """Integrate a function over the element.
 
-        f := The function to integrate.  Must be callable as `f(r)`,
-            with r being a 2d or 3d coordinate vector.
+        f := The function to integrate.  Must be callable as `f(e,r)`,
+            with `e` being this element object instance and `r` being
+            a 2d or 3d coordinate vector (a 2- or 3-element
+            array-like).
 
         """
-        return sum((f(r) * np.linalg.det(self.j(r)) * w 
+        return sum((f(self, r) * np.linalg.det(self.j(r)) * w 
                     for r, w in zip(self.gloc, self.gwt)))
 
     def interpolate(self, r, values):
