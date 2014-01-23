@@ -1,5 +1,5 @@
 # Run these tests with nose
-import itertools
+import itertools, math
 import numpy.testing as npt
 import numpy as np
 
@@ -68,5 +68,44 @@ for i in domain_interior:
 
 domain_e = [soln.element[i] for i in area]
 u = soln.data['displacement']
-print(soln.element[0].f((0,0), u))
 j = jintegral(domain_e, u, q, soln.material_map)
+
+def test_jintegral_uniax_center_crack_2d():
+    E = 1e7
+    nu = 0.3
+    y, mu = febtools.material.IsotropicElastic.tolame(E, nu)
+    mat1 = {'type': 'isotropic elastic',
+        'properties': {'lambda': y,
+                       'mu': mu}}
+    m = {1: mat1}
+    soln = febtools.MeshSolution('test/fixtures/'
+                                 'uniax-2d-center-crack-1mm.xplt',
+                                 step=2,
+                                 matl_map=m)
+    a = 1.0 # mm
+    W = 10.0 # mm
+    minima = np.array([min(x) for x in zip(*soln.node)])
+    maxima = np.array([max(x) for x in zip(*soln.node)])
+    ymin = minima[1]
+    ymax = maxima[1]
+    e_top = [e for e in soln.element
+             if np.any(np.isclose(zip(*e.xnode)[1], ymin))]
+    e_bottom = [e for e in soln.element
+                if np.any(np.isclose(zip(*e.xnode)[1], ymax))]
+    def pk1(elements):
+        """Convert Cauchy stress in each element to 1st P-K.
+
+        """
+        for e in elements:
+            t = soln.data['stress'][e.eid]
+            f = e.f((0,0), soln.data['displacement'])
+            fdet = np.linalg.det(f)
+            finv = np.linalg.inv(f)
+            P = fdet * np.dot(finv, np.dot(t, finv.T))
+            yield P
+    P = list(pk1(e_top + e_bottom))
+    Pavg = sum(P) / len(P)
+    stress = Pavg[1][1]
+    K_I = stress * (math.pi * a * 1.0 / math.cos(math.pi * a / W))**0.5
+    G = K_I**2.0 / E
+
