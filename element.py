@@ -30,12 +30,20 @@ class Element:
     matl_id = 0 # material integer code (FEBio codes are 1-indexed)
     matl = None # material definition class
     inode = [] # list of node indices
+    xnode_mesh = [] # list of node coordinates for whole mesh
 
     def __init__(self, inode, xnode, elem_id=None, matl_id=None):
         self.eid = elem_id
         self.inode = inode
-        self.xnode = xnode # List of node coordinate tuples
+        self.xnode_mesh = xnode
         self.matl_id = matl_id
+
+    @property
+    def xnode(self):
+        """List of node coordinate tuples.
+
+        """
+        return [self.xnode_mesh[i] for i in self.inode]
 
     def f(self, r, u):
         """Calculate F tensor.
@@ -64,8 +72,9 @@ class Element:
         """
         ddr = self.dN(*r)
         ddr = np.vstack(ddr)
-        x_node = [self.xnode[i][0:len(r)] for i in self.inode]
-        x_node = np.array(x_node).T  ## i = cartesian, j = node #
+        x_node = [x[0:len(r)] for x in self.xnode]
+        x_node = np.array(x_node).T  # i := i in x_i
+                                                   # j := node index
         J = np.dot(x_node, ddr)
         return J
 
