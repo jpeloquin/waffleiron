@@ -1,4 +1,5 @@
 import numpy as np
+import febtools as feb
 import febtools.element
 from febtools import XpltReader
 
@@ -101,16 +102,17 @@ class MeshSolution(Mesh):
                 self.reader = f
             self.node, self.element = self.reader.mesh()
             self.data = self.reader.solution(step)
-            self.material_index = self.reader.material()
+            self.material_index_xplt = self.reader.material()
+            self.material_map = matl_map
 
-    def assign_materials(self, mat_map):
+    def assign_materials(self, matl_map):
         """Assign materials from integer codes.
 
         mat_map : a dictionary mapping integers to material classes
 
         """
         for i, e in enumerate(self.element):
-            matname = mat_map[e.mat_id]
+            matname = matl_map[e.mat_id]
             self.element[i].material = feb.material.getclass(matname)
 
     def f(self, istep = -1, r = 0, s = 0, t = 0):

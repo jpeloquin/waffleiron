@@ -11,9 +11,9 @@ class IsotropicElasticTest(unittest.TestCase):
     """
     def W_identity_test(self):
         F = np.eye(3)
-        y = 1.0
-        mu = 1.0
-        W_try = mat.IsotropicElastic.w(F, y, mu)
+        matlprops = {'lambda': 1.0,
+                     'mu': 1.0}
+        W_try = mat.IsotropicElastic.w(F, matlprops)
         W_true = 0.0
         npt.assert_approx_equal(W_try, W_true)
 
@@ -21,11 +21,13 @@ class IsotropicElasticTest(unittest.TestCase):
         """Compare calculated stress with that from FEBio's logfile.
 
         """
-        # someday, the material properties will be read from the feb
+        # someday, the material properties will be read from the .feb
         # file
         youngmod = 1e6
         nu = 0.4
-        y, mu = mat.IsotropicElastic.lameparam(youngmod, nu)
+        y, mu = mat.IsotropicElastic.tolame(youngmod, nu)
+        matlprops = {'lambda': y,
+                     'mu': mu}
 
         elemdata = fb.readlog('test/isotropic_elastic_elem_data.txt')
         Fxx = elemdata[-1]['Fxx'][0]
@@ -49,7 +51,8 @@ class IsotropicElasticTest(unittest.TestCase):
         t_true = np.array([[tx, txy, txz],
                            [txy, ty, tyz],
                            [txz, tyz, tz]])
-        t_try = mat.IsotropicElastic.tstress(F, y, mu)
+        t_try = mat.IsotropicElastic.tstress(F, matlprops)
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
         
         
+    

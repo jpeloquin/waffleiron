@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
-def f(r, X, u, elem_type):
+def f(r, X, u):
     """Calculate F tensor from nodal values and shape functions.
 
     r = target coordinates in natural basis (tuple)
     X = nodal coordinates in reference configuration (n x 3)
     u = nodal displacements (n x 3)
-    elem_type = element class (Hex8 or Quad4)
 
     """
     dN = elem_type.dN(*r)
@@ -28,26 +27,49 @@ class Element:
     eid := element id
 
     """
-    mat_id = 0 # material integer code (real codes are > 0)
-    material = None # material definition class
+    matl_id = 0 # material integer code (FEBio codes are 1-indexed)
+    matl = None # material definition class
     inode = [] # list of node indices
 
-    def __init__(self, inode, xnode, elem_id=None, mat_id=None):
+    def __init__(self, inode, xnode, elem_id=None, matl_id=None):
         self.eid = elem_id
         self.inode = inode
         self.xnode = xnode # List of node coordinate tuples
-        self.mat_id = mat_id
+        self.matl_id = matl_id
+
+    def f(self, r, u):
+        """Calculate F tensor.
+
+        r := coordinate vector in element's natural basis
+        u := list of displacements for all the nodes in the mesh.
+        
+        """
+        u_node = [u[i] for i in self.inode]
+        u_node = np.array(u_node).T
+        j = self.j(r)
+        jinv = np.linalg.inv(j)
+        ddr = self.dN(*r)
+        ddr = np.vstack(ddr)
+        dudr = np.dot(u_node, ddr)[0:len(r),]
+        dudx = np.dot(jinv, dudr)
+        if len(r) == 2:
+            # pad to 3-dimensions
+            dudx = np.pad(dudx, ((0,1), (0,1)), mode='constant')
+        F = dudx + np.eye(3)
+        return F
 
     def j(self, r):
         """Jacobian matrix (∂x_i/∂r_j) evaluated at r
 
         """
         ddr = self.dN(*r)
-        x_node = [self.xnode[i] for i in self.inode]
-        J = sum(np.outer(x, d) for x, d in zip(x_node, ddr))
+        ddr = np.vstack(ddr)
+        x_node = [self.xnode[i][0:len(r)] for i in self.inode]
+        x_node = np.array(x_node).T  ## i = cartesian, j = node #
+        J = np.dot(x_node, ddr)
         return J
 
-    def integrate(self, f):
+    def integrate(self, f, *args):
         """Integrate a function over the element.
 
         f := The function to integrate.  Must be callable as `f(e,r)`,
@@ -56,11 +78,11 @@ class Element:
             array-like).
 
         """
-        return sum((f(self, r) * np.linalg.det(self.j(r)) * w 
+        return sum((f(self, r, *args) * np.linalg.det(self.j(r)) * w 
                     for r, w in zip(self.gloc, self.gwt)))
 
-    def interpolate(self, r, values):
-        """Interpolate values (defined per node) at r
+    def interp(self, r, values):
+        """Interpolate node-valued data at r.
 
         values := A list with a 1:1 mapping to the list of nodes in
         the mesh.  The list elements can be scalar or vector valued
@@ -68,7 +90,7 @@ class Element:
 
         For example, to obtain the centroid of a 2d element:
 
-            element.interpolate((0, 0), element.xnode)
+            element.interp((0,0), element.xnode)
 
         """
         v_node = np.array([values[i] for i in self.inode])
@@ -77,14 +99,19 @@ class Element:
     def dinterp(self, r, values):
         """Evalute d/dx of node-valued data at r
 
+        The node-valued data may be scalar or vector.
+
+        Note: If you are using a 2d element, do not use 3d vector
+        values.
+
         """
         v_node = [values[i] for i in self.inode]
         j = self.j(r)
         jinv = np.linalg.inv(j)
         ddr = self.dN(*r)
-        dvdr = (d * v for d, v in zip(ddr, v_node))
+        dvdr = [np.outer(d, v) for d, v in zip(ddr, v_node)]
         dvdx = sum(np.dot(jinv, d) for d in dvdr)
-        return dvdx
+        return dvdx.T
 
 
 class Hex8(Element):
@@ -115,7 +142,7 @@ class Hex8(Element):
 
     @staticmethod
     def dN(r, s, t):
-        """Shape functions' 1st derivatives.
+        """Shape function 1st derivatives.
 
         """
         dn = [np.zeros(3) for i in xrange(8)]
@@ -151,7 +178,7 @@ class Hex8(Element):
 
     @staticmethod
     def ddN(r, s, t):
-        """"Shape functions 2nd derivatives.
+        """"Shape function 2nd derivatives.
 
         """
         pass
@@ -187,7 +214,7 @@ class Quad4(Element):
 
     @staticmethod
     def dN(r, s):
-        """Shape function' 1st derivatives.
+        """Shape function 1st derivatives.
 
         """
         dn = [np.zeros(2) for i in xrange(4)]

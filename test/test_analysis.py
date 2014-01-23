@@ -12,13 +12,18 @@ from febtools import material
 
 """
 f = 'test/j-integral/center-crack-2d-1mm.xplt'
-mat = {'Mat1': material.IsotropicElastic}
-soln = febtools.MeshSolution(f, matl_map=mat)
+y, mu = febtools.material.IsotropicElastic.tolame(1e7, 0.3)
+mat1 = {'type': 'isotropic elastic',
+        'properties': {'lambda': y,
+                       'mu': mu}}
+m = {1: mat1}
+soln = febtools.MeshSolution(f, matl_map=m)
 
 x = (1e-3, 0)
 id_crack_tip = soln.find_nearest_node(*x)
 area1 = soln.elem_of_node(id_crack_tip)
 area2 = soln.conn_elem(area1)
+area = area2
 
 # Nodes on the boundary will have different connectivity
 def node_connectivity(elements, n):
@@ -61,6 +66,7 @@ for i in domain_crack:
 for i in domain_interior:
     q[i] = 1.0
 
-
-# j = jintegral(area2, q)
-#  return
+domain_e = [soln.element[i] for i in area]
+u = soln.data['displacement']
+print(soln.element[0].f((0,0), u))
+j = jintegral(domain_e, u, q, soln.material_map)

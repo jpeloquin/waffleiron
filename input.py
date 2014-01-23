@@ -223,7 +223,7 @@ class XpltReader:
                     # nodes = [node_list[i] for i in node_id]
                     element = etype(node_id, node_list,
                                     elem_id=elem_id,
-                                    mat_id=mat_id)
+                                    matl_id=mat_id)
                     element_list.append(element)
         finally:
             self.f.close()

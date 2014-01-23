@@ -1,6 +1,7 @@
 import numpy as np
+import febtools
 
-def jintegral(elements, q):
+def jintegral(elements, u, q, material_map):
     """Calculate J integral over elements
 
     Parameters
@@ -13,17 +14,22 @@ def jintegral(elements, q):
        Must be callable as q(x).
 
     """
+    def integrand(e, r, u, q, material_map):
+        matname = material_map[e.matl_id]['type']
+        matl = febtools.material.getclass(matname)
+        matlprops = material_map[e.matl_id]['properties']
+        F = e.f(r, u)
+        p = matl.pstress(F, matlprops) # 1st Piola-Kirchoff stress
+        dudx = F - np.eye(3)
+        dudx1 = dudx[:,0]
+        w = matl.w(F, matlprops) # strain energy
+        
+        dqdx = e.dinterp(r, q)
+        # w * dqdx[0]
+
+        return 1
+    j = 0
     for e in elements:
-        sigma = 0
-        for p, wp in zip(element.gloc, element.wp):
-            t = element.t(p)
-            dudx1 = None
-            w = element.w(p)
-            dqdx = None
-            summ = 0
-            for i in (1, 2, 3):
-                for j in (1, 2, 3):
-                    for k in (1, 2, 3):
-                        v = (t[i,j] * dudx1[j] - w * (i == 1)) * dqdx[i] * np.det(dxdeta[j, k]) * wp
-                        summ = summ + v
+        j += e.integrate(integrand, u, q, material_map)
+    return j
                         

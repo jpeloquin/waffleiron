@@ -25,5 +25,5 @@ def test_dinterp():
     element = febtools.element.Quad4(nodes, node_list)
     v = (0.0, 10.0, 11.0, 1.0)
     desired = np.array([10.0, 1.0])
-    actual = element.dinterp((0,0), v)
+    actual = element.dinterp((0,0), v).reshape(-1)
     npt.assert_allclose(actual, desired)

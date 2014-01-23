@@ -18,7 +18,7 @@ class IsotropicElastic:
 
     """
     @staticmethod
-    def lameparam(E, v):
+    def tolame(E, v):
         """Convert Young's modulus & Poisson ratio to Lamé parameters.
 
         """
@@ -27,7 +27,7 @@ class IsotropicElastic:
         return y, mu
 
     @staticmethod
-    def ymprparam(y, u):
+    def fromlame(y, u):
         """Convert Lamé parameters to modulus & Poisson's ratio.
 
         """
@@ -36,7 +36,7 @@ class IsotropicElastic:
         return E, v
 
     @staticmethod
-    def w(F, y, mu):
+    def w(F, props):
         """Strain energy for isotropic elastic material.
         
         F = deformation tensor
@@ -44,21 +44,48 @@ class IsotropicElastic:
         mu = Lamé parameter μ
 
         """
+        y = props['lambda']
+        mu = props['mu']
         E = 0.5 * (np.dot(F.T, F) - np.eye(3))
         trE = np.trace(E)
         W = 0.5 * y * trE**2.0 + mu * np.sum(E * E)
         return W
 
     @staticmethod
-    def tstress(F, y, mu):
+    def tstress(F, props):
         """Cauchy stress.
 
         """
+        y = props['lambda']
+        mu = props['mu']
         E = 0.5 * (np.dot(F.T, F) - np.eye(3))
         trE = np.trace(E)
-        # second piola-kirchoff
-        s = y * trE * np.eye(3) + 2.0 * mu * E
-        # cauchy
+        s = y * trE * np.eye(3) + 2.0 * mu * E  # 2nd P-K
         J = np.linalg.det(F)
         t = np.dot(np.dot(F, s), F.T) / J
         return t
+
+    @staticmethod
+    def pstress(F, props):
+        """1st Piola-Kirchoff stress.
+
+        """
+        y = props['lambda']
+        mu = props['mu']
+        E = 0.5 * (np.dot(F.T, F) - np.eye(3))
+        trE = np.trace(E)
+        s = y * trE * np.eye(3) + 2.0 * mu * E  # 2nd P-K
+        p = np.dot(s, F.T)
+        return p
+
+    @staticmethod
+    def sstress(F, props):
+        """2nd Piola-Kirchoff stress.
+
+        """
+        y = props['lambda']
+        mu = props['mu']
+        E = 0.5 * (np.dot(F.T, F) - np.eye(3))
+        trE = np.trace(E)
+        s = y * trE * np.eye(3) + 2.0 * mu * E
+        return s
