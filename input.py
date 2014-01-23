@@ -217,10 +217,12 @@ class XpltReader:
                     elem_id = struct.unpack(self.endian
                                             + 'I',
                                             data[0:4])[0]
+                    elem_id = elem_id - 1 # 0-index
                     node_id = struct.unpack(self.endian 
                                           + 'I' * ((s - 1) / 4),
                                           data[4:])
-                    # nodes = [node_list[i] for i in node_id]
+                    # the nodes are already 0-indexed in the binary
+                    # database
                     element = etype(node_id, node_list,
                                     elem_id=elem_id,
                                     matl_id=mat_id)
