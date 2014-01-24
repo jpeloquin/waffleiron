@@ -169,7 +169,7 @@ class XpltReader:
                 a = self._findall('state_header/time', l)
                 self.f.seek(a[0][0])
                 s = self.f.read(a[0][1])
-                time.append(struct.unpack(self.endian + 'f', s))
+                time.append(struct.unpack(self.endian + 'f', s)[0])
             self.time = time
     
     def mesh(self):
