@@ -39,7 +39,7 @@ class MeshSolutionTest(unittest.TestCase):
                 npt.assert_approx_equal(f[row, col], 
                                         self.elemdata[-1][key][i],
                                         significant=5)
-    
+
     def test_fx(self):
         self.cmp_f(0, 0, 'Fx')
 

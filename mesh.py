@@ -60,14 +60,16 @@ class Mesh:
         idx = np.argmin(abs(d))
         return idx
 
-    def elem_of_node(self, idx):
+    def elem_with_node(self, idx):
         """Return elements containing a node
 
         idx := node id
 
         """
-        return set((ii for (ii, r) in enumerate(self.element)
-                    if idx in r.inode))
+        eid = set(ii for (ii, r) in enumerate(self.element)
+                  if idx in r.inode)
+        elements = [self.element[i] for i in eid]
+        return set(elements)
 
     def conn_elem(self, idx):
         """Find elements connected to elements.
@@ -77,7 +79,7 @@ class Mesh:
         nodes = [jj for ii in idx for jj in self.element[ii].inode]
         elements = []
         for idx in nodes:
-            elements = elements + list(self.elem_of_node(idx))
+            elements = elements + list(self.elem_with_node(idx))
         return set(elements)
 
 

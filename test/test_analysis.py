@@ -1,10 +1,12 @@
 # Run these tests with nose
+from nose.tools import with_setup
+import unittest
 import itertools, math
 import numpy.testing as npt
 import numpy as np
 
 import febtools
-from febtools.analysis import jintegral
+from febtools.analysis import *
 from febtools import material
 
 # def test_jintegral():
@@ -21,54 +23,46 @@ soln = febtools.MeshSolution(f, matl_map=m)
 
 x = (1e-3, 0)
 id_crack_tip = soln.find_nearest_node(*x)
-area1 = soln.elem_of_node(id_crack_tip)
-area2 = soln.conn_elem(area1)
-area = area2
+elements, q = jdomain(soln, id_crack_tip, n=2)
+j = jintegral(elements, soln.data['displacement'],
+              q, soln.material_map)
 
-# Nodes on the boundary will have different connectivity
-def node_connectivity(elements, n):
-    connectivity = [0] * n
-    for e in elements:
-        for i in e.inode:
-            connectivity[i] += 1
-    return connectivity
+def set_up_center_crack_2d_iso():
+    f = 'test/j-integral/center-crack-2d-1mm.xplt'
+    y, mu = febtools.material.IsotropicElastic.tolame(1e7, 0.3)
+    mat1 = {'type': 'isotropic elastic',
+            'properties': {'lambda': y,
+                           'mu': mu}}
+    m = {1: mat1}
+    soln = febtools.MeshSolution(f, matl_map=m)
 
-if isinstance(soln.element[0], febtools.element.Quad4):
-    c_interior = 4
-elif isinstance(soln.element[0], febtools.element.Hex8):
-    c_interior = 8
+@with_setup(set_up_center_crack_2d_iso)
+def test_selecct_elems_around_node():
+    id_crack_tip = 1669
+    elements = select_elems_around_node(soln, id_crack_tip, n=2)
+    eid = [e.eid for e in elements].sort()
+    expected = [1533, 1534, 1535, 1536,
+                1585, 1586, 1587, 1588,
+                1637, 1638, 1639, 1640,
+                1689, 1690, 1691, 1692].sort()
+    npt.assert_array_equal(eid, expected)
 
-c_mesh = node_connectivity(soln.element, len(soln.node))
+@with_setup(set_up_center_crack_2d_iso)
+def test_jdomain_q():
+    id_crack_tip = 1669
+    elements, q = jdomain(soln, id_crack_tip, n=2, qtype='plateau')
+    qexpected = [None] * len(soln.node)
+    i_inner = [1615, 1616, 1617, 1668, 1669, 1670,
+               1721, 1722, 1723, 2921]
+    for i in i_inner:
+        qexpected[i] = 1.0
+    i_outer = [1561, 1562, 1563, 1564, 1565, 1614, 1618,
+               1667, 1671, 1720, 1724, 1773, 1774, 1775,
+               1776, 1777, 2920]
+    for i in i_outer:
+        qexpected[i] = 0.0
+    npt.assert_array_equal(q, qexpected)
 
-domain = (soln.element[eid].inode for eid in area2)
-domain = [nid for nid in itertools.chain.from_iterable(domain)] # flatten
-domain = set(domain)
-
-mesh_interior = set([i for i, c in enumerate(c_mesh)
-                     if c == c_interior])
-domain_crack = (domain - mesh_interior).union(set([id_crack_tip]))
-
-c_domain = node_connectivity([soln.element[i] for i in area2],
-                             len(soln.node))
-domain_interior = set([i for i, c in enumerate(c_domain)
-                       if c == c_interior and i != id_crack_tip])
-domain_border = domain - domain_interior - domain_crack
-domain_corners = set([i for i, c in enumerate(c_domain)
-                      if c == 1])
-domain_border = domain_border.union(domain_corners)
-
-# define plateau function
-q = [None] * len(soln.node)
-for i in domain_border:
-    q[i] = 0.0
-for i in domain_crack:
-    q[i] = 1.0
-for i in domain_interior:
-    q[i] = 1.0
-
-domain_e = [soln.element[i] for i in area]
-u = soln.data['displacement']
-j = jintegral(domain_e, u, q, soln.material_map)
 
 def test_jintegral_uniax_center_crack_2d():
     E = 1e7
@@ -108,4 +102,14 @@ def test_jintegral_uniax_center_crack_2d():
     stress = Pavg[1][1]
     K_I = stress * (math.pi * a * 1.0 / math.cos(math.pi * a / W))**0.5
     G = K_I**2.0 / E
-
+    print G
+    id_crack_tip = soln.find_nearest_node(*(1e-3, 0.0, 0.0))
+    print id_crack_tip
+    elements, q = jdomain(soln, id_crack_tip, n=2)
+    J = jintegral(elements, soln.data['displacement'],
+                  q, soln.material_map)
+    print J
+    elements, q = jdomain(soln, id_crack_tip, n=3)
+    J = jintegral(elements, soln.data['displacement'],
+                  q, soln.material_map)
+    print J
