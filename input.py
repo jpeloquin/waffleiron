@@ -28,8 +28,8 @@ def readlog(fpath):
     This function can be used for both node and element data.
 
     """
+    f = open(fpath, 'rU')
     try:
-        f = open(fpath, 'rU')
         allsteps = []
         stepdata = None
         for line in f:
