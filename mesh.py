@@ -103,7 +103,7 @@ class MeshSolution(Mesh):
             elif isinstance(f, XpltReader):
                 self.reader = f
             self.node, self.element = self.reader.mesh()
-            self.data = self.reader.solution(step)
+            self.data = self.reader.stepdata(step)
             self.material_index_xplt = self.reader.material()
             self.material_map = matl_map
 

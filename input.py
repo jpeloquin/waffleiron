@@ -251,8 +251,8 @@ class XpltReader:
                               'material_name': mat_name})
         return matl_index
 
-    def solution(self, step):
-        """Retrieve data for step (1 indexed).
+    def stepdata(self, istep):
+        """Retrieve data for step (0 indexed).
 
         The solution data is returned as a dictionary.  The data names
         (e.g. stress, displacement) are the keys.  These keys are read
@@ -266,10 +266,6 @@ class XpltReader:
         var['domain'] = self._rdict('domain')
         var['surface'] = self._rdict('surface')
         nsteps = len(self.time)
-        if step == -1:
-            istep = nsteps - 1
-        else:
-            istep = step - 1
         this_step = {}
         steploc = self.steploc[istep]
         for k, v in var.iteritems():

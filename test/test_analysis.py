@@ -37,7 +37,7 @@ def set_up_center_crack_2d_iso():
     soln = febtools.MeshSolution(f, matl_map=m)
 
 @with_setup(set_up_center_crack_2d_iso)
-def test_selecct_elems_around_node():
+def test_select_elems_around_node():
     id_crack_tip = 1669
     elements = select_elems_around_node(soln, id_crack_tip, n=2)
     eid = [e.eid for e in elements].sort()
@@ -76,8 +76,8 @@ def test_jintegral_uniax_center_crack_2d():
                                  'uniax-2d-center-crack-1mm.xplt',
                                  step=2,
                                  matl_map=m)
-    a = 1.0 # mm
-    W = 10.0 # mm
+    a = 1.0e-3 # m
+    W = 10.0e-3 # m
     minima = np.array([min(x) for x in zip(*soln.node)])
     maxima = np.array([max(x) for x in zip(*soln.node)])
     ymin = minima[1]
@@ -101,10 +101,10 @@ def test_jintegral_uniax_center_crack_2d():
     Pavg = sum(P) / len(P)
     stress = Pavg[1][1]
     K_I = stress * (math.pi * a * 1.0 / math.cos(math.pi * a / W))**0.5
+#    print 'K = {}'.format(K_I)
     G = K_I**2.0 / E
-    print G
+#    print 'G = {}'.format(G)
     id_crack_tip = soln.find_nearest_node(*(1e-3, 0.0, 0.0))
-    print id_crack_tip
     elements, q = jdomain(soln, id_crack_tip, n=2)
     J = jintegral(elements, soln.data['displacement'],
                   q, soln.material_map)

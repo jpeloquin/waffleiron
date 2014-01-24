@@ -2,18 +2,19 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 
-import febtools as fb
-from febtools import material as mat
+import febtools as feb
+from febtools import material
 
 class IsotropicElasticTest(unittest.TestCase):
     """Tests isotropic elastic material definition.
 
     """
+    
     def W_identity_test(self):
         F = np.eye(3)
         matlprops = {'lambda': 1.0,
                      'mu': 1.0}
-        W_try = mat.IsotropicElastic.w(F, matlprops)
+        W_try = material.IsotropicElastic.w(F, matlprops)
         W_true = 0.0
         npt.assert_approx_equal(W_try, W_true)
 
@@ -25,11 +26,12 @@ class IsotropicElasticTest(unittest.TestCase):
         # file
         youngmod = 1e6
         nu = 0.4
-        y, mu = mat.IsotropicElastic.tolame(youngmod, nu)
+        y, mu = material.IsotropicElastic.tolame(youngmod, nu)
         matlprops = {'lambda': y,
                      'mu': mu}
 
-        elemdata = fb.readlog('test/isotropic_elastic_elem_data.txt')
+        elemdata = feb.readlog('test/fixtures/'
+                              'isotropic_elastic_elem_data.txt')
         Fxx = elemdata[-1]['Fxx'][0]
         Fyy = elemdata[-1]['Fyy'][0]
         Fzz = elemdata[-1]['Fzz'][0]
@@ -51,7 +53,7 @@ class IsotropicElasticTest(unittest.TestCase):
         t_true = np.array([[tx, txy, txz],
                            [txy, ty, tyz],
                            [txz, tyz, tz]])
-        t_try = mat.IsotropicElastic.tstress(F, matlprops)
+        t_try = material.IsotropicElastic.tstress(F, matlprops)
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
         
         
