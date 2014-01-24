@@ -1,0 +1,490 @@
+===========================================================================
+         ________    _________   _________     __     _________            
+        |        |\ |        |\ |        |\   |  |\  /         \\          
+        |    ____|| |    ____|| |    __  ||   |__|| |    ___    ||         
+        |   |\___\| |   |\___\| |   |\_| ||    \_\| |   //  \   ||         
+        |   ||      |   ||      |   || | ||    __   |  ||    |  ||         
+        |   ||__    |   ||__    |   ||_| ||   |  |\ |  ||    |  ||         
+        |       |\  |       |\  |         \\  |  || |  ||    |  ||         
+        |    ___||  |    ___||  |    ___   || |  || |  ||    |  ||         
+        |   |\__\|  |   |\__\|  |   |\__|  || |  || |  ||    |  ||         
+        |   ||      |   ||      |   ||  |  || |  || |  ||    |  ||         
+        |   ||      |   ||___   |   ||__|  || |  || |   \\__/   ||         
+        |   ||      |        |\ |          || |  || |           ||         
+        |___||      |________|| |__________|| |__||  \_________//          
+                                                                           
+      F I N I T E   E L E M E N T S   F O R   B I O M E C H A N I C S      
+                                                                           
+                 --- v e r s i o n - 1 . 7 . 1 . 4800 ---                 
+                                                                           
+                                                                           
+  Musculoskeletal Research Laboratory                                      
+  University of Utah                                                       
+  http://mrl.sci.utah.edu                                                  
+                                                                           
+  copyright (c) 2006-2013 - All rights reserved                            
+                                                                              
+ This is the NON-COMMERCIAL version of FEBio or the commercial license        
+ key file could not be found. If you have a key file make sure it is          
+ placed in the same directory as the executable. This version may only        
+ be used for non-commercial purposes as described in the license agreement.   
+ The functionality of this version may be limited compared to the commercial  
+ version. If you wish to obtain a valid commercial license file, please       
+ contact the developers.                                                      
+                                                                           
+===========================================================================
+
+
+
+
+ FILES USED
+===========================================================================
+	Input file : isotropic_elastic.feb
+	Plot file  : isotropic_elastic.xplt
+	Log file   : isotropic_elastic.log
+
+
+ CONTROL DATA
+===========================================================================
+Module type ...................................... : 0
+	   eq. 0: solid mechanics
+	   eq. 1: solid-fluid mixture
+	   eq. 2: heat transfer
+	   eq. 3: solid-fluid-solute(s) mixture
+	Analysis type .................................. : 0
+	   eq. 0: quasi-static
+	   eq. 1: dynamic
+	   eq. 2: steady-state
+	Plane strain mode .............................. : no
+	Number of materials ............................ : 1
+	Number of nodes ................................ : 8
+	Number of solid elements ....................... : 1
+	Number of shell elements ....................... : 0
+	Number of truss elements ....................... : 0
+	Number of timesteps ............................ : 10
+	Time step size ................................. : 0.1
+	Auto time stepper activated .................... : yes
+	  Optimal nr of iterations ..................... : 10
+	  Minimum allowable step size .................. : 0.01
+	  Maximum allowable step size .................. : 0.1
+	Number of loadcurves ........................... : 3
+	Number of displacement boundary conditions ..... : 12
+	Number of concentrated nodal forces ............ : 0
+	Max nr of stiffness reformations ............... : 15
+	per time steps
+	Max nr of Quasi-Newton iterations .............. : 10
+	between stiffness matrix reformations
+	Displacement convergence tolerance ............. : 0.001
+	Energy convergence tolerance ................... : 0.01
+	Residual convergence tolerance ................. : 0
+	Minimal residual value ......................... : 1e-020
+	Linesearch convergence tolerance ............... : 0.9
+	Minimum line search size ....................... : 0.01
+	Maximum number of line search iterations ....... : 5
+	Max condition number ........................... : 100000
+
+
+ OUTPUT DATA
+===========================================================================
+	plot level ................................ : major iterations
+	plotfile format ........................... : FEBIO
+		Nodal Variables:
+			displacement         (type = vec3f, format = NODE)
+		Domain Variables:
+			stress               (type = mat3fs, format = ITEM)
+
+
+ MATERIAL DATA
+===========================================================================
+  1 - isotropic elastic (Material1)
+	density ........................................... : 1
+	E ................................................. : 1e+006
+	v ................................................. : 0.4
+
+
+ LOADCURVE DATA
+===========================================================================
+  1
+         0         0
+         1         1
+---------------------------------------------------------------------------
+  2
+         0         0
+         1         1
+---------------------------------------------------------------------------
+  3
+         0         0
+         1         1
+
+
+ LINEAR SOLVER DATA
+===========================================================================
+	Solver type ............................... : Pardiso
+
+
+===== reforming stiffness matrix:
+	Nr of equations ........................... : 12
+	Nr of nonzeroes in stiffness matrix ....... : 78
+
+
+===== beginning time step 1 : 0.1 =====
+ 1
+ Nonlinear solution status: time= 0.1
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
+	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
+	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+
+convergence summary
+    number of iterations   : 1
+    number of reformations : 1
+
+
+------- converged at time : 0.1
+
+
+Data Record #1
+===========================================================================
+Step = 1
+Time = 0.1
+Data = x;y;z;ux;uy;uz
+File = isotropic_elastic_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 1
+Time = 0.1
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = isotropic_elastic_elem_data.txt
+
+===== beginning time step 2 : 0.2 =====
+ 1
+ Nonlinear solution status: time= 0.2
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
+	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
+	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+
+convergence summary
+    number of iterations   : 1
+    number of reformations : 1
+
+
+------- converged at time : 0.2
+
+
+Data Record #1
+===========================================================================
+Step = 2
+Time = 0.2
+Data = x;y;z;ux;uy;uz
+File = isotropic_elastic_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 2
+Time = 0.2
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = isotropic_elastic_elem_data.txt
+
+===== beginning time step 3 : 0.3 =====
+ 1
+ Nonlinear solution status: time= 0.3
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
+	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
+	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+
+convergence summary
+    number of iterations   : 1
+    number of reformations : 1
+
+
+------- converged at time : 0.3
+
+
+Data Record #1
+===========================================================================
+Step = 3
+Time = 0.3
+Data = x;y;z;ux;uy;uz
+File = isotropic_elastic_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 3
+Time = 0.3
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = isotropic_elastic_elem_data.txt
+
+===== beginning time step 4 : 0.4 =====
+ 1
+ Nonlinear solution status: time= 0.4
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
+	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
+	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+
+convergence summary
+    number of iterations   : 1
+    number of reformations : 1
+
+
+------- converged at time : 0.4
+
+
+Data Record #1
+===========================================================================
+Step = 4
+Time = 0.4
+Data = x;y;z;ux;uy;uz
+File = isotropic_elastic_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 4
+Time = 0.4
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = isotropic_elastic_elem_data.txt
+
+===== beginning time step 5 : 0.5 =====
+ 1
+ Nonlinear solution status: time= 0.5
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
+	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
+	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+
+convergence summary
+    number of iterations   : 1
+    number of reformations : 1
+
+
+------- converged at time : 0.5
+
+
+Data Record #1
+===========================================================================
+Step = 5
+Time = 0.5
+Data = x;y;z;ux;uy;uz
+File = isotropic_elastic_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 5
+Time = 0.5
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = isotropic_elastic_elem_data.txt
+
+===== beginning time step 6 : 0.6 =====
+ 1
+ Nonlinear solution status: time= 0.6
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
+	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
+	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+
+convergence summary
+    number of iterations   : 1
+    number of reformations : 1
+
+
+------- converged at time : 0.6
+
+
+Data Record #1
+===========================================================================
+Step = 6
+Time = 0.6
+Data = x;y;z;ux;uy;uz
+File = isotropic_elastic_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 6
+Time = 0.6
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = isotropic_elastic_elem_data.txt
+
+===== beginning time step 7 : 0.7 =====
+ 1
+ Nonlinear solution status: time= 0.7
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
+	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
+	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+
+convergence summary
+    number of iterations   : 1
+    number of reformations : 1
+
+
+------- converged at time : 0.7
+
+
+Data Record #1
+===========================================================================
+Step = 7
+Time = 0.7
+Data = x;y;z;ux;uy;uz
+File = isotropic_elastic_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 7
+Time = 0.7
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = isotropic_elastic_elem_data.txt
+
+===== beginning time step 8 : 0.8 =====
+ 1
+ Nonlinear solution status: time= 0.8
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
+	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
+	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+
+convergence summary
+    number of iterations   : 1
+    number of reformations : 1
+
+
+------- converged at time : 0.8
+
+
+Data Record #1
+===========================================================================
+Step = 8
+Time = 0.8
+Data = x;y;z;ux;uy;uz
+File = isotropic_elastic_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 8
+Time = 0.8
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = isotropic_elastic_elem_data.txt
+
+===== beginning time step 9 : 0.9 =====
+ 1
+ Nonlinear solution status: time= 0.9
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
+	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
+	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+
+convergence summary
+    number of iterations   : 1
+    number of reformations : 1
+
+
+------- converged at time : 0.9
+
+
+Data Record #1
+===========================================================================
+Step = 9
+Time = 0.9
+Data = x;y;z;ux;uy;uz
+File = isotropic_elastic_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 9
+Time = 0.9
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = isotropic_elastic_elem_data.txt
+
+===== beginning time step 10 : 1 =====
+ 1
+ Nonlinear solution status: time= 1
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
+	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
+	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+
+convergence summary
+    number of iterations   : 1
+    number of reformations : 1
+
+
+------- converged at time : 1
+
+
+Data Record #1
+===========================================================================
+Step = 10
+Time = 1
+Data = x;y;z;ux;uy;uz
+File = isotropic_elastic_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 10
+Time = 1
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = isotropic_elastic_elem_data.txt
+
+
+N O N L I N E A R   I T E R A T I O N   I N F O R M A T I O N
+
+	Number of time steps completed .................... : 10
+
+	Total number of equilibrium iterations ............ : 10
+
+	Average number of equilibrium iterations .......... : 1
+
+	Total number of right hand evaluations ............ : 20
+
+	Total number of stiffness reformations ............ : 10
+
+	Time in solver: 0:00:00
+
+
+ Elapsed time : 0:00:00
+
+
+ N O R M A L   T E R M I N A T I O N
+
