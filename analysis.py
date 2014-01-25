@@ -86,14 +86,13 @@ def jintegral(elements, u, q, material_map):
         matlprops = material_map[e.matl_id]['properties']
         F = e.f(r, u)
         p = matl.pstress(F, matlprops) # 1st Piola-Kirchoff stress
-        dudx = F - np.eye(3)
+        dudx = e.dinterp(r, u)
         dudx1 = dudx[:,0]
         w = matl.w(F, matlprops) # strain energy
-
-        dqdx = e.dinterp(r, q)
-        # w * dqdx[0]
-
-        return 1
+        dqdx = e.dinterp(r, q) # 1 x 2 or 1 x 3
+        return -w * dqdx[0] + sum(p[i][j] * dudx[i,0] * dqdx[j] 
+                                 for i in xrange(len(r))
+                                 for j in xrange(len(r)))
     j = 0
     for e in elements:
         j += e.integrate(integrand, u, q, material_map)

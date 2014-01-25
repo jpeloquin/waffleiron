@@ -26,6 +26,12 @@ class Element:
     ----------
     eid := element id
 
+    Notes
+    -----
+    When using 2d elements, it is highly recommended that they
+    coincide with the xy plane.  The current implementation of the
+    methods cannot do anything useful with the z dimension.
+
     """
     matl_id = 0 # material integer code (FEBio codes are 1-indexed)
     matl = None # material definition class
@@ -52,14 +58,8 @@ class Element:
         u := list of displacements for all the nodes in the mesh.
         
         """
-        u_node = [u[i] for i in self.inode]
-        u_node = np.array(u_node).T
-        j = self.j(r)
-        jinv = np.linalg.inv(j)
-        ddr = self.dN(*r)
-        ddr = np.vstack(ddr)
-        dudr = np.dot(u_node, ddr)[0:len(r),]
-        dudx = np.dot(jinv, dudr)
+        u = [v[:len(r)] for v in u]
+        dudx = self.dinterp(r, u)
         if len(r) == 2:
             # pad to 3-dimensions
             dudx = np.pad(dudx, ((0,1), (0,1)), mode='constant')
@@ -72,9 +72,8 @@ class Element:
         """
         ddr = self.dN(*r)
         ddr = np.vstack(ddr)
-        x_node = [x[0:len(r)] for x in self.xnode]
-        x_node = np.array(x_node).T  # i := i in x_i
-                                                   # j := node index
+        x_node = [x[:len(r)] for x in self.xnode]
+        x_node = np.array(x_node).T  # i over x, j over nodes
         J = np.dot(x_node, ddr)
         return J
 
@@ -114,12 +113,12 @@ class Element:
         values.
 
         """
-        v_node = [values[i] for i in self.inode]
+        v_node = np.array([values[i] for i in self.inode]).T
         j = self.j(r)
         jinv = np.linalg.inv(j)
-        ddr = self.dN(*r)
-        dvdr = [np.outer(d, v) for d, v in zip(ddr, v_node)]
-        dvdx = sum(np.dot(jinv, d) for d in dvdr)
+        ddr = np.vstack(self.dN(*r))
+        dvdr = np.dot(v_node, ddr)
+        dvdx = np.dot(jinv, dvdr.T)
         return dvdx.T
 
 

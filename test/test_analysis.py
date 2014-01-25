@@ -101,15 +101,9 @@ def test_jintegral_uniax_center_crack_2d():
     Pavg = sum(P) / len(P)
     stress = Pavg[1][1]
     K_I = stress * (math.pi * a * 1.0 / math.cos(math.pi * a / W))**0.5
-#    print 'K = {}'.format(K_I)
     G = K_I**2.0 / E
-#    print 'G = {}'.format(G)
     id_crack_tip = soln.find_nearest_node(*(1e-3, 0.0, 0.0))
-    elements, q = jdomain(soln, id_crack_tip, n=2)
-    J = jintegral(elements, soln.data['displacement'],
-                  q, soln.material_map)
-    print J
     elements, q = jdomain(soln, id_crack_tip, n=3)
     J = jintegral(elements, soln.data['displacement'],
                   q, soln.material_map)
-    print J
+    npt.assert_allclose(J, G, rtol=0.01)
