@@ -30,9 +30,9 @@ class Mesh:
             raise Exception("Root node is not 'febio_spec': '" +
                             fpath + "' is not a valid .feb file.")
         self.node = [tuple([float(a) for a in b.text.split(",")])
-                      for b in root.findall("./Geometry/Nodes/*")]
-        self.element = [tuple([int(a) for a in b.text.split(",")])
-                         for b in root.findall("./Geometry/Elements/*")]
+                     for b in root.findall("./Geometry/Nodes/*")]
+        self.element = [tuple([int(a) - 1 for a in b.text.split(",")])
+                        for b in root.findall("./Geometry/Elements/*")]
 
     def elemcentroid(self):
         """List of element centroids (reference coordinates)."""
