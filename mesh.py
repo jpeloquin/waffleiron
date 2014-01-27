@@ -89,6 +89,17 @@ class Mesh:
             elements = elements + list(self.elem_with_node(idx))
         return set(elements)
 
+    def _build_node_graph(self):
+        """Create a node connectivity graph for faster node lookup.
+
+        The connectivity graph is a list of lists.
+        `node_graph[i][j]` returns the jth node connected to node
+        i.
+
+        """
+        for nid in self.node:
+            pass
+
 
 class MeshSolution(Mesh):
     """Analysis of a solution step"""
