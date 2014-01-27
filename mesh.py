@@ -2,6 +2,8 @@ import numpy as np
 import febtools as feb
 import febtools.element
 from febtools import XpltReader
+from febtools.element import elem_obj
+import xml.etree.ElementTree as ET
 
 class Mesh:
     """Stores a mesh geometry."""
@@ -18,10 +20,12 @@ class Mesh:
             self.node = node
 
         # Element list
-        if element is None:
-            self.element = []
-        else:
-            self.element = element
+        if element and node:
+            if element[0] is febtools.element.Element:
+                self.element = element
+            else:
+                self.element = [elem_obj(nid, node, eid=i)
+                                for i, nid in enumerate(element)]
 
     def readfeb(self, f):
         """Read .feb file geometry"""
@@ -31,8 +35,11 @@ class Mesh:
                             fpath + "' is not a valid .feb file.")
         self.node = [tuple([float(a) for a in b.text.split(",")])
                      for b in root.findall("./Geometry/Nodes/*")]
-        self.element = [tuple([int(a) - 1 for a in b.text.split(",")])
-                        for b in root.findall("./Geometry/Elements/*")]
+        element = [tuple([int(a) - 1 for a in b.text.split(",")])
+                   for b in root.findall("./Geometry/Elements/*")]
+        element = [elem_obj(nid, self.node, eid=i)
+                   for i, nid in enumerate(element)]
+        self.element = element
 
     def elemcentroid(self):
         """List of element centroids (reference coordinates)."""
@@ -71,12 +78,12 @@ class Mesh:
         elements = [self.element[i] for i in eid]
         return set(elements)
 
-    def conn_elem(self, idx):
+    def conn_elem(self, elements):
         """Find elements connected to elements.
 
         """
-        idx = list(idx)
-        nodes = [jj for ii in idx for jj in self.element[ii].inode]
+        nodes = set([i for e in elements
+                     for i in e.inode])
         elements = []
         for idx in nodes:
             elements = elements + list(self.elem_with_node(idx))

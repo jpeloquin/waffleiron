@@ -52,19 +52,6 @@ def readlog(fpath):
     finally:
         f.close()
     return allsteps
-    
-
-def readfeb(fpath):
-    tree = ET.parse(fpath)
-    root = tree.getroot()
-    if root.tag != "febio_spec":
-        raise Exception("Root node is not 'febio_spec': "
-                        "not a valid .xplt file.")
-    nodes = [tuple([float(a) for a in b.text.split(",")])
-             for b in root.findall("./Geometry/Nodes/*")]
-    elements = [tuple([int(a) for a in b.text.split(",")])
-                for b in root.findall("./Geometry/Elements/*")]
-    return nodes, elements
 
 
 class XpltReader:

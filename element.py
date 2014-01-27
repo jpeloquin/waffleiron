@@ -18,6 +18,23 @@ def f(r, X, u):
     f = np.dot(Jinv, du) + np.eye(3)
     return f
 
+def elem_obj(element, nodes, eid=None):
+    """Returns an Element object from node and element tuples.
+
+    element := the indices of this element's nodes
+    nodes := the global list of node coordinates
+
+    """
+    n = len(element)
+    if n == 4:
+        etype = Quad4
+    elif n == 8:
+        etype = Hex8
+    else:
+        s = "{} node element not recognized".format(n)
+        raise Exception(s)
+    return etype(element, nodes, elem_id=eid)
+
 
 class Element:
     """Data and metadata for an element.
