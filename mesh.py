@@ -41,7 +41,53 @@ class Mesh:
                    for i, nid in enumerate(element)]
         self.element = element
 
+    def clean_nodes(self):
+        """Remove any nodes that are not part of an element.
+
+        """
+        refcount = self._node_connectivity(self)
+        for i, c in enumerate(refcount):
+            if c == 0:
+                self.remove_node(i)
+
+    def remove_node(self, nid_remove):
+        """Remove node i from the mesh.
+        
+        The indexing of the elements into the node list is updated to
+        account for the removal of the node.  An exception is thrown
+        if an element refers to the removed node, since removing the
+        node would then invalidate the mesh.  Remove or modify the
+        element first.
+
+        Remember that the nodes are indexed starting with 0.
+
+        """
+        for eid, e in enumerate(self.element):
+            for i, nid in enumerate(e.inode):
+                if nid == nid_remove:
+                    msg = ('An element still refers to node {}. '
+                           'Remove or modify the element before '
+                           'deleting node {}.'.format(nid_remove))
+                    raise Exception(msg)
+                elif nid > nid_remove:
+                    # TODO: decrement by 1
+                    # actually, don't decrement until the full changeset is calculated
+                    self.element[eid].inode[i] -= 1
+                    pass
+
+    def _node_connectivity(self):
+
+        """Count how many elements each node belongs to.
+
+        """
+        refcount = [0] * len(self.node)
+        for e in self.element:
+            for i in e.inode:
+                refcount[i] += 1
+        return refcount
+
     def elemcentroid(self):
+
         """List of element centroids (reference coordinates)."""
         centroid = []
         for i in range(len(self.element)):
