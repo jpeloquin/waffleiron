@@ -20,7 +20,7 @@ class Mesh:
             self.node = node
 
         # Element list
-        if element and node:
+        if element is not None and node is not None:
             if element[0] is febtools.element.Element:
                 self.element = element
             else:
