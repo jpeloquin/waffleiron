@@ -57,10 +57,11 @@ class Element:
     inode = [] # list of node indices
     xnode_mesh = [] # list of node coordinates for whole mesh
 
-    def __init__(self, inode, xnode, elem_id=None, matl_id=None):
+    def __init__(self, inode, xnode_mesh,
+                 elem_id=None, matl_id=None):
         self.eid = elem_id
         self.inode = inode
-        self.xnode_mesh = xnode
+        self.xnode_mesh = xnode_mesh
         self.matl_id = matl_id
 
     @property

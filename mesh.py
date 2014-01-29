@@ -93,7 +93,7 @@ class Mesh:
         """Remove any nodes that are not part of an element.
 
         """
-        refcount = self._node_connectivity()
+        refcount = self.node_connectivity()
         for i in reversed(xrange(len(self.node))):
             if refcount[i] == 0:
                 self.remove_node(i)
@@ -124,7 +124,7 @@ class Mesh:
         self.node = [x for i, x in enumerate(self.node)
                      if i != nid_remove]
 
-    def _node_connectivity(self):
+    def node_connectivity(self):
 
         """Count how many elements each node belongs to.
 
