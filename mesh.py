@@ -62,18 +62,25 @@ class Mesh:
         Remember that the nodes are indexed starting with 0.
 
         """
+        # First, calculate how many positions each nodes should be
+        # decremented
+        changes = [] * len(self.element)
         for eid, e in enumerate(self.element):
             for i, nid in enumerate(e.inode):
+                changes[eid] = [0] * len(e.inode)
                 if nid == nid_remove:
                     msg = ('An element still refers to node {}. '
                            'Remove or modify the element before '
                            'deleting node {}.'.format(nid_remove))
                     raise Exception(msg)
                 elif nid > nid_remove:
-                    # TODO: decrement by 1
-                    # actually, don't decrement until the full changeset is calculated
+                    changes[eid][i] -= 1
                     self.element[eid].inode[i] -= 1
-                    pass
+        # If no exceptions were thrown, make the changes
+        del self.node[nid_remove]
+        for eid in xrange(len(self.element)):
+            for i in xrange(len(self.element[eid].inode)):
+                self.element[eid].inode[i] += changes[eid][i]
 
     def _node_connectivity(self):
 
