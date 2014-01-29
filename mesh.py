@@ -3,7 +3,8 @@ import febtools as feb
 import febtools.element
 from febtools import XpltReader
 from febtools.element import elem_obj
-import xml.etree.ElementTree as ET
+# import xml.etree.ElementTree as ET
+from lxml import etree as ET
 
 class Mesh:
     """Stores a mesh geometry."""
@@ -28,7 +29,9 @@ class Mesh:
                                 for i, nid in enumerate(element)]
 
     def readfeb(self, f):
-        """Read .feb file geometry"""
+        """Read a mesh from an .feb file.
+
+        """
         root = ET.parse(f).getroot()
         if root.tag != "febio_spec":
             raise Exception("Root node is not 'febio_spec': '" +
@@ -41,13 +44,58 @@ class Mesh:
                    for i, nid in enumerate(element)]
         self.element = element
 
+    def writefeb(self, fpath):
+        """Write mesh to .feb file.
+
+        """
+        root = feb.output.feb_skeleton()
+        Geometry = root.find('Geometry')
+        Nodes = root.find('Geometry/Nodes')
+        Elements = root.find('Geometry/Elements')
+
+        formatted = lambda n: "{:e}".format(n)
+
+        # write nodes
+        for i, x in enumerate(self.node):
+            feb_nid = i + 1 # 1-indexed
+            e = ET.SubElement(Nodes, 'node', id="{}".format(feb_nid))
+            e.text = ",".join("{:e}".format(n) for n in x)
+            Nodes.append(e)
+        
+        # write elements
+        for i, elem in enumerate(self.element):
+            label = elem.__class__.__name__.lower()
+            feb_eid = i + 1 # 1-indexed
+            matl_id = elem.matl_id
+            if matl_id is None:
+                matl_id = 1
+            e = ET.SubElement(Elements, label,
+                              id=str(feb_eid),
+                              mat=str(matl_id))
+            # remember, 1-indexed
+            e.text = ",".join("{:d}".format(n + 1) for n in elem.inode)
+
+            # write thicknesses for shells
+            if label == 'tri3' or label == 'quad4':
+                ElementData = root.find('Geometry/ElementData')
+                if ElementData is None:
+                    ElementData = ET.SubElement(Geometry, 'ElementData')
+            e = ET.SubElement(ElementData, 'element', id=str(feb_eid))
+            t = ET.SubElement(e, 'thickness')
+            t.text = '0.001, 0.001, 0.001'
+
+        tree = ET.ElementTree(root)
+        with open(fpath, 'w') as f:
+            tree.write(f, pretty_print=True, xml_declaration=True,
+                       encoding='us-ascii')
+
     def clean_nodes(self):
         """Remove any nodes that are not part of an element.
 
         """
-        refcount = self._node_connectivity(self)
-        for i, c in enumerate(refcount):
-            if c == 0:
+        refcount = self._node_connectivity()
+        for i in reversed(xrange(len(self.node))):
+            if refcount[i] == 0:
                 self.remove_node(i)
 
     def remove_node(self, nid_remove):
@@ -62,25 +110,19 @@ class Mesh:
         Remember that the nodes are indexed starting with 0.
 
         """
-        # First, calculate how many positions each nodes should be
-        # decremented
-        changes = [] * len(self.element)
-        for eid, e in enumerate(self.element):
-            for i, nid in enumerate(e.inode):
-                changes[eid] = [0] * len(e.inode)
-                if nid == nid_remove:
-                    msg = ('An element still refers to node {}. '
-                           'Remove or modify the element before '
-                           'deleting node {}.'.format(nid_remove))
-                    raise Exception(msg)
-                elif nid > nid_remove:
-                    changes[eid][i] -= 1
-                    self.element[eid].inode[i] -= 1
-        # If no exceptions were thrown, make the changes
-        del self.node[nid_remove]
-        for eid in xrange(len(self.element)):
-            for i in xrange(len(self.element[eid].inode)):
-                self.element[eid].inode[i] += changes[eid][i]
+        def nodemap(i):
+            if i < nid_remove:
+                return i
+            elif i > nid_remove:
+                return i - 1
+            else:
+                return None
+        removal = lambda e: [nodemap(i) for i in e]
+        elems = [removal(e.inode) for e in self.element]
+        for i, inode in enumerate(elems):
+            self.element[i].inode = inode
+        self.node = [x for i, x in enumerate(self.node)
+                     if i != nid_remove]
 
     def _node_connectivity(self):
 

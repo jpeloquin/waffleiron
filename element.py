@@ -26,8 +26,10 @@ def elem_obj(element, nodes, eid=None):
 
     """
     n = len(element)
-    if n == 4:
+    if n == 4 and (len(nodes[0] == 2) or all(x[2] == 0.0 for x in nodes)):
         etype = Quad4
+    if n == 3:
+        etype = Tri3
     elif n == 8:
         etype = Hex8
     else:
@@ -137,6 +139,40 @@ class Element:
         dvdr = np.dot(v_node, ddr)
         dvdx = np.dot(jinv, dvdr.T)
         return dvdx.T
+
+
+class Tri3(Element):
+    """Functions for tri3 elements.
+
+    """
+    n = 3
+
+    @staticmethod
+    def N(r, s):
+        """Shape functions.
+
+        """
+        n = [0.0] * 3
+        n[0] = 1.0 - r - s
+        n[1] = r
+        n[2] = s
+        return n
+
+    @staticmethod
+    def dN(r, s):
+        """Shape function 1st derivatives.
+
+        """
+        dn = [np.zeros(2) for i in xrange(3)]
+        dn[0][0] = -s
+        dn[1][0] = 1.0
+        dn[2][0] = 0.0
+
+        dn[0][1] = -r
+        dn[1][1] = 0.0
+        dn[2][1] = 1.0
+
+        return dn
 
 
 class Hex8(Element):
