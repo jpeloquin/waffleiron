@@ -26,10 +26,11 @@ def elem_obj(element, nodes, eid=None):
 
     """
     n = len(element)
-    if n == 4 and (len(nodes[0] == 2) or all(x[2] == 0.0 for x in nodes)):
-        etype = Quad4
     if n == 3:
         etype = Tri3
+    elif n == 4 \
+       and (len(nodes[0]) == 2 or all([x[2] == 0.0 for x in nodes])):
+        etype = Quad4
     elif n == 8:
         etype = Hex8
     else:
