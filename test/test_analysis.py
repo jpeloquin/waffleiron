@@ -14,7 +14,7 @@ from febtools import material
 
 """
 f = 'test/j-integral/center-crack-2d-1mm.xplt'
-y, mu = febtools.material.IsotropicElastic.tolame(1e7, 0.3)
+y, mu = febtools.material.tolame(1e7, 0.3)
 mat1 = {'type': 'isotropic elastic',
         'properties': {'lambda': y,
                        'mu': mu}}
@@ -29,7 +29,7 @@ j = jintegral(elements, soln.data['displacement'],
 
 def set_up_center_crack_2d_iso():
     f = 'test/j-integral/center-crack-2d-1mm.xplt'
-    y, mu = febtools.material.IsotropicElastic.tolame(1e7, 0.3)
+    y, mu = febtools.material.tolame(1e7, 0.3)
     mat1 = {'type': 'isotropic elastic',
             'properties': {'lambda': y,
                            'mu': mu}}
@@ -67,7 +67,7 @@ def test_jdomain_q():
 def test_jintegral_uniax_center_crack_2d():
     E = 1e7
     nu = 0.3
-    y, mu = febtools.material.IsotropicElastic.tolame(E, nu)
+    y, mu = febtools.material.tolame(E, nu)
     mat1 = {'type': 'isotropic elastic',
         'properties': {'lambda': y,
                        'mu': mu}}

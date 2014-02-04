@@ -1,7 +1,8 @@
 # coding=utf-8
 
 import numpy as np
-from numpy import dot, trace, det, eye
+from numpy import dot, trace, eye
+from numpy.linalg import det
 from math import log, exp
 
 def getclass(matname):
@@ -14,6 +15,22 @@ def getclass(matname):
     """
     d = {'isotropic elastic': IsotropicElastic}
     return d[matname]
+
+def tolame(E, v):
+    """Convert Young's modulus & Poisson ratio to Lamé parameters.
+
+    """
+    y = v * E / ((1.0 + v) * (1.0 - 2.0 * v))
+    mu = E / (2.0 * (1.0 + v))
+    return y, mu
+
+def fromlame(y, u):
+    """Convert Lamé parameters to modulus & Poisson's ratio.
+
+    """
+    E = u / (y + u) * (2.0 * u + 3.0 * y)
+    v = 0.5 * y / (y + u)
+    return E, v
 
 class HolmesMow:
     """Holmes-Mow coupled hyperelastic material.
@@ -42,8 +59,14 @@ class HolmesMow:
         """Cauchy stress tensor.
 
         """
+        y = props['lambda']
+        mu = props['mu']
+        b = props['beta']
+
         J = det(F)
         B = dot(F, F.T) # left cauchy-green
+        i1 = np.trace(B)
+        i2 = 0.5 * (i1**2.0 - trace(dot(B, B)))
         Q = b / (y + 2.0 * mu) * ((2.0 * mu - y) * (i1 - 3.0)
                                   + y * (i2 - 3.0)
                                   - (y + 2.0*mu) * log(J**2.0))
@@ -52,27 +75,20 @@ class HolmesMow:
                                         - (y + 2.0*mu) * eye(3))
         return t
 
+    @classmethod
+    def pstress(cls, F, props):
+        """1st Piola-Kirchoff stress.
+
+        """
+        t = cls.tstress(F, props)
+        p = det(F) * dot(inv(F), t)
+        return p
+
+
 class IsotropicElastic:
     """Isotropic elastic material definition.
 
     """
-    @staticmethod
-    def tolame(E, v):
-        """Convert Young's modulus & Poisson ratio to Lamé parameters.
-
-        """
-        y = v * E / ((1.0 + v) * (1.0 - 2.0 * v))
-        mu = E / (2.0 * (1.0 + v))
-        return y, mu
-
-    @staticmethod
-    def fromlame(y, u):
-        """Convert Lamé parameters to modulus & Poisson's ratio.
-
-        """
-        E = u / (y + u) * (2.0 * u + 3.0 * y)
-        v = 0.5 * y / (y + u)
-        return E, v
 
     @staticmethod
     def w(F, props):

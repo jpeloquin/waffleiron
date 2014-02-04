@@ -17,7 +17,7 @@ class IsotropicElasticTest(unittest.TestCase):
                               'isotropic_elastic_elem_data.txt')
         youngmod = 1e6
         nu = 0.4
-        y, mu = material.IsotropicElastic.tolame(youngmod, nu)
+        y, mu = material.tolame(youngmod, nu)
         matlprops = {'lambda': y,
                      'mu': mu}
         Fxx = elemdata[-1]['Fxx'][0]
@@ -35,6 +35,11 @@ class IsotropicElasticTest(unittest.TestCase):
         self.elemdata = elemdata
         self.matlprops = matlprops
         self.F = F
+
+    def tearDown(self):
+        del self.elemdata
+        del self.matlprops
+        del self.F
 
     def w_identity_test(self):
         F = np.eye(3)
@@ -54,7 +59,7 @@ class IsotropicElasticTest(unittest.TestCase):
         W_true = 3610887.5 # calculated by hand
         npt.assert_approx_equal(W_try, W_true)
 
-    def s_test(self):
+    def sstress_test(self):
         tx = self.elemdata[-1]['sx'][0]
         ty = self.elemdata[-1]['sy'][0]
         tz = self.elemdata[-1]['sz'][0]
@@ -89,5 +94,29 @@ class IsotropicElasticTest(unittest.TestCase):
         t_try = material.IsotropicElastic.tstress(F, self.matlprops)
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
         
-        
-    
+
+class HolmesMowTestCase(unittest.TestCase):
+    """Tests Holmes Mow material definition.
+
+    """
+
+    def setUp(self):
+        self.soln = feb.MeshSolution('test/fixtures/holmes_mow.xplt')
+        E = 75800
+        v = 0.2205
+        beta = 0.9438
+        y, mu = feb.material.tolame(E, v)
+        self.matlprops = {'lambda': y,
+                     'mu': mu,
+                     'beta': beta}
+
+    def tearDown(self):
+        del self.soln
+        del self.matlprops
+
+    def tstress_test(self):
+        F = self.soln.element[0].f((0, 0, 0),
+                                   self.soln.data['displacement'])
+        t_true = self.soln.data['stress'][0]
+        t_try = material.HolmesMow.tstress(F, self.matlprops)
+        npt.assert_allclose(t_try, t_true, rtol=1e-5)
