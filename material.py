@@ -1,6 +1,8 @@
 # coding=utf-8
 
 import numpy as np
+from numpy import dot, trace, det, eye
+from math import log, exp
 
 def getclass(matname):
     """Return reference to a material's class from its name.
@@ -12,6 +14,43 @@ def getclass(matname):
     """
     d = {'isotropic elastic': IsotropicElastic}
     return d[matname]
+
+class HolmesMow:
+    """Holmes-Mow coupled hyperelastic material.
+
+    See page 73 of the FEBio theory manual, version 1.8.
+
+    """
+    @staticmethod
+    def w(F, props):
+        b = props['beta']
+        y = props['lambda']
+        u = props['mu']
+        C = np.dot(F.T, F)
+        i1 = np.trace(C)
+        i2 = 0.5 * (i1**2.0 - trace(dot(C, C)))
+        J = np.det(F)
+        Q = b / (y + 2.0 * mu) * ((2.0 * mu - y) * (i1 - 3.0)
+                                  + y * (i2 - 3.0)
+                                  - (y + 2.0*mu) * log(J**2.0))
+        c = (y + 2.0 * mu) / (2.0 * b)
+        w = 0.5 * c * (exp(Q) - 1.0)
+        return w
+
+    @staticmethod
+    def tstress(F, props):
+        """Cauchy stress tensor.
+
+        """
+        J = det(F)
+        B = dot(F, F.T) # left cauchy-green
+        Q = b / (y + 2.0 * mu) * ((2.0 * mu - y) * (i1 - 3.0)
+                                  + y * (i2 - 3.0)
+                                  - (y + 2.0*mu) * log(J**2.0))
+        t = 1.0 / (2.0 * J) * exp(Q) * ((2.0 * mu + y * (i1 - 1.0)) * B
+                                        - y * dot(B, B)
+                                        - (y + 2.0*mu) * eye(3))
+        return t
 
 class IsotropicElastic:
     """Isotropic elastic material definition.
