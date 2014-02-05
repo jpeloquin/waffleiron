@@ -7,6 +7,53 @@ import numpy.testing as npt
 import febtools as feb
 from febtools import material
 
+
+class ExponentialFiberTest(unittest.TestCase):
+    """Tests exponential fiber material definition.
+
+    Since this material is unstable, it must be tested in a mixture.
+    The test, therefore, is not truly independent.
+
+    """
+    def setUp(self):
+        self.soln = feb.MeshSolution('test/fixtures/'
+                                'mixture_hm_exp.xplt')
+        E = 75800
+        v = 0.2205
+        y, mu = feb.material.tolame(E, v)
+        self.hmprops = {'lambda': y,
+                        'mu': mu,
+                        'beta': 0.9438}
+        self.fiberprops = {'alpha': 65,
+                           'beta': 2,
+                           'ksi': 0.296,
+                           'theta': 90,
+                           'phi': 90}
+
+    def w_test(self):
+        # This is a very weak test; just a sanity check.
+        F = np.array([[1.1, 0.1, 0.0],
+                      [0.2, 0.9, 0.0],
+                      [-0.3, 0.0, 1.5]])
+        matlprops = {'alpha': 65,
+                     'beta': 2,
+                     'ksi': 0.296,
+                     'theta': 90,
+                     'phi': 90}
+        w = material.ExponentialFiber.w(F, matlprops)
+        assert w > 0
+
+    def tstress_test(self):
+        """Check Cauchy stress against FEBio.
+
+        """
+        F = self.soln.element[0].f((0, 0, 0),
+                                   self.soln.data['displacement'])
+        t_true = self.soln.data['stress'][0]
+        t_try = material.ExponentialFiber.tstress(F, self.fiberprops) \
+                + material.HolmesMow.tstress(F, self.hmprops)
+        npt.assert_allclose(t_true, t_try, rtol=1e-5)
+
 class IsotropicElasticTest(unittest.TestCase):
     """Tests isotropic elastic material definition.
 

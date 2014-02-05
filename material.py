@@ -1,9 +1,9 @@
 # coding=utf-8
 
 import numpy as np
-from numpy import dot, trace, eye
+from numpy import dot, trace, eye, outer
 from numpy.linalg import det
-from math import log, exp
+from math import log, exp, sin, cos
 
 def getclass(matname):
     """Return reference to a material's class from its name.
@@ -13,7 +13,9 @@ def getclass(matname):
     file.
 
     """
-    d = {'isotropic elastic': IsotropicElastic}
+    d = {'isotropic elastic': IsotropicElastic,
+         'Holmes-Mow': HolmesMow,
+         'fiber-exp-pow': ExponentialFiber}
     return d[matname]
 
 def tolame(E, v):
@@ -31,6 +33,78 @@ def fromlame(y, u):
     E = u / (y + u) * (2.0 * u + 3.0 * y)
     v = 0.5 * y / (y + u)
     return E, v
+
+
+class ExponentialFiber:
+    """Fiber with exponential power law.
+
+    References
+    ----------
+    FEBio theory manual 1.8, page 78.
+
+    """
+    @staticmethod
+    def w(F, props):
+        """(Deviatoric) strain energy density.
+
+        Input angles in degrees.
+
+        """
+        F = np.array(F)
+        xi = props['ksi']
+        a = props['alpha']
+        b = props['beta']
+        theta = props['theta'] # azimuth; 0° := +x, 90° := +y
+        phi = props['phi'] # zenith; 0° := +z, 90° := x-y plane
+        # deviatoric components
+        J = det(F)
+        Fdev = J**(-1.0/3.0) * F
+        Cdev = dot(Fdev.T, Fdev)
+        # fiber unit vector
+        N = np.array([sin(phi) * cos(theta),
+                      sin(phi) * sin(theta),
+                      cos(phi)])
+        # square of fiber stretch
+        In = dot(N, dot(Cdev, N))
+        w = xi / (a * b) * (exp(a * (In - 1.0)**b) - 1.0)
+        return w
+
+    @staticmethod
+    def tstress(F, props):
+        """(Deviatoric) Cauchy stress tensor.
+
+        """
+        # unpack properties
+        F = np.array(F)
+        xi = props['ksi']
+        a = props['alpha']
+        b = props['beta']
+        theta = props['theta'] # azimuth; 0° := +x, 90° := +y
+        phi = props['phi'] # zenith; 0° := +z, 90° := x-y plane
+
+        def H(x):
+            """Unit step function."""
+            if x > 0.0:
+                return 1.0
+            else:
+                return 0.0
+
+        # Deviatoric components
+        J = det(F)
+        Fdev = J**(-1.0/3.0) * F
+        Cdev = dot(Fdev.T, Fdev)
+        # fiber unit vector
+        N = np.array([sin(phi) * cos(theta),
+                      sin(phi) * sin(theta),
+                      cos(phi)])
+        # (deviatoric) square of fiber stretch
+        In = dot(N, dot(Cdev, N))
+        n = dot(Fdev, N) / In**0.5
+
+        DxIn = xi * (In - 1.0)**(b - 1.0) * exp(a * (In - 1.0)**b)
+        t = 2 / J * H(In - 1.0) * In * DxIn * outer(n, n)
+        return t
+
 
 class HolmesMow:
     """Holmes-Mow coupled hyperelastic material.
