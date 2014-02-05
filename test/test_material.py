@@ -71,9 +71,9 @@ class IsotropicElasticTest(unittest.TestCase):
                            [txz, tyz, tz]])
         Fdet = self.elemdata[-1]['J'][0]
         F = self.F
-        S_true = Fdet * dot(inv(F), dot(t_true, inv(F.T)))
-        S = material.IsotropicElastic.sstress(F, self.matlprops)
-        npt.assert_allclose(S, S_true, rtol=1e-3, atol=1.0)
+        s_true = Fdet * dot(inv(F), dot(t_true, inv(F.T)))
+        s_try = material.IsotropicElastic.sstress(F, self.matlprops)
+        npt.assert_allclose(s_try, s_true, rtol=1e-3, atol=1.0)
 
     def tstress_test(self):
         """Compare calculated stress with that from FEBio's logfile.
