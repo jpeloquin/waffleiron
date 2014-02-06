@@ -114,7 +114,7 @@ class XpltReader:
         1: 'penta6',
         2: 'tet4',
         3: febtools.element.Quad4,
-        4: 'tri3',
+        4: febtools.element.Tri3,
         5: 'truss2'
         }
     tag2item_type = {
