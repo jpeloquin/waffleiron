@@ -28,22 +28,6 @@ class Mesh:
                 self.element = [elem_obj(nid, node, eid=i)
                                 for i, nid in enumerate(element)]
 
-    def readfeb(self, f):
-        """Read a mesh from an .feb file.
-
-        """
-        root = ET.parse(f).getroot()
-        if root.tag != "febio_spec":
-            raise Exception("Root node is not 'febio_spec': '" +
-                            fpath + "' is not a valid .feb file.")
-        self.node = [tuple([float(a) for a in b.text.split(",")])
-                     for b in root.findall("./Geometry/Nodes/*")]
-        element = [tuple([int(a) - 1 for a in b.text.split(",")])
-                   for b in root.findall("./Geometry/Elements/*")]
-        element = [elem_obj(nid, self.node, eid=i)
-                   for i, nid in enumerate(element)]
-        self.element = element
-
     def writefeb(self, fpath):
         """Write mesh to .feb file.
 
@@ -199,14 +183,13 @@ class Mesh:
 class MeshSolution(Mesh):
     """Analysis of a solution step"""
 
-    node = []
-    element = []
+    nodes = []
+    elements = []
+    materials = {}
     data = {}
     reader = None
-    material_index = []
-
     
-    def __init__(self, f=None, step=-1, matl_map=None):
+    def __init__(self, f=None, step=-1, materials=None):
         if f is None:
             # This is a minimal instance for debugging.
             pass
@@ -218,17 +201,23 @@ class MeshSolution(Mesh):
             self.node, self.element = self.reader.mesh()
             self.data = self.reader.stepdata(step)
             self.material_index_xplt = self.reader.material()
-            self.material_map = matl_map
+            if materials:
+                self.assign_materials(materials)
+                self.materials = materials
 
-    def assign_materials(self, matl_map):
+    def assign_materials(self, materials):
         """Assign materials from integer codes.
 
-        mat_map : a dictionary mapping integers to material classes
+        Parameters
+        ----------
+        materials : dictionary
+            A mapping from integer ids to material objects.  This
+            dictionary is usually obtained from
+            `input.FebReader.materials()`.
 
         """
         for i, e in enumerate(self.element):
-            matname = matl_map[e.mat_id]
-            self.element[i].material = feb.material.getclass(matname)
+            self.element[i].material = materials[e.matl_id]
 
     def f(self, istep = -1, r = 0, s = 0, t = 0):
         """Generator for F tensors for each element.

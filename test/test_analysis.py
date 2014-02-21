@@ -5,7 +5,8 @@ import itertools, math
 import numpy.testing as npt
 import numpy as np
 
-import febtools
+from febtools import FebReader, MeshSolution
+from febtools.material import fromlame, tolame
 from febtools.analysis import *
 from febtools import material
 
@@ -13,28 +14,29 @@ from febtools import material
 """J integral for isotropic material, equibiaxial stretch.
 
 """
+febreader = FebReader(open('test/j-integral/'
+                           'center-crack-2d-1mm.feb'))
+materials = febreader.materials()
 f = 'test/j-integral/center-crack-2d-1mm.xplt'
+soln = MeshSolution(f, materials=materials)
 y, mu = febtools.material.tolame(1e7, 0.3)
 mat1 = {'type': 'isotropic elastic',
         'properties': {'lambda': y,
                        'mu': mu}}
 m = {1: mat1}
-soln = febtools.MeshSolution(f, matl_map=m)
 
 x = (1e-3, 0)
 id_crack_tip = soln.find_nearest_node(*x)
 elements, q = jdomain(soln, id_crack_tip, n=2)
-j = jintegral(elements, soln.data['displacement'],
-              q, soln.material_map)
+j = jintegral(elements, soln.data['displacement'], q)
 
 def set_up_center_crack_2d_iso():
-    f = 'test/j-integral/center-crack-2d-1mm.xplt'
-    y, mu = febtools.material.tolame(1e7, 0.3)
-    mat1 = {'type': 'isotropic elastic',
-            'properties': {'lambda': y,
-                           'mu': mu}}
-    m = {1: mat1}
-    soln = febtools.MeshSolution(f, matl_map=m)
+    febreader = FebReader(open('test/j-integral/'
+                               'center-crack-2d-1mm.feb'))
+    materials = febreader.materials()
+    soln = febtools.MeshSolution('test/j-integral/'
+                                 'center-crack-2d-1mm.xplt',
+                                 materials=materials)
 
 @with_setup(set_up_center_crack_2d_iso)
 def test_select_elems_around_node():
@@ -65,17 +67,18 @@ def test_jdomain_q():
 
 
 def test_jintegral_uniax_center_crack_2d():
-    E = 1e7
-    nu = 0.3
-    y, mu = febtools.material.tolame(E, nu)
-    mat1 = {'type': 'isotropic elastic',
-        'properties': {'lambda': y,
-                       'mu': mu}}
-    m = {1: mat1}
-    soln = febtools.MeshSolution('test/fixtures/'
-                                 'uniax-2d-center-crack-1mm.xplt',
-                                 step=2,
-                                 matl_map=m)
+    febreader = FebReader(open('test/fixtures/'
+                               'uniax-2d-center-crack-1mm.feb'))
+    materials = febreader.materials()
+    soln = MeshSolution('test/fixtures/'
+                        'uniax-2d-center-crack-1mm.xplt',
+                        step=2,
+                        materials=materials)
+
+    y = materials[1].y
+    mu = materials[1].mu
+    E, nu = fromlame(y, mu)
+
     a = 1.0e-3 # m
     W = 10.0e-3 # m
     minima = np.array([min(x) for x in zip(*soln.node)])
@@ -104,6 +107,5 @@ def test_jintegral_uniax_center_crack_2d():
     G = K_I**2.0 / E
     id_crack_tip = soln.find_nearest_node(*(1e-3, 0.0, 0.0))
     elements, q = jdomain(soln, id_crack_tip, n=3)
-    J = jintegral(elements, soln.data['displacement'],
-                  q, soln.material_map)
+    J = jintegral(elements, soln.data['displacement'], q)
     npt.assert_allclose(J, G, rtol=0.01)

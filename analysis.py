@@ -67,7 +67,7 @@ def jdomain(mesh, inode_tip, n=3, qtype='plateau'):
                         'yet.'.format(qtype))
     return elements, q
 
-def jintegral(elements, u, q, material_map):
+def jintegral(elements, u, q):
     """Calculate J integral.
 
     Parameters
@@ -80,20 +80,24 @@ def jintegral(elements, u, q, material_map):
 
     """
 
-    def integrand(e, r, u, q, material_map):
-        matname = material_map[e.matl_id]['type']
-        matl = febtools.material.getclass(matname)
-        matlprops = material_map[e.matl_id]['properties']
+    def integrand(e, r, u, q):
+        """Integrate over a single element.
+
+        Parameters
+        ----------
+        e : Element object
+
+        """
         F = e.f(r, u)
-        p = matl.pstress(F, matlprops) # 1st Piola-Kirchoff stress
+        p = e.material.pstress(F) # 1st Piola-Kirchoff stress
         dudx = e.dinterp(r, u)
         dudx1 = dudx[:,0]
-        w = matl.w(F, matlprops) # strain energy
+        w = e.material.w(F) # strain energy
         dqdx = e.dinterp(r, q) # 1 x 2 or 1 x 3
         return -w * dqdx[0] + sum(p[i][j] * dudx[i,0] * dqdx[j] 
                                  for i in xrange(len(r))
                                  for j in xrange(len(r)))
     j = 0
     for e in elements:
-        j += e.integrate(integrand, u, q, material_map)
+        j += e.integrate(integrand, u, q)
     return j

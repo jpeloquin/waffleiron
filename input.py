@@ -1,6 +1,6 @@
 #! /usr/bin/env python2.7
 
-import xml.etree.ElementTree as ET
+from lxml import etree as ET
 import struct
 import numpy as np
 import os
@@ -53,6 +53,68 @@ def readlog(fpath):
         f.close()
     return allsteps
 
+class FebReader:
+    """Read an FEBio xml file.
+
+    """
+    def __init__(self, file):
+        """Read a file object as an FEBio xml file.
+
+        """
+        self.file = file
+        self.root = ET.parse(self.file).getroot()
+        if self.root.tag != "febio_spec":
+            raise Exception("Root node is not 'febio_spec': '" +
+                            fpath + "is not an FEBio xml file.")
+
+    def materials(self):
+        """Return dictionary of material objects keyed by id.
+
+        """
+        materials = {}
+        for mat in self.root.findall('./Material/material'):
+            # Read material attributes
+            mat_type = mat.attrib['type']
+            if 'name' in mat.attrib:
+                name = mat.attrib['name']
+            else:
+                name = ''
+            mat_id = int(mat.attrib['id'])
+            if mat_type == "solid mixture":
+                # collect child materials
+                solids = []
+                for child in mat:
+                    solid = self._elem2mat(child)
+                    solids.append(solid)
+                material = febtools.material.SolidMixture(*solids)
+            else:
+                material = self._elem2mat(mat)
+            # Store material object in materials dictionary
+            material.name = name
+            materials[mat_id] = material
+        return materials
+
+    def _elem2mat(self, element):
+        """Get material properties dictionary from a material element.
+
+        """
+        props = {}
+        for child in element:
+            props[child.tag] = float(child.text)
+        cls = febtools.material.getclass(element.attrib['type'])
+        return cls(props)
+
+    def mesh(self):
+        """Return mesh.
+
+        """
+        nodes = [tuple([float(a) for a in b.text.split(",")])
+                 for b in root.findall("./Geometry/Nodes/*")]
+        elements = [tuple([int(a) - 1 for a in b.text.split(",")])
+                    for b in root.findall("./Geometry/Elements/*")]
+        elements = [elem_obj(nid, self.node, eid=i)
+                    for i, nid in enumerate(element)]
+        return Mesh(node=nodes, element=elements)
 
 class XpltReader:
     """Parses an FEBio xplt file.
