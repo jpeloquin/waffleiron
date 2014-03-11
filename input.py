@@ -477,9 +477,9 @@ class XpltReader:
         name, size = struct.unpack(self.endian + 'II',
                                    self.fdata[self.cursor:self.cursor+8])
         if self.cursor > len(self.fdata) - 8:
-            raise Exception('The cursor is within 8 bytes of the end of the '
-                            'file. There cannot be a valid block at this '
-                            'position.')
+            raise Exception('The cursor is within 8 bytes of the end '
+                            'of the file.  There cannot be a valid '
+                            'block at this position.')
         try:
             name = self.tag2id[name]
         except KeyError as e:
