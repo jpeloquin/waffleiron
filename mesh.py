@@ -12,16 +12,16 @@ class Mesh:
     node = []
     element = []
 
-    def __init__(self, node=None, element=None):
+    def __init__(self, node=[], element=[]):
 
-        # Node list
-        if node is None:
-            self.node = []
-        else:
-            self.node = node
+        # Nodes (list of tuples)
+        if node:
+            if len(node[0]) == 2:
+                node = [(x, y, 0.0) for (x, y) in node]
+        self.node = node
 
-        # Element list
-        if element is not None and node is not None:
+        # Elements (list of tuples)
+        if element and node:
             if element[0] is febtools.element.Element:
                 self.element = element
             else:
