@@ -1,10 +1,14 @@
+from copy import deepcopy
 import numpy as np
+from scipy.spatial.distance import cdist
 import febtools as feb
 import febtools.element
 from febtools import XpltReader
 from febtools.element import elem_obj
 # import xml.etree.ElementTree as ET
 from lxml import etree as ET
+
+default_tol = 10*np.finfo(float).eps
 
 class Mesh:
     """Stores a mesh geometry."""
@@ -149,7 +153,8 @@ class Mesh:
         else:
             p = (x, y, z)
         d = np.array(self.node) - p
-        d = np.sum(d**2., axis=1)**0.5
+        d = np.sum(d**2., axis=1) # don't need square root if just
+                                  # finding nearest
         idx = np.argmin(abs(d))
         return idx
 
@@ -174,6 +179,61 @@ class Mesh:
         for idx in nodes:
             elements = elements + list(self.elem_with_node(idx))
         return set(elements)
+
+    def merge(self, other, candidates='auto', tol=default_tol):
+        """Merge this mesh with another
+
+
+        Inputs
+        ------
+        other : Mesh object
+            The mesh to merge with this one.
+        candidates : {'auto', list of int}
+            If 'auto' (the default), combine all nodes in the `other`
+            mesh that are distance < `tol` from a node in the current
+            mesh.  The simplices of `other` will be updated
+            accordingly.  If `nodes` is a list, use only the node
+            indices in the list as candidates for combination.
+
+        Returns
+        -------
+        Mesh object
+            The merged mesh
+
+        """
+        dist = cdist(other.node, self.node, 'euclidean')
+        newind = [] # new indices for 'other' nodes after merge
+        # copy nodelist so any error will not corrupt the original mesh
+        nodelist = deepcopy(self.node)
+        # Iterate over nodes in 'other'
+        for i, p in enumerate(other.node):
+            try_combine = ((candidates == 'auto') or 
+                           (candidates != 'auto' and i in candidates))
+            if try_combine:
+                # Find node in 'self' closest to p
+                imatch = self.find_nearest_node(*p)
+                pmatch = self.node[imatch]
+                if dist[i, imatch] < tol:
+                    # Make all references in 'other' to p use pmatch
+                    # instead
+                    newind.append(imatch)
+                else:
+                    newind.append(len(nodelist))
+                    nodelist.append(p)
+            else:
+                # This node will not be combined; just append it
+                # to the 'self' nodelist
+                newind.append(len(nodelist))
+                nodelist.append(p)
+
+        new_simplices = [list(e.inode) for e in other.element]
+        for i, elem in enumerate(other.element):
+            for j, nodeid in enumerate(elem.inode):
+                new_simplices[i][j] = newind[nodeid]
+
+        simplices = [e.inode for e in self.element] + \
+                    new_simplices
+        return Mesh(nodelist, simplices)
 
     def _build_node_graph(self):
         """Create a node connectivity graph for faster node lookup.
