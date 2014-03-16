@@ -19,13 +19,13 @@ class Mesh:
     def __init__(self, node=[], element=[]):
 
         # Nodes (list of tuples)
-        if node:
+        if node != []:
             if len(node[0]) == 2:
                 node = [(x, y, 0.0) for (x, y) in node]
         self.node = node
 
         # Elements (list of tuples)
-        if element and node:
+        if element !=[] and node !=[]:
             if element[0] is febtools.element.Element:
                 self.element = element
             else:
