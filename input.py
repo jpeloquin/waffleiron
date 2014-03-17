@@ -5,6 +5,7 @@ import struct
 import numpy as np
 import os
 import febtools.element
+from febtools.element import elem_obj
 
 def nstrip(string):
     """Remove trailing nulls from string.
@@ -109,12 +110,10 @@ class FebReader:
 
         """
         nodes = [tuple([float(a) for a in b.text.split(",")])
-                 for b in root.findall("./Geometry/Nodes/*")]
+                 for b in self.root.findall("./Geometry/Nodes/*")]
         elements = [tuple([int(a) - 1 for a in b.text.split(",")])
-                    for b in root.findall("./Geometry/Elements/*")]
-        elements = [elem_obj(nid, self.node, eid=i)
-                    for i, nid in enumerate(element)]
-        return Mesh(node=nodes, element=elements)
+                    for b in self.root.findall("./Geometry/Elements/*")]
+        return febtools.Mesh(node=nodes, element=elements)
 
 class XpltReader:
     """Parses an FEBio xplt file.
