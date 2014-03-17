@@ -53,7 +53,7 @@ class Element:
     methods cannot do anything useful with the z dimension.
 
     """
-    matl_id = 0 # material integer code (FEBio codes are 1-indexed)
+    matl_id = None # material integer code (FEBio codes are 1-indexed)
     matl = None # material definition class
     inode = [] # list of node indices
     xnode_mesh = [] # list of node coordinates for whole mesh

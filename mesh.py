@@ -28,8 +28,15 @@ class Mesh:
                 self.element = [elem_obj(nid, node, eid=i)
                                 for i, nid in enumerate(element)]
 
-    def writefeb(self, fpath):
+    def writefeb(self, fpath, materials=None):
         """Write mesh to .feb file.
+
+        Inputs
+        ------
+        fpath : string
+            Path for output file.
+
+        materials : list of Material objects
 
         """
         root = feb.output.feb_skeleton()
