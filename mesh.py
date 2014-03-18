@@ -245,15 +245,18 @@ class Mesh:
                 # to the 'self' nodelist
                 newind.append(len(nodelist))
                 nodelist.append(p)
-
+        # Update this mesh's node list
+        self.node = nodelist
+        # Define new simplices for "other" mesh
         new_simplices = [list(e.inode) for e in other.element]
         for i, elem in enumerate(other.element):
+            elem.xnode_mesh = nodelist
             for j, nodeid in enumerate(elem.inode):
-                new_simplices[i][j] = newind[nodeid]
-
-        simplices = [e.inode for e in self.element] + \
-                    new_simplices
-        return Mesh(nodelist, simplices)
+                inode = np.array(elem.inode)
+                inode[j] = newind[nodeid]
+                elem.inode = inode
+            # Add the new element
+            self.element.append(elem)
 
     def _build_node_graph(self):
         """Create a node connectivity graph for faster node lookup.

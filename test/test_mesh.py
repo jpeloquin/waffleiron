@@ -30,13 +30,12 @@ class MergeTestTri2d(unittest.TestCase):
         """
         mesh1 = deepcopy(self.mesh1)
         mesh2 = deepcopy(self.mesh2)
-        mergemesh = mesh1.merge(mesh2)
-        assert(len(mergemesh.element) == 8)
-        assert(len(mergemesh.node) == 8)
+        mesh1.merge(mesh2)
+        assert(len(mesh1.element) == 8)
+        assert(len(mesh1.node) == 8)
 
     def test_mesh_merge_sel(self):
         """Test merging two meshes, merging only selected nodes.
 
         """
         pass
-    
