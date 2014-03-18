@@ -119,7 +119,7 @@ class Element:
 
         For example, to obtain the centroid of a 2d element:
 
-            element.interp((0,0), element.xnode)
+            element.interp((0,0), element.xnode_mesh)
 
         """
         v_node = np.array([values[i] for i in self.inode])
