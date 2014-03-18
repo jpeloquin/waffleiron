@@ -150,7 +150,7 @@ class Tri3(Element):
     n = 3
 
     @staticmethod
-    def N(r, s):
+    def N(r, s, t=None):
         """Shape functions.
 
         """
@@ -161,7 +161,7 @@ class Tri3(Element):
         return n
 
     @staticmethod
-    def dN(r, s):
+    def dN(r, s, t=None):
         """Shape function 1st derivatives.
 
         """
@@ -264,7 +264,7 @@ class Quad4(Element):
     gwt = (1, 1, 1, 1)          # Guass weights
 
     @staticmethod
-    def N(r, s):
+    def N(r, s, t=None):
         """Shape functions.
 
         """
@@ -276,7 +276,7 @@ class Quad4(Element):
         return n
 
     @staticmethod
-    def dN(r, s):
+    def dN(r, s, t=None):
         """Shape function 1st derivatives.
 
         """
@@ -294,7 +294,7 @@ class Quad4(Element):
         return dn
 
     @staticmethod
-    def ddN(r, s):
+    def ddN(r, s, t=None):
         """Shape function 2nd derivatives.
 
         """
