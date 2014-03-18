@@ -44,6 +44,7 @@ class Mesh:
 
         """
         root = feb.output.feb_skeleton()
+        Material = root.find('Material')
         Geometry = root.find('Geometry')
         Nodes = root.find('Geometry/Nodes')
         Elements = root.find('Geometry/Elements')
@@ -61,9 +62,10 @@ class Mesh:
         for i, elem in enumerate(self.element):
             label = elem.__class__.__name__.lower()
             feb_eid = i + 1 # 1-indexed
-            matl_id = elem.matl_id
-            if matl_id is None:
+            if elem.matl_id is None:
                 matl_id = 1
+            else:
+                matl_id = elem.matl_id + 1
             e = ET.SubElement(Elements, label,
                               id=str(feb_eid),
                               mat=str(matl_id))
@@ -78,6 +80,24 @@ class Mesh:
             e = ET.SubElement(ElementData, 'element', id=str(feb_eid))
             t = ET.SubElement(e, 'thickness')
             t.text = '0.001, 0.001, 0.001'
+
+        # Write materials
+
+        def default_mat(mat_id):
+            m = ET.Element('material',
+                           id=str(mat_id),
+                           name="Material" + str(mat_id),
+                           type="isotropic elastic")
+            ET.SubElement(m, 'E').text = "1"
+            ET.SubElement(m, 'v').text = "0.3"
+            return m
+
+        if materials is None:
+            # Count how many materials are defined
+            mids = set(e.matl_id for e in self.element)
+            for mid in mids:
+                m = default_mat(mid)
+                Material.append(m)
 
         tree = ET.ElementTree(root)
         with open(fpath, 'w') as f:
