@@ -72,6 +72,13 @@ class Element:
         """
         return [self.xnode_mesh[i] for i in self.inode]
 
+    @property
+    def centroid(self):
+        """Centroid of element.
+
+        """
+        return self.interp((0,0,0), self.xnode_mesh)
+
     def f(self, r, u):
         """Calculate F tensor.
 
@@ -148,6 +155,13 @@ class Tri3(Element):
 
     """
     n = 3
+
+    @property
+    def centroid(self):
+        """Centroid of element.
+
+        """
+        return self.interp((1.0/3.0, 1.0/3.0), self.xnode_mesh)
 
     @staticmethod
     def N(r, s, t=None):
