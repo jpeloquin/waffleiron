@@ -3,6 +3,7 @@
 import numpy as np
 from numpy import dot, trace, eye, outer
 from numpy.linalg import det
+import math
 from math import log, exp, sin, cos
 import febtools as feb
 
@@ -38,7 +39,7 @@ def fromlame(y, u):
 
 
 class SolidMixture:
-    """Mixture of solids with to dependencies and no residual stress.
+    """Mixture of solids with no interdependencies or residual stress.
 
     The strain energy of the mixture is defined as the sum of the
     strain energies for each component.
@@ -90,8 +91,10 @@ class ExponentialFiber:
         self.alpha = props['alpha']
         self.beta = props['beta']
         self.xi = props['ksi']
-        self.theta = props['theta'] # azimuth; 0° := +x, 90° := +y
-        self.phi = props['phi'] # zenith; 0° := +z, 90° := x-y plane
+        self.theta = math.radians(props['theta'])
+            # azimuth; 0° := +x, 90° := +y
+        self.phi = math.radians(props['phi'])
+            # zenith; 0° := +z, 90° := x-y plane
 
     def w(self, F):
         """(Deviatoric) strain energy density.
