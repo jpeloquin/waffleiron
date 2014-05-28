@@ -63,8 +63,8 @@ def jdomain(mesh, inode_tip, n=3, qtype='plateau'):
         for i in crack_nodes & inner_nodes:
             q[i] = 1.0
     else:
-        raise Exception('{}-type q functions are not implemented '
-                        'yet.'.format(qtype))
+        raise NotImplemented('{}-type q functions are not '
+                             'implemented yet.'.format(qtype))
     return elements, q
 
 def jintegral(elements, u, q):
