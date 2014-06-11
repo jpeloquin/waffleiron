@@ -469,24 +469,6 @@ class XpltReader:
             data = self.f.read(size)
             yield label, data
 
-    def _readblock(self):
-        """Reads a block starting at the current cursor location.
-
-        """
-        name, size = struct.unpack(self.endian + 'II',
-                                   self.fdata[self.cursor:self.cursor+8])
-        if self.cursor > len(self.fdata) - 8:
-            raise Exception('The cursor is within 8 bytes of the end '
-                            'of the file.  There cannot be a valid '
-                            'block at this position.')
-        try:
-            name = self.tag2id[name]
-        except KeyError as e:
-            print('_readblock did not find an expected tag at '
-                  'cursor position ' + str(self.cursor))
-        data = self.fdata[self.cursor+8:self.cursor+8+size]
-        return name, data
-
     def _dword(self):
         """Reads a 4-bit integer from the file.
 
