@@ -375,35 +375,54 @@ class XpltReader:
         Returns a tuple.
 
         """
-        if len(s) == 0:
+        len_tot = len(s)
+
+        # Validity check
+        if len_tot == 0:
             raise Exception('Input data has zero length.')
-        s = s[8:] # discard the 8 junk bytes at the start
-        if typ == 'float':
-            v = struct.unpack(self.endian + 'f' * (len(s) / 4), s)
-        elif typ == 'vec3f':
-            if len(s) % 12 != 0:
-                raise Exception('Input data cannot be evenly divided '
-                                'into vectors.')
-            v = []
-            for i in range(0, len(s), 12):
-                v.append(np.array(
-                        struct.unpack(self.endian + 'f' * 3,
-                                      s[i:i+12])))
-        elif typ == 'mat3fs':
-            v = []
-            if len(s) % 24 != 0:
-                raise Exception('Input data cannot be evenly divided '
-                                'into tensors.')
-            for i in range(0, len(s), 24):
-                a = struct.unpack(self.endian + 'f' * 6, s[i:i+24])
-                # The FEBio database spec does not document the
-                # tensor order, but this is correct (for now).
-                v.append(np.array([[a[0], a[3], a[5]],
-                                   [a[3], a[1], a[4]],
-                                   [a[5], a[4], a[2]]]))
-        else:
+        if typ not in ['float', 'vec3f', 'mat3fs']:
             raise Exception('Type %s  not recognized.' % (str(typ),))
-        return tuple(v)
+
+        values = [] # list of values
+
+        # iterate over any pseudo-blocks (region id, size, data) that
+        # may exist
+        i = 0
+        while i < len(s):
+            # read the block
+            id, sz = struct.unpack('II', s[i:i+8])
+            data = s[i+8:i+8+sz]
+            i = i + 8 + sz
+            # unpack and append the values
+            if typ == 'float':
+                v = list(struct.unpack(self.endian + 'f'*(len(data)/4),
+                                       data))
+            elif typ == 'vec3f':
+                if len(data) % 12 != 0:
+                    raise Exception('Input data cannot be '
+                                    'evenly divided '
+                                    'into vectors.')
+                v = []
+                for j in range(0, len(data), 12):
+                    v.append(np.array(
+                            struct.unpack(self.endian + 'f' * 3,
+                                          data[j:j+12])))
+            elif typ == 'mat3fs':
+                v = []
+                if len(data) % 24 != 0:
+                    raise Exception('Input data cannot be '
+                                    'evenly divided '
+                                    'into tensors.')
+                for j in range(0, len(data), 24):
+                    a = struct.unpack(self.endian + 'f' * 6,
+                                      data[j:j+24])
+                    # The FEBio database spec does not document the
+                    # tensor order
+                    v.append(np.array([[a[0], a[3], a[5]],
+                                       [a[3], a[1], a[4]],
+                                       [a[5], a[4], a[2]]]))
+            values = values + v
+        return tuple(values)
 
     def _findall(self, pathstr, start = 0):
         """Finds position and size of blocks.
