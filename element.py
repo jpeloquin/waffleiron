@@ -79,12 +79,38 @@ class Element:
         """
         return self.interp((0,0,0), self.xnode_mesh)
 
+    def face_normals(self):
+        """List of face normals
+
+        """
+        points = np.array(self.xnode)
+        normals = []
+        # Iterate over faces
+        for f in self.face_nodes:
+            # Define vectors for two face edges, using the first face
+            # node as the origin.  For quadrilateral faces, one node
+            # is left unused.
+            v1 = points[f[1]] - points[f[0]]
+            v2 = points[f[-1]] - points[f[0]]
+            # compute the face normal
+            normals.append(np.cross(v1, v2))
+        return normals
+
+    def faces_with_node(self, node_id):
+        """Indices of faces that include node id
+
+        The node id here is local to the element.
+
+        """
+        return [i for i, f in enumerate(self.face_nodes)
+                if node_id in f]
+
     def f(self, r, u):
         """Calculate F tensor.
 
         r := coordinate vector in element's natural basis
         u := list of displacements for all the nodes in the mesh.
-        
+
         """
         u = [v[:len(r)] for v in u]
         dudx = self.dinterp(r, u)
@@ -114,7 +140,7 @@ class Element:
             array-like).
 
         """
-        return sum((f(self, r, *args) * np.linalg.det(self.j(r)) * w 
+        return sum((f(self, r, *args) * np.linalg.det(self.j(r)) * w
                     for r, w in zip(self.gloc, self.gwt)))
 
     def interp(self, r, values):
@@ -155,6 +181,12 @@ class Tri3(Element):
 
     """
     n = 3
+    node_connectivity = [[1, 2],
+                         [0, 2],
+                         [1, 0]]
+
+    # oriented so positive normal follows node ordering convention
+    face_nodes = [[0, 1, 2]]
 
     @property
     def centroid(self):
@@ -198,7 +230,25 @@ class Hex8(Element):
     """
     # gwt
     # gloc
+
     n = 8 # number of vertices
+
+    node_connectivity = [[1, 3, 4], # 0
+                         [0, 2, 3], # 1
+                         [1, 3, 6], # 2
+                         [0, 2, 7], # 3
+                         [0, 5, 7], # 4
+                         [1, 4, 6], # 5
+                         [2, 5, 7], # 6
+                         [3, 4, 6]] # 7
+
+    # Oriented positive = out
+    face_nodes = [[0, 1, 5, 4],
+                  [1, 2, 6, 5],
+                  [2, 3, 7, 6],
+                  [3, 0, 4, 7],
+                  [4, 5, 6, 7],
+                  [0, 3, 2, 1]]
 
     @staticmethod
     def N(r, s, t):
@@ -270,6 +320,10 @@ class Quad4(Element):
 
     """
     n = 4
+    node_connectivity = [[1, 3],
+                         [0, 2],
+                         [1, 3],
+                         [2, 0]]
 
     a = 1.0 / 3.0**0.5
     gloc = ((-a, -a),           # Guass point locations

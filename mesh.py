@@ -1,6 +1,7 @@
 from copy import deepcopy
 import numpy as np
 from scipy.spatial.distance import cdist
+from scipy.spatial import KDTree
 import febtools as feb
 import febtools.element
 from febtools import XpltReader
@@ -15,14 +16,16 @@ class Mesh:
 
     node = []
     element = []
+    # nodetree = kd-tree for quick lookup of nodes
 
-    def __init__(self, node=[], element=[]):
+    def __init__(self, node, element):
 
         # Nodes (list of tuples)
-        if node != []:
-            if len(node[0]) == 2:
-                node = [(x, y, 0.0) for (x, y) in node]
+        if len(node[0]) == 2:
+            node = [(x, y, 0.0) for (x, y) in node]
         self.node = node
+
+        self.nodetree = KDTree(self.node)
 
         # Elements (list of tuples)
         if element !=[] and node !=[]:
@@ -151,8 +154,9 @@ class Mesh:
         return refcount
 
     def elemcentroid(self):
+        """List of element centroids (reference coordinates).
 
-        """List of element centroids (reference coordinates)."""
+        """
         centroid = []
         for i in range(len(self.element)):
             x = [self.node[inode] for inode in self.element[i]]
@@ -184,8 +188,8 @@ class Mesh:
         idx := node id
 
         """
-        eid = set(ii for (ii, r) in enumerate(self.element)
-                  if idx in r.inode)
+        eid = set(i for (i, e) in enumerate(self.element)
+                  if idx in e.inode)
         elements = [self.element[i] for i in eid]
         return set(elements)
 
@@ -199,6 +203,38 @@ class Mesh:
         for idx in nodes:
             elements = elements + list(self.elem_with_node(idx))
         return set(elements)
+
+    def element_containing_point(self, point):
+        """Return element containing a point
+
+        """
+        # Provide 2 dimensions so iteration over the first will always
+        # iterate over points
+        point = np.array(point)
+
+        # Determine closest node (point Q) to each point P
+        d, node_idx = self.nodetree.query(point)
+
+        # Iterate over all points and the corresponding proximal
+        # nodes
+        elems = self.elem_with_node(node_idx)
+        # vector from closest node to point p
+        v_pq = point - self.node[node_idx]
+        # Iterate over the elements
+        for e in elems:
+            local_id = e.inode.index(node_idx)
+            face_ids = e.faces_with_node(local_id)
+            normals = e.face_normals()
+            normals = [normals[i] for i in face_ids]
+            # Test if line PQ is perpindicular or antiparallel to
+            # every face normal.  Since Q is on the face plane,
+            # this would mean that P is interior to all three
+            # faces and the element contains P.
+            if np.all([n * v_pq <= 0 for n in normals]):
+                return e
+        # If no element contains the point, the point is outside the
+        # mesh.
+        return None
 
     def merge(self, other, candidates='auto', tol=default_tol):
         """Merge this mesh with another
@@ -289,6 +325,10 @@ class MeshSolution(Mesh):
             elif isinstance(f, XpltReader):
                 self.reader = f
             self.node, self.element = self.reader.mesh()
+            self.nodetree = KDTree(self.node) # TODO: make this an
+                                              # automatic consequence
+                                              # of adding a Mesh
+                                              # geometry
             self.data = self.reader.stepdata(step)
             self.material_index_xplt = self.reader.material()
             if materials:
