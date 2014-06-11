@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<febio_spec version="1.2">
+	<Globals>
+		<Constants>
+			<T>0</T>
+			<R>0</R>
+			<Fc>0</Fc>
+		</Constants>
+	</Globals>
+	<Material>
+		<material id="1" name="Material1" type="isotropic elastic">
+			<density>1</density>
+			<E>1e+006</E>
+			<v>0.33</v>
+		</material>
+		<material id="2" name="Material2" type="isotropic elastic">
+			<density>1</density>
+			<E>2e+006</E>
+			<v>0.33</v>
+		</material>
+		<material id="3" name="Material3" type="isotropic elastic">
+			<density>1</density>
+			<E>3e+006</E>
+			<v>0.33</v>
+		</material>
+		<material id="4" name="Material4" type="isotropic elastic">
+			<density>1</density>
+			<E>4e+006</E>
+			<v>0.33</v>
+		</material>
+		<material id="5" name="Material5" type="isotropic elastic">
+			<density>1</density>
+			<E>5e+006</E>
+			<v>0.33</v>
+		</material>
+		<material id="6" name="Material6" type="isotropic elastic">
+			<density>1</density>
+			<E>6e+006</E>
+			<v>0.33</v>
+		</material>
+		<material id="7" name="Material7" type="isotropic elastic">
+			<density>1</density>
+			<E>7e+006</E>
+			<v>0.33</v>
+		</material>
+		<material id="8" name="Material8" type="isotropic elastic">
+			<density>1</density>
+			<E>8e+006</E>
+			<v>0.33</v>
+		</material>
+	</Material>
+	<Geometry>
+		<Nodes>
+			<node id="1"> -1.0000000e+00, -1.0000000e+00,  0.0000000e+00</node>
+			<node id="2"> -1.0000000e+00, -1.0000000e+00,  1.0000000e+00</node>
+			<node id="3"> -1.0000000e+00, -1.0000000e+00,  2.0000000e+00</node>
+			<node id="4"> -1.0000000e+00,  0.0000000e+00,  0.0000000e+00</node>
+			<node id="5"> -1.0000000e+00,  0.0000000e+00,  1.0000000e+00</node>
+			<node id="6"> -1.0000000e+00,  0.0000000e+00,  2.0000000e+00</node>
+			<node id="7"> -1.0000000e+00,  1.0000000e+00,  0.0000000e+00</node>
+			<node id="8"> -1.0000000e+00,  1.0000000e+00,  1.0000000e+00</node>
+			<node id="9"> -1.0000000e+00,  1.0000000e+00,  2.0000000e+00</node>
+			<node id="10">  0.0000000e+00, -1.0000000e+00,  0.0000000e+00</node>
+			<node id="11">  0.0000000e+00, -1.0000000e+00,  1.0000000e+00</node>
+			<node id="12">  0.0000000e+00, -1.0000000e+00,  2.0000000e+00</node>
+			<node id="13">  0.0000000e+00,  0.0000000e+00,  0.0000000e+00</node>
+			<node id="14">  0.0000000e+00,  0.0000000e+00,  1.0000000e+00</node>
+			<node id="15">  0.0000000e+00,  0.0000000e+00,  2.0000000e+00</node>
+			<node id="16">  0.0000000e+00,  1.0000000e+00,  0.0000000e+00</node>
+			<node id="17">  0.0000000e+00,  1.0000000e+00,  1.0000000e+00</node>
+			<node id="18">  0.0000000e+00,  1.0000000e+00,  2.0000000e+00</node>
+			<node id="19">  1.0000000e+00, -1.0000000e+00,  0.0000000e+00</node>
+			<node id="20">  1.0000000e+00, -1.0000000e+00,  1.0000000e+00</node>
+			<node id="21">  1.0000000e+00, -1.0000000e+00,  2.0000000e+00</node>
+			<node id="22">  1.0000000e+00,  0.0000000e+00,  0.0000000e+00</node>
+			<node id="23">  1.0000000e+00,  0.0000000e+00,  1.0000000e+00</node>
+			<node id="24">  1.0000000e+00,  0.0000000e+00,  2.0000000e+00</node>
+			<node id="25">  1.0000000e+00,  1.0000000e+00,  0.0000000e+00</node>
+			<node id="26">  1.0000000e+00,  1.0000000e+00,  1.0000000e+00</node>
+			<node id="27">  1.0000000e+00,  1.0000000e+00,  2.0000000e+00</node>
+		</Nodes>
+		<Elements>
+			<hex8 id="1" mat="1">     1,    10,    13,     4,     2,    11,    14,     5</hex8>
+			<hex8 id="2" mat="2">     2,    11,    14,     5,     3,    12,    15,     6</hex8>
+			<hex8 id="3" mat="3">     4,    13,    16,     7,     5,    14,    17,     8</hex8>
+			<hex8 id="4" mat="7">     5,    14,    17,     8,     6,    15,    18,     9</hex8>
+			<hex8 id="5" mat="5">    10,    19,    22,    13,    11,    20,    23,    14</hex8>
+			<hex8 id="6" mat="6">    11,    20,    23,    14,    12,    21,    24,    15</hex8>
+			<hex8 id="7" mat="7">    13,    22,    25,    16,    14,    23,    26,    17</hex8>
+			<hex8 id="8" mat="8">    14,    23,    26,    17,    15,    24,    27,    18</hex8>
+		</Elements>
+	</Geometry>
+	<Boundary>
+		<fix>
+			<node id="13" bc="yz"/>
+		</fix>
+		<fix>
+			<node id="15" bc="y"/>
+		</fix>
+		<fix>
+			<node id="1" bc="x"/>
+			<node id="2" bc="x"/>
+			<node id="3" bc="x"/>
+			<node id="4" bc="x"/>
+			<node id="5" bc="x"/>
+			<node id="6" bc="x"/>
+			<node id="7" bc="x"/>
+			<node id="8" bc="x"/>
+			<node id="9" bc="x"/>
+		</fix>
+	</Boundary>
+	<LoadData>
+		<loadcurve id="1" type="smooth">
+			<loadpoint>0,0</loadpoint>
+			<loadpoint>1,1</loadpoint>
+		</loadcurve>
+	</LoadData>
+	<Output>
+		<plotfile type="febio">
+			<var type="displacement"/>
+			<var type="stress"/>
+		</plotfile>
+	</Output>
+	<Step name="Step01">
+		<Module type="solid"/>
+		<Control>
+			<time_steps>10</time_steps>
+			<step_size>0.1</step_size>
+			<max_refs>15</max_refs>
+			<max_ups>10</max_ups>
+			<dtol>0.001</dtol>
+			<etol>0.01</etol>
+			<rtol>0</rtol>
+			<lstol>0.9</lstol>
+			<time_stepper>
+				<dtmin>0.01</dtmin>
+				<dtmax>0.1</dtmax>
+				<max_retries>5</max_retries>
+				<opt_iter>10</opt_iter>
+			</time_stepper>
+			<analysis type="static"/>
+		</Control>
+		<Boundary>
+			<prescribe>
+				<node id="19" bc="x" lc="1">0.2</node>
+				<node id="20" bc="x" lc="1">0.2</node>
+				<node id="21" bc="x" lc="1">0.2</node>
+				<node id="22" bc="x" lc="1">0.2</node>
+				<node id="23" bc="x" lc="1">0.2</node>
+				<node id="24" bc="x" lc="1">0.2</node>
+				<node id="25" bc="x" lc="1">0.2</node>
+				<node id="26" bc="x" lc="1">0.2</node>
+				<node id="27" bc="x" lc="1">0.2</node>
+			</prescribe>
+		</Boundary>
+	</Step>
+</febio_spec>
