@@ -223,9 +223,14 @@ class Mesh:
         # Iterate over the elements
         for e in elems:
             local_id = e.inode.index(node_idx)
-            face_ids = e.faces_with_node(local_id)
-            normals = e.face_normals()
-            normals = [normals[i] for i in face_ids]
+            if e.is_planar:
+                edge_ids = e.edges_with_node(local_id)
+                normals = e.edge_normals()
+                normals = [normals[i] for i in edge_ids]
+            else:
+                face_ids = e.faces_with_node(local_id)
+                normals = e.face_normals()
+                normals = [normals[i] for i in face_ids]
             # Test if line PQ is perpindicular or antiparallel to
             # every face normal.  Since Q is on the face plane,
             # this would mean that P is interior to all three

@@ -175,8 +175,45 @@ class Element:
         dvdx = np.dot(jinv, dvdr.T)
         return dvdx.T
 
+class Element3D(Element):
+    """Class for 3D elements.
 
-class Tri3(Element):
+    """
+    is_planar = False
+
+class Element2D(Element):
+    """Class for 2D elements.
+
+    All 2D elements should inherit from this class.
+
+    """
+    is_planar = True
+
+    def edges_with_node(self, node_id):
+        """Indices of edges that include node id.
+
+        """
+        return [i for i, l in enumerate(self.edge_nodes)
+                if node_id in l]
+
+    def edge_normals(self):
+        """List of edge normals.
+
+        These are constrained to lie in the same plane as the element.
+        The normals point outward.
+
+        """
+        points = np.array(self.xnode)
+        normals = []
+        # Iterate over edges
+        for l in self.edge_nodes:
+            v = points[l[1]] - points[l[0]]
+            face_normal = self.face_normals()[0]
+            normals.append(np.cross(v, face_normal))
+        return normals
+
+
+class Tri3(Element2D):
     """Functions for tri3 elements.
 
     """
@@ -224,7 +261,7 @@ class Tri3(Element):
         return dn
 
 
-class Hex8(Element):
+class Hex8(Element3D):
     """Functions for hex8 trilinear elements.
 
     """
@@ -311,7 +348,7 @@ class Hex8(Element):
         """
         pass
 
-class Quad4(Element):
+class Quad4(Element2D):
     """Shape functions for quad4 bilinear shell element.
 
     This definition uses Guass point integration.  FEBio also has a
@@ -324,6 +361,13 @@ class Quad4(Element):
                          [0, 2],
                          [1, 3],
                          [2, 0]]
+
+    face_nodes = [[0, 1, 2, 3]]
+
+    edge_nodes = [[0, 1],
+                  [1, 2],
+                  [2, 3],
+                  [3, 0]]
 
     a = 1.0 / 3.0**0.5
     gloc = ((-a, -a),           # Guass point locations
