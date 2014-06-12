@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<febio_spec version="2.0">
+	<Globals>
+		<Constants>
+			<T>0</T>
+			<R>0</R>
+			<Fc>0</Fc>
+		</Constants>
+	</Globals>
+	<Material>
+		<material id="1" name="Material1" type="isotropic elastic">
+			<density>1</density>
+			<E>1e7</E>
+			<v>0.34</v>
+		</material>
+	</Material>
+	<Geometry>
+		<Nodes>
+			<node id="1"> -1.0000000e+00, -1.0000000e+00,  0.0000000e+00</node>
+			<node id="2"> -1.0000000e+00,  0.0000000e+00,  0.0000000e+00</node>
+			<node id="3"> -1.0000000e+00,  1.0000000e+00,  0.0000000e+00</node>
+			<node id="4">  0.0000000e+00, -1.0000000e+00,  0.0000000e+00</node>
+			<node id="5">  0.0000000e+00,  0.0000000e+00,  0.0000000e+00</node>
+			<node id="6">  0.0000000e+00,  1.0000000e+00,  0.0000000e+00</node>
+			<node id="7">  1.0000000e+00, -1.0000000e+00,  0.0000000e+00</node>
+			<node id="8">  1.0000000e+00,  0.0000000e+00,  0.0000000e+00</node>
+			<node id="9">  1.0000000e+00,  1.0000000e+00,  0.0000000e+00</node>
+		</Nodes>
+		<Elements type="quad4" mat="1" elset="Part1">
+			<elem id="1">     1,     4,     5,     2</elem>
+			<elem id="2">     2,     5,     6,     3</elem>
+			<elem id="3">     4,     7,     8,     5</elem>
+			<elem id="4">     5,     8,     9,     6</elem>
+		</Elements>
+		<ElementData>
+			<element id="1">
+				<thickness>0.01,0.01,0.01,0.01</thickness>
+			</element>
+			<element id="2">
+				<thickness>0.01,0.01,0.01,0.01</thickness>
+			</element>
+			<element id="3">
+				<thickness>0.01,0.01,0.01,0.01</thickness>
+			</element>
+			<element id="4">
+				<thickness>0.01,0.01,0.01,0.01</thickness>
+			</element>
+		</ElementData>
+	</Geometry>
+	<Boundary>
+		<fix bc="z">
+			<node id="1"/>
+			<node id="3"/>
+			<node id="7"/>
+			<node id="9"/>
+		</fix>
+		<fix bc="y">
+			<node id="5"/>
+		</fix>
+		<fix bc="x">
+			<node id="1"/>
+			<node id="2"/>
+			<node id="3"/>
+		</fix>
+	</Boundary>
+	<LoadData>
+		<loadcurve id="1" type="smooth">
+			<point>0,0</point>
+			<point>1,1</point>
+		</loadcurve>
+	</LoadData>
+	<Output>
+		<plotfile type="febio">
+			<var type="displacement"/>
+			<var type="stress"/>
+		</plotfile>
+		<logfile>
+         <node_data data="x;y;z;ux;uy;uz" delim="," file="square_quad4_node_data.txt"/>
+         <element_data data="x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J" delim="," file="square_quad4_elem_data.txt"/>
+		</logfile>
+	</Output>
+	<Step name="Step01">
+		<Module type="solid"/>
+		<Control>
+			<time_steps>10</time_steps>
+			<step_size>0.1</step_size>
+			<max_refs>15</max_refs>
+			<max_ups>10</max_ups>
+			<dtol>0.001</dtol>
+			<etol>0.01</etol>
+			<rtol>0</rtol>
+			<lstol>0.9</lstol>
+			<time_stepper>
+				<dtmin>0.01</dtmin>
+				<dtmax>0.1</dtmax>
+				<max_retries>5</max_retries>
+				<opt_iter>10</opt_iter>
+			</time_stepper>
+			<analysis type="static"/>
+		</Control>
+		<Boundary>
+			<prescribe bc="x" lc="1">
+				<node id="7">0.2</node>
+				<node id="8">0.2</node>
+				<node id="9">0.2</node>
+			</prescribe>
+			<prescribe bc="y" lc="1">
+				<node id="7">0.1</node>
+				<node id="8">0.1</node>
+				<node id="9">0.1</node>
+			</prescribe>
+		</Boundary>
+	</Step>
+</febio_spec>

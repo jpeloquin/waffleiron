@@ -1,0 +1,675 @@
+===========================================================================
+         ________    _________   _________     __     _________            
+        |        |\ |        |\ |        |\   |  |\  /         \\          
+        |    ____|| |    ____|| |    __  ||   |__|| |    ___    ||         
+        |   |\___\| |   |\___\| |   |\_| ||    \_\| |   //  \   ||         
+        |   ||      |   ||      |   || | ||    __   |  ||    |  ||         
+        |   ||__    |   ||__    |   ||_| ||   |  |\ |  ||    |  ||         
+        |       |\  |       |\  |         \\  |  || |  ||    |  ||         
+        |    ___||  |    ___||  |    ___   || |  || |  ||    |  ||         
+        |   |\__\|  |   |\__\|  |   |\__|  || |  || |  ||    |  ||         
+        |   ||      |   ||      |   ||  |  || |  || |  ||    |  ||         
+        |   ||      |   ||___   |   ||__|  || |  || |   \\__/   ||         
+        |   ||      |        |\ |          || |  || |           ||         
+        |___||      |________|| |__________|| |__||  \_________//          
+                                                                           
+      F I N I T E   E L E M E N T S   F O R   B I O M E C H A N I C S      
+                                                                           
+                 --- v e r s i o n - 2 . 0 . 1 ---                 
+                                                                           
+                                                                           
+  Musculoskeletal Research Laboratory                                      
+  University of Utah                                                       
+  http://mrl.sci.utah.edu                                                  
+                                                                           
+  copyright (c) 2006-2014 - All rights reserved                            
+                                                                              
+ This is the NON-COMMERCIAL version of FEBio or the commercial license        
+ key file could not be found. If you have a key file make sure it is          
+ placed in the same directory as the executable. This version may only        
+ be used for non-commercial purposes as described in the license agreement.   
+ The functionality of this version may be limited compared to the commercial  
+ version. If you wish to obtain a valid commercial license file, please       
+ contact the developers.                                                      
+                                                                           
+===========================================================================
+
+
+
+
+ FILES USED
+===========================================================================
+	Input file : square_quad4.feb
+	Plot file  : square_quad4.xplt
+	Log file   : square_quad4.log
+
+
+ CONTROL DATA
+===========================================================================
+	Module type .................................... : solid
+	Analysis type .................................. : quasi-static
+	Plane strain mode .............................. : no
+	Number of materials ............................ : 1
+	Number of nodes ................................ : 9
+	Number of solid elements ....................... : 0
+	Number of shell elements ....................... : 4
+	Number of truss elements ....................... : 0
+	Number of timesteps ............................ : 10
+	Time step size ................................. : 0.1
+	Auto time stepper activated .................... : yes
+	  Optimal nr of iterations ..................... : 10
+	  Minimum allowable step size .................. : 0.01
+	  Maximum allowable step size .................. : 0.1
+	Number of loadcurves ........................... : 1
+	Number of displacement boundary conditions ..... : 6
+	Number of concentrated nodal forces ............ : 0
+	Max nr of stiffness reformations ............... : 15
+	per time steps
+	Max nr of Quasi-Newton iterations .............. : 10
+	between stiffness matrix reformations
+	Displacement convergence tolerance ............. : 0.001
+	Energy convergence tolerance ................... : 0.01
+	Residual convergence tolerance ................. : 0
+	Minimal residual value ......................... : 1e-20
+	Linesearch convergence tolerance ............... : 0.9
+	Minimum line search size ....................... : 0.01
+	Maximum number of line search iterations ....... : 5
+	Max condition number ........................... : 100000
+
+
+ OUTPUT DATA
+===========================================================================
+	plot level ................................ : major iterations
+	plotfile format ........................... : FEBIO
+		Nodal Variables:
+			displacement         (type = vec3f, format = NODE)
+		Domain Variables:
+			stress               (type = mat3fs, format = ITEM)
+
+
+ MATERIAL DATA
+===========================================================================
+  1 - Material1 (type: isotropic elastic)
+	density ........................................... : 1
+	E ................................................. : 1e+07
+	v ................................................. : 0.34
+
+
+ LOADCURVE DATA
+===========================================================================
+  1
+         0         0
+         1         1
+
+
+ LINEAR SOLVER DATA
+===========================================================================
+	Solver type ............................... : Pardiso
+
+
+===== reforming stiffness matrix:
+	Nr of equations ........................... : 46
+	Nr of nonzeroes in stiffness matrix ....... : 688
+
+
+===== beginning time step 1 : 0.1 =====
+ 1
+ Nonlinear solution status: time= 0.1
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            1.749720e+07    3.534834e+02    0.000000e+00 
+	   energy              8.337805e+01    2.796166e-01    8.337805e-01 
+	   displacement        5.306513e-04    5.306513e-04    5.306513e-10 
+ 2
+ Nonlinear solution status: time= 0.1
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            1.749720e+07    1.663992e-01    0.000000e+00 
+	   energy              8.337805e+01    3.494641e-05    8.337805e-01 
+	   displacement        5.306513e-04    4.723713e-08    5.356338e-10 
+ 3
+ Nonlinear solution status: time= 0.1
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            1.749720e+07    5.426905e-05    0.000000e+00 
+	   energy              8.337805e+01    1.843053e-08    8.337805e-01 
+	   displacement        5.306513e-04    3.303641e-11    5.355998e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 0.1
+
+
+Data Record #1
+===========================================================================
+Step = 1
+Time = 0.1
+Data = x;y;z;ux;uy;uz
+File = square_quad4_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 1
+Time = 0.1
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_quad4_elem_data.txt
+
+===== beginning time step 2 : 0.2 =====
+ 1
+ Nonlinear solution status: time= 0.2
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            1.845441e+07    3.488478e+02    0.000000e+00 
+	   energy              8.611957e+01    2.828763e-01    8.611957e-01 
+	   displacement        5.406393e-04    5.406393e-04    5.406393e-10 
+ 2
+ Nonlinear solution status: time= 0.2
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            1.845441e+07    1.551358e-01    0.000000e+00 
+	   energy              8.611957e+01    3.090850e-05    8.611957e-01 
+	   displacement        5.406393e-04    4.604611e-08    5.458035e-10 
+ 3
+ Nonlinear solution status: time= 0.2
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            1.845441e+07    5.430449e-05    0.000000e+00 
+	   energy              8.611957e+01    1.783799e-08    8.611957e-01 
+	   displacement        5.406393e-04    2.895188e-11    5.457709e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 0.2
+
+
+Data Record #1
+===========================================================================
+Step = 2
+Time = 0.2
+Data = x;y;z;ux;uy;uz
+File = square_quad4_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 2
+Time = 0.2
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_quad4_elem_data.txt
+
+===== beginning time step 3 : 0.3 =====
+ 1
+ Nonlinear solution status: time= 0.3
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            1.944702e+07    3.448710e+02    0.000000e+00 
+	   energy              8.889509e+01    2.861626e-01    8.889509e-01 
+	   displacement        5.509925e-04    5.509925e-04    5.509925e-10 
+ 2
+ Nonlinear solution status: time= 0.3
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            1.944702e+07    1.451294e-01    0.000000e+00 
+	   energy              8.889509e+01    2.722697e-05    8.889509e-01 
+	   displacement        5.509925e-04    4.513371e-08    5.563368e-10 
+ 3
+ Nonlinear solution status: time= 0.3
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            1.944702e+07    5.419244e-05    0.000000e+00 
+	   energy              8.889509e+01    1.721365e-08    8.889509e-01 
+	   displacement        5.509925e-04    2.548797e-11    5.563058e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 0.3
+
+
+Data Record #1
+===========================================================================
+Step = 3
+Time = 0.3
+Data = x;y;z;ux;uy;uz
+File = square_quad4_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 3
+Time = 0.3
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_quad4_elem_data.txt
+
+===== beginning time step 4 : 0.4 =====
+ 1
+ Nonlinear solution status: time= 0.4
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.047582e+07    3.415032e+02    0.000000e+00 
+	   energy              9.170422e+01    2.894945e-01    9.170422e-01 
+	   displacement        5.617088e-04    5.617088e-04    5.617088e-10 
+ 2
+ Nonlinear solution status: time= 0.4
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.047582e+07    1.362310e-01    0.000000e+00 
+	   energy              9.170422e+01    2.384942e-05    9.170422e-01 
+	   displacement        5.617088e-04    4.446715e-08    5.672333e-10 
+ 3
+ Nonlinear solution status: time= 0.4
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.047582e+07    5.395140e-05    0.000000e+00 
+	   energy              9.170422e+01    1.656884e-08    9.170422e-01 
+	   displacement        5.617088e-04    2.254730e-11    5.672043e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 0.4
+
+
+Data Record #1
+===========================================================================
+Step = 4
+Time = 0.4
+Data = x;y;z;ux;uy;uz
+File = square_quad4_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 4
+Time = 0.4
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_quad4_elem_data.txt
+
+===== beginning time step 5 : 0.5 =====
+ 1
+ Nonlinear solution status: time= 0.5
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.154156e+07    3.387043e+02    0.000000e+00 
+	   energy              9.454659e+01    2.928918e-01    9.454659e-01 
+	   displacement        5.727897e-04    5.727897e-04    5.727897e-10 
+ 2
+ Nonlinear solution status: time= 0.5
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.154156e+07    1.283186e-01    0.000000e+00 
+	   energy              9.454659e+01    2.073140e-05    9.454659e-01 
+	   displacement        5.727897e-04    4.401975e-08    5.784958e-10 
+ 3
+ Nonlinear solution status: time= 0.5
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.154156e+07    5.359921e-05    0.000000e+00 
+	   energy              9.454659e+01    1.591340e-08    9.454659e-01 
+	   displacement        5.727897e-04    2.005075e-11    5.784692e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 0.5
+
+
+Data Record #1
+===========================================================================
+Step = 5
+Time = 0.5
+Data = x;y;z;ux;uy;uz
+File = square_quad4_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 5
+Time = 0.5
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_quad4_elem_data.txt
+
+===== beginning time step 6 : 0.6 =====
+ 1
+ Nonlinear solution status: time= 0.6
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.264503e+07    3.364394e+02    0.000000e+00 
+	   energy              9.742185e+01    2.963730e-01    9.742185e-01 
+	   displacement        5.842395e-04    5.842395e-04    5.842395e-10 
+ 2
+ Nonlinear solution status: time= 0.6
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.264503e+07    1.212884e-01    0.000000e+00 
+	   energy              9.742185e+01    1.783402e-05    9.742185e-01 
+	   displacement        5.842395e-04    4.376931e-08    5.901303e-10 
+ 3
+ Nonlinear solution status: time= 0.6
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.264503e+07    5.315294e-05    0.000000e+00 
+	   energy              9.742185e+01    1.525567e-08    9.742185e-01 
+	   displacement        5.842395e-04    1.793325e-11    5.901063e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 0.6
+
+
+Data Record #1
+===========================================================================
+Step = 6
+Time = 0.6
+Data = x;y;z;ux;uy;uz
+File = square_quad4_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 6
+Time = 0.6
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_quad4_elem_data.txt
+
+===== beginning time step 7 : 0.7 =====
+ 1
+ Nonlinear solution status: time= 0.7
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.378700e+07    3.346779e+02    0.000000e+00 
+	   energy              1.003297e+02    2.999555e-01    1.003297e+00 
+	   displacement        5.960653e-04    5.960653e-04    5.960653e-10 
+ 2
+ Nonlinear solution status: time= 0.7
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.378700e+07    1.150518e-01    0.000000e+00 
+	   energy              1.003297e+02    1.512304e-05    1.003297e+00 
+	   displacement        5.960653e-04    4.369746e-08    6.021449e-10 
+ 3
+ Nonlinear solution status: time= 0.7
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.378700e+07    5.262885e-05    0.000000e+00 
+	   energy              1.003297e+02    1.460259e-08    1.003297e+00 
+	   displacement        5.960653e-04    1.614130e-11    6.021239e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 0.7
+
+
+Data Record #1
+===========================================================================
+Step = 7
+Time = 0.7
+Data = x;y;z;ux;uy;uz
+File = square_quad4_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 7
+Time = 0.7
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_quad4_elem_data.txt
+
+===== beginning time step 8 : 0.8 =====
+ 1
+ Nonlinear solution status: time= 0.8
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.496825e+07    3.333931e+02    0.000000e+00 
+	   energy              1.032699e+02    3.036561e-01    1.032699e+00 
+	   displacement        6.082765e-04    6.082765e-04    6.082765e-10 
+ 2
+ Nonlinear solution status: time= 0.8
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.496825e+07    1.095334e-01    0.000000e+00 
+	   energy              1.032699e+02    1.256806e-05    1.032699e+00 
+	   displacement        6.082765e-04    4.378913e-08    6.145504e-10 
+ 3
+ Nonlinear solution status: time= 0.8
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.496825e+07    5.204230e-05    0.000000e+00 
+	   energy              1.032699e+02    1.395977e-08    1.032699e+00 
+	   displacement        6.082765e-04    1.463103e-11    6.145325e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 0.8
+
+
+Data Record #1
+===========================================================================
+Step = 8
+Time = 0.8
+Data = x;y;z;ux;uy;uz
+File = square_quad4_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 8
+Time = 0.8
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_quad4_elem_data.txt
+
+===== beginning time step 9 : 0.9 =====
+ 1
+ Nonlinear solution status: time= 0.9
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.618958e+07    3.325617e+02    0.000000e+00 
+	   energy              1.062421e+02    3.074911e-01    1.062421e+00 
+	   displacement        6.208848e-04    6.208848e-04    6.208848e-10 
+ 2
+ Nonlinear solution status: time= 0.9
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.618958e+07    1.046693e-01    0.000000e+00 
+	   energy              1.062421e+02    1.014191e-05    1.062421e+00 
+	   displacement        6.208848e-04    4.403213e-08    6.273594e-10 
+ 3
+ Nonlinear solution status: time= 0.9
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.618958e+07    5.140775e-05    0.000000e+00 
+	   energy              1.062421e+02    1.333170e-08    1.062421e+00 
+	   displacement        6.208848e-04    1.336654e-11    6.273450e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 0.9
+
+
+Data Record #1
+===========================================================================
+Step = 9
+Time = 0.9
+Data = x;y;z;ux;uy;uz
+File = square_quad4_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 9
+Time = 0.9
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_quad4_elem_data.txt
+
+===== beginning time step 10 : 1 =====
+ 1
+ Nonlinear solution status: time= 1
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.745177e+07    3.321634e+02    0.000000e+00 
+	   energy              1.092463e+02    3.114760e-01    1.092463e+00 
+	   displacement        6.339043e-04    6.339043e-04    6.339043e-10 
+ 2
+ Nonlinear solution status: time= 1
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.745177e+07    1.004052e-01    0.000000e+00 
+	   energy              1.092463e+02    7.819984e-06    1.092463e+00 
+	   displacement        6.339043e-04    4.441685e-08    6.405870e-10 
+ 3
+ Nonlinear solution status: time= 1
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.745177e+07    5.073882e-05    0.000000e+00 
+	   energy              1.092463e+02    1.272182e-08    1.092463e+00 
+	   displacement        6.339043e-04    1.231875e-11    6.405763e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 1
+
+
+Data Record #1
+===========================================================================
+Step = 10
+Time = 1
+Data = x;y;z;ux;uy;uz
+File = square_quad4_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 10
+Time = 1
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_quad4_elem_data.txt
+
+
+N O N L I N E A R   I T E R A T I O N   I N F O R M A T I O N
+
+	Number of time steps completed .................... : 10
+
+	Total number of equilibrium iterations ............ : 30
+
+	Average number of equilibrium iterations .......... : 3
+
+	Total number of right hand evaluations ............ : 40
+
+	Total number of stiffness reformations ............ : 10
+
+	Time in solver: 0:00:00
+
+
+ Elapsed time : 0:00:00
+
+
+ N O R M A L   T E R M I N A T I O N
+

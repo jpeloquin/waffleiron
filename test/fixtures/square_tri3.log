@@ -1,0 +1,679 @@
+===========================================================================
+         ________    _________   _________     __     _________            
+        |        |\ |        |\ |        |\   |  |\  /         \\          
+        |    ____|| |    ____|| |    __  ||   |__|| |    ___    ||         
+        |   |\___\| |   |\___\| |   |\_| ||    \_\| |   //  \   ||         
+        |   ||      |   ||      |   || | ||    __   |  ||    |  ||         
+        |   ||__    |   ||__    |   ||_| ||   |  |\ |  ||    |  ||         
+        |       |\  |       |\  |         \\  |  || |  ||    |  ||         
+        |    ___||  |    ___||  |    ___   || |  || |  ||    |  ||         
+        |   |\__\|  |   |\__\|  |   |\__|  || |  || |  ||    |  ||         
+        |   ||      |   ||      |   ||  |  || |  || |  ||    |  ||         
+        |   ||      |   ||___   |   ||__|  || |  || |   \\__/   ||         
+        |   ||      |        |\ |          || |  || |           ||         
+        |___||      |________|| |__________|| |__||  \_________//          
+                                                                           
+      F I N I T E   E L E M E N T S   F O R   B I O M E C H A N I C S      
+                                                                           
+                 --- v e r s i o n - 2 . 0 . 1 ---                 
+                                                                           
+                                                                           
+  Musculoskeletal Research Laboratory                                      
+  University of Utah                                                       
+  http://mrl.sci.utah.edu                                                  
+                                                                           
+  copyright (c) 2006-2014 - All rights reserved                            
+                                                                              
+ This is the NON-COMMERCIAL version of FEBio or the commercial license        
+ key file could not be found. If you have a key file make sure it is          
+ placed in the same directory as the executable. This version may only        
+ be used for non-commercial purposes as described in the license agreement.   
+ The functionality of this version may be limited compared to the commercial  
+ version. If you wish to obtain a valid commercial license file, please       
+ contact the developers.                                                      
+                                                                           
+===========================================================================
+
+
+
+
+ FILES USED
+===========================================================================
+	Input file : square_tri3.feb
+	Plot file  : square_tri3.xplt
+	Log file   : square_tri3.log
+
+
+ CONTROL DATA
+===========================================================================
+	Module type .................................... : solid
+	Analysis type .................................. : quasi-static
+	Plane strain mode .............................. : no
+	Number of materials ............................ : 1
+	Number of nodes ................................ : 10
+	Number of solid elements ....................... : 0
+	Number of shell elements ....................... : 10
+	Number of truss elements ....................... : 0
+	Number of timesteps ............................ : 10
+	Time step size ................................. : 0.1
+	Auto time stepper activated .................... : yes
+	  Optimal nr of iterations ..................... : 10
+	  Minimum allowable step size .................. : 0.01
+	  Maximum allowable step size .................. : 0.1
+	Number of loadcurves ........................... : 2
+	Number of displacement boundary conditions ..... : 6
+	Number of concentrated nodal forces ............ : 0
+	Max nr of stiffness reformations ............... : 15
+	per time steps
+	Max nr of Quasi-Newton iterations .............. : 10
+	between stiffness matrix reformations
+	Displacement convergence tolerance ............. : 0.001
+	Energy convergence tolerance ................... : 0.01
+	Residual convergence tolerance ................. : 0
+	Minimal residual value ......................... : 1e-20
+	Linesearch convergence tolerance ............... : 0.9
+	Minimum line search size ....................... : 0.01
+	Maximum number of line search iterations ....... : 5
+	Max condition number ........................... : 100000
+
+
+ OUTPUT DATA
+===========================================================================
+	plot level ................................ : major iterations
+	plotfile format ........................... : FEBIO
+		Nodal Variables:
+			displacement         (type = vec3f, format = NODE)
+		Domain Variables:
+			stress               (type = mat3fs, format = ITEM)
+
+
+ MATERIAL DATA
+===========================================================================
+  1 - MaterialNone (type: isotropic elastic)
+	density ........................................... : 1
+	E ................................................. : 1e+06
+	v ................................................. : 0.3
+
+
+ LOADCURVE DATA
+===========================================================================
+  1
+         0         0
+         1         1
+---------------------------------------------------------------------------
+  2
+         0         0
+         1         1
+
+
+ LINEAR SOLVER DATA
+===========================================================================
+	Solver type ............................... : Pardiso
+
+
+===== reforming stiffness matrix:
+	Nr of equations ........................... : 52
+	Nr of nonzeroes in stiffness matrix ....... : 713
+
+
+===== beginning time step 1 : 0.1 =====
+ 1
+ Nonlinear solution status: time= 0.1
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            1.773060e+03    1.298054e-02    0.000000e+00 
+	   energy              8.936923e-01    3.640719e-04    8.936923e-03 
+	   displacement        7.320177e-04    7.320177e-04    7.320177e-10 
+ 2
+ Nonlinear solution status: time= 0.1
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            1.773060e+03    5.768305e-06    0.000000e+00 
+	   energy              8.936923e-01    1.039279e-07    8.936923e-03 
+	   displacement        7.320177e-04    2.072937e-08    7.350517e-10 
+ 3
+ Nonlinear solution status: time= 0.1
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            1.773060e+03    2.837991e-09    0.000000e+00 
+	   energy              8.936923e-01    7.988352e-11    8.936923e-03 
+	   displacement        7.320177e-04    5.662174e-12    7.350519e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 0.1
+
+
+Data Record #1
+===========================================================================
+Step = 1
+Time = 0.1
+Data = x;y;z;ux;uy;uz
+File = square_tri3_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 1
+Time = 0.1
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_tri3_elem_data.txt
+
+===== beginning time step 2 : 0.2 =====
+ 1
+ Nonlinear solution status: time= 0.2
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            1.869942e+03    1.258822e-02    0.000000e+00 
+	   energy              9.187968e-01    3.905070e-04    9.187968e-03 
+	   displacement        7.381365e-04    7.381365e-04    7.381365e-10 
+ 2
+ Nonlinear solution status: time= 0.2
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            1.869942e+03    5.238326e-06    0.000000e+00 
+	   energy              9.187968e-01    8.851070e-08    9.187968e-03 
+	   displacement        7.381365e-04    2.045857e-08    7.412817e-10 
+ 3
+ Nonlinear solution status: time= 0.2
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            1.869942e+03    2.694570e-09    0.000000e+00 
+	   energy              9.187968e-01    7.486704e-11    9.187968e-03 
+	   displacement        7.381365e-04    4.904859e-12    7.412829e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 0.2
+
+
+Data Record #1
+===========================================================================
+Step = 2
+Time = 0.2
+Data = x;y;z;ux;uy;uz
+File = square_tri3_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 2
+Time = 0.2
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_tri3_elem_data.txt
+
+===== beginning time step 3 : 0.3 =====
+ 1
+ Nonlinear solution status: time= 0.3
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            1.970758e+03    1.223583e-02    0.000000e+00 
+	   energy              9.442495e-01    4.159490e-04    9.442495e-03 
+	   displacement        7.444793e-04    7.444793e-04    7.444793e-10 
+ 2
+ Nonlinear solution status: time= 0.3
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            1.970758e+03    4.771559e-06    0.000000e+00 
+	   energy              9.442495e-01    7.467005e-08    9.442495e-03 
+	   displacement        7.444793e-04    2.026575e-08    7.477347e-10 
+ 3
+ Nonlinear solution status: time= 0.3
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            1.970758e+03    2.555455e-09    0.000000e+00 
+	   energy              9.442495e-01    7.002347e-11    9.442495e-03 
+	   displacement        7.444793e-04    4.270150e-12    7.477369e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 0.3
+
+
+Data Record #1
+===========================================================================
+Step = 3
+Time = 0.3
+Data = x;y;z;ux;uy;uz
+File = square_tri3_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 3
+Time = 0.3
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_tri3_elem_data.txt
+
+===== beginning time step 4 : 0.4 =====
+ 1
+ Nonlinear solution status: time= 0.4
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.075600e+03    1.191917e-02    0.000000e+00 
+	   energy              9.700456e-01    4.405218e-04    9.700456e-03 
+	   displacement        7.510442e-04    7.510442e-04    7.510442e-10 
+ 2
+ Nonlinear solution status: time= 0.4
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.075600e+03    4.359356e-06    0.000000e+00 
+	   energy              9.700456e-01    6.217311e-08    9.700456e-03 
+	   displacement        7.510442e-04    2.014214e-08    7.544092e-10 
+ 3
+ Nonlinear solution status: time= 0.4
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.075600e+03    2.420356e-09    0.000000e+00 
+	   energy              9.700456e-01    6.537551e-11    9.700456e-03 
+	   displacement        7.510442e-04    3.737871e-12    7.544126e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 0.4
+
+
+Data Record #1
+===========================================================================
+Step = 4
+Time = 0.4
+Data = x;y;z;ux;uy;uz
+File = square_tri3_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 4
+Time = 0.4
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_tri3_elem_data.txt
+
+===== beginning time step 5 : 0.5 =====
+ 1
+ Nonlinear solution status: time= 0.5
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.184568e+03    1.163481e-02    0.000000e+00 
+	   energy              9.961812e-01    4.643401e-04    9.961812e-03 
+	   displacement        7.578307e-04    7.578307e-04    7.578307e-10 
+ 2
+ Nonlinear solution status: time= 0.5
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.184568e+03    3.994672e-06    0.000000e+00 
+	   energy              9.961812e-01    5.082632e-08    9.961812e-03 
+	   displacement        7.578307e-04    2.008077e-08    7.613054e-10 
+ 3
+ Nonlinear solution status: time= 0.5
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.184568e+03    2.289260e-09    0.000000e+00 
+	   energy              9.961812e-01    6.094132e-11    9.961812e-03 
+	   displacement        7.578307e-04    3.291800e-12    7.613100e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 0.5
+
+
+Data Record #1
+===========================================================================
+Step = 5
+Time = 0.5
+Data = x;y;z;ux;uy;uz
+File = square_tri3_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 5
+Time = 0.5
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_tri3_elem_data.txt
+
+===== beginning time step 6 : 0.6 =====
+ 1
+ Nonlinear solution status: time= 0.6
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.297760e+03    1.137975e-02    0.000000e+00 
+	   energy              1.022653e+00    4.875067e-04    1.022653e-02 
+	   displacement        7.648393e-04    7.648393e-04    7.648393e-10 
+ 2
+ Nonlinear solution status: time= 0.6
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.297760e+03    3.671533e-06    0.000000e+00 
+	   energy              1.022653e+00    4.046431e-08    1.022653e-02 
+	   displacement        7.648393e-04    2.007587e-08    7.684243e-10 
+ 3
+ Nonlinear solution status: time= 0.6
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.297760e+03    2.162268e-09    0.000000e+00 
+	   energy              1.022653e+00    5.673319e-11    1.022653e-02 
+	   displacement        7.648393e-04    2.918713e-12    7.684303e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 0.6
+
+
+Data Record #1
+===========================================================================
+Step = 6
+Time = 0.6
+Data = x;y;z;ux;uy;uz
+File = square_tri3_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 6
+Time = 0.6
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_tri3_elem_data.txt
+
+===== beginning time step 7 : 0.7 =====
+ 1
+ Nonlinear solution status: time= 0.7
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.415277e+03    1.115141e-02    0.000000e+00 
+	   energy              1.049457e+00    5.101138e-04    1.049457e-02 
+	   displacement        7.720717e-04    7.720717e-04    7.720717e-10 
+ 2
+ Nonlinear solution status: time= 0.7
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.415277e+03    3.384853e-06    0.000000e+00 
+	   energy              1.049457e+00    3.094515e-08    1.049457e-02 
+	   displacement        7.720717e-04    2.012273e-08    7.757681e-10 
+ 3
+ Nonlinear solution status: time= 0.7
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.415277e+03    2.039545e-09    0.000000e+00 
+	   energy              1.049457e+00    5.275814e-11    1.049457e-02 
+	   displacement        7.720717e-04    2.607808e-12    7.757755e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 0.7
+
+
+Data Record #1
+===========================================================================
+Step = 7
+Time = 0.7
+Data = x;y;z;ux;uy;uz
+File = square_tri3_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 7
+Time = 0.7
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_tri3_elem_data.txt
+
+===== beginning time step 8 : 0.8 =====
+ 1
+ Nonlinear solution status: time= 0.8
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.537220e+03    1.094754e-02    0.000000e+00 
+	   energy              1.076590e+00    5.322449e-04    1.076590e-02 
+	   displacement        7.795303e-04    7.795303e-04    7.795303e-10 
+ 2
+ Nonlinear solution status: time= 0.8
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.537220e+03    3.130295e-06    0.000000e+00 
+	   energy              1.076590e+00    2.214658e-08    1.076590e-02 
+	   displacement        7.795303e-04    2.021748e-08    7.833397e-10 
+ 3
+ Nonlinear solution status: time= 0.8
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.537220e+03    1.921280e-09    0.000000e+00 
+	   energy              1.076590e+00    4.901868e-11    1.076590e-02 
+	   displacement        7.795303e-04    2.350250e-12    7.833486e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 0.8
+
+
+Data Record #1
+===========================================================================
+Step = 8
+Time = 0.8
+Data = x;y;z;ux;uy;uz
+File = square_tri3_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 8
+Time = 0.8
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_tri3_elem_data.txt
+
+===== beginning time step 9 : 0.9 =====
+ 1
+ Nonlinear solution status: time= 0.9
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.663691e+03    1.076619e-02    0.000000e+00 
+	   energy              1.104051e+00    5.539753e-04    1.104051e-02 
+	   displacement        7.872187e-04    7.872187e-04    7.872187e-10 
+ 2
+ Nonlinear solution status: time= 0.9
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.663691e+03    2.904143e-06    0.000000e+00 
+	   energy              1.104051e+00    1.396279e-08    1.104051e-02 
+	   displacement        7.872187e-04    2.035700e-08    7.911429e-10 
+ 3
+ Nonlinear solution status: time= 0.9
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.663691e+03    1.807653e-09    0.000000e+00 
+	   energy              1.104051e+00    4.551357e-11    1.104051e-02 
+	   displacement        7.872187e-04    2.138813e-12    7.911534e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 0.9
+
+
+Data Record #1
+===========================================================================
+Step = 9
+Time = 0.9
+Data = x;y;z;ux;uy;uz
+File = square_tri3_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 9
+Time = 0.9
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_tri3_elem_data.txt
+
+===== beginning time step 10 : 1 =====
+ 1
+ Nonlinear solution status: time= 1
+	stiffness updates             = 0
+	right hand side evaluations   = 2
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.794797e+03    1.060565e-02    0.000000e+00 
+	   energy              1.131835e+00    5.753741e-04    1.131835e-02 
+	   displacement        7.951408e-04    7.951408e-04    7.951408e-10 
+ 2
+ Nonlinear solution status: time= 1
+	stiffness updates             = 1
+	right hand side evaluations   = 3
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.794797e+03    2.703213e-06    0.000000e+00 
+	   energy              1.131835e+00    6.301786e-09    1.131835e-02 
+	   displacement        7.951408e-04    2.053880e-08    7.991822e-10 
+ 3
+ Nonlinear solution status: time= 1
+	stiffness updates             = 2
+	right hand side evaluations   = 4
+	stiffness matrix reformations = 1
+	step from line search         = 1.000000
+	convergence norms :     INITIAL         CURRENT         REQUIRED
+	   residual            2.794797e+03    1.698822e-09    0.000000e+00 
+	   energy              1.131835e+00    4.223857e-11    1.131835e-02 
+	   displacement        7.951408e-04    1.967586e-12    7.991945e-10 
+
+convergence summary
+    number of iterations   : 3
+    number of reformations : 1
+
+
+------- converged at time : 1
+
+
+Data Record #1
+===========================================================================
+Step = 10
+Time = 1
+Data = x;y;z;ux;uy;uz
+File = square_tri3_node_data.txt
+
+Data Record #2
+===========================================================================
+Step = 10
+Time = 1
+Data = x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J
+File = square_tri3_elem_data.txt
+
+
+N O N L I N E A R   I T E R A T I O N   I N F O R M A T I O N
+
+	Number of time steps completed .................... : 10
+
+	Total number of equilibrium iterations ............ : 30
+
+	Average number of equilibrium iterations .......... : 3
+
+	Total number of right hand evaluations ............ : 40
+
+	Total number of stiffness reformations ............ : 10
+
+	Time in solver: 0:00:01
+
+
+ Elapsed time : 0:00:01
+
+
+ N O R M A L   T E R M I N A T I O N
+
