@@ -180,11 +180,12 @@ class Tri3(Element):
 
         """
         dn = [np.zeros(2) for i in xrange(3)]
-        dn[0][0] = -s
+        # d/dr
+        dn[0][0] = -1.0
         dn[1][0] = 1.0
         dn[2][0] = 0.0
-
-        dn[0][1] = -r
+        # d/ds
+        dn[0][1] = -1.0
         dn[1][1] = 0.0
         dn[2][1] = 1.0
 
