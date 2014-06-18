@@ -85,6 +85,8 @@
 			displacement         (type = vec3f, format = NODE)
 		Domain Variables:
 			stress               (type = mat3fs, format = ITEM)
+			shell thickness      (type = float, format = COMP)
+			shell strain         (type = mat3fs, format = ITEM)
 
 
  MATERIAL DATA
@@ -669,10 +671,10 @@ N O N L I N E A R   I T E R A T I O N   I N F O R M A T I O N
 
 	Total number of stiffness reformations ............ : 10
 
-	Time in solver: 0:00:01
+	Time in solver: 0:00:00
 
 
- Elapsed time : 0:00:01
+ Elapsed time : 0:00:00
 
 
  N O R M A L   T E R M I N A T I O N

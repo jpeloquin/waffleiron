@@ -1,6 +1,7 @@
 import febtools as feb
 import numpy as np
 import numpy.testing as npt
+import unittest
 
 def f_tensor_logfile(elemdata, step, eid):
     """Return F tensor read from a logfile.
@@ -31,6 +32,48 @@ def f_test_hex8():
         F_expected = f_tensor_logfile(elemdata, istep, eid)
         F = soln.element[eid].f((0, 0, 0), u)
         npt.assert_almost_equal(F, F_expected, decimal=5)
+
+
+class FTestTri3(unittest.TestCase):
+    """Test F tensor calculations for Tri3 mesh.
+
+    Only part of the F tensor is tested right now, pending full
+    implementation of the extended directors.
+
+    """
+    def setUp(self):
+        self.soln = feb.MeshSolution('test/fixtures/'
+                                     'square_tri3.xplt')
+        self.elemdata = feb.readlog('test/fixtures/'
+                                    'square_tri3_elem_data.txt')
+    def test_f(self):
+        istep = -1
+        u = self.soln.reader.stepdata(istep)['displacement']
+        for eid in xrange(len(self.soln.element)):
+            F_expected = f_tensor_logfile(self.elemdata, istep, eid)
+            F = self.soln.element[eid].f((1.0/3.0, 1.0/3.0), u)
+            npt.assert_almost_equal(F[:2,:2], F_expected[:2,:2],
+                                    decimal=5)
+
+
+@unittest.skip("extended directors not yet implemented, so shell elements will not provide the correct F tensor")
+class FTestQuad4(unittest.TestCase):
+    """Test F tensor calculations for Tri3 mesh.
+
+    """
+    def setUp(self):
+        self.soln = feb.MeshSolution('test/fixtures/'
+                                     'square_quad4.xplt')
+        self.elemdata = feb.readlog('test/fixtures/'
+                                    'square_quad4_elem_data.txt')
+    def test_f(self):
+        istep = -1
+        u = self.soln.reader.stepdata(istep)['displacement']
+        for eid in xrange(len(self.soln.element)):
+            F_expected = f_tensor_logfile(self.elemdata, istep, eid)
+            F = self.soln.element[eid].f((1.0/3.0, 1.0/3.0), u)
+            npt.assert_almost_equal(F[:2,:2], F_expected[:2,:2],
+                                    decimal=5)
 
 def test_integration():
     # create trapezoidal element

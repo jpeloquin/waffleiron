@@ -102,6 +102,8 @@
 		<plotfile type="febio">
 			<var type="displacement"/>
 			<var type="stress"/>
+			<var type="shell thickness"/>
+			<var type="shell strain"/>
 		</plotfile>
 		<logfile>
          <node_data data="x;y;z;ux;uy;uz" delim="," file="square_tri3_node_data.txt"/>

@@ -112,11 +112,7 @@ class Element:
         u := list of displacements for all the nodes in the mesh.
 
         """
-        u = [v[:len(r)] for v in u]
         dudx = self.dinterp(r, u)
-        if len(r) == 2:
-            # pad to 3-dimensions
-            dudx = np.pad(dudx, ((0,1), (0,1)), mode='constant')
         F = dudx + np.eye(3)
         return F
 
@@ -125,10 +121,8 @@ class Element:
 
         """
         ddr = self.dN(*r)
-        ddr = np.vstack(ddr)
-        x_node = [x[:len(r)] for x in self.xnode]
-        x_node = np.array(x_node).T  # i over x, j over nodes
-        J = np.dot(x_node, ddr)
+        ddr = np.vstack(self.dN(*r))
+        J = np.dot(np.array(self.xnode).T, ddr)
         return J
 
     def integrate(self, f, *args):
@@ -140,7 +134,25 @@ class Element:
             array-like).
 
         """
-        return sum((f(self, r, *args) * np.linalg.det(self.j(r)) * w
+        def jdet(r):
+            """Calculate determinant of the jacobian, handling R3 → R2
+            transformations correctly.
+
+            """
+            j = self.j(r)
+            if j.shape[1] == 2 and j.shape[0] == 3:
+                # jacobian of transform from R3 to R2
+                n = np.cross(j[:,0], j[:,1])
+                jd = n[2]
+            elif j.shape[0] == j.shape[1]:
+                # is square; working in R2 or R3
+                jd = np.linalg.det(j)
+            else:
+                s = "Transformations from R{} to R{} space are not handled.".format(j.shape[0], j.shape[1])
+                raise Exception(s)
+            return jd
+
+        return sum((f(self, r, *args) * jdet(r) * w
                     for r, w in zip(self.gloc, self.gwt)))
 
     def interp(self, r, values):
@@ -167,13 +179,13 @@ class Element:
         values.
 
         """
-        v_node = np.array([values[i] for i in self.inode]).T
+        v_node = np.array([values[i] for i in self.inode])
         j = self.j(r)
-        jinv = np.linalg.inv(j)
+        jinv = np.linalg.pinv(j).T
         ddr = np.vstack(self.dN(*r))
-        dvdr = np.dot(v_node, ddr)
-        dvdx = np.dot(jinv, dvdr.T)
-        return dvdx.T
+        dvdr = np.dot(v_node.T, ddr)
+        dvdx = np.dot(jinv, dvdr.T).T
+        return dvdx
 
 class Element3D(Element):
     """Class for 3D elements.
