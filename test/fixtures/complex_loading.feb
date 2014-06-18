@@ -232,7 +232,7 @@
 	<Output>
 		<logfile>
          <node_data data="x;y;z;ux;uy;uz" delim="," file="complex_loading_node_data.txt"/>
-         <element_data data="x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fx;Fy;Fz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J" delim="," file="complex_loading_elem_data.txt"/>
+         <element_data data="x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J" delim="," file="complex_loading_elem_data.txt"/>
 		</logfile>
 		<plotfile type="febio">
 			<var type="displacement"/>

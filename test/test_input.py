@@ -17,11 +17,12 @@ class MeshSolutionTest(unittest.TestCase):
     recorded in the text log.
 
     """
-    xpltsol = febtools.MeshSolution('test/complex_loading.xplt') 
-    elemdata = febtools.readlog(
-        'test/complex_loading_elem_data.txt') 
-    nodedata = febtools.readlog(
-        'test/complex_loading_node_data.txt')
+    xpltsol = febtools.MeshSolution('test/fixtures/'
+                                    'complex_loading.xplt')
+    elemdata = febtools.readlog('test/fixtures/'
+                                'complex_loading_elem_data.txt')
+    nodedata = febtools.readlog('test/fixtures/'
+                                'complex_loading_node_data.txt')
 
     def cmp_f(self, row, col, key):
         """Helper function for comparing f tensors.
@@ -41,13 +42,13 @@ class MeshSolutionTest(unittest.TestCase):
                                         significant=5)
 
     def test_fx(self):
-        self.cmp_f(0, 0, 'Fx')
+        self.cmp_f(0, 0, 'Fxx')
 
     def test_fy(self):
-        self.cmp_f(1, 1, 'Fy')
+        self.cmp_f(1, 1, 'Fyy')
 
     def test_fz(self):
-        self.cmp_f(2, 2, 'Fz')
+        self.cmp_f(2, 2, 'Fzz')
 
     def test_fxy(self):
         self.cmp_f(0, 1, 'Fxy')
