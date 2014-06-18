@@ -2,29 +2,35 @@ import febtools as feb
 import numpy as np
 import numpy.testing as npt
 
-    
+def f_tensor_logfile(elemdata, step, eid):
+    """Return F tensor read from a logfile.
 
-def f_test():
+    """
+    Fxx = elemdata[step]['Fxx'][eid]
+    Fyy = elemdata[step]['Fyy'][eid]
+    Fzz = elemdata[step]['Fzz'][eid]
+    Fxy = elemdata[step]['Fxy'][eid]
+    Fxz = elemdata[step]['Fxz'][eid]
+    Fyx = elemdata[step]['Fyx'][eid]
+    Fyz = elemdata[step]['Fyz'][eid]
+    Fzx = elemdata[step]['Fzx'][eid]
+    Fzy = elemdata[step]['Fzy'][eid]
+    F = np.array([[Fxx, Fxy, Fxz],
+                  [Fyx, Fyy, Fyz],
+                  [Fzx, Fzy, Fzz]])
+    return F
+
+def f_test_hex8():
     elemdata = feb.readlog('test/fixtures/'
-                           'isotropic_elastic_elem_data.txt')
+                           'complex_loading_elem_data.txt')
     soln = feb.MeshSolution('test/fixtures/'
-                            'isotropic_elastic.xplt')
-    for istep in xrange(1, len(soln.reader.time)):
-        Fxx = elemdata[istep-1]['Fxx'][0]
-        Fyy = elemdata[istep-1]['Fyy'][0]
-        Fzz = elemdata[istep-1]['Fzz'][0]
-        Fxy = elemdata[istep-1]['Fxy'][0]
-        Fxz = elemdata[istep-1]['Fxz'][0]
-        Fyx = elemdata[istep-1]['Fyx'][0]
-        Fyz = elemdata[istep-1]['Fyz'][0]
-        Fzx = elemdata[istep-1]['Fzx'][0]
-        Fzy = elemdata[istep-1]['Fzy'][0]
-        expected = np.array([[Fxx, Fxy, Fxz],
-                             [Fyx, Fyy, Fyz],
-                             [Fzx, Fzy, Fzz]])
-        u = soln.reader.stepdata(istep)['displacement']
-        F = soln.element[0].f((0, 0, 0), u)
-        yield npt.assert_array_almost_equal, F, expected
+                            'complex_loading.xplt')
+    istep = -1
+    u = soln.reader.stepdata(istep)['displacement']
+    for eid in xrange(len(soln.element) - 1): # don't check rigid body
+        F_expected = f_tensor_logfile(elemdata, istep, eid)
+        F = soln.element[eid].f((0, 0, 0), u)
+        npt.assert_almost_equal(F, F_expected, decimal=5)
 
 def test_integration():
     # create trapezoidal element
