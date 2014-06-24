@@ -254,7 +254,8 @@ class Mesh:
             mesh that are distance < `tol` from a node in the current
             mesh.  The simplices of `other` will be updated
             accordingly.  If `nodes` is a list, use only the node
-            indices in the list as candidates for combination.
+            indices in the list as candidates for combination.  These
+            indexes are in the domain of `other`.
 
         Returns
         -------
