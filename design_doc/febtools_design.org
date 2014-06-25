@@ -1,0 +1,38 @@
+In order to calculate integrals (e.g. the j-integral) efficiently, the
+solution object must be able to look up values for each element.
+
+To calculate strain energy in post-processing, the material type must
+be known.  Unfortunately, FEBio does not store the material identity
+anywhere, just the user-defined name, which is usually something
+useless like "Mat1".  The J-integral code will therefore require a
+mapping from =material_name= in the =.xplt= file to the material class
+defined in =febtools=.
+
+* Special case data fields
+
+** =shell thickness=
+
+Shell thickness has an item format of =mult=, meaning there is one
+value per node per element.  Right now, =_unpack_variable_data()= only
+knows how to distinguish between numeric types (float, vector,
+matrix), not item formats (node, item, mult).  This will have to be
+revised at some point.
+
+For a basic mesh (one material), all the stuff in the =domain=
+dictionary is defined per element.  A =domain= is explicitly an
+element set; they are listed in =geometry/domain_section=.
+
+* Specification uncertainties
+
+I am assuming that all integer values in the FEBio binary file format
+are encoded as unsigned integers, since the default 4-byte word is
+explicitly an unsigned integer.  Additionally, it makes more sense to
+use unsigned than signed integers as identifiers.
+
+* Two-dimensional elements
+
+Two-dimensional elements are currently handled by ignoring $x_3$.
+This is done so that the Jacobian matrix will be square and therefore
+invertible for calculating spatial derivatives.  It is probably
+possible to calculate a non-square pseudo-inverse of $J$ that permits
+calculation of spatial derivatives including $x_3$, though.
