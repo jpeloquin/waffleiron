@@ -19,6 +19,15 @@ def f(r, X, u):
     f = np.dot(Jinv, du) + np.eye(3)
     return f
 
+def _cross(u, v):
+    """Cross product for two vectors in R3.
+
+    """
+    w = np.array([u[1]*v[2] - u[2]*v[1],
+                  u[2]*v[0] - u[0]*v[2],
+                  u[0]*v[1] - u[1]*v[0]])
+    return w
+
 def elem_obj(element, nodes, eid=None):
     """Returns an Element object from node and element tuples.
 
@@ -95,7 +104,7 @@ class Element:
             v1 = points[f[1]] - points[f[0]]
             v2 = points[f[-1]] - points[f[0]]
             # compute the face normal
-            normals.append(np.cross(v1, v2))
+            normals.append(_cross(v1, v2))
         return normals
 
     def faces_with_node(self, node_id):
@@ -223,7 +232,7 @@ class Element2D(Element):
         for l in self.edge_nodes:
             v = points[l[1]] - points[l[0]]
             face_normal = self.face_normals()[0]
-            normals.append(np.cross(v, face_normal))
+            normals.append(_cross(v, face_normal))
         return normals
 
     def to_natural(self, p):
