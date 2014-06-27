@@ -14,10 +14,10 @@ from febtools import material
 """J integral for isotropic material, equibiaxial stretch.
 
 """
-febreader = FebReader(open('test/j-integral/'
+febreader = FebReader(open('test/fixtures/'
                            'center-crack-2d-1mm.feb'))
 materials = febreader.materials()
-f = 'test/j-integral/center-crack-2d-1mm.xplt'
+f = 'test/fixtures/center-crack-2d-1mm.xplt'
 soln = MeshSolution(f, materials=materials)
 y, mu = febtools.material.tolame(1e7, 0.3)
 mat1 = {'type': 'isotropic elastic',
