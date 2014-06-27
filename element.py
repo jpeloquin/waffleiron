@@ -74,14 +74,9 @@ class Element:
         self.eid = elem_id
         self.inode = inode
         self.xnode_mesh = xnode_mesh
+        self.xnode = np.array([self.xnode_mesh[i]
+                               for i in self.inode])
         self.matl_id = matl_id
-
-    @property
-    def xnode(self):
-        """List of node coordinate tuples.
-
-        """
-        return [self.xnode_mesh[i] for i in self.inode]
 
     @property
     def centroid(self):
@@ -226,7 +221,7 @@ class Element2D(Element):
         the element.  The normals point outward.
 
         """
-        points = np.array(self.xnode)
+        points = self.xnode
         normals = []
         # Iterate over edges
         for l in self.edge_nodes:
