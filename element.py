@@ -240,6 +240,10 @@ class Element2D(Element):
         j = self.j([0]*self.r_n)
         jinv = np.linalg.pinv(j)
         nat_coords = np.dot(jinv, v)
+        if (nat_coords > 1).any() or (nat_coords < -1).any():
+            raise Exception("Computed natural basis coordinates "
+                            "{} are outside the element's "
+                            "domain.".format(nat_coords))
         return nat_coords
 
 

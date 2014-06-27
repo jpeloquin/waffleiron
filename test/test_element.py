@@ -33,6 +33,23 @@ def f_test_hex8():
         F = soln.elements[eid].f((0, 0, 0), u)
         npt.assert_almost_equal(F, F_expected, decimal=5)
 
+class ElementMethodsTestQuad4(unittest.TestCase):
+
+    def setUp(self):
+        self.soln = feb.MeshSolution("test/fixtures/" \
+                                "center-crack-2d-1mm.xplt")
+        febreader = feb.FebReader('test/fixtures/'
+                              'center-crack-2d-1mm.feb')
+        self.soln.assign_materials(febreader.materials())
+
+    def test_physical_to_natural_outside(self):
+        """Test if an exception is raised when the computed natural
+        coordinates are outside an element.
+
+        """
+        e = self.soln.elements[0]
+        self.assertRaises(Exception,
+                          e.to_natural, (-10.1e-3, -9.5e-3, 0.0))
 
 class FTestTri3(unittest.TestCase):
     """Test F tensor calculations for Tri3 mesh.
