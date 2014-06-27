@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+from scipy.optimize import fsolve
 
 def f(r, X, u):
     """Calculate F tensor from nodal values and shape functions.
@@ -57,6 +58,7 @@ class Element:
     matl = None # material definition class
     inode = [] # list of node indices
     xnode_mesh = [] # list of node coordinates for whole mesh
+    # material := material class
 
     def __init__(self, inode, xnode_mesh,
                  elem_id=None, matl_id=None):
@@ -209,10 +211,10 @@ class Element2D(Element):
                 if node_id in l]
 
     def edge_normals(self):
-        """List of edge normals.
+        """Return list of edge normals.
 
-        These are constrained to lie in the same plane as the element.
-        The normals point outward.
+        The edge normals are constrained to lie in the same plane as
+        the element.  The normals point outward.
 
         """
         points = np.array(self.xnode)
@@ -224,12 +226,25 @@ class Element2D(Element):
             normals.append(np.cross(v, face_normal))
         return normals
 
+    def to_natural(self, p):
+        """Return natural coordinates for p = (x, y, z)
+
+        """
+        p = np.array(p)
+        x0 = np.dot(self.N(*[0]*self.r_n), self.xnode)
+        v = p - x0
+        j = self.j([0]*self.r_n)
+        jinv = np.linalg.pinv(j)
+        nat_coords = np.dot(jinv, v)
+        return nat_coords
+
 
 class Tri3(Element2D):
     """Functions for tri3 elements.
 
     """
     n = 3
+    r_n = 2 # number of natural basis parameters
     node_connectivity = [[1, 2],
                          [0, 2],
                          [1, 0]]
@@ -281,6 +296,7 @@ class Hex8(Element3D):
     # gloc
 
     n = 8 # number of vertices
+    r_n = 3 # number of natural basis parameters
 
     node_connectivity = [[1, 3, 4], # 0
                          [0, 2, 3], # 1
@@ -369,6 +385,7 @@ class Quad4(Element2D):
 
     """
     n = 4
+    r_n = 2 # number of natural basis parameters
     node_connectivity = [[1, 3],
                          [0, 2],
                          [1, 3],
@@ -389,7 +406,7 @@ class Quad4(Element2D):
     gwt = (1, 1, 1, 1)          # Guass weights
 
     @staticmethod
-    def N(r, s, t=None):
+    def N(r, s):
         """Shape functions.
 
         """

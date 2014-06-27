@@ -45,9 +45,8 @@ class SolidMixture:
     strain energies for each component.
 
     """
-    materials = []
 
-    def __init__(self, *args):
+    def __init__(self, solids):
         """Mixture of solids.
 
         Parameters
@@ -59,7 +58,8 @@ class SolidMixture:
             defined.
 
         """
-        for solid in args:
+        self.materials = []
+        for solid in solids:
             self.materials.append(solid)
 
     def w(self, F):

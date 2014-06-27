@@ -31,10 +31,10 @@ elements, q = jdomain(soln, id_crack_tip, n=2)
 j = jintegral(elements, soln.data['displacement'], q)
 
 def set_up_center_crack_2d_iso():
-    febreader = FebReader(open('test/j-integral/'
+    febreader = FebReader(open('test/fixtures/'
                                'center-crack-2d-1mm.feb'))
     materials = febreader.materials()
-    soln = febtools.MeshSolution('test/j-integral/'
+    soln = febtools.MeshSolution('test/fixtures/'
                                  'center-crack-2d-1mm.xplt',
                                  materials=materials)
 

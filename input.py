@@ -87,7 +87,7 @@ class FebReader:
                 for child in mat:
                     solid = self._elem2mat(child)
                     solids.append(solid)
-                material = febtools.material.SolidMixture(*solids)
+                material = febtools.material.SolidMixture(solids)
             else:
                 material = self._elem2mat(mat)
             # Store material object in materials dictionary
