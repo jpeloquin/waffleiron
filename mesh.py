@@ -17,6 +17,7 @@ class Mesh:
     node = []
     element = []
     # nodetree = kd-tree for quick lookup of nodes
+    # elem_with_node = For each node, list the parent elements.
 
     def __init__(self, node, element):
 
@@ -34,6 +35,13 @@ class Mesh:
             else:
                 self.element = [elem_obj(nid, node, eid=i)
                                 for i, nid in enumerate(element)]
+
+        # Create list of parent elements by node
+        elem_with_node = [[] for i in xrange(len(self.node))]
+        for e in self.element:
+            for nid in e.inode:
+                elem_with_node[nid].append(e)
+        self.elem_with_node = elem_with_node
 
     def writefeb(self, fpath, materials=None):
         """Write mesh to .feb file.
