@@ -43,9 +43,9 @@ class ExponentialFiberTest(unittest.TestCase):
         """Check Cauchy stress against FEBio.
 
         """
-        F = self.soln.element[0].f((0, 0, 0),
+        F = self.soln.elements[0].f((0, 0, 0),
                                    self.soln.data['displacement'])
-        t_try = self.soln.element[0].material.tstress(F)
+        t_try = self.soln.elements[0].material.tstress(F)
         t_true = self.soln.data['stress'][0]
         npt.assert_allclose(t_true, t_try, rtol=1e-5)
 
@@ -162,7 +162,7 @@ class HolmesMowTestCase(unittest.TestCase):
         del self.soln
 
     def tstress_test(self):
-        e = self.soln.element[0]
+        e = self.soln.elements[0]
         F = e.f((0, 0, 0), self.soln.data['displacement'])
         t_try = e.material.tstress(F)
         t_true = self.soln.data['stress'][0]

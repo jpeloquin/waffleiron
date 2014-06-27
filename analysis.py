@@ -20,7 +20,7 @@ def select_elems_around_node(mesh, i, n=3):
     elements = set([])
     for n in xrange(n):
         for i in nodelist:
-            elements = elements | mesh.elem_with_node(i)
+            elements = elements | set(mesh.elem_with_node[i])
         nodelist = set(i for e in elements
                        for i in e.inode)
         # ^ This needlessly re-adds elements already in the domain;
@@ -33,7 +33,7 @@ def jdomain(mesh, inode_tip, n=3, qtype='plateau'):
     """Define q for for the J integral.
 
     """
-    q = [None] * len(mesh.node)
+    q = [None] * len(mesh.nodes)
     inner_elements = select_elems_around_node(mesh, inode_tip, n=n-1)
     inner_nodes = set(i for e in inner_elements
                       for i in e.inode)
@@ -46,12 +46,12 @@ def jdomain(mesh, inode_tip, n=3, qtype='plateau'):
             for i in e.inode:
                 connectivity[i] += 1
         return connectivity
-    c = node_connectivity(mesh.element, len(mesh.node))
+    c = node_connectivity(mesh.elements, len(mesh.nodes))
     crack_nodes = [inode_tip]
     # walk along crack boundary to find crack nodes
     for l in xrange(n):
         crack_nodes = set(idx for i in crack_nodes
-                          for e in mesh.elem_with_node(i)
+                          for e in mesh.elem_with_node[i]
                           for idx in e.inode
                           if c[idx] == e.n/2)
     crack_nodes = crack_nodes | set([inode_tip])

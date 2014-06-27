@@ -11,19 +11,19 @@ class MergeTestTri2d(unittest.TestCase):
         """Create two meshes sharing a common boundary.
 
         """
-        node = [(0.0, 0.0),
+        nodes1 = [(0.0, 0.0),
                 (0.3, 0.0),
                 (0.6, 0.0),
                 (1.0, 0.0),
                 (1.0, 1.0),
                 (0.0, 1.0)]
-        element = [(0, 1, 5),
+        elements = [(0, 1, 5),
                    (1, 4, 5),
                    (1, 2, 4),
                    (2, 3, 4)]
-        self.mesh1 = Mesh(node, element)
-        node = [(x, -1.0 * y) for (x, y) in node]
-        self.mesh2 = Mesh(node, element)
+        self.mesh1 = Mesh(nodes1, elements)
+        nodes2 = [(x, -1.0 * y) for (x, y) in nodes1]
+        self.mesh2 = Mesh(nodes2, elements)
     
 
     def test_mesh_merge_all(self):
@@ -33,8 +33,8 @@ class MergeTestTri2d(unittest.TestCase):
         mesh1 = deepcopy(self.mesh1)
         mesh2 = deepcopy(self.mesh2)
         mesh1.merge(mesh2)
-        assert(len(mesh1.element) == 8)
-        assert(len(mesh1.node) == 8)
+        assert(len(mesh1.elements) == 8)
+        assert(len(mesh1.nodes) == 8)
 
     def test_mesh_merge_sel(self):
         """Test merging two meshes, merging only selected nodes.

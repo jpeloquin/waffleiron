@@ -53,7 +53,7 @@ def test_select_elems_around_node():
 def test_jdomain_q():
     id_crack_tip = 1669
     elements, q = jdomain(soln, id_crack_tip, n=2, qtype='plateau')
-    qexpected = [None] * len(soln.node)
+    qexpected = [None] * len(soln.nodes)
     i_inner = [1615, 1616, 1617, 1668, 1669, 1670,
                1721, 1722, 1723, 2921]
     for i in i_inner:
@@ -81,13 +81,13 @@ def test_jintegral_uniax_center_crack_2d():
 
     a = 1.0e-3 # m
     W = 10.0e-3 # m
-    minima = np.array([min(x) for x in zip(*soln.node)])
-    maxima = np.array([max(x) for x in zip(*soln.node)])
+    minima = np.array([min(x) for x in zip(*soln.nodes)])
+    maxima = np.array([max(x) for x in zip(*soln.nodes)])
     ymin = minima[1]
     ymax = maxima[1]
-    e_top = [e for e in soln.element
+    e_top = [e for e in soln.elements
              if np.any(np.isclose(zip(*e.xnode)[1], ymin))]
-    e_bottom = [e for e in soln.element
+    e_bottom = [e for e in soln.elements
                 if np.any(np.isclose(zip(*e.xnode)[1], ymax))]
     def pk1(elements):
         """Convert Cauchy stress in each element to 1st P-K.

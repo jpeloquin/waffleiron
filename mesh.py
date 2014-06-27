@@ -14,8 +14,8 @@ default_tol = 10*np.finfo(float).eps
 class Mesh:
     """Stores a mesh geometry."""
 
-    node = []
-    element = []
+    nodes = []
+    elements = []
     # nodetree = kd-tree for quick lookup of nodes
     # elem_with_node = For each node, list the parent elements.
 
@@ -24,21 +24,21 @@ class Mesh:
         # Nodes (list of tuples)
         if len(node[0]) == 2:
             node = [(x, y, 0.0) for (x, y) in node]
-        self.node = node
+        self.nodes = node
 
-        self.nodetree = KDTree(self.node)
+        self.nodetree = KDTree(self.nodes)
 
         # Elements (list of tuples)
         if element !=[] and node !=[]:
             if element[0] is febtools.element.Element:
-                self.element = element
+                self.elements = element
             else:
-                self.element = [elem_obj(nid, node, eid=i)
+                self.elements = [elem_obj(nid, node, eid=i)
                                 for i, nid in enumerate(element)]
 
         # Create list of parent elements by node
-        elem_with_node = [[] for i in xrange(len(self.node))]
-        for e in self.element:
+        elem_with_node = [[] for i in xrange(len(self.nodes))]
+        for e in self.elements:
             for nid in e.inode:
                 elem_with_node[nid].append(e)
         self.elem_with_node = elem_with_node
@@ -63,14 +63,14 @@ class Mesh:
         formatted = lambda n: "{:e}".format(n)
 
         # write nodes
-        for i, x in enumerate(self.node):
+        for i, x in enumerate(self.nodes):
             feb_nid = i + 1 # 1-indexed
             e = ET.SubElement(Nodes, 'node', id="{}".format(feb_nid))
             e.text = ",".join("{:e}".format(n) for n in x)
             Nodes.append(e)
         
         # write elements
-        for i, elem in enumerate(self.element):
+        for i, elem in enumerate(self.elements):
             label = elem.__class__.__name__.lower()
             feb_eid = i + 1 # 1-indexed
             if elem.matl_id is None:
@@ -105,7 +105,7 @@ class Mesh:
 
         if materials is None:
             # Count how many materials are defined
-            mids = set(e.matl_id for e in self.element)
+            mids = set(e.matl_id for e in self.elements)
             for mid in mids:
                 m = default_mat(mid)
                 Material.append(m)
@@ -120,7 +120,7 @@ class Mesh:
 
         """
         refcount = self.node_connectivity()
-        for i in reversed(xrange(len(self.node))):
+        for i in reversed(xrange(len(self.nodes))):
             if refcount[i] == 0:
                 self.remove_node(i)
 
@@ -144,10 +144,10 @@ class Mesh:
             else:
                 return None
         removal = lambda e: [nodemap(i) for i in e]
-        elems = [removal(e.inode) for e in self.element]
+        elems = [removal(e.inode) for e in self.elements]
         for i, inode in enumerate(elems):
-            self.element[i].inode = inode
-        self.node = [x for i, x in enumerate(self.node)
+            self.elements[i].inode = inode
+        self.nodes = [x for i, x in enumerate(self.nodes)
                      if i != nid_remove]
 
     def node_connectivity(self):
@@ -155,8 +155,8 @@ class Mesh:
         """Count how many elements each node belongs to.
 
         """
-        refcount = [0] * len(self.node)
-        for e in self.element:
+        refcount = [0] * len(self.nodes)
+        for e in self.elements:
             for i in e.inode:
                 refcount[i] += 1
         return refcount
@@ -166,15 +166,15 @@ class Mesh:
 
         """
         centroid = []
-        for i in range(len(self.element)):
-            x = [self.node[inode] for inode in self.element[i]]
+        for i in range(len(self.elements)):
+            x = [self.nodes[inode] for inode in self.elements[i]]
             c = [sum(v) / len(v) for v in zip(*x)]
             yield c
 
     def elemcoord(self):
         """Generator for element coordinates."""
-        for idx in self.element:
-            yield tuple([self.node[i] for i in idx])
+        for idx in self.elements:
+            yield tuple([self.nodes[i] for i in idx])
 
     def find_nearest_node(self, x, y, z=None):
         """Find node nearest (x, y, z)
@@ -184,22 +184,11 @@ class Mesh:
             p = (x, y, 0)
         else:
             p = (x, y, z)
-        d = np.array(self.node) - p
+        d = np.array(self.nodes) - p
         d = np.sum(d**2., axis=1) # don't need square root if just
                                   # finding nearest
         idx = np.argmin(abs(d))
         return idx
-
-    def elem_with_node(self, idx):
-        """Return elements containing a node
-
-        idx := node id
-
-        """
-        eid = set(i for (i, e) in enumerate(self.element)
-                  if idx in e.inode)
-        elements = [self.element[i] for i in eid]
-        return set(elements)
 
     def conn_elem(self, elements):
         """Find elements connected to elements.
@@ -209,7 +198,7 @@ class Mesh:
                      for i in e.inode])
         elements = []
         for idx in nodes:
-            elements = elements + list(self.elem_with_node(idx))
+            elements = elements + self.elem_with_node[idx]
         return set(elements)
 
     def element_containing_point(self, point):
@@ -225,9 +214,9 @@ class Mesh:
 
         # Iterate over all points and the corresponding proximal
         # nodes
-        elems = self.elem_with_node(node_idx)
+        elems = self.elem_with_node[node_idx]
         # vector from closest node to point p
-        v_pq = point - self.node[node_idx]
+        v_pq = point - self.nodes[node_idx]
         # Iterate over the elements
         for e in elems:
             local_id = e.inode.index(node_idx)
@@ -271,18 +260,18 @@ class Mesh:
             The merged mesh
 
         """
-        dist = cdist(other.node, self.node, 'euclidean')
+        dist = cdist(other.nodes, self.nodes, 'euclidean')
         newind = [] # new indices for 'other' nodes after merge
         # copy nodelist so any error will not corrupt the original mesh
-        nodelist = deepcopy(self.node)
+        nodelist = deepcopy(self.nodes)
         # Iterate over nodes in 'other'
-        for i, p in enumerate(other.node):
+        for i, p in enumerate(other.nodes):
             try_combine = ((candidates == 'auto') or 
                            (candidates != 'auto' and i in candidates))
             if try_combine:
                 # Find node in 'self' closest to p
                 imatch = self.find_nearest_node(*p)
-                pmatch = self.node[imatch]
+                pmatch = self.nodes[imatch]
                 if dist[i, imatch] < tol:
                     # Make all references in 'other' to p use pmatch
                     # instead
@@ -296,17 +285,17 @@ class Mesh:
                 newind.append(len(nodelist))
                 nodelist.append(p)
         # Update this mesh's node list
-        self.node = nodelist
+        self.nodes = nodelist
         # Define new simplices for "other" mesh
-        new_simplices = [list(e.inode) for e in other.element]
-        for i, elem in enumerate(other.element):
+        new_simplices = [list(e.inode) for e in other.elements]
+        for i, elem in enumerate(other.elements):
             elem.xnode_mesh = nodelist
             for j, nodeid in enumerate(elem.inode):
                 inode = np.array(elem.inode)
                 inode[j] = newind[nodeid]
                 elem.inode = inode
             # Add the new element
-            self.element.append(elem)
+            self.elements.append(elem)
 
     def _build_node_graph(self):
         """Create a node connectivity graph for faster node lookup.
@@ -316,7 +305,7 @@ class Mesh:
         i.
 
         """
-        for nid in self.node:
+        for nid in self.nodes:
             pass
 
 
@@ -338,8 +327,8 @@ class MeshSolution(Mesh):
                 self.reader = XpltReader(f)
             elif isinstance(f, XpltReader):
                 self.reader = f
-            self.node, self.element = self.reader.mesh()
-            self.nodetree = KDTree(self.node) # TODO: make this an
+            self.nodes, self.elements = self.reader.mesh()
+            self.nodetree = KDTree(self.nodes) # TODO: make this an
                                               # automatic consequence
                                               # of adding a Mesh
                                               # geometry
@@ -348,6 +337,13 @@ class MeshSolution(Mesh):
             if materials:
                 self.assign_materials(materials)
                 self.materials = materials
+
+        # Create list of parent elements by node
+        elem_with_node = [[] for i in xrange(len(self.nodes))]
+        for e in self.elements:
+            for nid in e.inode:
+                elem_with_node[nid].append(e)
+        self.elem_with_node = elem_with_node
 
     def assign_materials(self, materials):
         """Assign materials from integer codes.
@@ -360,8 +356,8 @@ class MeshSolution(Mesh):
             `input.FebReader.materials()`.
 
         """
-        for i, e in enumerate(self.element):
-            self.element[i].material = materials[e.matl_id]
+        for i, e in enumerate(self.elements):
+            self.elements[i].material = materials[e.matl_id]
 
     def f(self, istep = -1, r = 0, s = 0, t = 0):
         """Generator for F tensors for each element.
@@ -371,7 +367,7 @@ class MeshSolution(Mesh):
         Displacements (global): u, v, w
     
         """
-        for e in self.element:
+        for e in self.elements:
             u = np.array([self.data['displacement'][i]
                           for i in e.inode])
             # displacements are exported for each node

@@ -28,9 +28,9 @@ def f_test_hex8():
                             'complex_loading.xplt')
     istep = -1
     u = soln.reader.stepdata(istep)['displacement']
-    for eid in xrange(len(soln.element) - 1): # don't check rigid body
+    for eid in xrange(len(soln.elements) - 1): # don't check rigid body
         F_expected = f_tensor_logfile(elemdata, istep, eid)
-        F = soln.element[eid].f((0, 0, 0), u)
+        F = soln.elements[eid].f((0, 0, 0), u)
         npt.assert_almost_equal(F, F_expected, decimal=5)
 
 
@@ -49,9 +49,9 @@ class FTestTri3(unittest.TestCase):
     def test_f(self):
         istep = -1
         u = self.soln.reader.stepdata(istep)['displacement']
-        for eid in xrange(len(self.soln.element)):
+        for eid in xrange(len(self.soln.elements)):
             F_expected = f_tensor_logfile(self.elemdata, istep, eid)
-            F = self.soln.element[eid].f((1.0/3.0, 1.0/3.0), u)
+            F = self.soln.elements[eid].f((1.0/3.0, 1.0/3.0), u)
             npt.assert_almost_equal(F[:2,:2], F_expected[:2,:2],
                                     decimal=5)
 
@@ -69,9 +69,9 @@ class FTestQuad4(unittest.TestCase):
     def test_f(self):
         istep = -1
         u = self.soln.reader.stepdata(istep)['displacement']
-        for eid in xrange(len(self.soln.element)):
+        for eid in xrange(len(self.soln.elements)):
             F_expected = f_tensor_logfile(self.elemdata, istep, eid)
-            F = self.soln.element[eid].f((1.0/3.0, 1.0/3.0), u)
+            F = self.soln.elements[eid].f((1.0/3.0, 1.0/3.0), u)
             npt.assert_almost_equal(F[:2,:2], F_expected[:2,:2],
                                     decimal=5)
 
