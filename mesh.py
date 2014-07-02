@@ -53,6 +53,7 @@ class Mesh:
                 elem_with_node[nid].append(e)
         self.elem_with_node = elem_with_node
 
+
     def writefeb(self, fpath, materials=None):
         """Write mesh to .feb file.
 
@@ -78,7 +79,7 @@ class Mesh:
             e = ET.SubElement(Nodes, 'node', id="{}".format(feb_nid))
             e.text = ",".join("{:e}".format(n) for n in x)
             Nodes.append(e)
-        
+
         # write elements
         for i, elem in enumerate(self.elements):
             label = elem.__class__.__name__.lower()
@@ -136,7 +137,7 @@ class Mesh:
 
     def remove_node(self, nid_remove):
         """Remove node i from the mesh.
-        
+
         The indexing of the elements into the node list is updated to
         account for the removal of the node.  An exception is thrown
         if an element refers to the removed node, since removing the
@@ -286,7 +287,7 @@ class Mesh:
         nodelist = deepcopy(self.nodes)
         # Iterate over nodes in 'other'
         for i, p in enumerate(other.nodes):
-            try_combine = ((candidates == 'auto') or 
+            try_combine = ((candidates == 'auto') or
                            (candidates != 'auto' and i in candidates))
             if try_combine:
                 # Find node in 'self' closest to p
@@ -337,7 +338,7 @@ class MeshSolution(Mesh):
     materials = {}
     data = {}
     reader = None
-    
+
     def __init__(self, f=None, step=-1, materials=None):
         if f is None:
             # This is a minimal instance for debugging.
@@ -381,11 +382,11 @@ class MeshSolution(Mesh):
 
     def f(self, istep = -1, r = 0, s = 0, t = 0):
         """Generator for F tensors for each element.
-        
+
         Global coordinates: x, y, z
         Natural coordinates: r, s, t
         Displacements (global): u, v, w
-    
+
         """
         for e in self.elements:
             u = np.array([self.data['displacement'][i]
@@ -395,10 +396,10 @@ class MeshSolution(Mesh):
             du_dX = np.dot(np.linalg.inv(e.j((r, s, t))), du_dR)
             f = du_dX + np.eye(3)
             yield f
-            
+
     def s(self):
         """1st Piola-Kirchoff stress for each element.
-        
+
         The stress is calculated at the center of each element by
         transforming FEBio's Cauchy stress output.
         """
