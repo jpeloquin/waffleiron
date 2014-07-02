@@ -22,7 +22,7 @@ def scalar_field(soln, fn, pts):
 
     Notes
     -----
-    This funtion does not yet handle holes.
+    This function does not yet handle holes.
 
     """
     # add z coordinates if omitted
