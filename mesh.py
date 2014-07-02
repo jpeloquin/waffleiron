@@ -36,6 +36,16 @@ class Mesh:
                 self.elements = [elem_obj(nid, node, eid=i)
                                 for i, nid in enumerate(element)]
 
+        # Precompute derived properties
+        self._precompute()
+
+
+    def _precompute(self):
+        """Calculate all derived properties.
+
+        This should be called every time the mesh geometry changes.
+
+        """
         # Create list of parent elements by node
         elem_with_node = [[] for i in xrange(len(self.nodes))]
         for e in self.elements:
