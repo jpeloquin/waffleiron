@@ -190,6 +190,10 @@ class Mesh:
     def find_nearest_node(self, x, y, z=None):
         """Find node nearest (x, y, z)
 
+        Notes
+        -----
+        Does not handle the case where nodes are superimposed.
+
         """
         if z is None:
             p = (x, y, 0)
