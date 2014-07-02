@@ -37,9 +37,12 @@ def scalar_field(soln, fn, pts):
             y = pts[i, j, 1]
             z = pts[i, j, 2]
             e = soln.element_containing_point((x, y, z))
-            r = e.to_natural((x, y, z))
-            f = e.f(r, soln.data['displacement'])
-            img[i, j] = fn(f, e)
+            if e is None:
+                img[i, j] = None
+            else:
+                r = e.to_natural((x, y, z))
+                f = e.f(r, soln.data['displacement'])
+                img[i, j] = fn(f, e)
         sys.stdout.write("\rLine {}/{}".format(i+1, img.shape[0]))
         sys.stdout.flush()
     sys.stdout.write("\n")
