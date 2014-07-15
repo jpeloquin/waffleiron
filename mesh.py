@@ -11,6 +11,10 @@ from lxml import etree as ET
 
 default_tol = 10*np.finfo(float).eps
 
+# Increase recursion limit for kdtree
+import sys
+sys.setrecursionlimit(10000)
+
 class Mesh:
     """Stores a mesh geometry."""
 
