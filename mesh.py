@@ -15,6 +15,51 @@ default_tol = 10*np.finfo(float).eps
 import sys
 sys.setrecursionlimit(10000)
 
+def zstack(mesh, zcoords):
+    """Stack a 2d mesh in the z direction to make a 3d mesh.
+
+    Arguments
+    ---------
+    zcoords -- The z-coordinate of each layer of nodes in the stacked
+    mesh.  The number of element layers will be one less than the
+    length of zcoords.
+
+    Material properties are preserved.  Boundary conditions are not.
+
+    """
+    # Create 3d node list
+    nodes = []
+    for z in zcoords:
+        node_layer = [(pt[0], pt[1], z) for pt in mesh.nodes]
+        nodes = nodes + node_layer
+
+    # Create elements
+    eid = 0
+    elements = []
+    # Iterate over element layers
+    for i in xrange(len(zcoords) - 1):
+        # Iterate over elements in 2d mesh
+        for e2d in mesh.elements:
+            nids = ([a + i * len(mesh.nodes)
+                     for a in e2d.inode] +
+                    [a + (i + 1) * len(mesh.nodes)
+                     for a in e2d.inode])
+            if isinstance(e2d, febtools.element.Quad4):
+                e3d = febtools.element.Hex8(nids,
+                                            xnode_mesh=nodes,
+                                            elem_id=eid,
+                                            matl_id=e2d.matl_id)
+            else:
+                raise NotImplemented("Only Quad4 meshes can be used in zstack right now.")
+            eid = eid + 1
+            e3d.matl_id = e3d.matl_id
+            e3d.material = e2d.material
+            elements.append(e3d)
+
+    mesh3d = febtools.mesh.Mesh(nodes=nodes, elements=elements)
+    mesh3d.materials = mesh.materials
+    return mesh3d
+
 class Mesh:
     """Stores a mesh geometry."""
 
