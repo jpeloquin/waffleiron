@@ -1,25 +1,11 @@
 # coding=utf-8
-
 import numpy as np
 from numpy import dot, trace, eye, outer
 from numpy.linalg import det
 import math
 from math import log, exp, sin, cos
 import febtools as feb
-
-def getclass(matname):
-    """Return reference to a material's class from its name.
-
-    The material names are those used by FEBio.  These names are
-    listed in the type attribute of each `material` tag in an `.feb`
-    file.
-
-    """
-    d = {'isotropic elastic': IsotropicElastic,
-         'Holmes-Mow': HolmesMow,
-         'fiber-exp-pow': ExponentialFiber,
-         'solid mixture': SolidMixture}
-    return d[matname]
+from lxml import etree as ET
 
 def tolame(E, v):
     """Convert Young's modulus & Poisson ratio to Lamé parameters.
@@ -294,3 +280,9 @@ class IsotropicElastic:
         trE = np.trace(E)
         s = y * trE * np.eye(3) + 2.0 * mu * E
         return s
+
+class_from_name = {'isotropic elastic': IsotropicElastic,
+                   'Holmes-Mow': HolmesMow,
+                   'fiber-exp-pow': ExponentialFiber,
+                   'solid mixture': SolidMixture}
+name_from_class = {v:k for k, v in class_from_name.items()}

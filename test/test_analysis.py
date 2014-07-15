@@ -75,8 +75,8 @@ def test_jintegral_uniax_center_crack_2d():
                         step=2,
                         materials=materials)
 
-    y = materials[1].y
-    mu = materials[1].mu
+    y = materials[0].y
+    mu = materials[0].mu
     E, nu = fromlame(y, mu)
 
     a = 1.0e-3 # m

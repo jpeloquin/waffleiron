@@ -6,9 +6,9 @@ import febtools as feb
 import febtools.element
 from febtools import XpltReader
 from febtools.element import elem_obj
-# import xml.etree.ElementTree as ET
 from lxml import etree as ET
 
+# Set tolerances
 default_tol = 10*np.finfo(float).eps
 
 # Increase recursion limit for kdtree
@@ -20,6 +20,7 @@ class Mesh:
 
     nodes = []
     elements = []
+    materials = {}
     # nodetree = kd-tree for quick lookup of nodes
     # elem_with_node = For each node, list the parent elements.
 
@@ -58,7 +59,7 @@ class Mesh:
         self.elem_with_node = elem_with_node
 
 
-    def writefeb(self, fpath, materials=None):
+    def writefeb(self, fpath):
         """Write mesh to .feb file.
 
         Inputs
@@ -103,27 +104,26 @@ class Mesh:
                 ElementData = root.find('Geometry/ElementData')
                 if ElementData is None:
                     ElementData = ET.SubElement(Geometry, 'ElementData')
-            e = ET.SubElement(ElementData, 'element', id=str(feb_eid))
-            t = ET.SubElement(e, 'thickness')
-            t.text = '0.001, 0.001, 0.001'
+                e = ET.SubElement(ElementData, 'element', id=str(feb_eid))
+                t = ET.SubElement(e, 'thickness')
+                t.text = '0.001, 0.001, 0.001'
 
         # Write materials
-
-        def default_mat(mat_id):
-            m = ET.Element('material',
-                           id=str(mat_id),
-                           name="Material" + str(mat_id),
-                           type="isotropic elastic")
-            ET.SubElement(m, 'E').text = "1"
-            ET.SubElement(m, 'v').text = "0.3"
+        def default_mat():
+            props = {'E': 1, 'v': 0.3}
+            m = febtools.material.IsotropicElastic(props)
             return m
 
-        if materials is None:
-            # Count how many materials are defined
-            mids = set(e.matl_id for e in self.elements)
-            for mid in mids:
-                m = default_mat(mid)
-                Material.append(m)
+        # get all material ids used
+        mids = set(e.matl_id for e in self.elements)
+        # write a material for each material id
+        for material_id in xrange(max(mids) + 1):
+            material = self.materials.setdefault(material_id,
+                                                 default_mat())
+            m = febtools.output.material_to_feb(material)
+            m.attrib['name'] = 'Material' + str(material_id)
+            m.attrib['id'] = str(material_id + 1) # 1-indexed xml
+            Material.append(m)
 
         tree = ET.ElementTree(root)
         with open(fpath, 'w') as f:
@@ -337,6 +337,21 @@ class Mesh:
         for nid in self.nodes:
             pass
 
+    def assign_materials(self, materials):
+        """Assign materials from integer codes.
+
+        Parameters
+        ----------
+        materials : dictionary
+            A mapping from integer ids to material objects.  This
+            dictionary is usually obtained from
+            `input.FebReader.materials()`.
+
+        """
+        self.materials = materials
+        for i, e in enumerate(self.elements):
+            self.elements[i].material = materials[e.matl_id]
+
 
 class MeshSolution(Mesh):
     """Analysis of a solution step"""
@@ -373,20 +388,6 @@ class MeshSolution(Mesh):
             for nid in e.inode:
                 elem_with_node[nid].append(e)
         self.elem_with_node = elem_with_node
-
-    def assign_materials(self, materials):
-        """Assign materials from integer codes.
-
-        Parameters
-        ----------
-        materials : dictionary
-            A mapping from integer ids to material objects.  This
-            dictionary is usually obtained from
-            `input.FebReader.materials()`.
-
-        """
-        for i, e in enumerate(self.elements):
-            self.elements[i].material = materials[e.matl_id]
 
     def f(self, istep = -1, r = 0, s = 0, t = 0):
         """Generator for F tensors for each element.

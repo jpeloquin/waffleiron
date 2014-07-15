@@ -64,7 +64,6 @@ class Element:
 
     """
     matl_id = None # material integer code (FEBio codes are 1-indexed)
-    matl = None # material definition class
     inode = [] # list of node indices
     xnode_mesh = [] # list of node coordinates for whole mesh
     # material := material class

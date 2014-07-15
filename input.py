@@ -80,7 +80,7 @@ class FebReader:
                 name = mat.attrib['name']
             else:
                 name = ''
-            mat_id = int(mat.attrib['id'])
+            mat_id = int(mat.attrib['id']) - 1 # convert to 0-index
             if mat_type == "solid mixture":
                 # collect child materials
                 solids = []
@@ -102,7 +102,7 @@ class FebReader:
         props = {}
         for child in element:
             props[child.tag] = float(child.text)
-        cls = febtools.material.getclass(element.attrib['type'])
+        cls = febtools.material.class_from_name[element.attrib['type']]
         return cls(props)
 
     def mesh(self):
@@ -111,9 +111,28 @@ class FebReader:
         """
         nodes = [tuple([float(a) for a in b.text.split(",")])
                  for b in self.root.findall("./Geometry/Nodes/*")]
-        elements = [tuple([int(a) - 1 for a in b.text.split(",")])
-                    for b in self.root.findall("./Geometry/Elements/*")]
-        return febtools.Mesh(node=nodes, element=elements)
+        # Read elements
+        elements = []
+        for elset in self.root.findall("./Geometry/Elements"):
+            material_id = int(elset.attrib['mat']) - 1 # zero-index
+
+            element_type = elset.attrib['type']
+            if element_type == 'quad4':
+                element_class = febtools.element.Quad4
+            elif element_type == 'tri3':
+                element_class = febtools.element.Tri3
+            elif element_type == 'hex8':
+                element_class = febtools.element.Hex8
+
+            for elem in elset.findall("./elem"):
+                node_ids = [int(a) - 1 for a in elem.text.split(",")]
+                eid = int(elem.attrib['id']) - 1
+                e = element_class(node_ids, nodes, elem_id=eid,
+                                  matl_id=material_id)
+                elements.append(e)
+        mesh = febtools.Mesh(nodes=nodes, elements=elements)
+        mesh.assign_materials(self.materials())
+        return mesh
 
 class XpltReader:
     """Parses an FEBio xplt file.
@@ -252,11 +271,12 @@ class XpltReader:
                                       self.f.read(s))[0]
                 etype = self.tag2elem_type[ecode]
                 # Determine material id
+                # convert 1-index to 0-index
                 l, s = self._findall('domain_header/mat_id', loc)[0]
                 self.f.seek(l)
                 mat_id = struct.unpack(self.endian
                                        + 'I',
-                                       self.f.read(s))[0]
+                                       self.f.read(s))[0] - 1
                 # Read elements
                 elements = self._findall('element_list/element', loc)
                 for l, s in elements:

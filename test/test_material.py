@@ -60,7 +60,7 @@ class IsotropicElasticTest(unittest.TestCase):
         febreader = FebReader(open('test/fixtures/'
                                    'isotropic_elastic.feb'))
         materials = febreader.materials()
-        self.material = materials[1]
+        self.material = materials[0]
         Fxx = elemdata[-1]['Fxx'][0]
         Fyy = elemdata[-1]['Fyy'][0]
         Fzz = elemdata[-1]['Fzz'][0]
