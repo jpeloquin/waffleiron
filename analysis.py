@@ -29,6 +29,31 @@ def select_elems_around_node(mesh, i, n=3):
         # graph data structure.
     return elements
 
+def eval_fn_x(soln, fn, pt):
+    """Evaluate a function at a specific point.
+
+    fn := A function that takes an F tensor and an Element object.
+
+    soln := A MeshSolution object.
+
+    pt : (x, y, z)
+        The coordinates of the point at which to evaluate `fn`.  The z
+        value may be omitted; if so, it is assumed to be 0.
+
+    Returns
+    -------
+    The return value of fn evaluated at pt or, if no element contains
+    pt, None.
+
+    """
+    e = soln.element_containing_point(pt)
+    if e is None:
+        return None
+    else:
+        r = e.to_natural(pt)
+        f = e.f(r, soln.data['displacement'])
+        return fn(f, e)
+
 def jdomain(mesh, inode_tip, n=3, qtype='plateau'):
     """Define q for for the J integral.
 
