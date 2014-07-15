@@ -19,22 +19,22 @@ class Mesh:
     # nodetree = kd-tree for quick lookup of nodes
     # elem_with_node = For each node, list the parent elements.
 
-    def __init__(self, node, element):
+    def __init__(self, nodes, elements):
 
         # Nodes (list of tuples)
-        if len(node[0]) == 2:
-            node = [(x, y, 0.0) for (x, y) in node]
-        self.nodes = node
+        if len(nodes[0]) == 2:
+            nodes = [(x, y, 0.0) for (x, y) in nodes]
+        self.nodes = nodes
 
         self.nodetree = KDTree(self.nodes)
 
         # Elements (list of tuples)
-        if element !=[] and node !=[]:
-            if element[0] is febtools.element.Element:
-                self.elements = element
+        if elements !=[] and nodes !=[]:
+            if isinstance(elements[0], febtools.element.Element):
+                self.elements = elements
             else:
-                self.elements = [elem_obj(nid, node, eid=i)
-                                for i, nid in enumerate(element)]
+                self.elements = [elem_obj(nid, nodes, eid=i)
+                                 for i, nid in enumerate(elements)]
 
         # Precompute derived properties
         self._precompute()
