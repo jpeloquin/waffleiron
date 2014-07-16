@@ -1,7 +1,7 @@
 # import xml.etree.ElemOAentTree as ET
 from lxml import etree as ET
 import febtools as feb
-
+from math import degrees
 
 feb_version = 1.2
 
@@ -50,9 +50,9 @@ def exponentialfiber_to_feb(mat):
     p = ET.SubElement(e, 'ksi')
     p.text = str(mat.xi)
     p = ET.SubElement(e, 'theta')
-    p.text = str(mat.theta)
+    p.text = str(degrees(mat.theta))
     p = ET.SubElement(e, 'phi')
-    p.text = str(mat.phi)
+    p.text = str(degrees(mat.phi))
     return e
 
 def holmesmow_to_feb(mat):
