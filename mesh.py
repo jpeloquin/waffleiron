@@ -120,6 +120,9 @@ class Mesh:
         Geometry = root.find('Geometry')
         Nodes = root.find('Geometry/Nodes')
         Elements = root.find('Geometry/Elements')
+        Boundary = root.find('Boundary')
+        LoadData = root.find('LoadData')
+        Output = root.find('Output')
 
         formatted = lambda n: "{:e}".format(n)
 
@@ -169,6 +172,11 @@ class Mesh:
             m.attrib['name'] = 'Material' + str(material_id)
             m.attrib['id'] = str(material_id + 1) # 1-indexed xml
             Material.append(m)
+
+        # Write Output section
+        plotfile = ET.SubElement(Output, 'plotfile', type='febio')
+        ET.SubElement(plotfile, 'var', type='displacement')
+        ET.SubElement(plotfile, 'var', type='stress')
 
         tree = ET.ElementTree(root)
         with open(fpath, 'w') as f:
