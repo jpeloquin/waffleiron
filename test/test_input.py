@@ -1,6 +1,7 @@
 # Run these tests with nose
 
 import unittest
+import os
 import numpy.testing as npt
 import numpy as np
 from nose.tools import with_setup
@@ -17,12 +18,15 @@ class MeshSolutionTest(unittest.TestCase):
     recorded in the text log.
 
     """
-    xpltsol = febtools.MeshSolution('test/fixtures/'
-                                    'complex_loading.xplt')
-    elemdata = febtools.readlog('test/fixtures/'
-                                'complex_loading_elem_data.txt')
-    nodedata = febtools.readlog('test/fixtures/'
-                                'complex_loading_node_data.txt')
+
+    def setUp(self):
+        self.soln = febtools.input.XpltReader(os.path.join('test', 'fixtures', 'complex_loading.xplt'))
+        reader = febtools.input.FebReader(os.path.join('test', 'fixtures', 'complex_loading.feb'))
+        self.model = reader.model()
+        self.model.apply_solution(self.soln
+)
+        self.elemdata = febtools.input.readlog(os.path.join('test', 'fixtures', 'complex_loading_elem_data.txt'))
+        self.nodedata = febtools.input.readlog(os.path.join('test', 'fixtures', 'complex_loading_node_data.txt'))
 
     def cmp_f(self, row, col, key):
         """Helper function for comparing f tensors.
@@ -31,12 +35,11 @@ class MeshSolutionTest(unittest.TestCase):
         data in the logfile.
 
         """
-        for i, f in enumerate(self.xpltsol.f()):
-            if np.isnan(self.elemdata[-1]['s1'][i]):
-                # Likely a rigid body
-                # FEBio gives rigid bodies F_ii = +/-1
-                pass
-            else:
+        for i, e in enumerate(self.model.mesh.elements):
+            # Check if rigid body. FEBio gives rigid bodies F_ii =
+            # +/-1
+            if not np.isnan(self.elemdata[-1]['s1'][i]):
+                f = e.f((0, 0, 0))
                 npt.assert_approx_equal(f[row, col], 
                                         self.elemdata[-1][key][i],
                                         significant=5)
@@ -67,37 +70,3 @@ class MeshSolutionTest(unittest.TestCase):
 
     def test_fzy(self):
         self.cmp_f(2, 1, 'Fzy')
-
-
-class MeshSolution1PKTest(unittest.TestCase):
-    """Tests MeshSolution.s
-
-    A known deformation gradient and cauchy stress is provided to
-    `MeshSolution.s`, which calculates 1st Piola-Kirchoff stress
-    $s$. The Cauchy stress is then recalculated based on $s$ and
-    checked against the reference.
-
-    """
-    # Construct minimal instance of MeshSolution
-    a = febtools.MeshSolution(None, -1)
-    def f():
-        f = []
-        f.append(
-            np.array([[ 1.17006749, -0.02775013,  0.02736336],
-                      [ 0.07567887, -0.93846805, -0.13324592],
-                      [-0.06877768,  0.13129845, -0.94069371]]))
-        return f
-    a.f = f
-    a.data['stress'] = \
-        [np.array([[ 45.576931  , -13.9562149 ,   2.88448954],
-                   [-13.9562149 ,   8.23718643,  -0.69315594],
-                   [  2.88448954,  -0.69315594,   4.93684435]])]
-    print 'Setup completed'
-
-    def test_cauchy_from_1pk(self):
-        s = list(self.a.s())[0]
-        f = self.a.f()[0]
-        J = np.linalg.det(f)
-        t_actual = 1 / J * np.dot(np.dot(f, s), f.T)
-        t_desired = self.a.data['stress'][0]
-        npt.assert_allclose(t_actual, t_desired)

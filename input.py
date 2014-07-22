@@ -1,13 +1,14 @@
 #! /usr/bin/env python2.7
-
 from lxml import etree as ET
 import struct
 import numpy as np
 import os
+import febtools as feb
 import febtools.element
 from febtools.element import elem_obj
+from operator import itemgetter
 
-def nstrip(string):
+def _nstrip(string):
     """Remove trailing nulls from string.
 
     """
@@ -25,7 +26,7 @@ def readlog(fpath):
     etc.). Each dictionary value is a list of variable values over all
     the nodes.  The indexing of this list is the same as in the
     original file.
-    
+
     This function can be used for both node and element data.
 
     """
@@ -67,6 +68,8 @@ class FebReader:
         if self.root.tag != "febio_spec":
             raise Exception("Root node is not 'febio_spec': '" +
                             fpath + "is not an FEBio xml file.")
+        if self.root.attrib['version'] != '2.0':
+            raise ValueError('{} is not febio_spec 2.0'.format(file))
 
     def materials(self):
         """Return dictionary of material objects keyed by id.
@@ -101,38 +104,70 @@ class FebReader:
         """
         props = {}
         for child in element:
-            props[child.tag] = float(child.text)
+            v = map(float, child.text.split(','))
+            if len(v) == 1:
+                v = v[0]
+            props[child.tag] = v
         cls = febtools.material.class_from_name[element.attrib['type']]
         return cls(props)
+
+    def model(self):
+        """Return model.
+
+        """
+        # Create model from mesh
+        mesh = self.mesh() # materials handled in here
+        model = feb.Model(mesh)
+        # Boundary condition: fixed nodes
+        for e_fix in self.root.findall("Boundary/fix"):
+            lbl = e_fix.attrib['bc']
+            node_ids = set()
+            for e_node in e_fix:
+                node_ids.add(int(e_node.attrib['id']))
+            model.fixed_nodes[lbl].update(node_ids)
+        # Load curves (sequences)
+        # Steps
+        for e_step in self.root.findall('Step'):
+            e_module = e_step.find('Module')
+            module = e_module.attrib['type']
+            e_control = e_step.find('Control')
+            e_boundary = e_step.find('Boundary')
+            # TBD
+        return model
 
     def mesh(self):
         """Return mesh.
 
         """
+        materials = self.materials()
         nodes = [tuple([float(a) for a in b.text.split(",")])
                  for b in self.root.findall("./Geometry/Nodes/*")]
         # Read elements
-        elements = []
+        elements = [] # nodal index format
         for elset in self.root.findall("./Geometry/Elements"):
-            material_id = int(elset.attrib['mat']) - 1 # zero-index
+            mat_id = int(elset.attrib['mat']) - 1 # zero-index
 
-            element_type = elset.attrib['type']
-            if element_type == 'quad4':
-                element_class = febtools.element.Quad4
-            elif element_type == 'tri3':
-                element_class = febtools.element.Tri3
-            elif element_type == 'hex8':
-                element_class = febtools.element.Hex8
+            # map element type strings to classes
+            cls = self._element_class(elset.attrib['type'])
 
             for elem in elset.findall("./elem"):
-                node_ids = [int(a) - 1 for a in elem.text.split(",")]
-                eid = int(elem.attrib['id']) - 1
-                e = element_class(node_ids, nodes, elem_id=eid,
-                                  matl_id=material_id)
+                ids = [int(a) - 1 for a in elem.text.split(",")]
+                e = cls.from_ids(ids, nodes,
+                                 material=materials[mat_id])
                 elements.append(e)
-        mesh = febtools.Mesh(nodes=nodes, elements=elements)
-        mesh.assign_materials(self.materials())
+        # Create mesh
+        mesh = feb.Mesh(nodes, elements)
         return mesh
+
+    @staticmethod
+    def _element_class(label):
+        """Return element class corresponding to type label.
+
+        """
+        d = {'quad4': feb.element.Quad4,
+             'tri3': feb.element.Tri3,
+             'hex8': feb.element.Hex8}
+        return d[label]
 
 class XpltReader:
     """Parses an FEBio xplt file.
@@ -208,16 +243,14 @@ class XpltReader:
         2: 'mult'
         }
 
-    fhandle = None
-    endian = '' # little-endian: '<'
-                # big-endian:    '>'
-    time = []
-    
     def __init__(self, fpath):
-        """Read xplt data from file"""
-        print('Reading ' + fpath)
+        """Load an .xplt file.
+
+        """
         with open(fpath,'rb') as f:
             self.f = f
+
+            # Endianness
             self.endian = '<' # initial assumption
             s = f.read(4)
             if s == 'BEF\x00':
@@ -229,6 +262,8 @@ class XpltReader:
                                 "do not match the FEBio spec: "
                                 "it is not a valid .feb file."
                                 % (fpath,))
+
+            # Find timepoints
             time = []
             a = self._findall('state_section')
             self.steploc = [loc for loc, sz in a]
@@ -238,7 +273,7 @@ class XpltReader:
                 s = self.f.read(a[0][1])
                 time.append(struct.unpack(self.endian + 'f', s)[0])
             self.time = time
-    
+
     def mesh(self):
         """Reads node and element lists.
 
@@ -286,7 +321,7 @@ class XpltReader:
                                             + 'I',
                                             data[0:4])[0]
                     elem_id = elem_id - 1 # 0-index
-                    node_id = struct.unpack(self.endian 
+                    node_id = struct.unpack(self.endian
                                           + 'I' * ((s - 1) / 4),
                                           data[4:])
                     # the nodes are already 0-indexed in the binary
@@ -314,13 +349,21 @@ class XpltReader:
             mat_id = struct.unpack(self.endian + 'i', self.f.read(sz))[0]
             st, sz = self._findall('material_name', loc)[0]
             self.f.seek(st)
-            mat_name = nstrip(self.f.read(sz))
+            mat_name = _nstrip(self.f.read(sz))
             matl_index.append({'material_id': mat_id,
                               'material_name': mat_name})
         return matl_index
 
-    def stepdata(self, istep):
-        """Retrieve data for step (0 indexed).
+    def step_index(self, time):
+        """Return step index for a given time.
+
+        """
+        idx, d = min(enumerate(abs(t - time) for t in self.time),
+                     key=itemgetter(1))
+        return idx
+
+    def stepdata(self, step=None, time=None):
+        """Retrieve data for a specific solution step.
 
         The solution data is returned as a dictionary.  The data names
         (e.g. stress, displacement) are the keys.  These keys are read
@@ -328,14 +371,25 @@ class XpltReader:
         list of floats, vectors, or tensors according to the data type
         specified in the file's dictionary section.
 
+        The last step is the default.
+
         """
+        if time and not step:
+            step = self.step_index(time)
+        elif not time and not step:
+            step = -1
+
         var = {}
+        var['global'] = self._rdict('global')
+        var['material'] = self._rdict('material')
         var['node'] = self._rdict('nodeset')
         var['domain'] = self._rdict('domain')
         var['surface'] = self._rdict('surface')
-        nsteps = len(self.time)
-        this_step = {}
-        steploc = self.steploc[istep]
+
+        data = {}
+        data['time'] = self.time[step]
+
+        steploc = self.steploc[step]
         for k, v in var.iteritems():
             if v:
                 path = ('state_data/' + k + '_data'
@@ -344,12 +398,10 @@ class XpltReader:
                 for (loc, sz), (typ, fmt, name) in zip(a, v):
                     self.f.seek(loc)
                     s = self.f.read(sz)
-                    print('Found data named %s in  %s section'
-                          ', step %s.' % (name, k, str(istep)))
-                    this_step[name] = \
+                    data.setdefault(k, {})[name] = \
                         self._unpack_variable_data(s, typ)
-        this_step['time'] = self.time[istep]
-        return this_step
+        data['element'] = data['domain']
+        return data
 
     def _rdict(self, name):
         """Find a dictionary section and read it.
@@ -378,7 +430,7 @@ class XpltReader:
                     fmt.append(self.tag2item_format[
                         struct.unpack(self.endian + 'I', data)[0]])
                 elif label == 'item_name':
-                    name.append(nstrip(data))
+                    name.append(_nstrip(data))
                 else:
                     raise Exception('%s block not expected as '
                                     'child of dict_item.' % (label,))
@@ -446,7 +498,7 @@ class XpltReader:
 
     def _findall(self, pathstr, start = 0):
         """Finds position and size of blocks.
-        
+
         self._findall(pathstr[, start])
 
         `pathstr` is a `/`-delimited sequence of block IDs. For
@@ -519,7 +571,7 @@ class XpltReader:
 
     def _bprops(self):
         """Reads label and size of a block.
-        
+
         Returns (label, size) based on the next 2 dwords in the file.
         Label is in its string form and size is an integer.
 
@@ -533,4 +585,3 @@ class XpltReader:
             return self.tag2str[d[0]], d[1]
         else:
             return None
-

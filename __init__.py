@@ -1,8 +1,9 @@
-from input import *
-from mesh import *
-from analysis import *
+from core import *
+import analysis
 import compare
-import material
 import element
+import input
+import material
+import meshing
 import output
 import plotting

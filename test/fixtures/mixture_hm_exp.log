@@ -15,14 +15,14 @@
                                                                            
       F I N I T E   E L E M E N T S   F O R   B I O M E C H A N I C S      
                                                                            
-                 --- v e r s i o n - 1 . 7 . 1 . 4800 ---                 
+                 --- v e r s i o n - 2 . 0 . 1 ---                 
                                                                            
                                                                            
   Musculoskeletal Research Laboratory                                      
   University of Utah                                                       
   http://mrl.sci.utah.edu                                                  
                                                                            
-  copyright (c) 2006-2013 - All rights reserved                            
+  copyright (c) 2006-2014 - All rights reserved                            
                                                                               
  This is the NON-COMMERCIAL version of FEBio or the commercial license        
  key file could not be found. If you have a key file make sure it is          
@@ -46,15 +46,8 @@
 
  CONTROL DATA
 ===========================================================================
-Module type ...................................... : 0
-	   eq. 0: solid mechanics
-	   eq. 1: solid-fluid mixture
-	   eq. 2: heat transfer
-	   eq. 3: solid-fluid-solute(s) mixture
-	Analysis type .................................. : 0
-	   eq. 0: quasi-static
-	   eq. 1: dynamic
-	   eq. 2: steady-state
+	Module type .................................... : solid
+	Analysis type .................................. : quasi-static
 	Plane strain mode .............................. : no
 	Number of materials ............................ : 1
 	Number of nodes ................................ : 8
@@ -77,7 +70,7 @@ Module type ...................................... : 0
 	Displacement convergence tolerance ............. : 0.001
 	Energy convergence tolerance ................... : 0.01
 	Residual convergence tolerance ................. : 0
-	Minimal residual value ......................... : 1e-020
+	Minimal residual value ......................... : 1e-20
 	Linesearch convergence tolerance ............... : 0.9
 	Minimum line search size ....................... : 0.01
 	Maximum number of line search iterations ....... : 5
@@ -96,7 +89,7 @@ Module type ...................................... : 0
 
  MATERIAL DATA
 ===========================================================================
-  1 - solid mixture (frst)
+  1 - frst (type: solid mixture)
 	density ........................................... : 1
 
 
@@ -133,9 +126,9 @@ Module type ...................................... : 0
 	stiffness matrix reformations = 1
 	step from line search         = 1.000000
 	convergence norms :     INITIAL         CURRENT         REQUIRED
-	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
-	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
-	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+	   residual            0.000000e+00    0.000000e+00    0.000000e+00 
+	   energy              0.000000e+00    0.000000e+00    0.000000e+00 
+	   displacement        0.000000e+00    0.000000e+00    0.000000e+00 
 
 convergence summary
     number of iterations   : 1
@@ -167,9 +160,9 @@ File = mixture_hm_exp_elem_data.txt
 	stiffness matrix reformations = 1
 	step from line search         = 1.000000
 	convergence norms :     INITIAL         CURRENT         REQUIRED
-	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
-	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
-	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+	   residual            0.000000e+00    0.000000e+00    0.000000e+00 
+	   energy              0.000000e+00    0.000000e+00    0.000000e+00 
+	   displacement        0.000000e+00    0.000000e+00    0.000000e+00 
 
 convergence summary
     number of iterations   : 1
@@ -201,9 +194,9 @@ File = mixture_hm_exp_elem_data.txt
 	stiffness matrix reformations = 1
 	step from line search         = 1.000000
 	convergence norms :     INITIAL         CURRENT         REQUIRED
-	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
-	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
-	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+	   residual            0.000000e+00    0.000000e+00    0.000000e+00 
+	   energy              0.000000e+00    0.000000e+00    0.000000e+00 
+	   displacement        0.000000e+00    0.000000e+00    0.000000e+00 
 
 convergence summary
     number of iterations   : 1
@@ -235,9 +228,9 @@ File = mixture_hm_exp_elem_data.txt
 	stiffness matrix reformations = 1
 	step from line search         = 1.000000
 	convergence norms :     INITIAL         CURRENT         REQUIRED
-	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
-	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
-	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+	   residual            0.000000e+00    0.000000e+00    0.000000e+00 
+	   energy              0.000000e+00    0.000000e+00    0.000000e+00 
+	   displacement        0.000000e+00    0.000000e+00    0.000000e+00 
 
 convergence summary
     number of iterations   : 1
@@ -269,9 +262,9 @@ File = mixture_hm_exp_elem_data.txt
 	stiffness matrix reformations = 1
 	step from line search         = 1.000000
 	convergence norms :     INITIAL         CURRENT         REQUIRED
-	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
-	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
-	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+	   residual            0.000000e+00    0.000000e+00    0.000000e+00 
+	   energy              0.000000e+00    0.000000e+00    0.000000e+00 
+	   displacement        0.000000e+00    0.000000e+00    0.000000e+00 
 
 convergence summary
     number of iterations   : 1
@@ -303,9 +296,9 @@ File = mixture_hm_exp_elem_data.txt
 	stiffness matrix reformations = 1
 	step from line search         = 1.000000
 	convergence norms :     INITIAL         CURRENT         REQUIRED
-	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
-	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
-	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+	   residual            0.000000e+00    0.000000e+00    0.000000e+00 
+	   energy              0.000000e+00    0.000000e+00    0.000000e+00 
+	   displacement        0.000000e+00    0.000000e+00    0.000000e+00 
 
 convergence summary
     number of iterations   : 1
@@ -337,9 +330,9 @@ File = mixture_hm_exp_elem_data.txt
 	stiffness matrix reformations = 1
 	step from line search         = 1.000000
 	convergence norms :     INITIAL         CURRENT         REQUIRED
-	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
-	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
-	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+	   residual            0.000000e+00    0.000000e+00    0.000000e+00 
+	   energy              0.000000e+00    0.000000e+00    0.000000e+00 
+	   displacement        0.000000e+00    0.000000e+00    0.000000e+00 
 
 convergence summary
     number of iterations   : 1
@@ -371,9 +364,9 @@ File = mixture_hm_exp_elem_data.txt
 	stiffness matrix reformations = 1
 	step from line search         = 1.000000
 	convergence norms :     INITIAL         CURRENT         REQUIRED
-	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
-	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
-	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+	   residual            0.000000e+00    0.000000e+00    0.000000e+00 
+	   energy              0.000000e+00    0.000000e+00    0.000000e+00 
+	   displacement        0.000000e+00    0.000000e+00    0.000000e+00 
 
 convergence summary
     number of iterations   : 1
@@ -405,9 +398,9 @@ File = mixture_hm_exp_elem_data.txt
 	stiffness matrix reformations = 1
 	step from line search         = 1.000000
 	convergence norms :     INITIAL         CURRENT         REQUIRED
-	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
-	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
-	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+	   residual            0.000000e+00    0.000000e+00    0.000000e+00 
+	   energy              0.000000e+00    0.000000e+00    0.000000e+00 
+	   displacement        0.000000e+00    0.000000e+00    0.000000e+00 
 
 convergence summary
     number of iterations   : 1
@@ -439,9 +432,9 @@ File = mixture_hm_exp_elem_data.txt
 	stiffness matrix reformations = 1
 	step from line search         = 1.000000
 	convergence norms :     INITIAL         CURRENT         REQUIRED
-	   residual           0.000000e+000   0.000000e+000   0.000000e+000 
-	   energy             0.000000e+000   0.000000e+000   0.000000e+000 
-	   displacement       0.000000e+000   0.000000e+000   0.000000e+000 
+	   residual            0.000000e+00    0.000000e+00    0.000000e+00 
+	   energy              0.000000e+00    0.000000e+00    0.000000e+00 
+	   displacement        0.000000e+00    0.000000e+00    0.000000e+00 
 
 convergence summary
     number of iterations   : 1
@@ -478,10 +471,10 @@ N O N L I N E A R   I T E R A T I O N   I N F O R M A T I O N
 
 	Total number of stiffness reformations ............ : 10
 
-	Time in solver: 0:00:01
+	Time in solver: 0:00:00
 
 
- Elapsed time : 0:00:01
+ Elapsed time : 0:00:00
 
 
  N O R M A L   T E R M I N A T I O N

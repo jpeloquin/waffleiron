@@ -415,7 +415,7 @@ convergence summary
 	stiffness matrix reformations = 1
 	step from line search         = 1.000000
 	convergence norms :     INITIAL         CURRENT         REQUIRED
-	   residual            1.327064e+11    2.340217e-02    0.000000e+00 
+	   residual            1.327064e+11    2.340218e-02    0.000000e+00 
 	   energy              1.307012e+04    3.557351e-07    1.307012e+02 
 	   displacement        2.267002e-03    2.763119e-11    2.268136e-09 
 

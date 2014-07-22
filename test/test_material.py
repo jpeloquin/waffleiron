@@ -7,8 +7,9 @@ from numpy.linalg import inv
 import numpy.testing as npt
 
 import febtools as feb
+import os
 from febtools.material import *
-from febtools import FebReader
+from febtools.input import FebReader, readlog
 
 
 class ExponentialFiberTest(unittest.TestCase):
@@ -19,10 +20,11 @@ class ExponentialFiberTest(unittest.TestCase):
 
     """
     def setUp(self):
-        soln = feb.MeshSolution('test/fixtures/'
-                                'mixture_hm_exp.xplt')
-        febreader = FebReader(open('test/fixtures/mixture_hm_exp.feb'))
-        soln.assign_materials(febreader.materials())
+        febreader = feb.input.FebReader(os.path.join('test', 'fixtures', 'mixture_hm_exp.feb'))
+        model = febreader.model()
+        soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'mixture_hm_exp.xplt'))
+        model.apply_solution(soln)
+        self.model = model
         self.soln = soln
 
     def w_test(self):
@@ -43,10 +45,10 @@ class ExponentialFiberTest(unittest.TestCase):
         """Check Cauchy stress against FEBio.
 
         """
-        F = self.soln.elements[0].f((0, 0, 0),
-                                   self.soln.data['displacement'])
-        t_try = self.soln.elements[0].material.tstress(F)
-        t_true = self.soln.data['stress'][0]
+        F = self.model.mesh.elements[0].f((0, 0, 0))
+        t_try = self.model.mesh.elements[0].material.tstress(F)
+        data = self.soln.stepdata(step=-1)
+        t_true = data['element']['stress'][0]
         npt.assert_allclose(t_true, t_try, rtol=1e-5)
 
 
@@ -55,7 +57,7 @@ class IsotropicElasticTest(unittest.TestCase):
 
     """
     def setUp(self):
-        elemdata = feb.readlog('test/fixtures/'
+        elemdata = readlog('test/fixtures/'
                               'isotropic_elastic_elem_data.txt')
         febreader = FebReader(open('test/fixtures/'
                                    'isotropic_elastic.feb'))
@@ -153,17 +155,14 @@ class HolmesMowTestCase(unittest.TestCase):
     """
 
     def setUp(self):
-        soln = feb.MeshSolution('test/fixtures/holmes_mow.xplt')
-        febreader = FebReader(open('test/fixtures/holmes_mow.feb'))
-        soln.assign_materials(febreader.materials())
-        self.soln = soln
-
-    def tearDown(self):
-        del self.soln
+        self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'holmes_mow.xplt'))
+        febreader = FebReader(open(os.path.join('test', 'fixtures', 'holmes_mow.feb')))
+        self.model = febreader.model()
+        self.model.apply_solution(self.soln)
 
     def tstress_test(self):
-        e = self.soln.elements[0]
-        F = e.f((0, 0, 0), self.soln.data['displacement'])
+        e = self.model.mesh.elements[0]
+        F = e.f((0, 0, 0))
         t_try = e.material.tstress(F)
-        t_true = self.soln.data['stress'][0]
+        t_true = self.soln.stepdata()['element']['stress'][0]
         npt.assert_allclose(t_try, t_true, rtol=1e-5)

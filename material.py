@@ -23,7 +23,6 @@ def fromlame(y, u):
     v = 0.5 * y / (y + u)
     return E, v
 
-
 class SolidMixture:
     """Mixture of solids with no interdependencies or residual stress.
 
@@ -64,6 +63,12 @@ class SolidMixture:
         return sum(material.pstress(F)
                    for material in self.materials)
 
+class RigidBody:
+    """Rigid body.
+
+    """
+    def __init__(self, props):
+        pass
 
 class ExponentialFiber:
     """Fiber with exponential power law.
@@ -284,5 +289,6 @@ class IsotropicElastic:
 class_from_name = {'isotropic elastic': IsotropicElastic,
                    'Holmes-Mow': HolmesMow,
                    'fiber-exp-pow': ExponentialFiber,
-                   'solid mixture': SolidMixture}
+                   'solid mixture': SolidMixture,
+                   'rigid body': RigidBody}
 name_from_class = {v:k for k, v in class_from_name.items()}

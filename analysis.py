@@ -22,7 +22,7 @@ def select_elems_around_node(mesh, i, n=3):
         for i in nodelist:
             elements = elements | set(mesh.elem_with_node[i])
         nodelist = set(i for e in elements
-                       for i in e.inode)
+                       for i in e.ids)
         # ^ This needlessly re-adds elements already in the domain;
         # there's probably a better way; see undirected graph search.
         # Doing this efficiently requires transforming the mesh into a
@@ -61,14 +61,14 @@ def jdomain(mesh, inode_tip, n=3, qtype='plateau'):
     q = [None] * len(mesh.nodes)
     inner_elements = select_elems_around_node(mesh, inode_tip, n=n-1)
     inner_nodes = set(i for e in inner_elements
-                      for i in e.inode)
+                      for i in e.ids)
     elements = select_elems_around_node(mesh, inode_tip, n=n)
     nodes = set(i for e in elements
-                for i in e.inode)
+                for i in e.ids)
     def node_connectivity(elements, n_nodes):
         connectivity = [0] * n_nodes
         for e in elements:
-            for i in e.inode:
+            for i in e.ids:
                 connectivity[i] += 1
         return connectivity
     c = node_connectivity(mesh.elements, len(mesh.nodes))
@@ -77,7 +77,7 @@ def jdomain(mesh, inode_tip, n=3, qtype='plateau'):
     for l in xrange(n):
         crack_nodes = set(idx for i in crack_nodes
                           for e in mesh.elem_with_node[i]
-                          for idx in e.inode
+                          for idx in e.ids
                           if c[idx] == e.n/2)
     crack_nodes = crack_nodes | set([inode_tip])
     if qtype == 'plateau':
@@ -92,7 +92,7 @@ def jdomain(mesh, inode_tip, n=3, qtype='plateau'):
                              'implemented yet.'.format(qtype))
     return elements, q
 
-def jintegral(elements, u, q):
+def jintegral(elements, q):
     """Calculate J integral.
 
     Parameters
@@ -105,7 +105,7 @@ def jintegral(elements, u, q):
 
     """
 
-    def integrand(e, r, u, q):
+    def integrand(e, r, q):
         """Integrate over a single element.
 
         Parameters
@@ -113,16 +113,17 @@ def jintegral(elements, u, q):
         e : Element object
 
         """
-        F = e.f(r, u)
+        F = e.f(r)
         p = e.material.pstress(F) # 1st Piola-Kirchoff stress
-        dudx = e.dinterp(r, u)
+        dudx = e.dinterp(r, prop='displacement')
         dudx1 = dudx[:,0]
         w = e.material.w(F) # strain energy
-        dqdx = e.dinterp(r, q) # 1 x 2 or 1 x 3
+#        e.apply_property('q', [q[i] for i in e.ids])
+        dqdx = e.dinterp(r, prop='q') # 1 x 2 or 1 x 3
         return -w * dqdx[0] + sum(p[i][j] * dudx[i,0] * dqdx[j] 
                                  for i in xrange(len(r))
                                  for j in xrange(len(r)))
     j = 0
     for e in elements:
-        j += e.integrate(integrand, u, q)
+        j += e.integrate(integrand, q)
     return j

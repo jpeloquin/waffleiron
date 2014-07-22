@@ -36,3 +36,14 @@ This is done so that the Jacobian matrix will be square and therefore
 invertible for calculating spatial derivatives.  It is probably
 possible to calculate a non-square pseudo-inverse of $J$ that permits
 calculation of spatial derivatives including $x_3$, though.
+
+
+* Coding style
+** Indexing conventions
+
+Everything is zero-indexed until it is written to FEBio xml or another output format.
+
+** Numeric IDs
+
+Assignment of numeric ids to objects is avoided in favor of aliasing each unique object instance.
+Sets of object instances can thus be assembled organically without reference to a separately stored table.

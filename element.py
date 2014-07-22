@@ -2,23 +2,6 @@
 import numpy as np
 from scipy.optimize import fsolve
 
-def f(r, X, u):
-    """Calculate F tensor from nodal values and shape functions.
-
-    r = target coordinates in natural basis (tuple)
-    X = nodal coordinates in reference configuration (n x 3)
-    u = nodal displacements (n x 3)
-
-    """
-    dN = elem_type.dN(*r)
-    J = np.dot(X.T, dN)
-    Jinv = np.linalg.inv(J)
-    Jdet = np.linalg.det(J)
-    du = np.dot(u.T, dN)
-    # Push from natural basis to reference configuration
-    f = np.dot(Jinv, du) + np.eye(3)
-    return f
-
 def _cross(u, v):
     """Cross product for two vectors in R3.
 
@@ -54,41 +37,150 @@ class Element:
 
     Attributes
     ----------
-    eid := element id
+    nodes := Nodal positions in reference configuration.  The order
+    follows FEBio convention.
+
+    mesh := (optional) The mesh to which the element belongs.
+
+    ids := (optional) Nodal indices into `mesh.nodes`
+
+    material := (optional) Material object instance.
+
+    properties := A dictionary of nodal values.  Expected keys are
+    'displacement' (indexing a list of displacement vectors).
 
     Notes
     -----
-    When using 2d elements, it is highly recommended that they
-    coincide with the xy plane.  The current implementation of the
-    methods cannot do anything useful with the z dimension.
+    When using 2d elements, they should coincide with the xy plane.
+    The current implementation of the methods cannot do anything
+    useful with the z dimension.  This will be fixed.
 
     """
-    matl_id = None # material integer code (FEBio codes are 1-indexed)
-    inode = [] # list of node indices
-    xnode_mesh = [] # list of node coordinates for whole mesh
-    # material := material class
+    def __init__(self, nodes, material=None):
+        """Create an element from a list of nodes.
 
-    def __init__(self, inode, xnode_mesh,
-                 elem_id=None, matl_id=None):
-        self.eid = elem_id
-        self.inode = inode
-        self.xnode_mesh = xnode_mesh
-        self.xnode = np.array([self.xnode_mesh[i]
-                               for i in self.inode])
-        self.matl_id = matl_id
+        Parameters
+        ----------
+        nodes : n × 3 array-like or n × 1 array-like
+            Coordinates for n nodes.  The second dimension is x, y,
+            and z.  If `mesh` is provided, a list of node indices is
+            instead expected, and the node coordinates will be
+            calculated by indexing into `mesh`.
 
-    @property
-    def centroid(self):
+        """
+        self.ids = None # indices of nodes in mesh
+        self.mesh = None
+        self.material = material
+        self.properties = {'displacement': np.array([(0, 0, 0) for i in nodes])}
+        # Nodal coordinates
+        self.nodes = np.array(nodes)
+        assert self.nodes.shape[1] >= 2
+            
+    @classmethod
+    def from_ids(cls, ids, nodelist, material=None):
+        """Create an element from nodal indices.
+
+        """
+        nodes = [nodelist[i] for i in ids]
+        element = cls(nodes, material)
+        element.ids = ids
+        return element
+
+    def apply_property(self, label, values):
+        """Apply nodal properties.
+
+        """
+        assert len(values) == len(self.nodes)
+        values = np.array(values)
+        self.properties[label] = values
+
+    def x(self, config='reference'):
+        """Nodal positions in reference or deformed configuration.
+
+        """
+        if config == 'reference':
+            x = self.nodes
+        elif config == 'deformed':
+            x = self.nodes + self.properties['displacement']
+        else:
+            raise Exception('Value "{}" for config not recognized.  Use "reference" or "deformed"'.format(config))
+        return x
+
+    def interp(self, r, prop='displacement'):
+        """Interpolate node-valued data at r.
+
+        values := A list with a 1:1 mapping to the list of nodes in
+        the mesh.  The list elements can be scalar or vector valued
+        (but must be consistent).
+
+        For example, to obtain the centroid of a 2d element:
+
+            element.interp((0,0), element.xnode_mesh)
+
+        """
+        v = self.properties[prop] # nodal values
+        return np.dot(self.N(*r), v_node)
+
+    def dinterp(self, r, prop='displacement'):
+        """Evalute d/dx of node-valued data at r
+
+        The node-valued data may be scalar or vector.
+
+        Note: If you are using a 2d element, do not use 3d vector
+        values.
+
+        """
+        v = self.properties[prop] # nodal values
+        j = self.j(r)
+        jinv = np.linalg.pinv(j).T
+        ddr = np.vstack(self.dN(*r))
+        dvdr = np.dot(v.T, ddr)
+        dvdx = np.dot(jinv, dvdr.T).T
+        return dvdx
+
+    def f(self, r):
+        """Calculate F tensor (convenience function).
+
+        r := coordinate vector in element's natural basis
+
+        """
+        dudx = self.dinterp(r, prop='displacement')
+        F = dudx + np.eye(3)
+        return F
+
+    def j(self, r, config='reference'):
+        """Jacobian matrix (∂x_i/∂r_j) evaluated at r
+
+        """
+        ddr = self.dN(*r)
+        ddr = np.vstack(self.dN(*r))
+        J = np.dot(np.array(self.nodes).T, ddr)
+        return J
+
+    def integrate(self, fn, *args):
+        """Integrate a function over the element.
+
+        f := The function to integrate.  Must be callable as `f(e,
+            r)`, with `e` being this element object instance and `r`
+            being 3-element array-like specifing the natural basis
+            coordinate at which f is evaluated.
+
+        """
+        return sum((fn(self, r, *args) * self.jdet(r) * w
+                    for r, w in zip(self.gloc, self.gwt)))
+
+    def centroid(self, config='reference'):
         """Centroid of element.
 
         """
-        return self.interp((0,0,0), self.xnode_mesh)
+        x = self.x(config)
+        return self.interp((0,0,0), x)
 
-    def face_normals(self):
+    def face_normals(self, config='reference'):
         """List of face normals
 
         """
-        points = np.array(self.xnode)
+        points = self.x(config)
         normals = []
         # Iterate over faces
         for f in self.face_nodes:
@@ -102,7 +194,7 @@ class Element:
         return normals
 
     def faces_with_node(self, node_id):
-        """Indices of faces that include node id
+        """Indices of faces that include a node.
 
         The node id here is local to the element.
 
@@ -110,87 +202,6 @@ class Element:
         return [i for i, f in enumerate(self.face_nodes)
                 if node_id in f]
 
-    def f(self, r, u):
-        """Calculate F tensor.
-
-        r := coordinate vector in element's natural basis
-        u := list of displacements for all the nodes in the mesh.
-
-        """
-        dudx = self.dinterp(r, u)
-        F = dudx + np.eye(3)
-        return F
-
-    def j(self, r):
-        """Jacobian matrix (∂x_i/∂r_j) evaluated at r
-
-        """
-        ddr = self.dN(*r)
-        ddr = np.vstack(self.dN(*r))
-        J = np.dot(np.array(self.xnode).T, ddr)
-        return J
-
-    def integrate(self, f, *args):
-        """Integrate a function over the element.
-
-        f := The function to integrate.  Must be callable as `f(e,r)`,
-            with `e` being this element object instance and `r` being
-            a 2d or 3d coordinate vector (a 2- or 3-element
-            array-like).
-
-        """
-        def jdet(r):
-            """Calculate determinant of the jacobian, handling R3 → R2
-            transformations correctly.
-
-            """
-            j = self.j(r)
-            if j.shape[1] == 2 and j.shape[0] == 3:
-                # jacobian of transform from R3 to R2
-                n = np.cross(j[:,0], j[:,1])
-                jd = n[2]
-            elif j.shape[0] == j.shape[1]:
-                # is square; working in R2 or R3
-                jd = np.linalg.det(j)
-            else:
-                s = "Transformations from R{} to R{} space are not handled.".format(j.shape[0], j.shape[1])
-                raise Exception(s)
-            return jd
-
-        return sum((f(self, r, *args) * jdet(r) * w
-                    for r, w in zip(self.gloc, self.gwt)))
-
-    def interp(self, r, values):
-        """Interpolate node-valued data at r.
-
-        values := A list with a 1:1 mapping to the list of nodes in
-        the mesh.  The list elements can be scalar or vector valued
-        (but must be consistent).
-
-        For example, to obtain the centroid of a 2d element:
-
-            element.interp((0,0), element.xnode_mesh)
-
-        """
-        v_node = np.array([values[i] for i in self.inode])
-        return np.dot(self.N(*r), v_node)
-
-    def dinterp(self, r, values):
-        """Evalute d/dx of node-valued data at r
-
-        The node-valued data may be scalar or vector.
-
-        Note: If you are using a 2d element, do not use 3d vector
-        values.
-
-        """
-        v_node = np.array([values[i] for i in self.inode])
-        j = self.j(r)
-        jinv = np.linalg.pinv(j).T
-        ddr = np.vstack(self.dN(*r))
-        dvdr = np.dot(v_node.T, ddr)
-        dvdx = np.dot(jinv, dvdr.T).T
-        return dvdx
 
 class Element3D(Element):
     """Class for 3D elements.
@@ -198,13 +209,32 @@ class Element3D(Element):
     """
     is_planar = False
 
-class Element2D(Element):
-    """Class for 2D elements.
+    def jdet(r, config='reference'):
+        """Calculate determinant of the R3 → R3 jacobian.
 
-    All 2D elements should inherit from this class.
+        """
+        return np.linalg.det(self.j(r, config))
+
+
+class Element2D(Element):
+    """Class for shell (2D) elements.
+
+    All shell elements should inherit from this class.
 
     """
     is_planar = True
+
+    def jdet(self, r, config='reference'):
+        """Calculate determinant of the R3 → R2 jacobian.
+
+        """
+        j = self.j(r, config)
+        n = np.cross(j[:,0], j[:,1])
+        try:
+            return n[2]
+        except IndexError:
+            # i.e if 2d vectors were used
+            return n
 
     def edges_with_node(self, node_id):
         """Indices of edges that include node id.
@@ -213,14 +243,14 @@ class Element2D(Element):
         return [i for i, l in enumerate(self.edge_nodes)
                 if node_id in l]
 
-    def edge_normals(self):
+    def edge_normals(self, config='reference'):
         """Return list of edge normals.
 
         The edge normals are constrained to lie in the same plane as
         the element.  The normals point outward.
 
         """
-        points = self.xnode
+        points = self.x(config)
         normals = []
         # Iterate over edges
         for l in self.edge_nodes:
@@ -229,13 +259,14 @@ class Element2D(Element):
             normals.append(_cross(v, face_normal))
         return normals
 
-    def to_natural(self, p):
+    def to_natural(self, pt, config='reference'):
         """Return natural coordinates for p = (x, y, z)
 
         """
-        p = np.array(p)
-        x0 = np.dot(self.N(*[0]*self.r_n), self.xnode)
-        v = p - x0
+        pt = np.array(pt)
+        x = self.x(config)
+        x0 = np.dot(self.N(*[0]*self.r_n), x)
+        v = pt - x0
         j = self.j([0]*self.r_n)
         jinv = np.linalg.pinv(j)
         nat_coords = np.dot(jinv, v)
@@ -260,11 +291,12 @@ class Tri3(Element2D):
     face_nodes = [[0, 1, 2]]
 
     @property
-    def centroid(self):
+    def centroid(self, config='reference'):
         """Centroid of element.
 
         """
-        return self.interp((1.0/3.0, 1.0/3.0), self.xnode_mesh)
+        x = self.x(config)
+        return self.interp((1.0/3.0, 1.0/3.0), x)
 
     @staticmethod
     def N(r, s, t=None):
@@ -291,7 +323,6 @@ class Tri3(Element2D):
         dn[0][1] = -1.0
         dn[1][1] = 0.0
         dn[2][1] = 1.0
-
         return dn
 
 
@@ -301,7 +332,6 @@ class Hex8(Element3D):
     """
     # gwt
     # gloc
-
     n = 8 # number of vertices
     r_n = 3 # number of natural basis parameters
 
@@ -373,7 +403,6 @@ class Hex8(Element3D):
         dn[5][2] =  1. / 8. * (1 - r) * (1 - s)
         dn[6][2] =  1. / 8. * (1 - r) * (1 - s)
         dn[7][2] =  1. / 8. * (1 - r) * (1 - s)
-
         return dn
 
     @staticmethod
@@ -381,7 +410,8 @@ class Hex8(Element3D):
         """"Shape function 2nd derivatives.
 
         """
-        pass
+        raise NotImplementedError()
+
 
 class Quad4(Element2D):
     """Shape functions for quad4 bilinear shell element.
@@ -430,16 +460,16 @@ class Quad4(Element2D):
 
         """
         dn = [np.zeros(2) for i in xrange(4)]
+        # d/dr
         dn[0][0] = -0.25 * (1 - s)
         dn[1][0] =  0.25 * (1 - s)
         dn[2][0] =  0.25 * (1 + s)
         dn[3][0] = -0.25 * (1 + s)
-
+        # d/ds
         dn[0][1] = -0.25 * (1 - r)
         dn[1][1] = -0.25 * (1 + r)
         dn[2][1] =  0.25 * (1 + r)
         dn[3][1] =  0.25 * (1 - r)
-
         return dn
 
     @staticmethod
@@ -447,4 +477,4 @@ class Quad4(Element2D):
         """Shape function 2nd derivatives.
 
         """
-        pass
+        raise NotImplementedError()

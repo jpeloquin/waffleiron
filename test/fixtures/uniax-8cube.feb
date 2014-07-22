@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<febio_spec version="1.2">
+<febio_spec version="2.0">
 	<Globals>
 		<Constants>
 			<T>0</T>
@@ -10,42 +10,42 @@
 	<Material>
 		<material id="1" name="Material1" type="isotropic elastic">
 			<density>1</density>
-			<E>1e+006</E>
+			<E>1e+06</E>
 			<v>0.33</v>
 		</material>
 		<material id="2" name="Material2" type="isotropic elastic">
 			<density>1</density>
-			<E>2e+006</E>
+			<E>2e+06</E>
 			<v>0.33</v>
 		</material>
 		<material id="3" name="Material3" type="isotropic elastic">
 			<density>1</density>
-			<E>3e+006</E>
+			<E>3e+06</E>
 			<v>0.33</v>
 		</material>
 		<material id="4" name="Material4" type="isotropic elastic">
 			<density>1</density>
-			<E>4e+006</E>
+			<E>4e+06</E>
 			<v>0.33</v>
 		</material>
 		<material id="5" name="Material5" type="isotropic elastic">
 			<density>1</density>
-			<E>5e+006</E>
+			<E>5e+06</E>
 			<v>0.33</v>
 		</material>
 		<material id="6" name="Material6" type="isotropic elastic">
 			<density>1</density>
-			<E>6e+006</E>
+			<E>6e+06</E>
 			<v>0.33</v>
 		</material>
 		<material id="7" name="Material7" type="isotropic elastic">
 			<density>1</density>
-			<E>7e+006</E>
+			<E>7e+06</E>
 			<v>0.33</v>
 		</material>
 		<material id="8" name="Material8" type="isotropic elastic">
 			<density>1</density>
-			<E>8e+006</E>
+			<E>8e+06</E>
 			<v>0.33</v>
 		</material>
 	</Material>
@@ -79,40 +79,55 @@
 			<node id="26">  1.0000000e+00,  1.0000000e+00,  1.0000000e+00</node>
 			<node id="27">  1.0000000e+00,  1.0000000e+00,  2.0000000e+00</node>
 		</Nodes>
-		<Elements>
-			<hex8 id="1" mat="1">     1,    10,    13,     4,     2,    11,    14,     5</hex8>
-			<hex8 id="2" mat="2">     2,    11,    14,     5,     3,    12,    15,     6</hex8>
-			<hex8 id="3" mat="3">     4,    13,    16,     7,     5,    14,    17,     8</hex8>
-			<hex8 id="4" mat="7">     5,    14,    17,     8,     6,    15,    18,     9</hex8>
-			<hex8 id="5" mat="5">    10,    19,    22,    13,    11,    20,    23,    14</hex8>
-			<hex8 id="6" mat="6">    11,    20,    23,    14,    12,    21,    24,    15</hex8>
-			<hex8 id="7" mat="7">    13,    22,    25,    16,    14,    23,    26,    17</hex8>
-			<hex8 id="8" mat="8">    14,    23,    26,    17,    15,    24,    27,    18</hex8>
+		<Elements type="hex8" mat="1" elset="Part18">
+			<elem id="1">     1,    10,    13,     4,     2,    11,    14,     5</elem>
+		</Elements>
+		<Elements type="hex8" mat="2" elset="Part19">
+			<elem id="2">     2,    11,    14,     5,     3,    12,    15,     6</elem>
+		</Elements>
+		<Elements type="hex8" mat="3" elset="Part20">
+			<elem id="3">     4,    13,    16,     7,     5,    14,    17,     8</elem>
+		</Elements>
+		<Elements type="hex8" mat="5" elset="Part21">
+			<elem id="4">    10,    19,    22,    13,    11,    20,    23,    14</elem>
+		</Elements>
+		<Elements type="hex8" mat="6" elset="Part22">
+			<elem id="5">    11,    20,    23,    14,    12,    21,    24,    15</elem>
+		</Elements>
+		<Elements type="hex8" mat="7" elset="Part23">
+			<elem id="6">     5,    14,    17,     8,     6,    15,    18,     9</elem>
+			<elem id="7">    13,    22,    25,    16,    14,    23,    26,    17</elem>
+		</Elements>
+		<Elements type="hex8" mat="8" elset="Part24">
+			<elem id="8">    14,    23,    26,    17,    15,    24,    27,    18</elem>
 		</Elements>
 	</Geometry>
 	<Boundary>
-		<fix>
-			<node id="13" bc="yz"/>
+		<fix bc="z">
+			<node id="13"/>
 		</fix>
-		<fix>
-			<node id="15" bc="y"/>
+		<fix bc="y">
+			<node id="13"/>
 		</fix>
-		<fix>
-			<node id="1" bc="x"/>
-			<node id="2" bc="x"/>
-			<node id="3" bc="x"/>
-			<node id="4" bc="x"/>
-			<node id="5" bc="x"/>
-			<node id="6" bc="x"/>
-			<node id="7" bc="x"/>
-			<node id="8" bc="x"/>
-			<node id="9" bc="x"/>
+		<fix bc="y">
+			<node id="15"/>
+		</fix>
+		<fix bc="x">
+			<node id="1"/>
+			<node id="2"/>
+			<node id="3"/>
+			<node id="4"/>
+			<node id="5"/>
+			<node id="6"/>
+			<node id="7"/>
+			<node id="8"/>
+			<node id="9"/>
 		</fix>
 	</Boundary>
 	<LoadData>
 		<loadcurve id="1" type="smooth">
-			<loadpoint>0,0</loadpoint>
-			<loadpoint>1,1</loadpoint>
+			<point>0,0</point>
+			<point>1,1</point>
 		</loadcurve>
 	</LoadData>
 	<Output>
@@ -141,16 +156,16 @@
 			<analysis type="static"/>
 		</Control>
 		<Boundary>
-			<prescribe>
-				<node id="19" bc="x" lc="1">0.2</node>
-				<node id="20" bc="x" lc="1">0.2</node>
-				<node id="21" bc="x" lc="1">0.2</node>
-				<node id="22" bc="x" lc="1">0.2</node>
-				<node id="23" bc="x" lc="1">0.2</node>
-				<node id="24" bc="x" lc="1">0.2</node>
-				<node id="25" bc="x" lc="1">0.2</node>
-				<node id="26" bc="x" lc="1">0.2</node>
-				<node id="27" bc="x" lc="1">0.2</node>
+			<prescribe bc="x" lc="1">
+				<node id="19">0.2</node>
+				<node id="20">0.2</node>
+				<node id="21">0.2</node>
+				<node id="22">0.2</node>
+				<node id="23">0.2</node>
+				<node id="24">0.2</node>
+				<node id="25">0.2</node>
+				<node id="26">0.2</node>
+				<node id="27">0.2</node>
 			</prescribe>
 		</Boundary>
 	</Step>

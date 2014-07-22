@@ -1,7 +1,7 @@
 import febtools as feb
 import numpy as np
 import numpy.testing as npt
-import unittest
+import unittest, os 
 
 def f_tensor_logfile(elemdata, step, eid):
     """Return F tensor read from a logfile.
@@ -21,33 +21,39 @@ def f_tensor_logfile(elemdata, step, eid):
                   [Fzx, Fzy, Fzz]])
     return F
 
-def f_test_hex8():
-    elemdata = feb.readlog('test/fixtures/'
-                           'complex_loading_elem_data.txt')
-    soln = feb.MeshSolution('test/fixtures/'
-                            'complex_loading.xplt')
-    istep = -1
-    u = soln.reader.stepdata(istep)['displacement']
-    for eid in xrange(len(soln.elements) - 1): # don't check rigid body
-        F_expected = f_tensor_logfile(elemdata, istep, eid)
-        F = soln.elements[eid].f((0, 0, 0), u)
-        npt.assert_almost_equal(F, F_expected, decimal=5)
+class ElementMethodsTestHex8(unittest.TestCase):
+
+    def setUp(self):
+        self.elemdata = feb.input.readlog(os.path.join('test', 'fixtures', 'complex_loading_elem_data.txt'))
+        self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'complex_loading.xplt'))
+        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'complex_loading.feb'))
+        self.model = reader.model()
+        self.model.apply_solution(self.soln)
+
+    def test_f(self):
+        istep = -1
+        u = self.soln.stepdata(istep)['node']['displacement']
+        for eid in xrange(len(self.model.mesh.elements) - 1):
+            # don't check rigid body (last element)
+            F_expected = f_tensor_logfile(self.elemdata, istep, eid)
+            F = self.model.mesh.elements[eid].f((0, 0, 0))
+            npt.assert_almost_equal(F, F_expected, decimal=5)
+
 
 class ElementMethodsTestQuad4(unittest.TestCase):
 
     def setUp(self):
-        self.soln = feb.MeshSolution("test/fixtures/" \
-                                "center-crack-2d-1mm.xplt")
-        febreader = feb.FebReader('test/fixtures/'
-                              'center-crack-2d-1mm.feb')
-        self.soln.assign_materials(febreader.materials())
+        self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'center-crack-2d-1mm.xplt'))
+        febreader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center-crack-2d-1mm.feb'))
+        self.model = febreader.model()
+        self.model.apply_solution(self.soln)
 
     def test_physical_to_natural_outside(self):
         """Test if an exception is raised when the computed natural
         coordinates are outside an element.
 
         """
-        e = self.soln.elements[0]
+        e = self.model.mesh.elements[0]
         self.assertRaises(Exception,
                           e.to_natural, (-10.1e-3, -9.5e-3, 0.0))
 
@@ -59,16 +65,18 @@ class FTestTri3(unittest.TestCase):
 
     """
     def setUp(self):
-        self.soln = feb.MeshSolution('test/fixtures/'
-                                     'square_tri3.xplt')
-        self.elemdata = feb.readlog('test/fixtures/'
-                                    'square_tri3_elem_data.txt')
+        self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'square_tri3.xplt'))
+        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'square_tri3.feb'))
+        self.model = reader.model()
+        self.model.apply_solution(self.soln)
+        self.elemdata = feb.input.readlog(os.path.join('test', 'fixtures', 'square_tri3_elem_data.txt'))
+
     def test_f(self):
         istep = -1
-        u = self.soln.reader.stepdata(istep)['displacement']
-        for eid in xrange(len(self.soln.elements)):
+        u = self.soln.stepdata(step=istep)['node']['displacement']
+        for eid in xrange(len(self.model.mesh.elements)):
             F_expected = f_tensor_logfile(self.elemdata, istep, eid)
-            F = self.soln.elements[eid].f((1.0/3.0, 1.0/3.0), u)
+            F = self.model.mesh.elements[eid].f((1.0/3.0, 1.0/3.0))
             npt.assert_almost_equal(F[:2,:2], F_expected[:2,:2],
                                     decimal=5)
 
@@ -94,12 +102,11 @@ class FTestQuad4(unittest.TestCase):
 
 def test_integration():
     # create trapezoidal element
-    node_list = ((0.0, 0.0),
-                 (2.0, 0.0),
-                 (1.5, 2.0),
-                 (0.5, 2.0))
-    nodes = (0, 1, 2, 3)
-    element = feb.element.Quad4(nodes, node_list)
+    nodes = ((0.0, 0.0),
+             (2.0, 0.0),
+             (1.5, 2.0),
+             (0.5, 2.0))
+    element = feb.element.Quad4(nodes)
     # compute area
     actual = element.integrate(lambda e, r: 1.0)
     desired = 3.0 # A_trapezoid = 0.5 * (b1 + b2) * h
@@ -107,13 +114,12 @@ def test_integration():
 
 def test_dinterp():
     # create square element
-    node_list = ((0.0, 0.0),
-                 (1.0, 0.0),
-                 (1.0, 1.0),
-                 (0.0, 1.0))
-    nodes = (0, 1, 2, 3)
-    element = feb.element.Quad4(nodes, node_list)
-    v = (0.0, 10.0, 11.0, 1.0)
+    nodes = ((0.0, 0.0),
+             (1.0, 0.0),
+             (1.0, 1.0),
+             (0.0, 1.0))
+    element = feb.element.Quad4(nodes)
+    element.properties['testval'] = np.array((0.0, 10.0, 11.0, 1.0))
     desired = np.array([10.0, 1.0])
-    actual = element.dinterp((0,0), v).reshape(-1)
+    actual = element.dinterp((0,0), 'testval').reshape(-1)
     npt.assert_allclose(actual, desired)
