@@ -167,6 +167,14 @@ class Mesh:
         mesh = cls(nodes, element_objects)
         return mesh
 
+    def update_elements(self):
+        """Update elements with current node coordinates.
+
+        """
+        for e in self.elements:
+            nodes = [self.nodes[i] for i in e.ids]
+            e.nodes = nodes
+
     def prepare(self):
         """Calculate all derived properties.
 
@@ -200,8 +208,6 @@ class Mesh:
         node would then invalidate the mesh.  Remove or modify the
         element first.
 
-        Remember that the nodes are indexed starting with 0.
-
         """
         def nodemap(i):
             if i < nid_remove:
@@ -215,10 +221,9 @@ class Mesh:
         for i, ids in enumerate(elems):
             self.elements[i].ids = ids
         self.nodes = [x for i, x in enumerate(self.nodes)
-                     if i != nid_remove]
+                      if i != nid_remove]
 
     def node_connectivity(self):
-
         """Count how many elements each node belongs to.
 
         """
