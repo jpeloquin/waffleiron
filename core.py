@@ -138,7 +138,7 @@ class Mesh:
         for e in elements:
             # Make sure node ids are consistent with the nodal
             # coordinates
-            if e.ids:
+            if len(e.ids) == 0:
                 pts_e = np.array(e.nodes)
                 pts_ind = np.array([nodes[i] for i in e.ids])
                 assert np.all(pts_e == pts_ind)
