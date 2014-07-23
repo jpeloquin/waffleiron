@@ -12,59 +12,86 @@ from febtools.material import fromlame, tolame
 from febtools.analysis import *
 from febtools import material
 
-# def test_jintegral():
-"""J integral for isotropic material, equibiaxial stretch.
+class temp():
 
-"""
-febreader = FebReader(os.path.join('test', 'fixtures', 'center-crack-2d-1mm.feb'))
-model = febreader.model()
-materials = febreader.materials()
-fp = os.path.join('test', 'fixtures', 'center-crack-2d-1mm.xplt')
-soln = feb.input.XpltReader(fp)
-y, mu = febtools.material.tolame(1e7, 0.3)
-mat1 = {'type': 'isotropic elastic',
-        'properties': {'lambda': y,
-                       'mu': mu}}
-m = {1: mat1}
+    def set_up_center_crack_2d_iso():
+        soln = febtools.input.XpltReader(os.path.join('test', 'fixtures', 'center-crack-2d-1mm.xplt'))
+        model = febtools.input.FebReader(os.path.join('test', 'fixtures', 'center-crack-2d-1mm.feb')).model()
+        model.apply_solution(soln)
 
-x = (1e-3, 0)
-id_crack_tip = model.mesh.find_nearest_node(*x)
-elements, q = jdomain(model.mesh, id_crack_tip, n=2)
-for e in elements:
-    e.apply_property('q', [q[i] for i in e.ids])
-j = jintegral(elements, q)
+    @with_setup(set_up_center_crack_2d_iso)
+    def test_select_elems_around_node():
+        id_crack_tip = 1669
+        elements = select_elems_around_node(model.mesh, id_crack_tip, n=2)
+        expected = [1585, 1637, 1638, 1586, # ring 1
+                    1534, 1535, 1587, 1639, # ring 2
+                    1691, 1690, 1689, 1688,
+                    1636, 1584, 1532, 1533]
+        expected = set([model.mesh.elements[i] for i in expected])
+        assert not elements - expected
 
-def set_up_center_crack_2d_iso():
-    soln = febtools.input.XpltReader(os.path.join('test', 'fixtures', 'center-crack-2d-1mm.xplt'))
-    model = febtools.input.FebReader(os.path.join('test', 'fixtures', 'center-crack-2d-1mm.feb')).model()
-    model.apply_solution(soln)
+    @with_setup(set_up_center_crack_2d_iso)
+    def test_jdomain_q():
+        id_crack_tip = 1669
+        elements, q = jdomain(model.mesh, id_crack_tip, n=2, qtype='plateau')
+        qexpected = [None] * len(model.mesh.nodes)
+        i_inner = [1615, 1616, 1617, 1668, 1669, 1670,
+                   1721, 1722, 1723, 2921]
+        for i in i_inner:
+            qexpected[i] = 1.0
+        i_outer = [1561, 1562, 1563, 1564, 1565, 1614, 1618,
+                   1667, 1671, 1720, 1724, 1773, 1774, 1775,
+                   1776, 1777, 2920]
+        for i in i_outer:
+            qexpected[i] = 0.0
+        npt.assert_array_equal(q, qexpected)
 
-@with_setup(set_up_center_crack_2d_iso)
-def test_select_elems_around_node():
-    id_crack_tip = 1669
-    elements = select_elems_around_node(model.mesh, id_crack_tip, n=2)
-    expected = [1585, 1637, 1638, 1586, # ring 1
-                1534, 1535, 1587, 1639, # ring 2
-                1691, 1690, 1689, 1688,
-                1636, 1584, 1532, 1533]
-    expected = set([model.mesh.elements[i] for i in expected])
-    assert not elements - expected
 
-@with_setup(set_up_center_crack_2d_iso)
-def test_jdomain_q():
-    id_crack_tip = 1669
-    elements, q = jdomain(model.mesh, id_crack_tip, n=2, qtype='plateau')
-    qexpected = [None] * len(model.mesh.nodes)
-    i_inner = [1615, 1616, 1617, 1668, 1669, 1670,
-               1721, 1722, 1723, 2921]
-    for i in i_inner:
-        qexpected[i] = 1.0
-    i_outer = [1561, 1562, 1563, 1564, 1565, 1614, 1618,
-               1667, 1671, 1720, 1724, 1773, 1774, 1775,
-               1776, 1777, 2920]
-    for i in i_outer:
-        qexpected[i] = 0.0
-    npt.assert_array_equal(q, qexpected)
+class CenterCrackHex8(unittest.TestCase):
+    """Center cracked isotropic elastic plate in 3d.
+
+    """
+    def setUp(self):
+        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic.feb'))
+        self.model = reader.model()
+        self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic.xplt'))
+        self.model.apply_solution(self.soln)
+
+        material = self.model.mesh.elements[0].material
+        y = material.y
+        mu = material.mu
+        E, nu = fromlame(y, mu)
+        self.E = E
+        self.nu = nu
+
+    def test_jintegral_vs_griffith(self):
+        a = 1.0e-3 # m
+        width = 10.0e-3 # m
+        minima = np.min(self.model.mesh.nodes, axis=0)
+        maxima = np.max(self.model.mesh.nodes, axis=0)
+        elems_up_down = [e for e in self.model.mesh.elements
+                         if (np.any(e.nodes[:,1] == minima[1]) or
+                             np.any(e.nodes[:,1] == maxima[1]))]
+        pavg = np.mean([e.material.pstress(e.f((0, 0, 0)))
+                        for e in elems_up_down], axis=0)
+        K_I = pavg[1][1] * (math.pi * a * 1.0 /
+                            math.cos(math.pi * a / width))**0.5
+        G = K_I**2.0 / self.E
+
+        crack_line = [i for i, (x, y, z)
+                      in enumerate(self.model.mesh.nodes)
+                      if np.allclose(x, 1e-3) and np.allclose(y, 0)]
+        domain = feb.analysis.apply_q(self.model.mesh,
+                                      crack_line, n=2)
+#        assert len(domain) == 180
+        J = feb.analysis.jintegral(domain)
+        elems = [e for e in list(domain)
+                 if np.any(np.array(e.nodes)[:,2] == -0.0005)]
+        for e in elems:
+            for q, pt in zip(e.properties['q'], e.nodes):
+                print q, pt
+        import pdb; pdb.set_trace()
+        npt.assert_allclose(J, G, rtol=0.01)
 
 class CenterCrackQuad4(unittest.TestCase):
 
@@ -76,8 +103,8 @@ class CenterCrackQuad4(unittest.TestCase):
         self.model.apply_solution(self.soln, t=self.t)
 
         material = self.model.mesh.elements[0].material
-        y = materials[0].y
-        mu = materials[0].mu
+        y = material.y
+        mu = material.mu
         E, nu = fromlame(y, mu)
         self.E = E
         self.nu = nu
@@ -85,14 +112,14 @@ class CenterCrackQuad4(unittest.TestCase):
     def test_jintegral_vs_griffith(self):
         a = 1.0e-3 # m
         W = 10.0e-3 # m
-        minima = np.array([min(x) for x in zip(*model.mesh.nodes)])
-        maxima = np.array([max(x) for x in zip(*model.mesh.nodes)])
+        minima = np.min(self.model.mesh.nodes, axis=0)
+        maxima = np.max(self.model.mesh.nodes, axis=0)
         ymin = minima[1]
         ymax = maxima[1]
-    
+
         def pk1(element_ids):
             """Convert Cauchy stress in each element to 1st P-K.
-    
+
             """
             data = self.soln.stepdata(time=self.t)
             for i in element_ids:
@@ -103,7 +130,7 @@ class CenterCrackQuad4(unittest.TestCase):
                 finv = np.linalg.inv(f)
                 P = fdet * np.dot(finv, np.dot(t, finv.T))
                 yield P
-    
+
         e_top = [(i, e) for i, e
                  in enumerate(self.model.mesh.elements)
                  if np.any(np.isclose(zip(*e.nodes)[1], ymin))]
@@ -113,13 +140,11 @@ class CenterCrackQuad4(unittest.TestCase):
         P = list(pk1([i for i, e in e_top + e_bot]))
         Pavg = sum(P) / len(P)
         stress = Pavg[1][1]
-    
-        K_I = stress * (math.pi * a * 1.0 / 
+
+        K_I = stress * (math.pi * a * 1.0 /
                         math.cos(math.pi * a / W))**0.5
         G = K_I**2.0 / self.E
-        id_crack_tip = self.model.mesh.find_nearest_node(*(1e-3, 0.0, 0.0))
-        elements, q = jdomain(self.model.mesh, id_crack_tip, n=3)
-        for e in elements:
-            e.apply_property('q', [q[i] for i in e.ids])
-        J = jintegral(elements, q)
+        id_crack_tip = [self.model.mesh.find_nearest_node(*(1e-3, 0.0, 0.0))]
+        elements = apply_q(self.model.mesh, id_crack_tip, n=3)
+        J = jintegral(elements)
         npt.assert_allclose(J, G, rtol=0.01)

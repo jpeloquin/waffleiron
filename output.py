@@ -5,17 +5,6 @@ from math import degrees
 
 feb_version = 2.0
 
-def solidmixture_to_feb(mat):
-    """Convert SolidMixture material instance to FEBio xml.
-
-    """
-    e = ET.Element('material', type='solid mixture')
-    for submat in mat.materials:
-        m = material_to_feb(submat)
-        m.tag = 'solid'
-        e.append(m)
-    return e
-
 def exponentialfiber_to_feb(mat):
     """Convert ExponentialFiber material instance to FEBio xml.
 
@@ -39,12 +28,30 @@ def holmesmow_to_feb(mat):
     """
     e = ET.Element('material', type='Holmes-Mow')
     E, v = feb.material.fromlame(mat.y, mat.mu)
-    p = ET.SubElement(e, 'E')
-    p.text = str(E)
-    p = ET.SubElement(e, 'v')
-    p.text = str(v)
-    p = ET.SubElement(e, 'beta')
-    p.text = str(mat.beta)
+    ET.SubElement(e, 'E').text = str(E)
+    p = ET.SubElement(e, 'v').text = str(v)
+    ET.SubElement(e, 'beta').text = str(mat.beta)
+    return e
+
+def isotropicelastic_to_feb(mat):
+    """Convert IsotropicElastic material instance to FEBio xml.
+
+    """
+    e = ET.Element('material', type='isotropic elastic')
+    E, v = feb.material.fromlame(mat.y, mat.mu)
+    ET.SubElement(e, 'E').text = str(E)
+    ET.SubElement(e, 'v').text = str(v)
+    return e
+
+def solidmixture_to_feb(mat):
+    """Convert SolidMixture material instance to FEBio xml.
+
+    """
+    e = ET.Element('material', type='solid mixture')
+    for submat in mat.materials:
+        m = material_to_feb(submat)
+        m.tag = 'solid'
+        e.append(m)
     return e
 
 def material_to_feb(mat):
@@ -57,6 +64,8 @@ def material_to_feb(mat):
         e = exponentialfiber_to_feb(mat)
     elif isinstance(mat, feb.material.HolmesMow):
         e = holmesmow_to_feb(mat)
+    elif isinstance(mat, feb.material.IsotropicElastic):
+        e = isotropicelastic_to_feb(mat)
     elif isinstance(mat, feb.material.SolidMixture):
         e = solidmixture_to_feb(mat)
     else:
@@ -170,7 +179,8 @@ def write_feb(model, fpath):
                'dtol': 'dtol',
                'etol': 'etol',
                'rtol': 'rtol',
-               'lstol': 'lstol'}
+               'lstol': 'lstol',
+               'plot level': 'plot_level'}
         for lbl1, lbl2 in tbl.iteritems():
             ET.SubElement(e_con, lbl2).text = \
                 str(step['control'][lbl1])

@@ -54,58 +54,65 @@ def eval_fn_x(soln, fn, pt):
         f = e.f(r, soln.data['displacement'])
         return fn(f, e)
 
-def jdomain(mesh, inode_tip, n=3, qtype='plateau'):
+def apply_q(mesh, crack_line, n=3, qtype='plateau'):
     """Define q for for the J integral.
 
+    crack_line := list of node ids comprising the crack line
+
+    Notes:
+
+    Zero crack face tractions are assumed.
+
     """
+    active_nodes = set(crack_line)
+    all_nodes = set(crack_line)
+    inner_nodes = set()
+    elements = set()
+    for ring in xrange(n):
+        # The current nodeset becomes interior nodes
+        inner_nodes.update(all_nodes)
+        # Add connected elements
+        for i in active_nodes:
+            elems = mesh.elem_with_node[i]
+            elements.update(elems)
+            for e in elems:
+                all_nodes.update(e.ids)
+        # Update list of active nodes to the set of exterior nodes
+        # that were just added to the full nodeset.
+        active_nodes = all_nodes - inner_nodes
+    elements = set(elements)
+
+    # The final active node set forms the exterior ring of the domain,
+    # which must have q = 0.  In the 3D case, the faces on either end
+    # of the crack line must also have q = 0.
+    outer_nodes = active_nodes
     q = [None] * len(mesh.nodes)
-    inner_elements = select_elems_around_node(mesh, inode_tip, n=n-1)
-    inner_nodes = set(i for e in inner_elements
-                      for i in e.ids)
-    elements = select_elems_around_node(mesh, inode_tip, n=n)
-    nodes = set(i for e in elements
-                for i in e.ids)
-    def node_connectivity(elements, n_nodes):
-        connectivity = [0] * n_nodes
-        for e in elements:
-            for i in e.ids:
-                connectivity[i] += 1
-        return connectivity
-    c = node_connectivity(mesh.elements, len(mesh.nodes))
-    crack_nodes = [inode_tip]
-    # walk along crack boundary to find crack nodes
-    for l in xrange(n):
-        crack_nodes = set(idx for i in crack_nodes
-                          for e in mesh.elem_with_node[i]
-                          for idx in e.ids
-                          if c[idx] == e.n/2)
-    crack_nodes = crack_nodes | set([inode_tip])
     if qtype == 'plateau':
         for i in inner_nodes:
             q[i] = 1.0
-        for i in nodes - inner_nodes:
+        for i in outer_nodes:
             q[i] = 0.0
-        for i in crack_nodes & inner_nodes:
-            q[i] = 1.0
     else:
         raise NotImplemented('{}-type q functions are not '
                              'implemented yet.'.format(qtype))
-    return elements, q
 
-def jintegral(elements, q):
+    # Apply q to the elements
+    for e in elements:
+        e.properties['q'] = np.array([q[i] for i in e.ids])
+
+    return elements
+
+def jintegral(elements):
     """Calculate J integral.
 
     Parameters
     ----------
     elements : list of element objects
-       List the elements to use as the integration domain.
-
-    q_mode : list of scalars
-       Specify a list of q values, one per node.
+       The q function should be pre-applied as nodal properties.
 
     """
 
-    def integrand(e, r, q):
+    def integrand(e, r):
         """Integrate over a single element.
 
         Parameters
@@ -118,12 +125,11 @@ def jintegral(elements, q):
         dudx = e.dinterp(r, prop='displacement')
         dudx1 = dudx[:,0]
         w = e.material.w(F) # strain energy
-#        e.apply_property('q', [q[i] for i in e.ids])
         dqdx = e.dinterp(r, prop='q') # 1 x 2 or 1 x 3
-        return -w * dqdx[0] + sum(p[i][j] * dudx[i,0] * dqdx[j] 
+        return -w * dqdx[0] + sum(p[i][j] * dudx[i,0] * dqdx[j]
                                  for i in xrange(len(r))
                                  for j in xrange(len(r)))
     j = 0
     for e in elements:
-        j += e.integrate(integrand, q)
+        j += e.integrate(integrand)
     return j

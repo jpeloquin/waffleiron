@@ -209,7 +209,7 @@ class Element3D(Element):
     """
     is_planar = False
 
-    def jdet(r, config='reference'):
+    def jdet(self, r, config='reference'):
         """Calculate determinant of the R3 → R3 jacobian.
 
         """
@@ -330,8 +330,6 @@ class Hex8(Element3D):
     """Functions for hex8 trilinear elements.
 
     """
-    # gwt
-    # gloc
     n = 8 # number of vertices
     r_n = 3 # number of natural basis parameters
 
@@ -351,6 +349,19 @@ class Hex8(Element3D):
                   [3, 0, 4, 7],
                   [4, 5, 6, 7],
                   [0, 3, 2, 1]]
+
+    # Guass point locations
+    g = 1.0 / 3.0**0.5
+    gloc = ((-g, -g, -g),
+            ( g, -g, -g),
+            ( g,  g, -g),
+            (-g,  g, -g),
+            (-g, -g,  g),
+            ( g, -g,  g),
+            ( g,  g,  g),
+            (-g,  g,  g))
+    # Guass weights
+    gwt = (1, 1, 1, 1, 1, 1, 1, 1)
 
     @staticmethod
     def N(r, s, t):
@@ -436,11 +447,11 @@ class Quad4(Element2D):
                   [3, 0]]
 
     a = 1.0 / 3.0**0.5
-    gloc = ((-a, -a),           # Guass point locations
+    gloc = ((-a, -a),           # Gauss point locations
           ( a, -a),
           ( a, a),
           (-a, a))
-    gwt = (1, 1, 1, 1)          # Guass weights
+    gwt = (1, 1, 1, 1)          # Gauss weights
 
     @staticmethod
     def N(r, s):
