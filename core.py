@@ -360,7 +360,7 @@ class Mesh:
         # Define new elements for "other" mesh
         new_simplices = [list(e.ids) for e in other.elements]
         for i, e in enumerate(other.elements):
-            new_ids = (newind[j] for j in e.ids)
+            new_ids = [newind[j] for j in e.ids]
             e.ids = new_ids
             # Merge the element to the first mesh
             self.elements.append(e)
