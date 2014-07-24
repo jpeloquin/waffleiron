@@ -36,3 +36,29 @@ def elements_with_face(mesh, face):
     face = frozenset(face)
     all_faces = set(frozenset(e.faces()) for e in mesh.elements)
     raise NotImplemented
+
+def adj_faces(mesh, face, mode='all'):
+    """Return faces connected to a face.
+
+    mode : {'all', 'edge', 'face'}
+        The type of adjacency desired. Specifying 'edge' returns only
+        faces which share an edge with the input face. Specifying
+        'face' returns only faces that share every node with the input
+        face.
+
+    """
+    nc_faces = [mesh.faces_with_node[i] for i in face.ids]
+    # ^ faces sharing a node
+    fc_faces = set.intersection(*nc_faces) - set([face])
+    # ^ other faces sharing all nodes
+    if mode == 'face':
+        return fc_faces
+    edges = [(i, i + 1) for i in xrange(len(face.ids) - 1)]
+    edges.append((len(face.ids) - 1, 0))
+    ec_faces = set.union(*[set.intersection(nc_faces[i1], nc_faces[i2])
+                           for i1, i2 in edges]) - fc_faces - set([face])
+    # ^ other faces sharing two nodes
+    if mode == 'edge':
+        return ec_faces
+    elif mode == 'all':
+        return set.union(fc_faces, ec_faces)

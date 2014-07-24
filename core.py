@@ -183,38 +183,24 @@ class Mesh:
         """
         # Create KDTree for fast node lookup
         self.nodetree = KDTree(self.nodes)
+
         # Create list of parent elements by node
         elem_with_node = [[] for i in xrange(len(self.nodes))]
         for e in self.elements:
             for i in e.ids:
                 elem_with_node[i].append(e)
         self.elem_with_node = elem_with_node
+
         # Faces
-        faces = [Face(f) for e in self.elements for f in e.faces()]
-        # which faces share a node?
+        self.faces = [Face(f) for e in self.elements
+                      for f in e.faces()]
+
+        # Create list of parent faces by node
         faces_with_node = [set() for i in xrange(len(self.nodes))]
-        for f in faces:
+        for f in self.faces:
             for i in f.ids:
                 faces_with_node[i].add(f)
         self.faces_with_node = faces_with_node
-        # establish face connectivity
-        for f in faces:
-            nc = {} # number of nodes shared with other faces, indexed
-                    # by other face
-            for i in f.ids:
-                for f2 in faces_with_node[i]:
-                    if f2 is not f: # ignore self-connnection
-                        nc[f2] = nc.setdefault(f2, 0) + 1
-            for k, v in nc.iteritems():
-                n_nodes = len(f.ids)
-                # fully connected
-                if v == n_nodes:
-                    f.fc_faces.add(k)
-                # edge connected
-                elif v >= 2:
-                    # with high order elements, edge connected faces
-                    # could share > 2 nodes
-                    f.ec_faces.add(k)
 
     def clean_nodes(self):
         """Remove any nodes that are not part of an element.
