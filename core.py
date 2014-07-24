@@ -189,6 +189,32 @@ class Mesh:
             for i in e.ids:
                 elem_with_node[i].append(e)
         self.elem_with_node = elem_with_node
+        # Faces
+        faces = [Face(f) for e in self.elements for f in e.faces()]
+        # which faces share a node?
+        faces_with_node = [set() for i in xrange(len(self.nodes))]
+        for f in faces:
+            for i in f.ids:
+                faces_with_node[i].add(f)
+        self.faces_with_node = faces_with_node
+        # establish face connectivity
+        for f in faces:
+            nc = {} # number of nodes shared with other faces, indexed
+                    # by other face
+            for i in f.ids:
+                for f2 in faces_with_node[i]:
+                    if f2 is not f: # ignore self-connnection
+                        nc[f2] = nc.setdefault(f2, 0) + 1
+            for k, v in nc.iteritems():
+                n_nodes = len(f.ids)
+                # fully connected
+                if v == n_nodes:
+                    f.fc_faces.add(k)
+                # edge connected
+                elif v >= 2:
+                    # with high order elements, edge connected faces
+                    # could share > 2 nodes
+                    f.ec_faces.add(k)
 
     def clean_nodes(self):
         """Remove any nodes that are not part of an element.
@@ -375,3 +401,21 @@ class Mesh:
         """
         for nid in self.nodes:
             pass
+
+class Face:
+    """An oriented list of nodes representing a face.
+
+    """
+    def __init__(self, ids, mesh=None):
+        """Create a face from a list of node ids.
+
+        """
+        # Defaults
+        self.fc_faces = set() # neighboring faces sharing all nodes;
+                              # i.e. fully connected
+        self.ec_faces = set() # neighboring faces sharing an edge;
+                              # i.e. edge connected
+        self.normal = None # To be used by a mesh objected to store
+                           # normals.
+        # Set ids
+        self.ids = tuple(ids)

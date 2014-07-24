@@ -1,15 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from scipy.optimize import fsolve
-
-def _cross(u, v):
-    """Cross product for two vectors in R3.
-
-    """
-    w = np.array([u[1]*v[2] - u[2]*v[1],
-                  u[2]*v[0] - u[0]*v[2],
-                  u[0]*v[1] - u[1]*v[0]])
-    return w
+from febtools.geometry import _cross
 
 def elem_obj(element, nodes, eid=None):
     """Returns an Element object from node and element tuples.
@@ -40,8 +32,6 @@ class Element:
     nodes := Nodal positions in reference configuration.  The order
     follows FEBio convention.
 
-    mesh := (optional) The mesh to which the element belongs.
-
     ids := (optional) Nodal indices into `mesh.nodes`
 
     material := (optional) Material object instance.
@@ -69,7 +59,6 @@ class Element:
 
         """
         self.ids = None # indices of nodes in mesh
-        self.mesh = None
         self.material = material
         self.properties = {'displacement': np.array([(0, 0, 0) for i in nodes])}
         # Nodal coordinates
@@ -175,6 +164,20 @@ class Element:
         """
         x = self.x(config)
         return self.interp((0,0,0), x)
+
+    def faces(self):
+        """Return the faces of this element.
+
+        A face is represented by a tuple of node ids oriented such
+        that the cross product returns an outward-pointing normal.
+
+        """
+        if self.ids is not None:
+            faces =tuple(tuple(self.ids[i] for i in f)
+                         for f in self.face_nodes)
+        else:
+            faces = self.face_nodes
+        return faces
 
     def face_normals(self, config='reference'):
         """List of face normals
@@ -343,12 +346,12 @@ class Hex8(Element3D):
                          [3, 4, 6]] # 7
 
     # Oriented positive = out
-    face_nodes = [[0, 1, 5, 4],
-                  [1, 2, 6, 5],
-                  [2, 3, 7, 6],
-                  [3, 0, 4, 7],
-                  [4, 5, 6, 7],
-                  [0, 3, 2, 1]]
+    face_nodes = ((0, 1, 5, 4),
+                  (1, 2, 6, 5),
+                  (2, 3, 7, 6),
+                  (3, 0, 4, 7),
+                  (4, 5, 6, 7),
+                  (0, 3, 2, 1))
 
     # Guass point locations
     g = 1.0 / 3.0**0.5

@@ -90,7 +90,6 @@ class CenterCrackHex8(unittest.TestCase):
         for e in elems:
             for q, pt in zip(e.properties['q'], e.nodes):
                 print q, pt
-        import pdb; pdb.set_trace()
         npt.assert_allclose(J, G, rtol=0.01)
 
 class CenterCrackQuad4(unittest.TestCase):

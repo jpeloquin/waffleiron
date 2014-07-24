@@ -1,5 +1,5 @@
 import numpy as np
-import febtools
+import febtools as feb
 
 def select_elems_around_node(mesh, i, n=3):
     """Select elements centered on node i.

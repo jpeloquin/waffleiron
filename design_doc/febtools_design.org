@@ -47,3 +47,16 @@ Everything is zero-indexed until it is written to FEBio xml or another output fo
 
 Assignment of numeric ids to objects is avoided in favor of aliasing each unique object instance.
 Sets of object instances can thus be assembled organically without reference to a separately stored table.
+
+* Faces
+
+Faces are a derived property of the mesh.
+
+* Selecting edges and corners
+
+There's no good way to algorithmically define edges and faces on the scale of a mesh, particularly when element types are mixed.
+An edge could be defined by a rapid change in the surface normal, but the threshold would have to be set on a case-by-case basis.
+If brick elements alone are considered, a node connected to 1 element must be a corner and a node connected to 2 elements must be an edge; however, nodes that are qualitatively on corners and edges could potentially have more connected elements.
+
+Note that there is currently a =selection.corner_nodes= function, which in light of the above will not always work properly.
+It is essentially only useful for meshes that conform to a rectilinear grid.
