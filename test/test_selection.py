@@ -31,10 +31,9 @@ class QuadMesh(unittest.TestCase):
         assert not set(corner_nodes) - set([0, 100, 5554, 5454])
 
 
-### Adjacent faces
-from febtools.selection import adj_faces
+from febtools.selection import adj_faces, surface_faces
 
-class FaceConnectivityHex8(unittest.TestCase):
+class SelectionHex8(unittest.TestCase):
     """Test for correct face connectivity.
 
     """
@@ -75,3 +74,12 @@ class FaceConnectivityHex8(unittest.TestCase):
         assert len(faces) == 0
         # make sure the input face is not returned
         assert self.face not in faces
+
+    ### Surface faces
+
+    def test_surface_faces(self):
+        """Test selection of surface faces.
+
+        """
+        faces = surface_faces(self.mesh)
+        assert len(faces) == 6756

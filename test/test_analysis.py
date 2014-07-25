@@ -81,15 +81,12 @@ class CenterCrackHex8(unittest.TestCase):
         crack_line = [i for i, (x, y, z)
                       in enumerate(self.model.mesh.nodes)
                       if np.allclose(x, 1e-3) and np.allclose(y, 0)]
-        domain = feb.analysis.apply_q(self.model.mesh,
-                                      crack_line, n=2)
+        domain = feb.analysis.apply_q(self.model.mesh, crack_line,
+                                      n=2, dimension='3d')
 #        assert len(domain) == 180
         J = feb.analysis.jintegral(domain)
         elems = [e for e in list(domain)
                  if np.any(np.array(e.nodes)[:,2] == -0.0005)]
-        for e in elems:
-            for q, pt in zip(e.properties['q'], e.nodes):
-                print q, pt
         npt.assert_allclose(J, G, rtol=0.01)
 
 class CenterCrackQuad4(unittest.TestCase):
@@ -144,6 +141,7 @@ class CenterCrackQuad4(unittest.TestCase):
                         math.cos(math.pi * a / W))**0.5
         G = K_I**2.0 / self.E
         id_crack_tip = [self.model.mesh.find_nearest_node(*(1e-3, 0.0, 0.0))]
-        elements = apply_q(self.model.mesh, id_crack_tip, n=3)
+        elements = apply_q(self.model.mesh, id_crack_tip, n=3,
+                           dimension='2d')
         J = jintegral(elements)
         npt.assert_allclose(J, G, rtol=0.01)

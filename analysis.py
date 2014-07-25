@@ -54,7 +54,9 @@ def eval_fn_x(soln, fn, pt):
         f = e.f(r, soln.data['displacement'])
         return fn(f, e)
 
-def apply_q(mesh, crack_line, n=3, qtype='plateau'):
+from febtools.selection import adj_faces
+
+def apply_q(mesh, crack_line, n=3, qtype='plateau', dimension='2d'):
     """Define q for for the J integral.
 
     crack_line := list of node ids comprising the crack line
@@ -62,6 +64,9 @@ def apply_q(mesh, crack_line, n=3, qtype='plateau'):
     Notes:
 
     Zero crack face tractions are assumed.
+
+    In 3D, classification of the crack faces works only for hexahedral
+    elements.
 
     """
     active_nodes = set(crack_line)
@@ -81,11 +86,32 @@ def apply_q(mesh, crack_line, n=3, qtype='plateau'):
         # that were just added to the full nodeset.
         active_nodes = all_nodes - inner_nodes
     elements = set(elements)
+    outer_nodes = active_nodes
 
     # The final active node set forms the exterior ring of the domain,
     # which must have q = 0.  In the 3D case, the faces on either end
     # of the crack line must also have q = 0.
-    outer_nodes = active_nodes
+
+    if dimension == '3d':
+        # Find surface faces
+        surface_faces = feb.selection.surface_faces(mesh)
+        # Find crack faces
+        crack_faces = set()
+        adv_front = set(crack_line)
+        processed_nodes = set()
+        for j in xrange(n):
+            candidates = (f for i in adv_front
+                          for f in mesh.faces_with_node[i])
+            on_surface = (f for f in candidates
+                          if len(adj_faces(mesh, f, mode='face')) == 0)
+            new = [f for f in on_surface
+                   if len(set(f.ids) & adv_front) > 1]
+            crack_faces.update(new)
+            processed_nodes.update(adv_front)
+            adv_front = set.difference(set([i for f in crack_faces
+                                            for i in f.ids]),
+                                       processed_nodes)
+
     q = [None] * len(mesh.nodes)
     if qtype == 'plateau':
         for i in inner_nodes:
@@ -95,6 +121,13 @@ def apply_q(mesh, crack_line, n=3, qtype='plateau'):
     else:
         raise NotImplemented('{}-type q functions are not '
                              'implemented yet.'.format(qtype))
+    # Set ends of 3d cyclinder to q = 0
+    if dimension == '3d':
+        candidates = set(i for f in surface_faces - crack_faces
+                         for i in f.ids)
+        inner_cap_nodes = candidates & inner_nodes
+        for i in inner_cap_nodes:
+            q[i] = 0.0
 
     # Apply q to the elements
     for e in elements:

@@ -145,6 +145,7 @@ class Mesh:
             # Store reference to this mesh
             e.mesh = self
         self.elements = elements
+
         # Precompute derived properties
         self.prepare()
 
