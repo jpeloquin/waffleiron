@@ -43,9 +43,11 @@ class FaceConnectivityHex8(unittest.TestCase):
         self.mesh = reader.mesh()
         # get a specific face
         faces = self.mesh.faces_with_node[0]
-        nids = set((0, 1, 54, 55))
+        nids = set((0, 1, 55, 56))
         self.face = next(f for f in faces
                          if not set(f.ids) - nids)
+
+    ### Adjacent faces
 
     def test_all_adjacency(self):
         faces = adj_faces(self.mesh, self.face, mode='all')
