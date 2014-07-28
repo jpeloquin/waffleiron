@@ -129,8 +129,8 @@ def apply_q(mesh, crack_line, n=3, qtype='plateau', dimension='2d'):
         for i in inner_cap_nodes:
             q[i] = 0.0
 
-    # Apply q to the elements
-    for e in elements:
+    # Apply q to all elements
+    for e in mesh.elements:
         e.properties['q'] = np.array([q[i] for i in e.ids])
 
     return elements
