@@ -71,7 +71,7 @@ class Element:
         """Create an element from nodal indices.
 
         """
-        nodes = [nodelist[i] for i in ids]
+        nodes = np.array([nodelist[i] for i in ids])
         element = cls(nodes, material)
         element.ids = ids
         return element
