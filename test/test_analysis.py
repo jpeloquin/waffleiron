@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Run these tests with nose
 from nose.tools import with_setup
 import unittest
@@ -11,6 +12,38 @@ from febtools.input import FebReader
 from febtools.material import fromlame, tolame
 from febtools.analysis import *
 from febtools import material
+
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+def plot_q(mesh):
+    """Plot q function from mesh.
+
+    """
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    # get list of q values
+    n = np.array(mesh.nodes).shape[0]
+    q = np.array([None] * n)
+    for e in mesh.elements:
+        for q_loc, glob_i in zip(e.properties['q'], e.ids):
+            q_glob = q[glob_i]
+            if q_glob:
+                assert q_loc == q_glob
+            else:
+                q[glob_i] = q_loc
+    # plot 1-values
+    xyz = np.array(mesh.nodes)[q == 1.0]
+    ax.scatter(xyz[:,0], xyz[:,1], xyz[:,2],
+               s=16, c='b', marker='o', edgecolor='b')
+    # plot 0-values
+    xyz = np.array(mesh.nodes)[q == 0]
+    ax.scatter(xyz[:,0], xyz[:,1], xyz[:,2],
+               s=16, c='r', marker='*', edgecolor='r')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    return fig, ax
+
 
 class temp():
 
@@ -52,9 +85,9 @@ class CenterCrackHex8(unittest.TestCase):
 
     """
     def setUp(self):
-        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic.feb'))
+        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_thick_uniax_isotropic_elastic.feb'))
         self.model = reader.model()
-        self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic.xplt'))
+        self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'center_crack_thick_uniax_isotropic_elastic.xplt'))
         self.model.apply_solution(self.soln)
 
         material = self.model.mesh.elements[0].material
@@ -74,20 +107,36 @@ class CenterCrackHex8(unittest.TestCase):
                              np.any(e.nodes[:,1] == maxima[1]))]
         pavg = np.mean([e.material.pstress(e.f((0, 0, 0)))
                         for e in elems_up_down], axis=0)
+
+        # Define G for plane strain
         K_I = pavg[1][1] * (math.pi * a * 1.0 /
                             math.cos(math.pi * a / width))**0.5
-        G = K_I**2.0 / self.E
+        material = self.model.mesh.elements[0].material
+        G = K_I**2.0 / self.E * (1 - self.nu**2.0)
 
         crack_line = [i for i, (x, y, z)
                       in enumerate(self.model.mesh.nodes)
                       if np.allclose(x, 1e-3) and np.allclose(y, 0)]
         domain = feb.analysis.apply_q(self.model.mesh, crack_line,
                                       n=2, dimension='3d')
-#        assert len(domain) == 180
-        J = feb.analysis.jintegral(domain)
+        #        assert len(domain) == 180
+        jbdl = feb.analysis.jintegral(domain)
+
+        # debugging visualization
+        print("Jbar * ΔL = {}".format(jbdl))
+        plt.ion()
+        fig, ax = plot_q(self.model.mesh)
+        plt.show()
+
+        maxima = np.max(self.model.mesh.nodes, axis=0)
+        minima = np.min(self.model.mesh.nodes, axis=0)
+        deltaL = maxima[2] - minima[2]
+        print("ΔL = {}".format(deltaL))
         elems = [e for e in list(domain)
-                 if np.any(np.array(e.nodes)[:,2] == -0.0005)]
-        npt.assert_allclose(J, G, rtol=0.01)
+                 if np.any(np.array(e.nodes)[:,2] == minima[1])]
+        # This isn't quite right; deltaL is standing in for ∫q(η)dη
+        npt.assert_allclose(jbdl / deltaL, G, rtol=0.01)
+
 
 class CenterCrackQuad4(unittest.TestCase):
 
@@ -139,6 +188,7 @@ class CenterCrackQuad4(unittest.TestCase):
 
         K_I = stress * (math.pi * a * 1.0 /
                         math.cos(math.pi * a / W))**0.5
+        # Felderson; accurate to 0.3% for a/W ≤ 0.35
         G = K_I**2.0 / self.E
         id_crack_tip = [self.model.mesh.find_nearest_node(*(1e-3, 0.0, 0.0))]
         elements = apply_q(self.model.mesh, id_crack_tip, n=3,

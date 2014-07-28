@@ -111,7 +111,7 @@ class Element:
         return np.dot(self.N(*r), v_node)
 
     def dinterp(self, r, prop='displacement'):
-        """Evalute d/dx of node-valued data at r
+        """Return d/dx of node-valued data at natural basis point r
 
         The node-valued data may be scalar or vector.
 
