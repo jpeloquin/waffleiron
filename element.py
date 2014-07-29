@@ -174,8 +174,8 @@ class Element:
 
         """
         if self.ids is not None:
-            faces =tuple(tuple(self.ids[i] for i in f)
-                         for f in self.face_nodes)
+            faces = tuple(tuple(self.ids[i] for i in f)
+                          for f in self.face_nodes)
         else:
             faces = self.face_nodes
         return faces

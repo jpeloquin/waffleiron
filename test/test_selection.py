@@ -34,7 +34,7 @@ class QuadMesh(unittest.TestCase):
 from febtools.selection import adj_faces, surface_faces
 
 class SelectionHex8(unittest.TestCase):
-    """Test for correct face connectivity.
+    """Test selections for a hex8 mesh with a hole.
 
     """
     def setUp(self):

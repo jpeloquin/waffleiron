@@ -1,5 +1,6 @@
 import numpy as np
 import febtools as feb
+from collections import defaultdict
 
 def select_elems_around_node(mesh, i, n=3):
     """Select elements centered on node i.
@@ -56,10 +57,10 @@ def eval_fn_x(soln, fn, pt):
 
 from febtools.selection import adj_faces
 
-def apply_q(mesh, crack_line, n=3, qtype='plateau', dimension='2d'):
+def apply_q_2d(mesh, crack_tip, n=3, qtype='plateau'):
     """Define q for for the J integral.
 
-    crack_line := list of node ids comprising the crack line
+    crack_tip := list of node ids comprising the crack line
 
     Notes:
 
@@ -69,8 +70,8 @@ def apply_q(mesh, crack_line, n=3, qtype='plateau', dimension='2d'):
     elements.
 
     """
-    active_nodes = set(crack_line)
-    all_nodes = set(crack_line)
+    active_nodes = set(crack_tip)
+    all_nodes = set(crack_tip)
     inner_nodes = set()
     elements = set()
     for ring in xrange(n):
@@ -88,30 +89,6 @@ def apply_q(mesh, crack_line, n=3, qtype='plateau', dimension='2d'):
     elements = set(elements)
     outer_nodes = active_nodes
 
-    # The final active node set forms the exterior ring of the domain,
-    # which must have q = 0.  In the 3D case, the faces on either end
-    # of the crack line must also have q = 0.
-
-    if dimension == '3d':
-        # Find surface faces
-        surface_faces = feb.selection.surface_faces(mesh)
-        # Find crack faces
-        crack_faces = set()
-        adv_front = set(crack_line)
-        processed_nodes = set()
-        for j in xrange(n):
-            candidates = (f for i in adv_front
-                          for f in mesh.faces_with_node[i])
-            on_surface = (f for f in candidates
-                          if len(adj_faces(mesh, f, mode='face')) == 0)
-            new = [f for f in on_surface
-                   if len(set(f.ids) & adv_front) > 1]
-            crack_faces.update(new)
-            processed_nodes.update(adv_front)
-            adv_front = set.difference(set([i for f in crack_faces
-                                            for i in f.ids]),
-                                       processed_nodes)
-
     q = [None] * len(mesh.nodes)
     if qtype == 'plateau':
         for i in inner_nodes:
@@ -121,17 +98,94 @@ def apply_q(mesh, crack_line, n=3, qtype='plateau', dimension='2d'):
     else:
         raise NotImplemented('{}-type q functions are not '
                              'implemented yet.'.format(qtype))
-    # Set ends of 3d cyclinder to q = 0
-    if dimension == '3d':
-        candidates = set(i for f in surface_faces - crack_faces
-                         for i in f.ids)
-        inner_cap_nodes = candidates & inner_nodes
-        for i in inner_cap_nodes:
-            q[i] = 0.0
 
     # Apply q to all elements
     for e in mesh.elements:
         e.properties['q'] = np.array([q[i] for i in e.ids])
+
+    return elements
+
+from febtools.selection import expand_element_set
+
+def apply_q_3d(elements, crack_tip, n=3, qtype='plateau'):
+    """Define q for for the J integral.
+
+    crack_tip := list of node ids comprising the crack tip line
+
+    Notes:
+
+    Zero crack face tractions are assumed.
+
+    This function is only applicable to hexahedral meshes for which
+    the crack face surfaces together form a quad mesh that is (1) a
+    manifold and (2) regular.
+
+    The hexahedral mesh must also be regular; i.e. all interior nodes
+    are connected to 6 edges (8 elements).
+
+    """
+    all_nodes = set(i for e in elements for i in e.ids)
+    crack_tip = set(crack_tip) & all_nodes
+
+    # Grow a sub-selection of elements from the crack tip
+    tip_elements = [e for e in elements if set(e.ids) & crack_tip]
+    elements = expand_element_set(elements, tip_elements, n - 1)
+
+    # Find boundary nodes
+    refcount = {} # how many elements each node is connected to
+    for e in elements:
+        for i in e.ids:
+            refcount[i] = refcount.setdefault(i, 0) + 1
+    boundary_nodes = (set(k for k, v in refcount.iteritems()
+                         if v < 8)
+                      | crack_tip)
+    interior_nodes = all_nodes - boundary_nodes
+    if not interior_nodes:
+        raise ValueError("All nodes in `elements` are boundary nodes.")
+
+    # Find the moving nodes on the crack line
+    surface_faces = set(frozenset(f) for e in elements
+                        for f in e.faces()
+                        if set(f) <= boundary_nodes)
+    crack_faces = set()
+    active_nodes = set(crack_tip)
+    # ^ faces connected to these nodes will be added to crack_faces
+    candidates = surface_faces
+    for j in xrange(n):
+        new = [f for f in candidates
+               if len(f & active_nodes) > 1
+               and f not in crack_faces]
+        crack_faces.update(new)
+        # move the active front
+        active_nodes = set(i for f in new for i in f) - active_nodes
+    crack_nodes_q0 = active_nodes
+
+    # Find crack nodes on interior of crack face surface mesh
+    refcount = {}
+    for f in crack_faces:
+        for i in f:
+            refcount[i] = refcount.setdefault(i, 0) + 1
+    crack_surface_nodes_interior = set(k for k, v
+                                       in refcount.iteritems()
+                                       if v == 4)
+    crack_nodes_q1 = crack_surface_nodes_interior - crack_nodes_q0
+    # Apply
+    if qtype == 'plateau':
+        q0_nodes = boundary_nodes - crack_nodes_q1
+        q1_nodes = all_nodes - q0_nodes
+        for e in elements:
+            qprop = np.array([np.nan] * len(e.ids))
+            for i, node_id in enumerate(e.ids):
+                if node_id in q0_nodes:
+                    qprop[i] = 0.0
+                elif node_id in q1_nodes:
+                    qprop[i]= 1.0
+                else:
+                    raise Exception("Element {} node {} does not have q defined.".format(e, i))
+            e.apply_property('q', qprop)
+    else:
+        raise NotImplemented('{}-type q functions are not '
+                             'implemented.'.format(qtype))
 
     return elements
 

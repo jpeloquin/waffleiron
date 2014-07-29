@@ -402,7 +402,7 @@ class Face:
                               # i.e. fully connected
         self.ec_faces = set() # neighboring faces sharing an edge;
                               # i.e. edge connected
-        self.normal = None # To be used by a mesh objected to store
+        self.normal = None # To be used by a mesh object to store
                            # normals.
         # Set ids
         self.ids = tuple(ids)

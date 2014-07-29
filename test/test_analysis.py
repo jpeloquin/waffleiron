@@ -15,28 +15,22 @@ from febtools import material
 
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
-def plot_q(mesh):
+def plot_q(elements):
     """Plot q function from mesh.
 
     """
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     # get list of q values
-    n = np.array(mesh.nodes).shape[0]
-    q = np.array([None] * n)
-    for e in mesh.elements:
-        for q_loc, glob_i in zip(e.properties['q'], e.ids):
-            q_glob = q[glob_i]
-            if q_glob:
-                assert q_loc == q_glob
-            else:
-                q[glob_i] = q_loc
+    nodes = np.array([x for e in elements for x in e.nodes])
+    n = nodes.shape[0]
+    q = np.array([v for e in elements for v in e.properties['q']])
     # plot 1-values
-    xyz = np.array(mesh.nodes)[q == 1.0]
+    xyz = nodes[q == 1.0]
     ax.scatter(xyz[:,0], xyz[:,1], xyz[:,2],
                s=16, c='b', marker='o', edgecolor='b')
     # plot 0-values
-    xyz = np.array(mesh.nodes)[q == 0]
+    xyz = nodes[q == 0]
     ax.scatter(xyz[:,0], xyz[:,1], xyz[:,2],
                s=16, c='r', marker='*', edgecolor='r')
     ax.set_xlabel('X')
@@ -114,28 +108,34 @@ class CenterCrackHex8(unittest.TestCase):
         material = self.model.mesh.elements[0].material
         G = K_I**2.0 / self.E * (1 - self.nu**2.0)
 
-        crack_line = [i for i, (x, y, z)
-                      in enumerate(self.model.mesh.nodes)
-                      if np.allclose(x, 1e-3) and np.allclose(y, 0)]
-        domain = feb.analysis.apply_q(self.model.mesh, crack_line,
-                                      n=2, dimension='3d')
+        tip_line = [i for i, (x, y, z)
+                    in enumerate(self.model.mesh.nodes)
+                    if np.allclose(x, 1e-3) and np.allclose(y, 0)]
+        zslice = feb.selection.element_slice(self.model.mesh.elements,
+                                             v=0, axis=(0, 0, 1),
+                                             extent=1e-4)
+        nodes = [n for e in zslice for n in e.nodes]
+        maxima = np.max(nodes, axis=0)
+        minima = np.min(nodes, axis=0)
+        deltaL = maxima[2] - minima[2]
+        domain = feb.analysis.apply_q_3d(zslice, tip_line, n=3)
         #        assert len(domain) == 180
         jbdl = feb.analysis.jintegral(domain)
+        jbar = jbdl / (0.5 * deltaL)
+        # 0.5 * deltaL is standing in for ∫q(η)dη; this is ok for a
+        # tringular q(η)
 
         # debugging visualization
         print("Jbar * ΔL = {}".format(jbdl))
+        print("ΔL = {}".format(deltaL))
+        print("Jbar = {}".format(jbar))
         plt.ion()
-        fig, ax = plot_q(self.model.mesh)
+        fig, ax = plot_q(domain)
         plt.show()
 
-        maxima = np.max(self.model.mesh.nodes, axis=0)
-        minima = np.min(self.model.mesh.nodes, axis=0)
-        deltaL = maxima[2] - minima[2]
-        print("ΔL = {}".format(deltaL))
         elems = [e for e in list(domain)
                  if np.any(np.array(e.nodes)[:,2] == minima[1])]
-        # This isn't quite right; deltaL is standing in for ∫q(η)dη
-        npt.assert_allclose(jbdl / deltaL, G, rtol=0.01)
+        npt.assert_allclose(jbar, G, rtol=0.01)
 
 
 class CenterCrackQuad4(unittest.TestCase):
@@ -191,7 +191,6 @@ class CenterCrackQuad4(unittest.TestCase):
         # Felderson; accurate to 0.3% for a/W ≤ 0.35
         G = K_I**2.0 / self.E
         id_crack_tip = [self.model.mesh.find_nearest_node(*(1e-3, 0.0, 0.0))]
-        elements = apply_q(self.model.mesh, id_crack_tip, n=3,
-                           dimension='2d')
+        elements = apply_q_2d(self.model.mesh, id_crack_tip, n=3)
         J = jintegral(elements)
         npt.assert_allclose(J, G, rtol=0.01)
