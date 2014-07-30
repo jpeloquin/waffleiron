@@ -1,15 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from scipy.optimize import fsolve
-
-def _cross(u, v):
-    """Cross product for two vectors in R3.
-
-    """
-    w = np.array([u[1]*v[2] - u[2]*v[1],
-                  u[2]*v[0] - u[0]*v[2],
-                  u[0]*v[1] - u[1]*v[0]])
-    return w
+from febtools.geometry import _cross
 
 def elem_obj(element, nodes, eid=None):
     """Returns an Element object from node and element tuples.
@@ -39,8 +31,6 @@ class Element:
     ----------
     nodes := Nodal positions in reference configuration.  The order
     follows FEBio convention.
-
-    mesh := (optional) The mesh to which the element belongs.
 
     ids := (optional) Nodal indices into `mesh.nodes`
 
@@ -81,7 +71,7 @@ class Element:
         """Create an element from nodal indices.
 
         """
-        nodes = [nodelist[i] for i in ids]
+        nodes = np.array([nodelist[i] for i in ids])
         element = cls(nodes, material)
         element.ids = ids
         return element
@@ -122,7 +112,7 @@ class Element:
         return np.dot(self.N(*r), v_node)
 
     def dinterp(self, r, prop='displacement'):
-        """Evalute d/dx of node-valued data at r
+        """Return d/dx of node-valued data at natural basis point r
 
         The node-valued data may be scalar or vector.
 
@@ -176,6 +166,20 @@ class Element:
         x = self.x(config)
         return self.interp((0,0,0), x)
 
+    def faces(self):
+        """Return the faces of this element.
+
+        A face is represented by a tuple of node ids oriented such
+        that the cross product returns an outward-pointing normal.
+
+        """
+        if self.ids is not None:
+            faces = tuple(tuple(self.ids[i] for i in f)
+                          for f in self.face_nodes)
+        else:
+            faces = self.face_nodes
+        return faces
+
     def face_normals(self, config='reference'):
         """List of face normals
 
@@ -209,7 +213,7 @@ class Element3D(Element):
     """
     is_planar = False
 
-    def jdet(r, config='reference'):
+    def jdet(self, r, config='reference'):
         """Calculate determinant of the R3 → R3 jacobian.
 
         """
@@ -330,8 +334,6 @@ class Hex8(Element3D):
     """Functions for hex8 trilinear elements.
 
     """
-    # gwt
-    # gloc
     n = 8 # number of vertices
     r_n = 3 # number of natural basis parameters
 
@@ -345,12 +347,25 @@ class Hex8(Element3D):
                          [3, 4, 6]] # 7
 
     # Oriented positive = out
-    face_nodes = [[0, 1, 5, 4],
-                  [1, 2, 6, 5],
-                  [2, 3, 7, 6],
-                  [3, 0, 4, 7],
-                  [4, 5, 6, 7],
-                  [0, 3, 2, 1]]
+    face_nodes = ((0, 1, 5, 4),
+                  (1, 2, 6, 5),
+                  (2, 3, 7, 6),
+                  (3, 0, 4, 7),
+                  (4, 5, 6, 7),
+                  (0, 3, 2, 1))
+
+    # Guass point locations
+    g = 1.0 / 3.0**0.5
+    gloc = ((-g, -g, -g),
+            ( g, -g, -g),
+            ( g,  g, -g),
+            (-g,  g, -g),
+            (-g, -g,  g),
+            ( g, -g,  g),
+            ( g,  g,  g),
+            (-g,  g,  g))
+    # Guass weights
+    gwt = (1, 1, 1, 1, 1, 1, 1, 1)
 
     @staticmethod
     def N(r, s, t):
@@ -379,30 +394,30 @@ class Hex8(Element3D):
         # d/dr
         dn[0][0] = -1. / 8. * (1 - s) * (1 - t)
         dn[1][0] =  1. / 8. * (1 - s) * (1 - t)
-        dn[2][0] =  1. / 8. * (1 - s) * (1 - t)
-        dn[3][0] = -1. / 8. * (1 - s) * (1 - t)
-        dn[4][0] = -1. / 8. * (1 - s) * (1 - t)
-        dn[5][0] =  1. / 8. * (1 - s) * (1 - t)
-        dn[6][0] =  1. / 8. * (1 - s) * (1 - t)
-        dn[7][0] = -1. / 8. * (1 - s) * (1 - t)
+        dn[2][0] =  1. / 8. * (1 + s) * (1 - t)
+        dn[3][0] = -1. / 8. * (1 + s) * (1 - t)
+        dn[4][0] = -1. / 8. * (1 - s) * (1 + t)
+        dn[5][0] =  1. / 8. * (1 - s) * (1 + t)
+        dn[6][0] =  1. / 8. * (1 + s) * (1 + t)
+        dn[7][0] = -1. / 8. * (1 + s) * (1 + t)
         # d/ds
         dn[0][1] = -1. / 8. * (1 - r) * (1 - t)
-        dn[1][1] = -1. / 8. * (1 - r) * (1 - t)
-        dn[2][1] =  1. / 8. * (1 - r) * (1 - t)
+        dn[1][1] = -1. / 8. * (1 + r) * (1 - t)
+        dn[2][1] =  1. / 8. * (1 + r) * (1 - t)
         dn[3][1] =  1. / 8. * (1 - r) * (1 - t)
-        dn[4][1] = -1. / 8. * (1 - r) * (1 - t)
-        dn[5][1] = -1. / 8. * (1 - r) * (1 - t)
-        dn[6][1] =  1. / 8. * (1 - r) * (1 - t)
-        dn[7][1] =  1. / 8. * (1 - r) * (1 - t)
+        dn[4][1] = -1. / 8. * (1 - r) * (1 + t)
+        dn[5][1] = -1. / 8. * (1 + r) * (1 + t)
+        dn[6][1] =  1. / 8. * (1 + r) * (1 + t)
+        dn[7][1] =  1. / 8. * (1 - r) * (1 + t)
         # d/dt
         dn[0][2] = -1. / 8. * (1 - r) * (1 - s)
-        dn[1][2] = -1. / 8. * (1 - r) * (1 - s)
-        dn[2][2] = -1. / 8. * (1 - r) * (1 - s)
-        dn[3][2] = -1. / 8. * (1 - r) * (1 - s)
+        dn[1][2] = -1. / 8. * (1 + r) * (1 - s)
+        dn[2][2] = -1. / 8. * (1 + r) * (1 + s)
+        dn[3][2] = -1. / 8. * (1 - r) * (1 + s)
         dn[4][2] =  1. / 8. * (1 - r) * (1 - s)
-        dn[5][2] =  1. / 8. * (1 - r) * (1 - s)
-        dn[6][2] =  1. / 8. * (1 - r) * (1 - s)
-        dn[7][2] =  1. / 8. * (1 - r) * (1 - s)
+        dn[5][2] =  1. / 8. * (1 + r) * (1 - s)
+        dn[6][2] =  1. / 8. * (1 + r) * (1 + s)
+        dn[7][2] =  1. / 8. * (1 - r) * (1 + s)
         return dn
 
     @staticmethod
@@ -436,11 +451,11 @@ class Quad4(Element2D):
                   [3, 0]]
 
     a = 1.0 / 3.0**0.5
-    gloc = ((-a, -a),           # Guass point locations
+    gloc = ((-a, -a),           # Gauss point locations
           ( a, -a),
           ( a, a),
           (-a, a))
-    gwt = (1, 1, 1, 1)          # Guass weights
+    gwt = (1, 1, 1, 1)          # Gauss weights
 
     @staticmethod
     def N(r, s):

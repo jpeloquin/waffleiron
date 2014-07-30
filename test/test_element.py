@@ -21,6 +21,59 @@ def f_tensor_logfile(elemdata, step, eid):
                   [Fzx, Fzy, Fzz]])
     return F
 
+
+class Hex8IntegrationVolume(unittest.TestCase):
+
+    def setUp(self):
+        nodes = [(-2, -1.5, -3),
+                 (2, -1.5, -3),
+                 (2, 1.0, -3),
+                 (-2, 1.0, -3),
+                 (-2, -1.5, 1.2),
+                 (2, -1.5, 1.2),
+                 (2, 1.0, 1.2),
+                 (-2, 1.0, 1.2)]
+        self.element = feb.element.Hex8(nodes)
+        self.w = 4.0
+        self.l = 2.5
+        self.h = 4.2
+
+    def test_j(self):
+        desired = np.array([[self.w / 2, 0, 0],
+                            [0, self.l / 2, 0],
+                            [0, 0, self.h / 2]])
+        # at center
+        actual = self.element.j((0, 0, 0), config='reference')
+        npt.assert_allclose(actual, desired)
+        # at gauss points
+        for pt in self.element.gloc:
+            actual = self.element.j(pt, config='reference')
+            npt.assert_allclose(actual, desired, atol=np.spacing(1))
+
+    def test_dinterp(self):
+        dx = 1.5
+        dy = -0.8
+        dz = 0.7
+        deltax = self.w * dx
+        deltay = self.l * dy
+        deltaz = self.h * dz
+        self.element.properties['testval'] = np.array(
+            (0.0, deltax,
+             deltax + deltay, deltay,
+             deltaz, deltax + deltaz,
+             deltax + deltay + deltaz, deltay + deltaz))
+        desired = np.array([dx, dy, dz])
+        actual = self.element.dinterp((0, 0, 0), prop='testval')
+        npt.assert_allclose(actual, desired)
+        for pt in self.element.gloc:
+            actual = self.element.dinterp(pt, prop='testval')
+            npt.assert_allclose(actual, desired)
+
+    def test_integration_volume(self):
+        truth = self.w * self.l * self.h
+        computed = self.element.integrate(lambda e, r: 1.0)
+        npt.assert_approx_equal(computed, truth)
+
 class ElementMethodsTestHex8(unittest.TestCase):
 
     def setUp(self):

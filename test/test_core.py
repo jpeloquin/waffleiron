@@ -5,6 +5,21 @@ import febtools as feb
 from febtools import Mesh
 from copy import deepcopy
 
+### Face connectivity
+
+class FaceConnectivityHex8(unittest.TestCase):
+    """Test for correct face connectivity.
+
+    """
+    def setUp(self):
+        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic.feb'))
+        self.mesh = reader.mesh()
+
+    def test_edge(self):
+        faces = self.mesh.faces_with_node[0]
+        # Check total number of connected faces
+        assert len(faces) == 6
+
 ### ElementContainingPoint
 
 class ElementContainingPointHex8(unittest.TestCase):

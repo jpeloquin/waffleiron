@@ -5,13 +5,14 @@ import matplotlib.image as mpimg
 import unittest
 import os
 
+
 class ScalarFieldTest(unittest.TestCase):
     
     def setUp(self):
         soln = feb.input.XpltReader(os.path.join( \
-            "test", "fixtures", "uniax-2d-center-crack-1mm.xplt"))
+            "test", "fixtures", "center_crack_uniax_isotropic_elastic_quad4.xplt"))
         febreader = feb.input.FebReader(os.path.join( \
-            "test", "fixtures", "uniax-2d-center-crack-1mm.feb"))
+            "test", "fixtures", "center_crack_uniax_isotropic_elastic_quad4.feb"))
         model = febreader.model()
         model.apply_solution(soln, t=1.0)
         self.model = model

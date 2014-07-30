@@ -254,11 +254,7 @@ class IsotropicElastic:
         """Cauchy stress.
 
         """
-        y = self.y
-        mu = self.mu
-        E = 0.5 * (np.dot(F.T, F) - np.eye(3))
-        trE = np.trace(E)
-        s = y * trE * np.eye(3) + 2.0 * mu * E  # 2nd P-K
+        s = self.sstress(F)
         J = np.linalg.det(F)
         t = np.dot(np.dot(F, s), F.T) / J
         return t
@@ -267,11 +263,7 @@ class IsotropicElastic:
         """1st Piola-Kirchoff stress.
 
         """
-        y = self.y
-        mu = self.mu
-        E = 0.5 * (np.dot(F.T, F) - np.eye(3))
-        trE = np.trace(E)
-        s = y * trE * np.eye(3) + 2.0 * mu * E  # 2nd P-K
+        s = self.sstress(F)
         p = np.dot(s, F.T)
         return p
 

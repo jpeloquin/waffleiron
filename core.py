@@ -19,6 +19,9 @@ class Model:
     """An FE model: geometry, boundary conditions, solution.
 
     """
+    # If a sequence is assigned to dtmax in this default dictionary,
+    # it will be copied when `default_control` is used to initialize a
+    # control step.  This may not be desirable.
     default_control = {'time steps': 10,
                        'step size': 0.1,
                        'max refs': 15,
@@ -40,8 +43,6 @@ class Model:
         self.materials = {}
         self.solution = None # the solution for the model
 
-        self.sequences = []
-
         self.fixed_nodes = {'x': set(),
                             'y': set(),
                             'z': set(),
@@ -49,8 +50,6 @@ class Model:
                             'concentration': set()}
         # Note: for multiphasic problems, concentration is a list of
         # sets
-
-        self.steps = None # list
 
         # initial nodal values
         self.initial_values = {'velocity': [],
@@ -60,16 +59,6 @@ class Model:
         # lists.
         self.steps = []
         self.add_step()
-
-    def add_sequence(self, points, typ='smooth',
-                     extend='extrapolate'):
-        """Define a sequence.
-
-        """
-        seq = {'type': typ,
-               'extend': extend,
-               'points': points}
-        self.sequences.append(seq)
 
     def add_step(self, module='solid', control=None):
         """Add a step with default control values and no BCs.
@@ -82,14 +71,14 @@ class Model:
                 'bc': {}}
         self.steps.append(step)
 
-    def apply_bc(self, node_ids, values, sequence_id,
-                 axis, step_id=-1):
+    def apply_nodal_displacement(self, node_ids, values, sequence,
+                                 axis, step_id=-1):
         """Apply a boundary condition to a step.
 
         """
         for i, v in zip(node_ids, values):
             bc_node = self.steps[step_id]['bc'].setdefault(i, {})
-            bc_node[axis] = {'sequence': sequence_id,
+            bc_node[axis] = {'sequence': sequence,
                              'value': v}
 
     def apply_solution(self, solution, t=None):
@@ -145,6 +134,7 @@ class Mesh:
             # Store reference to this mesh
             e.mesh = self
         self.elements = elements
+
         # Precompute derived properties
         self.prepare()
 
@@ -183,12 +173,24 @@ class Mesh:
         """
         # Create KDTree for fast node lookup
         self.nodetree = KDTree(self.nodes)
+
         # Create list of parent elements by node
         elem_with_node = [[] for i in xrange(len(self.nodes))]
         for e in self.elements:
             for i in e.ids:
                 elem_with_node[i].append(e)
         self.elem_with_node = elem_with_node
+
+        # Faces
+        self.faces = [Face(f) for e in self.elements
+                      for f in e.faces()]
+
+        # Create list of parent faces by node
+        faces_with_node = [set() for i in xrange(len(self.nodes))]
+        for f in self.faces:
+            for i in f.ids:
+                faces_with_node[i].add(f)
+        self.faces_with_node = faces_with_node
 
     def clean_nodes(self):
         """Remove any nodes that are not part of an element.
@@ -375,3 +377,36 @@ class Mesh:
         """
         for nid in self.nodes:
             pass
+
+class Face:
+    """An oriented list of nodes representing a face.
+
+    """
+    def __init__(self, ids, mesh=None):
+        """Create a face from a list of node ids.
+
+        """
+        # Defaults
+        self.fc_faces = set() # neighboring faces sharing all nodes;
+                              # i.e. fully connected
+        self.ec_faces = set() # neighboring faces sharing an edge;
+                              # i.e. edge connected
+        self.normal = None # To be used by a mesh object to store
+                           # normals.
+        # Set ids
+        self.ids = tuple(ids)
+
+
+class Sequence:
+    """A time-varying sequence for step control.
+
+    """
+    def __init__(self, seq, typ='smooth', extend='extrapolate'):
+        # Input checking
+        assert extend in ['extrapolate', 'constant', 'repeat',
+                          'repeat continuous']
+        assert typ in ['step', 'linear', 'smooth']
+        # Parameters
+        self.points = seq
+        self.typ = typ
+        self.extend = extend
