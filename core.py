@@ -19,6 +19,9 @@ class Model:
     """An FE model: geometry, boundary conditions, solution.
 
     """
+    # If a sequence is assigned to dtmax in this default dictionary,
+    # it will be copied when `default_control` is used to initialize a
+    # control step.  This may not be desirable.
     default_control = {'time steps': 10,
                        'step size': 0.1,
                        'max refs': 15,
@@ -40,8 +43,6 @@ class Model:
         self.materials = {}
         self.solution = None # the solution for the model
 
-        self.sequences = []
-
         self.fixed_nodes = {'x': set(),
                             'y': set(),
                             'z': set(),
@@ -61,16 +62,6 @@ class Model:
         self.steps = []
         self.add_step()
 
-    def add_sequence(self, points, typ='smooth',
-                     extend='extrapolate'):
-        """Define a sequence.
-
-        """
-        seq = {'type': typ,
-               'extend': extend,
-               'points': points}
-        self.sequences.append(seq)
-
     def add_step(self, module='solid', control=None):
         """Add a step with default control values and no BCs.
 
@@ -82,14 +73,14 @@ class Model:
                 'bc': {}}
         self.steps.append(step)
 
-    def apply_bc(self, node_ids, values, sequence_id,
-                 axis, step_id=-1):
+    def apply_nodal_displacement(self, node_ids, values, sequence,
+                                 axis, step_id=-1):
         """Apply a boundary condition to a step.
 
         """
         for i, v in zip(node_ids, values):
             bc_node = self.steps[step_id]['bc'].setdefault(i, {})
-            bc_node[axis] = {'sequence': sequence_id,
+            bc_node[axis] = {'sequence': sequence,
                              'value': v}
 
     def apply_solution(self, solution, t=None):
@@ -406,3 +397,18 @@ class Face:
                            # normals.
         # Set ids
         self.ids = tuple(ids)
+
+
+class Sequence:
+    """A time-varying sequence for step control.
+
+    """
+    def __init__(self, seq, typ='smooth', extend='extrapolate'):
+        # Input checking
+        assert extend in ['extrapolate', 'constant', 'repeat',
+                          'repeat continuous']
+        assert typ in ['step', 'linear', 'smooth']
+        # Parameters
+        self.points = seq
+        self.typ = typ
+        self.extend = extend
