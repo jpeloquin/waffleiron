@@ -334,13 +334,13 @@ def sent_mesh_quad(angle, notch_length=2.0e-3,
 thisdir = os.path.dirname(os.path.abspath(__file__))
 zcoords = np.linspace(-0.5e-3, 0.5e-3, 5)
 mesh = center_mesh_quad(width=10e-3, height=20e-3,
-                        notch_length=2e-3, hmin=50e-6)
+                        notch_length=2e-3, hmin=100e-6)
 mesh = feb.meshing.zstack(mesh, zcoords)
 model = feb.Model(mesh)
 
 # Define material
-props = {'E': 1e7,
-         'v': 0.3}
+props = {'E': 1e9,
+         'v': 0.0}
 mat = feb.material.IsotropicElastic(props)
 for e in model.mesh.elements:
     e.material = mat
@@ -359,7 +359,7 @@ down_face = [i for i, pt in enumerate(model.mesh.nodes)
              if pt[1] == minima[1]]
 
 # Uniaxial stretch nodes
-c = 0.001
+c = 0.0001
 dy = [c for i in up_face]
 model.apply_nodal_displacement(up_face, values=dy, axis='y',
                                sequence=seq_bc)
