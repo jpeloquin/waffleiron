@@ -79,9 +79,9 @@ class CenterCrackHex8(unittest.TestCase):
 
     """
     def setUp(self):
-        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_thick_uniax_isotropic_elastic.feb'))
+        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic_hex8.feb'))
         self.model = reader.model()
-        self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'center_crack_thick_uniax_isotropic_elastic.xplt'))
+        self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic_hex8.xplt'))
         self.model.apply_solution(self.soln)
 
         material = self.model.mesh.elements[0].material
@@ -93,27 +93,26 @@ class CenterCrackHex8(unittest.TestCase):
 
     def test_jintegral_vs_griffith(self):
         a = 1.0e-3 # m
-        width = 10.0e-3 # m
         minima = np.min(self.model.mesh.nodes, axis=0)
         maxima = np.max(self.model.mesh.nodes, axis=0)
+        width = maxima[0] - minima[0]
         elems_up_down = [e for e in self.model.mesh.elements
                          if (np.any(e.nodes[:,1] == minima[1]) or
                              np.any(e.nodes[:,1] == maxima[1]))]
-        pavg = np.mean([e.material.pstress(e.f((0, 0, 0)))
+        pavg = np.mean([e.material.tstress(e.f((0, 0, 0)))
                         for e in elems_up_down], axis=0)
 
-        # Define G for plane strain
+        # Define G for plane stress
         K_I = pavg[1][1] * (math.pi * a * 1.0 /
                             math.cos(math.pi * a / width))**0.5
-        material = self.model.mesh.elements[0].material
-        G = K_I**2.0 / self.E * (1 - self.nu**2.0)
+        G = K_I**2.0 / self.E
 
+        # Calculate J
         tip_line = [i for i, (x, y, z)
                     in enumerate(self.model.mesh.nodes)
                     if np.allclose(x, 1e-3) and np.allclose(y, 0)]
         zslice = feb.selection.element_slice(self.model.mesh.elements,
-                                             v=0, axis=(0, 0, 1),
-                                             extent=1e-4)
+                                             v=0e-3, axis=(0, 0, 1))
         nodes = [n for e in zslice for n in e.nodes]
         maxima = np.max(nodes, axis=0)
         minima = np.min(nodes, axis=0)
@@ -126,6 +125,8 @@ class CenterCrackHex8(unittest.TestCase):
         # tringular q(η)
 
         # debugging visualization
+        print("P22_avg = {}".format(pavg[1][1]))
+        print("K_I = {}".format(K_I))
         print("Jbar * ΔL = {}".format(jbdl))
         print("ΔL = {}".format(deltaL))
         print("Jbar = {}".format(jbar))
@@ -189,6 +190,8 @@ class CenterCrackQuad4(unittest.TestCase):
         K_I = stress * (math.pi * a * 1.0 /
                         math.cos(math.pi * a / W))**0.5
         # Felderson; accurate to 0.3% for a/W ≤ 0.35
+        print("P22_avg = {}".format(stress))
+        print("K_I = {}".format(K_I))
         G = K_I**2.0 / self.E
         id_crack_tip = [self.model.mesh.find_nearest_node(*(1e-3, 0.0, 0.0))]
         elements = apply_q_2d(self.model.mesh, id_crack_tip, n=3)
