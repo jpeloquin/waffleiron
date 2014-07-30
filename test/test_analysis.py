@@ -144,8 +144,7 @@ class CenterCrackQuad4(unittest.TestCase):
         reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic_quad4.feb'))
         self.model = reader.model()
         self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic_quad4.xplt'))
-        self.t = 0.2
-        self.model.apply_solution(self.soln, t=self.t)
+        self.model.apply_solution(self.soln)
 
         material = self.model.mesh.elements[0].material
         y = material.y
@@ -166,7 +165,7 @@ class CenterCrackQuad4(unittest.TestCase):
             """Convert Cauchy stress in each element to 1st P-K.
 
             """
-            data = self.soln.stepdata(time=self.t)
+            data = self.soln.stepdata()
             for i in element_ids:
                 t = data['element']['stress'][i]
                 e = self.model.mesh.elements[i]
@@ -189,10 +188,8 @@ class CenterCrackQuad4(unittest.TestCase):
         K_I = stress * (math.pi * a * 1.0 /
                         math.cos(math.pi * a / W))**0.5
         # Felderson; accurate to 0.3% for a/W ≤ 0.35
-        print("P22_avg = {}".format(stress))
-        print("K_I = {}".format(K_I))
         G = K_I**2.0 / self.E
         id_crack_tip = [self.model.mesh.find_nearest_node(*(1e-3, 0.0, 0.0))]
         elements = apply_q_2d(self.model.mesh, id_crack_tip, n=3)
         J = jintegral(elements)
-        npt.assert_allclose(J, G, rtol=0.01)
+        npt.assert_allclose(J, G, rtol=0.03)

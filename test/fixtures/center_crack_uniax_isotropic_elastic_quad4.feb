@@ -10,8 +10,8 @@
 	<Material>
 		<material id="1" name="Mat1" type="isotropic elastic">
 			<density>1</density>
-			<E>1e+07</E>
-			<v>0.3</v>
+			<E>1e+09</E>
+			<v>0</v>
 		</material>
 	</Material>
 	<Geometry>
@@ -27264,6 +27264,10 @@
 			<point>0,0</point>
 			<point>1,1</point>
 		</loadcurve>
+	    <loadcurve extend="extrapolate" id="2" type="step">
+			<point>0,0</point>
+			<point>1,0.5</point>
+		</loadcurve>
 	</LoadData>
 	<Output>
 		<plotfile type="febio">
@@ -27283,9 +27287,10 @@
 			<etol>0.01</etol>
 			<rtol>0</rtol>
 			<lstol>0.9</lstol>
+      <plot_level>PLOT_MUST_POINTS</plot_level>
 			<time_stepper>
 				<dtmin>0.01</dtmin>
-				<dtmax>0.1</dtmax>
+				<dtmax lc="2">0.1</dtmax>
 				<max_retries>5</max_retries>
 				<opt_iter>10</opt_iter>
 			</time_stepper>
@@ -27293,61 +27298,61 @@
 		</Control>
 		<Boundary>
 			<prescribe bc="y" lc="1">
-				<node id="101">0.005</node>
-				<node id="202">0.005</node>
-				<node id="303">0.005</node>
-				<node id="404">0.005</node>
-				<node id="505">0.005</node>
-				<node id="606">0.005</node>
-				<node id="707">0.005</node>
-				<node id="808">0.005</node>
-				<node id="909">0.005</node>
-				<node id="1010">0.005</node>
-				<node id="1111">0.005</node>
-				<node id="1212">0.005</node>
-				<node id="1313">0.005</node>
-				<node id="1414">0.005</node>
-				<node id="1515">0.005</node>
-				<node id="1616">0.005</node>
-				<node id="1717">0.005</node>
-				<node id="1818">0.005</node>
-				<node id="1919">0.005</node>
-				<node id="2020">0.005</node>
-				<node id="2121">0.005</node>
-				<node id="2222">0.005</node>
-				<node id="2323">0.005</node>
-				<node id="2424">0.005</node>
-				<node id="2525">0.005</node>
-				<node id="2626">0.005</node>
-				<node id="2727">0.005</node>
-				<node id="2828">0.005</node>
-				<node id="2929">0.005</node>
-				<node id="3030">0.005</node>
-				<node id="3131">0.005</node>
-				<node id="3232">0.005</node>
-				<node id="3333">0.005</node>
-				<node id="3434">0.005</node>
-				<node id="3535">0.005</node>
-				<node id="3636">0.005</node>
-				<node id="3737">0.005</node>
-				<node id="3838">0.005</node>
-				<node id="3939">0.005</node>
-				<node id="4040">0.005</node>
-				<node id="4141">0.005</node>
-				<node id="4242">0.005</node>
-				<node id="4343">0.005</node>
-				<node id="4444">0.005</node>
-				<node id="4545">0.005</node>
-				<node id="4646">0.005</node>
-				<node id="4747">0.005</node>
-				<node id="4848">0.005</node>
-				<node id="4949">0.005</node>
-				<node id="5050">0.005</node>
-				<node id="5151">0.005</node>
-				<node id="5252">0.005</node>
-				<node id="5353">0.005</node>
-				<node id="5454">0.005</node>
-				<node id="5555">0.005</node>
+				<node id="101">0.0001</node>
+				<node id="202">0.0001</node>
+				<node id="303">0.0001</node>
+				<node id="404">0.0001</node>
+				<node id="505">0.0001</node>
+				<node id="606">0.0001</node>
+				<node id="707">0.0001</node>
+				<node id="808">0.0001</node>
+				<node id="909">0.0001</node>
+				<node id="1010">0.0001</node>
+				<node id="1111">0.0001</node>
+				<node id="1212">0.0001</node>
+				<node id="1313">0.0001</node>
+				<node id="1414">0.0001</node>
+				<node id="1515">0.0001</node>
+				<node id="1616">0.0001</node>
+				<node id="1717">0.0001</node>
+				<node id="1818">0.0001</node>
+				<node id="1919">0.0001</node>
+				<node id="2020">0.0001</node>
+				<node id="2121">0.0001</node>
+				<node id="2222">0.0001</node>
+				<node id="2323">0.0001</node>
+				<node id="2424">0.0001</node>
+				<node id="2525">0.0001</node>
+				<node id="2626">0.0001</node>
+				<node id="2727">0.0001</node>
+				<node id="2828">0.0001</node>
+				<node id="2929">0.0001</node>
+				<node id="3030">0.0001</node>
+				<node id="3131">0.0001</node>
+				<node id="3232">0.0001</node>
+				<node id="3333">0.0001</node>
+				<node id="3434">0.0001</node>
+				<node id="3535">0.0001</node>
+				<node id="3636">0.0001</node>
+				<node id="3737">0.0001</node>
+				<node id="3838">0.0001</node>
+				<node id="3939">0.0001</node>
+				<node id="4040">0.0001</node>
+				<node id="4141">0.0001</node>
+				<node id="4242">0.0001</node>
+				<node id="4343">0.0001</node>
+				<node id="4444">0.0001</node>
+				<node id="4545">0.0001</node>
+				<node id="4646">0.0001</node>
+				<node id="4747">0.0001</node>
+				<node id="4848">0.0001</node>
+				<node id="4949">0.0001</node>
+				<node id="5050">0.0001</node>
+				<node id="5151">0.0001</node>
+				<node id="5252">0.0001</node>
+				<node id="5353">0.0001</node>
+				<node id="5454">0.0001</node>
+				<node id="5555">0.0001</node>
 			</prescribe>
 		</Boundary>
 	</Step>
