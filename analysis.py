@@ -212,11 +212,11 @@ def jintegral(elements):
         dudx = e.dinterp(r, prop='displacement')
         dudx1 = dudx[:,0]
         w = e.material.w(F) # strain energy
-        dqdx = e.dinterp(r, prop='q') # 1 x 2 or 1 x 3
+        dqdx = e.dinterp(r, prop='q')
         return -w * dqdx[0] + sum(p[i][j] * dudx[j,0] * dqdx[i]
-                                 for i in xrange(len(r))
-                                 for j in xrange(len(r)))
-    j = 0
+                                  for i in xrange(3)
+                                  for j in xrange(3))
+    j = 0.0
     for e in elements:
         j += e.integrate(integrand)
     return j
