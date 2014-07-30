@@ -51,8 +51,6 @@ class Model:
         # Note: for multiphasic problems, concentration is a list of
         # sets
 
-        self.steps = None # list
-
         # initial nodal values
         self.initial_values = {'velocity': [],
                                'fluid_pressure': [],
