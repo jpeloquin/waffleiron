@@ -5,12 +5,12 @@ from numpy import dot
 from math import degrees, radians, cos, sin
 
 class QuadMesh(unittest.TestCase):
-    """Quadrilateral mesh (2D case) with a hole.
+    """Test selection of corners in rotated mesh.
 
     """
     
     def setUp(self):
-        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'uniax-2d-center-crack-1mm.feb'))
+        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic_quad4.feb'))
         self.model = reader.model()
         # rotate mesh to make the corner identification a little more
         # difficult

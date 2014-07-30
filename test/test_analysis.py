@@ -142,9 +142,9 @@ class CenterCrackHex8(unittest.TestCase):
 class CenterCrackQuad4(unittest.TestCase):
 
     def setUp(self):
-        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'uniax-2d-center-crack-1mm.feb'))
+        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic_quad4.feb'))
         self.model = reader.model()
-        self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'uniax-2d-center-crack-1mm.xplt'))
+        self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic_quad4.xplt'))
         self.t = 0.2
         self.model.apply_solution(self.soln, t=self.t)
 
