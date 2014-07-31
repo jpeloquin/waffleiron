@@ -26,11 +26,11 @@ def plot_q(elements):
     n = nodes.shape[0]
     q = np.array([v for e in elements for v in e.properties['q']])
     # plot 1-values
-    xyz = nodes[q == 1.0]
+    xyz = nodes[np.any(q, axis=1)]
     ax.scatter(xyz[:,0], xyz[:,1], xyz[:,2],
                s=16, c='b', marker='o', edgecolor='b')
     # plot 0-values
-    xyz = nodes[q == 0]
+    xyz = nodes[~np.any(q, axis=1)]
     ax.scatter(xyz[:,0], xyz[:,1], xyz[:,2],
                s=16, c='r', marker='*', edgecolor='r')
     ax.set_xlabel('X')
@@ -117,8 +117,9 @@ class CenterCrackHex8(unittest.TestCase):
         maxima = np.max(nodes, axis=0)
         minima = np.min(nodes, axis=0)
         deltaL = maxima[2] - minima[2]
-        domain = feb.analysis.apply_q_3d(zslice, tip_line, n=3)
-        #        assert len(domain) == 180
+        domain = feb.analysis.apply_q_3d(zslice, tip_line, n=3,
+                                         q=[1, 0, 0])
+        assert len(domain) == 6 * 6 * 2
         jbdl = feb.analysis.jintegral(domain)
         jbar = jbdl / (0.5 * deltaL)
         # 0.5 * deltaL is standing in for ∫q(η)dη; this is ok for a
@@ -190,6 +191,7 @@ class CenterCrackQuad4(unittest.TestCase):
         # Felderson; accurate to 0.3% for a/W ≤ 0.35
         G = K_I**2.0 / self.E
         id_crack_tip = [self.model.mesh.find_nearest_node(*(1e-3, 0.0, 0.0))]
-        elements = apply_q_2d(self.model.mesh, id_crack_tip, n=3)
+        elements = apply_q_2d(self.model.mesh, id_crack_tip, n=3,
+                              q=[1, 0, 0])
         J = jintegral(elements)
         npt.assert_allclose(J, G, rtol=0.03)

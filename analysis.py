@@ -57,7 +57,7 @@ def eval_fn_x(soln, fn, pt):
 
 from febtools.selection import adj_faces
 
-def apply_q_2d(mesh, crack_tip, n=3, qtype='plateau'):
+def apply_q_2d(mesh, crack_tip, q=[1, 0, 0], n=3, qtype='plateau'):
     """Define q for for the J integral.
 
     crack_tip := list of node ids comprising the crack line
@@ -70,6 +70,8 @@ def apply_q_2d(mesh, crack_tip, n=3, qtype='plateau'):
     elements.
 
     """
+    q = np.array(q)
+
     active_nodes = set(crack_tip)
     all_nodes = set(crack_tip)
     inner_nodes = set()
@@ -89,25 +91,25 @@ def apply_q_2d(mesh, crack_tip, n=3, qtype='plateau'):
     elements = set(elements)
     outer_nodes = active_nodes
 
-    q = [None] * len(mesh.nodes)
+    q_nodes = [None] * len(mesh.nodes)
     if qtype == 'plateau':
         for i in inner_nodes:
-            q[i] = 1.0
+            q_nodes[i] = 1.0 * q
         for i in outer_nodes:
-            q[i] = 0.0
+            q_nodes[i] = 0.0 * q
     else:
         raise NotImplemented('{}-type q functions are not '
                              'implemented yet.'.format(qtype))
 
     # Apply q to all elements
     for e in mesh.elements:
-        e.properties['q'] = np.array([q[i] for i in e.ids])
+        e.properties['q'] = np.array([q_nodes[i] for i in e.ids])
 
     return elements
 
 from febtools.selection import expand_element_set
 
-def apply_q_3d(elements, crack_tip, n=3, qtype='plateau'):
+def apply_q_3d(elements, crack_tip, q=[1, 0, 0], n=3, qtype='plateau'):
     """Define q for for the J integral.
 
     crack_tip := list of node ids comprising the crack tip line
@@ -124,6 +126,10 @@ def apply_q_3d(elements, crack_tip, n=3, qtype='plateau'):
     are connected to 6 edges (8 elements).
 
     """
+    # Define q vector
+    q = np.array(q)
+
+    # Initialize node selections
     all_nodes = set(i for e in elements for i in e.ids)
     crack_tip = set(crack_tip) & all_nodes
 
@@ -174,12 +180,12 @@ def apply_q_3d(elements, crack_tip, n=3, qtype='plateau'):
         q0_nodes = boundary_nodes - crack_nodes_q1
         q1_nodes = all_nodes - q0_nodes
         for e in elements:
-            qprop = np.array([np.nan] * len(e.ids))
+            qprop = np.array([[np.nan, np.nan, np.nan]] * len(e.ids))
             for i, node_id in enumerate(e.ids):
                 if node_id in q0_nodes:
-                    qprop[i] = 0.0
+                    qprop[i] = 0.0 * q
                 elif node_id in q1_nodes:
-                    qprop[i]= 1.0
+                    qprop[i]= 1.0 * q
                 else:
                     raise Exception("Element {} node {} does not have q defined.".format(e, i))
             e.apply_property('q', qprop)
@@ -213,9 +219,15 @@ def jintegral(elements):
         dudx1 = dudx[:,0]
         w = e.material.w(F) # strain energy
         dqdx = e.dinterp(r, prop='q')
-        return -w * dqdx[0] + sum(p[i][j] * dudx[j,0] * dqdx[i]
-                                  for i in xrange(3)
-                                  for j in xrange(3))
+        # integrand terms, partially expanded
+        work = sum(p[i][j] * dudx[j,k] * dqdx[k][i]
+                   for i in xrange(3)
+                   for j in xrange(3)
+                   for k in xrange(3))
+        pe = sum(-w * dqdx[ik][ik]
+                 for ik in xrange(3))
+        return work + pe
+
     j = 0.0
     for e in elements:
         j += e.integrate(integrand)
