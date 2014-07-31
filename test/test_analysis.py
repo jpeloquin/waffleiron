@@ -4,6 +4,7 @@ from nose.tools import with_setup
 import unittest
 import os
 import itertools, math
+from math import pi, radians, cos, sin
 import numpy.testing as npt
 import numpy as np
 
@@ -103,8 +104,8 @@ class CenterCrackHex8(unittest.TestCase):
                         for e in elems_up_down], axis=0)
 
         # Define G for plane stress
-        K_I = pavg[1][1] * (math.pi * a * 1.0 /
-                            math.cos(math.pi * a / width))**0.5
+        K_I = pavg[1][1] * (pi * a * 1.0 /
+                            cos(pi * a / width))**0.5
         G = K_I**2.0 / self.E
 
         # Calculate J
@@ -133,6 +134,62 @@ class CenterCrackHex8(unittest.TestCase):
         elems = [e for e in list(domain)
                  if np.any(np.array(e.nodes)[:,2] == minima[1])]
         # Test if approximately equal to G
+        npt.assert_allclose(jbar, G, rtol=0.07)
+        # Test for consistency with value calculated when code
+        # initially verified
+        npt.assert_allclose(jbar, 74.65, rtol=1e-4)
+
+    def test_rotated_coordinates(self):
+        """Test if J is the same after a coordinate shift.
+
+        """
+        mesh = self.model.mesh
+        # Geometry (easier before rotation)
+        a = 1.0e-3 # m
+        minima = np.min(self.model.mesh.nodes, axis=0)
+        maxima = np.max(self.model.mesh.nodes, axis=0)
+        width = maxima[0] - minima[0]
+        elems_up_down = [e for e in self.model.mesh.elements
+                         if (np.any(e.nodes[:,1] == minima[1]) or
+                             np.any(e.nodes[:,1] == maxima[1]))]
+        tip_line = [i for i, (x, y, z)
+                    in enumerate(self.model.mesh.nodes)
+                    if np.allclose(x, 1e-3) and np.allclose(y, 0)]
+        # Create object transform (rotation matrix)
+        angle = radians(30)
+        R = np.array([[cos(angle), -sin(angle), 0],
+                      [sin(angle), cos(angle), 0],
+                      [0, 0, 1]])
+        # Transform nodes
+        mesh.nodes = [np.dot(R, n) for n in mesh.nodes]
+        mesh.update_elements()
+        # Transform displacements
+        for e in mesh.elements:
+            e.properties['displacement'] = \
+                np.dot(R, e.properties['displacement'].T).T
+        # Calculate average normal reaction stress
+        pavg = np.mean([e.material.tstress(e.f((0, 0, 0)))
+                        for e in elems_up_down], axis=0)
+        pavg = np.dot(R.T, np.dot(pavg, R))
+        # Define G for plane stress
+        K_I = pavg[1][1] * (math.pi * a * 1.0 /
+                            math.cos(math.pi * a / width))**0.5
+        G = K_I**2.0 / self.E
+        # Calculate J
+        zslice = feb.selection.element_slice(self.model.mesh.elements,
+                                             v=0e-3, axis=(0, 0, 1))
+        nodes = [n for e in zslice for n in e.nodes]
+        maxima = np.max(nodes, axis=0)
+        minima = np.min(nodes, axis=0)
+        deltaL = maxima[2] - minima[2]
+        domain = feb.analysis.apply_q_3d(zslice, tip_line, n=3,
+                                         q=[cos(angle), sin(angle), 0])
+        assert len(domain) == 6 * 6 * 2
+        jbar = feb.analysis.jintegral(domain) / (0.5 * deltaL)
+        # 0.5 * deltaL is standing in for ∫q(η)dη; this is ok for a
+        # tringular q(η)
+
+        # Test if J ≈ G
         npt.assert_allclose(jbar, G, rtol=0.07)
         # Test for consistency with value calculated when code
         # initially verified

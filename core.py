@@ -162,7 +162,7 @@ class Mesh:
 
         """
         for e in self.elements:
-            nodes = [self.nodes[i] for i in e.ids]
+            nodes = np.array([self.nodes[i] for i in e.ids])
             e.nodes = nodes
 
     def prepare(self):
