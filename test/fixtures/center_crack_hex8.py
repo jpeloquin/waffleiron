@@ -91,18 +91,6 @@ def bias_pt_series(line, n=None, type='log', minstep=None,
 
     return pts
 
-
-def biased_range(start, stop, minstep, type='log'):
-    """Log spaced series with minimum step size, finer near start.
-
-    """
-    n = 2
-    x = biasrange_log(start, stop, n)
-    while abs(x[1] - x[0]) > minstep:
-        n = n + 1
-        x = biasrange_log(start, stop, n)
-    return x
-
 def mesh_quad_quad(col1, col2, row1, row2):
     """Mesh a quadrilateral with quad elements.
 
@@ -228,102 +216,6 @@ def center_mesh_quad(height=20.0e-3, width=10.0e-3,
                (x <= (pt_tip_left[0] + tol) or
                 x >= (pt_tip_right[0] - tol)))]
     mesh.merge(mesh2, candidates=ids)
-    return mesh
-
-def sent_mesh_quad(angle, notch_length=2.0e-3,
-                   height=20.0e-3, width=10.0e-3,
-                   hmin=0.05e-3, tol=1e-8):
-    """Notch a SENT specimen with quadrilateral elements.
-
-    angle := the notch angle in degrees, measured ccw from +x
-
-    The notch is on the the right (+x).
-
-    """
-
-    # all units in mks
-
-    bb_xmin = 0.0
-    bb_xmax = width
-    bb_ymax = 0.5 * height
-    bb_ymin = -0.5 * height
-
-    bbox = [(width, 0.5 * height), # upper right
-            (0.0, 0.5 * height), # upper left
-            (0.0, -0.5 * height), # lower left
-            (width, -0.5 * height)] # lower right
-
-    poly_specimen = Polygon(bbox)
-
-    # Define notch line
-    # notch origin
-    pt_og = (width, 0.0)
-    # notch tip
-    pt_tip = (pt_og[0] - (notch_length * cos(radians(angle))),
-              pt_og[1] - (notch_length * sin(radians(angle))))
-    # notch line
-    ln_notch = LineString([pt_tip, pt_og])
-
-    # Define biased grid points that are common between subdomains
-
-    # to left of notch tip
-    gridl = bias_pt_series([(bb_xmin, pt_tip[1]), pt_tip],
-                           minstep=hmin, bias_direction=-1)
-    # to right of notch tip
-    gridr = bias_pt_series([pt_tip, pt_og],
-                           minstep=hmin)
-    # up from notch tip
-    gridu = bias_pt_series([pt_tip, (pt_tip[0], bb_ymax)],
-                           minstep=hmin)
-    # down from notch tip
-    gridd = bias_pt_series([pt_tip, (pt_tip[0], bb_ymin)],
-                           minstep=hmin)
-
-    # Subdomain 1
-    # quadrant I with respect to the notch tip
-    col1 = gridu
-    col2 = bias_pt_series([pt_og, bbox[0]], n=len(gridu))
-    row1 = gridr
-    row2 = bias_pt_series([(pt_tip[0], bb_ymax), bbox[0]],
-                          n=len(gridr))
-    mesh1 = mesh_quad_quad(col1, col2, row1, row2)
-    # Subdomain 2
-    # quadrant II with respect to the notch tip
-    col1 = bias_pt_series([(bb_xmin, pt_tip[1]), bbox[1]],
-                          n=len(gridu))
-    col2 = gridu
-    row1 = gridl
-    row2 = bias_pt_series([bbox[1], (pt_tip[0], bb_ymax)],
-                          n=len(gridl), bias_direction=-1)
-    mesh2 = mesh_quad_quad(col1, col2, row1, row2)
-    # Subdomain 3
-    # quadrant III with respect to the notch tip
-    col1 = bias_pt_series([bbox[2], (bb_xmin, pt_tip[1])],
-                          n=len(gridd), bias_direction=-1)
-    col2 = gridd
-    row1 = bias_pt_series([bbox[2], (pt_tip[0], bb_ymin)],
-                          n=len(gridl), bias_direction=-1)
-    row2 = gridl
-    mesh3 = mesh_quad_quad(col1, col2, row1, row2)
-    # Subdomain 4
-    # quadrant IV with respect to the notch tip
-    col1 = gridd
-    col2 = bias_pt_series([bbox[3], pt_og],
-                          n=len(gridd), bias_direction=-1)
-    row1 = bias_pt_series([(pt_tip[0], bb_ymin), bbox[3]],
-                          n=len(gridr))
-    row2 = gridr
-    mesh4 = mesh_quad_quad(col1, col2, row1, row2)
-
-    ## Merge meshes
-    mesh = mesh2
-    mesh.merge(mesh3)
-    mesh.merge(mesh1)
-    # here, we need to avoid merging the notch face
-    tol=1e-6
-    idx_tipcolumn = [i for i, node in enumerate(mesh4.nodes)
-                     if abs(node[0] - pt_tip[0]) < tol]
-    mesh.merge(mesh4, candidates=idx_tipcolumn)
     return mesh
 
 
