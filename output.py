@@ -132,7 +132,10 @@ def write_feb(model, fpath):
                         for e in model.mesh.elements))}
 
     # make material tags
-    for m, i in material_ids.iteritems():
+    # sort by id to get around FEBio bug
+    materials = [(i, mat) for mat, i in material_ids.iteritems()]
+    materials.sort(key=itemgetter(1))
+    for i, m in materials:
         tag = feb.output.material_to_feb(m)
         tag.attrib['name'] = 'Material' + str(i + 1)
         tag.attrib['id'] = str(i + 1)
