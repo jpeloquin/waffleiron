@@ -2,6 +2,7 @@
 from lxml import etree as ET
 import febtools as feb
 from math import degrees
+from operator import itemgetter
 
 feb_version = 2.0
 
@@ -172,7 +173,10 @@ def write_feb(model, fpath):
                 ET.SubElement(e_fix, 'node', id=str(nid + 1))
 
     # LoadData (load curves)
-    for seq, i in seq_id.iteritems():
+    # sort sequences by id to get around FEBio bug
+    sequences = [(i, seq) for seq, i in seq_id.iteritems()]
+    sequences.sort(key=itemgetter(1))
+    for i, seq in sequences:
         e_lc = ET.SubElement(e_loaddata, 'loadcurve', id=str(i+1),
                              type=seq.typ, extend=seq.extend)
         for pt in seq.points:
