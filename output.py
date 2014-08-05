@@ -215,7 +215,7 @@ def write_feb(model, fpath):
         dtmax = step['control']['time stepper']['dtmax']
         e_dtmax = ET.SubElement(e_ts, 'dtmax')
         if dtmax.__class__ is feb.Sequence:
-            e_dtmax.attrib['lc'] = str(seq_id[dtmax])
+            e_dtmax.attrib['lc'] = str(seq_id[dtmax] + 1)
             e_dtmax.text = "1"
         else:
             e_dtmax.text = str(dtmax)
