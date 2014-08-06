@@ -206,6 +206,23 @@ class Element:
         return [i for i, f in enumerate(self.face_nodes)
                 if node_id in f]
 
+    def to_natural(self, pt, config='reference'):
+        """Return natural coordinates for p = (x, y, z)
+
+        """
+        pt = np.array(pt)
+        x = self.x(config)
+        x0 = np.dot(self.N(*[0]*self.r_n), x)
+        v = pt - x0
+        j = self.j([0]*self.r_n)
+        jinv = np.linalg.pinv(j)
+        nat_coords = np.dot(jinv, v)
+        if (nat_coords > 1).any() or (nat_coords < -1).any():
+            raise Exception("Computed natural basis coordinates "
+                            "{} are outside the element's "
+                            "domain.".format(nat_coords))
+        return nat_coords
+
 
 class Element3D(Element):
     """Class for 3D elements.
@@ -262,23 +279,6 @@ class Element2D(Element):
             face_normal = self.face_normals()[0]
             normals.append(_cross(v, face_normal))
         return normals
-
-    def to_natural(self, pt, config='reference'):
-        """Return natural coordinates for p = (x, y, z)
-
-        """
-        pt = np.array(pt)
-        x = self.x(config)
-        x0 = np.dot(self.N(*[0]*self.r_n), x)
-        v = pt - x0
-        j = self.j([0]*self.r_n)
-        jinv = np.linalg.pinv(j)
-        nat_coords = np.dot(jinv, v)
-        if (nat_coords > 1).any() or (nat_coords < -1).any():
-            raise Exception("Computed natural basis coordinates "
-                            "{} are outside the element's "
-                            "domain.".format(nat_coords))
-        return nat_coords
 
 
 class Tri3(Element2D):
