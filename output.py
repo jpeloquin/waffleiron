@@ -1,8 +1,10 @@
-# import xml.etree.ElemOAentTree as ET
-from lxml import etree as ET
-import febtools as feb
+# Base packages
 from math import degrees
 from operator import itemgetter
+# System packages
+from lxml import etree as ET
+# In-house packages
+import febtools as feb
 
 feb_version = 2.0
 
