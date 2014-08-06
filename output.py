@@ -1,6 +1,5 @@
 # Base packages
 from math import degrees
-from operator import itemgetter
 # System packages
 from lxml import etree as ET
 # In-house packages
@@ -136,7 +135,7 @@ def write_feb(model, fpath):
     # make material tags
     # sort by id to get around FEBio bug
     materials = [(i, mat) for mat, i in material_ids.iteritems()]
-    materials.sort(key=itemgetter(1))
+    materials.sort()
     for i, m in materials:
         tag = feb.output.material_to_feb(m)
         tag.attrib['name'] = 'Material' + str(i + 1)
@@ -180,7 +179,7 @@ def write_feb(model, fpath):
     # LoadData (load curves)
     # sort sequences by id to get around FEBio bug
     sequences = [(i, seq) for seq, i in seq_id.iteritems()]
-    sequences.sort(key=itemgetter(1))
+    sequences.sort()
     for i, seq in sequences:
         e_lc = ET.SubElement(e_loaddata, 'loadcurve', id=str(i+1),
                              type=seq.typ, extend=seq.extend)
