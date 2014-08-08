@@ -4,7 +4,7 @@ from shapely.geometry import LineString, Point, Polygon
 # Locally developed packages
 import febtools as feb
 
-def mesh_quad_quad(col1, col2, row1, row2):
+def quadrilateral(col1, col2, row1, row2):
     """Mesh a quadrilateral with quad elements.
 
     Each input variable is a list of (x, y) points specifying node locations
