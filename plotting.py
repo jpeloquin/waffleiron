@@ -2,11 +2,11 @@ import numpy as np
 import sys
 
 def scalar_field(mesh, fn, pts):
-    """Plot a scalar field over a given grid of points.
+    """Return a field evaluated over a grid of points.
 
     Inputs
     ------
-    soln := A MeshSolution object.
+    mesh := A Mesh object.
 
     fn := A function that takes an F tensor and an Element object and
     returns a scalar.
@@ -30,7 +30,7 @@ def scalar_field(mesh, fn, pts):
         zv = np.zeros(pts[:,:,0].shape)
         pts = np.concatenate([pts, zv[...,np.newaxis]], axis=2)
     
-    img = np.zeros(pts.shape[0:2])
+    field = np.empty(pts.shape[0:2])
     for i in xrange(pts.shape[0]):
         for j in xrange(pts.shape[1]):
             x = pts[i, j, 0]
@@ -38,14 +38,14 @@ def scalar_field(mesh, fn, pts):
             z = pts[i, j, 2]
             e = mesh.element_containing_point((x, y, z))
             if e is None:
-                img[i, j] = None
+                field[i, j] = None
             else:
                 r = e.to_natural((x, y, z))
                 f = e.f(r)
-                img[i, j] = fn(f, e)
-        sys.stdout.write("\rLine {}/{}".format(i+1, img.shape[0]))
+                field[i, j] = fn(f, e)
+        sys.stdout.write("\rLine {}/{}".format(i+1, field.shape[0]))
         sys.stdout.flush()
     sys.stdout.write("\n")
     sys.stdout.flush()
 
-    return img
+    return field

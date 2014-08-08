@@ -378,6 +378,7 @@ class Mesh:
         for nid in self.nodes:
             pass
 
+
 class Face:
     """An oriented list of nodes representing a face.
 
