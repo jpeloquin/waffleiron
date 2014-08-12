@@ -92,7 +92,10 @@ class CenterCrackHex8(unittest.TestCase):
         self.E = E
         self.nu = nu
 
-    def test_jintegral_vs_griffith(self):
+    def _griffith(self):
+        """Calculate Griffith strain energy.
+
+        """
         a = 1.0e-3 # m
         minima = np.min(self.model.mesh.nodes, axis=0)
         maxima = np.max(self.model.mesh.nodes, axis=0)
@@ -107,7 +110,10 @@ class CenterCrackHex8(unittest.TestCase):
         K_I = pavg[1][1] * (pi * a * 1.0 /
                             cos(pi * a / width))**0.5
         G = K_I**2.0 / self.E
+        return G
 
+    def test_right_tip(self):
+        G = self._griffith()
         # Calculate J
         tip_line = [i for i, (x, y, z)
                     in enumerate(self.model.mesh.nodes)
@@ -126,11 +132,6 @@ class CenterCrackHex8(unittest.TestCase):
         # 0.5 * deltaL is standing in for ∫q(η)dη; this is ok for a
         # tringular q(η)
 
-        # debugging visualization
-        plt.ion()
-        fig, ax = plot_q(domain)
-        plt.show()
-
         elems = [e for e in list(domain)
                  if np.any(np.array(e.nodes)[:,2] == minima[1])]
         # Test if approximately equal to G
@@ -139,22 +140,49 @@ class CenterCrackHex8(unittest.TestCase):
         # initially verified
         npt.assert_allclose(jbar, 74.65, rtol=1e-4)
 
-    def test_rotated_coordinates(self):
+    def test_left_tip(self):
+        """Test if J is valid for left crack tip.
+
+        """
+        tip_line = [i for i, (x, y, z)
+                    in enumerate(self.model.mesh.nodes)
+                    if np.allclose(x, -1e-3) and np.allclose(y, 0)]
+        zslice = feb.selection.element_slice(self.model.mesh.elements,
+                                             v=0e-3, axis=(0, 0, 1))
+        nodes = [n for e in zslice for n in e.nodes]
+        maxima = np.max(nodes, axis=0)
+        minima = np.min(nodes, axis=0)
+        deltaL = maxima[2] - minima[2]
+        domain = feb.analysis.apply_q_3d(zslice, tip_line, n=3,
+                                         q=[-1, 0, 0])
+        assert len(domain) == 6 * 6 * 2
+        jbdl = feb.analysis.jintegral(domain)
+        jbar = jbdl / (0.5 * deltaL)
+        # 0.5 * deltaL is standing in for ∫q(η)dη; this is ok for a
+        # tringular q(η)
+
+        elems = [e for e in list(domain)
+                 if np.any(np.array(e.nodes)[:,2] == minima[1])]
+        # Test if approximately equal to G
+        G = self._griffith()
+        npt.assert_allclose(jbar, G, rtol=0.07)
+        # Test for consistency with value calculated when code
+        # initially verified
+        npt.assert_allclose(jbar, 74.65, rtol=1e-4)
+
+
+    def test_rotated_right_tip(self):
         """Test if J is the same after a coordinate shift.
 
         """
         mesh = self.model.mesh
+        G = self._griffith()
         # Geometry (easier before rotation)
-        a = 1.0e-3 # m
-        minima = np.min(self.model.mesh.nodes, axis=0)
-        maxima = np.max(self.model.mesh.nodes, axis=0)
-        width = maxima[0] - minima[0]
-        elems_up_down = [e for e in self.model.mesh.elements
-                         if (np.any(e.nodes[:,1] == minima[1]) or
-                             np.any(e.nodes[:,1] == maxima[1]))]
-        tip_line = [i for i, (x, y, z)
-                    in enumerate(self.model.mesh.nodes)
-                    if np.allclose(x, 1e-3) and np.allclose(y, 0)]
+        tip_line_r = [i for i, (x, y, z)
+                      in enumerate(self.model.mesh.nodes)
+                      if np.allclose(x, 1e-3) and np.allclose(y, 0)]
+        # ^ right crack tip
+
         # Create object transform (rotation matrix)
         angle = radians(30)
         R = np.array([[cos(angle), -sin(angle), 0],
@@ -167,33 +195,61 @@ class CenterCrackHex8(unittest.TestCase):
         for e in mesh.elements:
             e.properties['displacement'] = \
                 np.dot(R, e.properties['displacement'].T).T
-        # Calculate average normal reaction stress
-        pavg = np.mean([e.material.tstress(e.f((0, 0, 0)))
-                        for e in elems_up_down], axis=0)
-        pavg = np.dot(R.T, np.dot(pavg, R))
-        # Define G for plane stress
-        K_I = pavg[1][1] * (math.pi * a * 1.0 /
-                            math.cos(math.pi * a / width))**0.5
-        G = K_I**2.0 / self.E
+
         # Calculate J
         zslice = feb.selection.element_slice(self.model.mesh.elements,
                                              v=0e-3, axis=(0, 0, 1))
         nodes = [n for e in zslice for n in e.nodes]
-        maxima = np.max(nodes, axis=0)
-        minima = np.min(nodes, axis=0)
-        deltaL = maxima[2] - minima[2]
-        domain = feb.analysis.apply_q_3d(zslice, tip_line, n=3,
-                                         q=[cos(angle), sin(angle), 0])
-        assert len(domain) == 6 * 6 * 2
-        jbar = feb.analysis.jintegral(domain) / (0.5 * deltaL)
-        # 0.5 * deltaL is standing in for ∫q(η)dη; this is ok for a
-        # tringular q(η)
+        deltaL = np.max(nodes, axis=0)[2] - np.min(nodes, axis=0)[2]
 
-        # Test if J ≈ G
-        npt.assert_allclose(jbar, G, rtol=0.07)
+        # Right tip
+        domain_r = feb.analysis.apply_q_3d(zslice, tip_line_r, n=3,
+                                           q=[cos(angle), sin(angle), 0])
+        assert len(domain_r) == 6 * 6 * 2
+        jbar_r = feb.analysis.jintegral(domain_r) / (0.5 * deltaL)
+        npt.assert_allclose(jbar_r, G, rtol=0.07)
         # Test for consistency with value calculated when code
         # initially verified
-        npt.assert_allclose(jbar, 74.65, rtol=1e-4)
+        npt.assert_allclose(jbar_r, 74.65, rtol=1e-4)
+
+    def test_rotated_coordinates_left_tip(self):
+        """Test if J is the same after a coordinate shift.
+
+        """
+        mesh = self.model.mesh
+        G = self._griffith()
+        # Geometry (easier before rotation)
+        tip_line_l = [i for i, (x, y, z)
+                      in enumerate(self.model.mesh.nodes)
+                      if np.allclose(x, -1e-3) and np.allclose(y, 0)]
+        # ^ left crack tip
+
+        # Create object transform (rotation matrix)
+        angle = radians(30)
+        R = np.array([[cos(angle), -sin(angle), 0],
+                      [sin(angle), cos(angle), 0],
+                      [0, 0, 1]])
+        # Transform nodes
+        mesh.nodes = [np.dot(R, n) for n in mesh.nodes]
+        mesh.update_elements()
+        # Transform displacements
+        for e in mesh.elements:
+            e.properties['displacement'] = \
+                np.dot(R, e.properties['displacement'].T).T
+
+        # Calculate J
+        zslice = feb.selection.element_slice(self.model.mesh.elements,
+                                             v=0e-3, axis=(0, 0, 1))
+        nodes = [n for e in zslice for n in e.nodes]
+        deltaL = np.max(nodes, axis=0)[2] - np.min(nodes, axis=0)[2]
+        domain_l = feb.analysis.apply_q_3d(zslice, tip_line_l, n=3,
+                                           q=[-cos(angle), -sin(angle), 0])
+        assert len(domain_l) == 6 * 6 * 2
+        jbar_l = feb.analysis.jintegral(domain_l) / (0.5 * deltaL)
+        npt.assert_allclose(jbar_l, G, rtol=0.07)
+        # Test for consistency with value calculated when code
+        # initially verified
+        npt.assert_allclose(jbar_l, 74.65, rtol=1e-4)
 
 
 class CenterCrackQuad4(unittest.TestCase):
