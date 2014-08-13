@@ -109,7 +109,7 @@ class Element:
 
         """
         v = self.properties[prop] # nodal values
-        return np.dot(self.N(*r), v_node)
+        return np.dot(v.T, self.N(*r))
 
     def dinterp(self, r, prop='displacement'):
         """Return d/dx of node-valued data at natural basis point r
