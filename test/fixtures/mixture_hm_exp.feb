@@ -17,8 +17,8 @@
 			<solid type="fiber-exp-pow">
 				<alpha>65</alpha>
 				<beta>2</beta>
-				<ksi>0.296</ksi>
-				<theta>90</theta>
+				<ksi>296000</ksi>
+				<theta>45</theta>
 				<phi>90</phi>
 			</solid>
 		</material>
@@ -53,9 +53,9 @@
 		</fix>
 		<fix bc="z">
 			<node id="1"/>
-			<node id="2"/>
 			<node id="3"/>
-			<node id="4"/>
+			<node id="5"/>
+			<node id="7"/>
 		</fix>
 	</Boundary>
 	<LoadData>
@@ -115,10 +115,10 @@
 				<node id="8">0.2</node>
 			</prescribe>
 			<prescribe bc="z" lc="3">
-				<node id="5">0.3</node>
-				<node id="6">0.3</node>
-				<node id="7">0.3</node>
-				<node id="8">0.3</node>
+				<node id="2">-0.3</node>
+				<node id="4">-0.3</node>
+				<node id="6">-0.3</node>
+				<node id="8">-0.3</node>
 			</prescribe>
 		</Boundary>
 	</Step>
