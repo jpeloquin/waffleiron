@@ -60,7 +60,7 @@ class SolidMixture:
                    for material in self.materials)
 
     def sstress(self, F):
-        return sum(material.pstress(F)
+        return sum(material.sstress(F)
                    for material in self.materials)
 
 class RigidBody:
