@@ -214,13 +214,13 @@ def jintegral(elements):
 
         """
         F = e.f(r)
-        p = e.material.pstress(F) # 1st Piola-Kirchoff stress
+        s = e.material.sstress(F) # 2nd Piola-Kirchoff stress
         dudx = e.dinterp(r, prop='displacement')
         dudx1 = dudx[:,0]
         w = e.material.w(F) # strain energy
         dqdx = e.dinterp(r, prop='q')
         # integrand terms, partially expanded
-        work = sum(p[i][j] * dudx[j,k] * dqdx[k][i]
+        work = sum(s[i][j] * dudx[j,k] * dqdx[k][i]
                    for i in xrange(3)
                    for j in xrange(3)
                    for k in xrange(3))
