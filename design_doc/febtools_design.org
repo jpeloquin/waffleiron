@@ -60,3 +60,21 @@ If brick elements alone are considered, a node connected to 1 element must be a 
 
 Note that there is currently a =selection.corner_nodes= function, which in light of the above will not always work properly.
 It is essentially only useful for meshes that conform to a rectilinear grid.
+
+* Supporting libraries
+
+** 3D geometry
+
+Geometry processing (for selecting mesh regions) is sufficiently complicated that we do not want to implement our own geometry functions.
+There does not appear to be a go-to 3D geometry library for python.
+
+CGAL is a C++ geometry library; the [[http://doc.cgal.org/latest/Linear_cell_complex/index.html#Chapter_Linear_Cell_Complex][linear cell complex]] package looks promising for representing an FE mesh.
+There are [[https://code.google.com/p/cgal-bindings/wiki/Package_wrappers_available][python bindings]] for CGAL, but although they include halfedge data structures they do not appear to include linear cell complexes.
+It may be convenient to create python bindings for linear cell complexes at some point.
+
+PythonOCC includes both constructive solid geometry and meshing functions.
+Although there is some [[http://www.pythonocc.org/resources/meshing/pythonocc-and-smesh/][documentation]], I have not yet found anything as comprehensive as the CGAL manual.
+
+[[https://github.com/danieljfarrell/pvtrace][pvtrace]] is a python library for optical ray tracing that includes a constructive geometry library.
+It's not widely used, appears to be a single-author package, and does not have active development, so it is not a good candidate for re-use.
+However, it may provide some ideas for plotting and utility functions.
