@@ -75,7 +75,7 @@ class ExponentialFiber:
 
     References
     ----------
-    FEBio theory manual 1.8, page 78.
+    FEBio users manual 2.0, page 104.
 
     """
     def __init__(self, props):
@@ -126,21 +126,21 @@ class ExponentialFiber:
 
         # Deviatoric components
         J = det(F)
-        Fdev = J**(-1.0/3.0) * F
-        Cdev = dot(Fdev.T, Fdev)
+        C = dot(F.T, F)
         # fiber unit vector
         N = np.array([sin(self.phi) * cos(self.theta),
                       sin(self.phi) * sin(self.theta),
                       cos(self.phi)])
         # (deviatoric) square of fiber stretch
-        In = dot(N, dot(Cdev, N))
-        n = dot(Fdev, N) / In**0.5
+        In = dot(N, dot(C, N))
+        yf = In**0.5 # fiber stretch
+        n = dot(F, N) / yf
 
         a = self.alpha
         b = self.beta
         xi = self.xi
-        DxIn = xi * (In - 1.0)**(b - 1.0) * exp(a * (In - 1.0)**b)
-        t = 2 / J * H(In - 1.0) * In * DxIn * outer(n, n)
+        dPsi_dIn = xi * (In - 1.0)**(b - 1.0) * exp(a * (In - 1.0)**b)
+        t = (2 / J) * H(In - 1.0) * In * dPsi_dIn * outer(n, n)
         return t
 
     def pstress(self, F):

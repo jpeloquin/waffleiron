@@ -49,7 +49,7 @@ class ExponentialFiberTest(unittest.TestCase):
         t_try = self.model.mesh.elements[0].material.tstress(F)
         data = self.soln.stepdata(step=-1)
         t_true = data['element']['stress'][0]
-        npt.assert_allclose(t_try, t_true, rtol=1e-5)
+        npt.assert_allclose(t_try, t_true, rtol=1e-5, atol=1e-5)
 
     def sstress_test(self):
         """Check second Piola-Kirchoff stress via transform.
@@ -62,7 +62,7 @@ class ExponentialFiberTest(unittest.TestCase):
         t_try = (1.0 / np.linalg.det(f)) \
                 * np.dot(f, np.dot(s_try, f.T))
         t_true = self.soln.stepdata()['element']['stress'][0]
-        npt.assert_allclose(t_try, t_true, rtol=1e-5)
+        npt.assert_allclose(t_try, t_true, rtol=1e-5, atol=1e-5)
 
 
 class IsotropicElasticTest(unittest.TestCase):
