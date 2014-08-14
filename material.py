@@ -147,8 +147,18 @@ class ExponentialFiber:
         """1st Piola-Kirchoff stress.
 
         """
-        pass
+        t = self.tstress(F)
+        p = det(F) * dot(t, np.linalg.inv(F).T)
+        return p
 
+    def sstress(self, F):
+        """2nd Piola-Kirchoff stress.
+
+        """
+        t = self.tstress(F)
+        s = det(F) * dot(np.linalg.inv(F),
+                         dot(t, np.linalg.inv(F).T))
+        return s
 
 class HolmesMow:
     """Holmes-Mow coupled hyperelastic material.
@@ -213,9 +223,18 @@ class HolmesMow:
         """1st Piola-Kirchoff stress.
 
         """
-        t = cls.tstress(F, props)
-        p = det(F) * dot(inv(F), t)
+        t = self.tstress(F)
+        p = det(F) * dot(t, np.linalg.inv(F).T)
         return p
+
+    def sstress(self, F):
+        """2nd Piola-Kirchoff stress.
+
+        """
+        t = self.tstress(F)
+        s = det(F) * dot(np.linalg.inv(F),
+                         dot(t, np.linalg.inv(F).T))
+        return s
 
 
 class IsotropicElastic:
