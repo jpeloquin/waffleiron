@@ -87,6 +87,10 @@ class Element:
     def x(self, config='reference'):
         """Nodal positions in reference or deformed configuration.
 
+        Index 1 := node number.
+
+        Index 2 := coordinate.
+
         """
         if config == 'reference':
             x = self.nodes
@@ -116,8 +120,8 @@ class Element:
 
         The node-valued data may be scalar or vector.
 
-        Note: If you are using a 2d element, do not use 3d vector
-        values.
+        The returned matrix is n x 3 where n is the dimensionality of
+        the node-valued data.
 
         """
         v = self.properties[prop] # nodal values

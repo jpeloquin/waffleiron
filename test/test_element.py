@@ -22,7 +22,7 @@ def f_tensor_logfile(elemdata, step, eid):
     return F
 
 
-class Hex8IntegrationVolume(unittest.TestCase):
+class Hex8Element(unittest.TestCase):
 
     def setUp(self):
         nodes = [(-2, -1.5, -3),
@@ -50,7 +50,7 @@ class Hex8IntegrationVolume(unittest.TestCase):
             actual = self.element.j(pt, config='reference')
             npt.assert_allclose(actual, desired, atol=np.spacing(1))
 
-    def test_dinterp(self):
+    def test_dinterp_1d(self):
         dx = 1.5
         dy = -0.8
         dz = 0.7

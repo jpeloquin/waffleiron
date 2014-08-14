@@ -149,7 +149,7 @@ class IsotropicElasticTest(unittest.TestCase):
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
         
 
-class HolmesMowTestCase(unittest.TestCase):
+class HolmesMowTest(unittest.TestCase):
     """Tests Holmes Mow material definition.
 
     """
