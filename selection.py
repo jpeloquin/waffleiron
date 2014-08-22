@@ -58,44 +58,40 @@ def surface_faces(mesh):
                                    processed_nodes)
     return surf_faces
 
-def bisect(elements, v, axis=np.array([0, 0, 1])):
+def bisect(elements, p, v):
     """Return elements on one side of of a plane.
 
-    v := The distance along `axis` at which to bisect.
+    p := A point (x, y, z) on the plane.
 
-    axis := Must coincide with the cartesian coordinate system;
-    i.e. two values must be zero and the third nonzero.  Elements
-    intersecting the slice plane or on the side of the bisection that
-    `axis` points at are returned.
+    v := A vector (vx, vy, vz) normal to the plane.
+
+    The elements reterned are those either intersected by the cut
+    plane or on the side of the plane towards which `v` points.
 
     """
-    # figure out which axis we're using
-    idx = np.array(axis).nonzero()[0]
-    assert len(idx) == 1
-    iax = idx[0]
-    sgn = np.sign(axis[iax])
-    # Perform bisection.  For each element, there are three
-    # possibilities: (1) all nodes below bisection → miss, (2) all
-    # nodes above bisection → hit, or (3) some nodes above and some
-    # below → hit.  Therefore, if any node is above the bisection, the
-    # element should be included.
-    if sgn > 0:
-        eset = [e for e in elements
-                if np.any(e.nodes[:,iax] > v)]
-    else:
-        eset = [e for e in elements
-                if np.any(e.nodes[:,iax] < v)]
+    # sanitize inputs
+    v = np.array(v)
+    p = np.array(p)
+    # find distance from plane
+    def on_pside(e, p=p, v=v):
+        """Returns true if element touches (or intersects) plane.
+
+        """
+        nodes = e.nodes - p
+        d = np.dot(nodes, v)
+        return any(d >= 0)
+    eset = [e for e in elements if on_pside(e)]
     return set(eset)
 
-def element_slice(elements, v, extent=tol, axis=np.array([0, 0, 1])):
+def element_slice(elements, v, extent=tol, axis=(0, 0, 1)):
     """Return a slice of elements.
 
     v := The distance along `axis` at which the slice plane is
     located.
 
     axis := A normal vector to the slice plane.  Must coincide with
-    the cartesian coordinate system; i.e. two values must be zero and
-    the third nonzero.
+    the cartesian coordinate system; i.e. two values must be 0 and
+    the third 1.
 
     Any element within +/- `extent` of `v` along `axis` is included in
     the slice.  The default extent is the floating point precision.
@@ -103,17 +99,18 @@ def element_slice(elements, v, extent=tol, axis=np.array([0, 0, 1])):
     elements on both sides of the plane will be included.
 
     """
+    # sanitize inputs
+    axis = np.abs(np.array(axis))
     # figure out which axis we're using
     idx = np.array(axis).nonzero()[0]
     assert len(idx) == 1
     iax = idx[0]
-    axis = np.abs(axis)
-    # Select all above lower bound
+    # Select all above and intersecting lower bound
     v1 = v - extent
-    elements = bisect(elements, v1, axis)
-    # Select all below upper bound
+    elements = bisect(elements, p=v1 * axis, v=axis)
+    # Select all below and intersecting upper bound
     v2 = v + extent
-    elements = bisect(elements, v2, -axis)
+    elements = bisect(elements, p=(0, 0, v2), v=-axis)
     return set(elements)
 
 def expand_element_set(superset, subset, n):

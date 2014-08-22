@@ -33,6 +33,38 @@ class QuadMesh(unittest.TestCase):
 
 from febtools.selection import adj_faces, surface_faces
 
+class SelectionHex8Consolidated(unittest.TestCase):
+    """Test selections for hex8 mesh with center crack.
+
+    """
+    # gradually move SelectionHex8 tests to here
+
+    def setUp(self):
+        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic_hex8.feb'))
+        self.mesh = reader.mesh()
+
+    def test_bisect_oblique_vector(self):
+        """Test bisect with an angled plane.
+
+        """
+        # p1 and p2 define the corners of a triangle on the upper
+        # right of the mesh.  The mesh corner makes the third point of
+        # the triangle.
+        p1 = np.array([0.005, 0.00734127, 0.0])
+        p2 = np.array([0.0028879, 0.01, 0.0])
+        l = p2 - p1
+        n = feb.geometry._cross(l, (0, 0, 1))
+        # Bisect off the elements in the afforementioned triangle
+        elset = feb.selection.bisect(self.mesh.elements, p=p1, v=n)
+        assert len(elset) == 6*4
+
+    def test_element_slice(self):
+        # select the two layers in the middle
+        eset = feb.selection.element_slice(self.mesh.elements,
+                                           v=0,
+                                           axis=(0, 0, 1))
+        assert len(eset) == len(self.mesh.elements) / 2
+
 class SelectionHex8(unittest.TestCase):
     """Test selections for a hex8 mesh with a hole.
 
