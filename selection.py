@@ -100,7 +100,7 @@ def element_slice(elements, v, extent=tol, axis=(0, 0, 1)):
 
     """
     # sanitize inputs
-    axis = np.abs(np.array(axis))
+    axis = np.abs(np.array(axis), dtype=np.float)
     # figure out which axis we're using
     idx = np.array(axis).nonzero()[0]
     assert len(idx) == 1
@@ -110,7 +110,7 @@ def element_slice(elements, v, extent=tol, axis=(0, 0, 1)):
     elements = bisect(elements, p=v1 * axis, v=axis)
     # Select all below and intersecting upper bound
     v2 = v + extent
-    elements = bisect(elements, p=(0, 0, v2), v=-axis)
+    elements = bisect(elements, p=v2 * axis, v=-axis)
     return set(elements)
 
 def expand_element_set(superset, subset, n):

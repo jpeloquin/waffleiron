@@ -38,5 +38,5 @@ class ScalarFieldTest(unittest.TestCase):
         imgplot = plt.imshow(img)
         imgplot.set_interpolation('nearest')
         plt.ion()
-        plt.show()
         plt.savefig(os.path.join("test", "test_output", "scalar_field_test.png"))
+        plt.show()
