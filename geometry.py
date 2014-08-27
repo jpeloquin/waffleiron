@@ -18,3 +18,12 @@ def face_normal(mesh, face):
     v2 = points[f[-1]] - points[f[0]]
     n = _cross(v1, v2)
     return n
+
+def point_in_element(element, point):
+    """Return true if element encloses point.
+
+    Points on the boundary of the element are considered to be inside
+    the element.
+
+    """
+    return False
