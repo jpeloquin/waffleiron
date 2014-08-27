@@ -20,15 +20,15 @@ class FaceConnectivityHex8(unittest.TestCase):
         # Check total number of connected faces
         assert len(faces) == 6
 
+
 ### ElementContainingPoint
 
-class ElementContainingPointHex8(unittest.TestCase):
+class ElementContainingPointCubeHex8(unittest.TestCase):
     """Test looking up which element contains (x,y,z)
 
     """
     def setUp(self):
-        # The cube is bounded by x ∈ [-1, 1], y ∈ [-1, 1],
-        # and z ∈ [0, 2]
+        # The cube is bounded by -1 ≤ x ≤ 1, -1 ≤ y ≤ 1, and 0 ≤ z ≤ 2
         self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'uniax-8cube.xplt'))
         self.model = feb.input.FebReader(os.path.join('test', 'fixtures', 'uniax-8cube.feb')).model()
         self.model.apply_solution(self.soln)

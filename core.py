@@ -119,6 +119,7 @@ class Mesh:
 
         """
         # Nodes
+        # if nodes are 2D, add z = 0
         if len(nodes[0]) == 2:
             self.nodes = [(x, y, 0.0) for (x, y) in nodes]
         else:
@@ -272,7 +273,7 @@ class Mesh:
         # iterate over points
         point = np.array(point)
 
-        # Determine closest node (point Q) to each point P
+        # Determine closest node (point Q) to the point P
         d, node_idx = self.nodetree.query(point, k=2)
         # Handle superimposed points
         if abs(d[0] - d[1]) < np.finfo('float').eps:

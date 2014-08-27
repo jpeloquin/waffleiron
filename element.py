@@ -211,7 +211,7 @@ class Element:
                 if node_id in f]
 
     def to_natural(self, pt, config='reference'):
-        """Return natural coordinates for p = (x, y, z)
+        """Return natural coordinates for pt = (x, y, z)
 
         """
         pt = np.array(pt)
