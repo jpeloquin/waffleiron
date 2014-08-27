@@ -5,7 +5,7 @@ import matplotlib.image as mpimg
 import unittest
 import os
 
-@unittest.skip("Very slow with bisection used to locate element containing a point.")
+#@unittest.skip("Very slow with bisection used to locate element containing a point.")
 class ScalarFieldTest(unittest.TestCase):
     
     def setUp(self):

@@ -271,19 +271,13 @@ class Mesh:
         Returns [] if no elements contain point.
 
         """
-        point = np.array(point)
-        elements = self.elements
-        # slice in xy
-        elements = feb.selection.element_slice(elements,
-            point[2], axis=(0, 0, 1))
-        # slice in xz
-        elements = feb.selection.element_slice(elements,
-            point[1], axis=(0, 1, 0))
-        # slice in yz
-        elements = feb.selection.element_slice(elements,
-            point[0], axis=(1, 0, 0))
-
-        elements = [e for e in elements
+        p = np.array(point)
+        candidates = [e for e in self.elements
+                      if (np.all(np.max(e.nodes, axis=0)
+                                 >= p - default_tol)
+                          and np.all(np.min(e.nodes, axis=0)
+                                     <= p + default_tol))]
+        elements = [e for e in candidates
                     if feb.geometry.point_in_element(e, point)]
         return elements
 
