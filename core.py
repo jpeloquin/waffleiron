@@ -265,53 +265,27 @@ class Mesh:
             elements = elements + self.elem_with_node[idx]
         return set(elements)
 
-    def element_containing_point(self, point):
-        """Return element containing a point
+    def elements_containing_point(self, point):
+        """Return element(s) containing a point
+
+        Returns [] if no elements contain point.
 
         """
-        # Provide 2 dimensions so iteration over the first will always
-        # iterate over points
         point = np.array(point)
+        elements = self.elements
+        # slice in xy
+        elements = feb.selection.element_slice(elements,
+            point[2], axis=(0, 0, 1))
+        # slice in xz
+        elements = feb.selection.element_slice(elements,
+            point[1], axis=(0, 1, 0))
+        # slice in yz
+        elements = feb.selection.element_slice(elements,
+            point[0], axis=(1, 0, 0))
 
-        # Determine closest node (point Q) to the point P
-        d, node_idx = self.nodetree.query(point, k=2)
-        # Handle superimposed points
-        if abs(d[0] - d[1]) < np.finfo('float').eps:
-            # These two points are superimposed.  There may be more.
-            node_idx = self.nodetree.query_ball_point(point,
-                            r=d[0] + np.finfo('float').eps)
-        else:
-            # The two points are not superimposed; we only want one.
-            node_idx = [node_idx[0]]
-
-        # Test each element connected to closest node(s) for
-        # containing the point
-        elems = []
-        for nid in node_idx:
-            # Iterate over connected elements
-            for e in self.elem_with_node[nid]:
-                pt_q = self.nodes[nid] # the closest node
-                v_pq = point - pt_q # vector from Q to point of
-                                    # interest
-                # Check if point is in element
-                lid = e.ids.index(nid) # node id w/in element
-                if e.is_planar:
-                    edge_ids = e.edges_with_node(lid)
-                    normals = e.edge_normals()
-                    normals = [normals[i] for i in edge_ids]
-                else:
-                    face_ids = e.faces_with_node(lid)
-                    normals = e.face_normals()
-                    normals = [normals[i] for i in face_ids]
-                # Test if line PQ is perpindicular or antiparallel to
-                # the normal of each face connected to Q; if yes, P is
-                # interior to all three faces and the element contains
-                # P.
-                if np.all([np.dot(n, v_pq) <= 0 for n in normals]):
-                    return e
-        # If no element contains the point, the point is outside the
-        # mesh or inside a hole.
-        return None
+        elements = [e for e in elements
+                    if feb.geometry.point_in_element(e, point)]
+        return elements
 
     def merge(self, other, candidates='auto', tol=default_tol):
         """Merge this mesh with another

@@ -31,11 +31,11 @@ def point_in_element(e, p):
     # normals point outward by convention.
     if e.is_planar:
         normals = e.edge_normals()
-        raise Exception("Element2D.edges() needs implementation.")
-        bdry_pts = [e.x()[ids[0]] for ids in e.edges()]
+        bdry_pts = [e.x()[ids[0]] for ids in e.edge_nodes]
     else:
         normals = e.face_normals()
-        bdry_pts = [e.x()[ids[0]] for ids in e.faces()]
+        # these ids are intra-element
+        bdry_pts = [e.x()[ids[0]] for ids in e.face_nodes]
     # Find the distance to each boundary face by projection onto the
     # face normal.  If any projection is positive, the point must lie
     # outside that face.  If all projections are negative or zero, the

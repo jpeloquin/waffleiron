@@ -20,10 +20,6 @@ def scalar_field(mesh, fn, pts):
     An n x m array of scalar values calculated by calling `fn` with
     the F tensor and `Element` for each point in `pts`.
 
-    Notes
-    -----
-    This function does not yet handle holes.
-
     """
     # add z coordinates if omitted
     if pts.shape[2] == 2:
@@ -36,10 +32,11 @@ def scalar_field(mesh, fn, pts):
             x = pts[i, j, 0]
             y = pts[i, j, 1]
             z = pts[i, j, 2]
-            e = mesh.element_containing_point((x, y, z))
-            if e is None:
+            elems = mesh.elements_containing_point((x, y, z))
+            if not elems:
                 field[i, j] = None
             else:
+                e = elems[0]
                 r = e.to_natural((x, y, z))
                 f = e.f(r)
                 field[i, j] = fn(f, e)

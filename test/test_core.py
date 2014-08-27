@@ -36,14 +36,20 @@ class ElementContainingPointCubeHex8(unittest.TestCase):
              (-2.5, -3.0, -10),
              (-5.0, -3.0, 1.0)]
         for p in points:
-            e = self.model.mesh.element_containing_point(p)
-            assert(e is None)
+            elements = self.model.mesh.elements_containing_point(p)
+            assert not elements
 
     def test_inside(self):
-        e = self.model.mesh.element_containing_point((-0.5, -0.5, 0.5))
-        assert(e is self.model.mesh.elements[0])
-        e = self.model.mesh.element_containing_point((-0.5, 0.5, 0.5))
-        assert(e is self.model.mesh.elements[2])
+        p = [(-0.5, -0.5, 0.5),
+             (-0.5, 0.5, 0.5)]
+
+        elems = self.model.mesh.elements_containing_point(p[0])
+        assert len(elems) == 1
+        assert elems[0] is self.model.mesh.elements[0]
+
+        elems = self.model.mesh.elements_containing_point(p[1])
+        assert len(elems) == 1
+        assert elems[0] is self.model.mesh.elements[2]
 
 
 class ElementContainingPointNarrowParallelogram(unittest.TestCase):
@@ -81,8 +87,9 @@ class ElementContainingPointNarrowParallelogram(unittest.TestCase):
         points = [(0.5, 0.5, 0.5),
                   (0.9, 5, 0.5)]
         for p in points:
-            e = self.mesh.element_containing_point(p)
-            assert e is self.e1
+            elems = self.mesh.elements_containing_point(p)
+            assert len(elems) == 1
+            assert elems[0] is self.e1
 
 
 class ElementContainingPointQuad4(unittest.TestCase):
@@ -101,11 +108,14 @@ class ElementContainingPointQuad4(unittest.TestCase):
                   (-2.5, -3.0, 0),
                   (-5.0, -3.0, 0)]
         for p in points:
-            e = self.model.mesh.element_containing_point(p)
-            assert(e is None)
+            elements = self.model.mesh.elements_containing_point(p)
+            assert not elements
 
     def test_inside(self):
-        e = self.model.mesh.element_containing_point((-0.5, -0.5, 0))
-        assert(e is self.model.mesh.elements[0])
-        e = self.model.mesh.element_containing_point((-0.5, 0.5, 0))
-        assert(e is self.model.mesh.elements[1])
+        e = self.model.mesh.elements_containing_point((-0.5, -0.5, 0))
+        assert len(e) == 1
+        assert(e[0] is self.model.mesh.elements[0])
+
+        e = self.model.mesh.elements_containing_point((-0.5, 0.5, 0))
+        assert len(e) == 1
+        assert(e[0] is self.model.mesh.elements[1])

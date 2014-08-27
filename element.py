@@ -263,6 +263,20 @@ class Element2D(Element):
             # i.e if 2d vectors were used
             return n
 
+    def edges(self):
+        """Return the edges of this element.
+
+        A edges is represented by a tuple of node ids oriented such
+        that the cross product returns an outward-pointing normal.
+
+        """
+        if self.ids is not None:
+            edges = tuple(tuple(self.ids[i] for i in edge)
+                          for edge in self.edge_nodes)
+        else:
+            edges = self.edge_nodes
+        return edges
+
     def edges_with_node(self, node_id):
         """Indices of edges that include node id.
 
