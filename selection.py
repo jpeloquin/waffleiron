@@ -77,9 +77,9 @@ def bisect(elements, p, v):
         """Returns true if element touches (or intersects) plane.
 
         """
-        nodes = e.nodes - p
-        d = np.dot(nodes, v)
-        return any(d >= 0)
+        dpv = np.dot(p, v)
+        d = np.dot(e.nodes, v)
+        return any(d >= dpv)
     eset = [e for e in elements if on_pside(e)]
     return set(eset)
 

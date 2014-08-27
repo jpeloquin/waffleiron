@@ -18,8 +18,6 @@ class ScalarFieldTest(unittest.TestCase):
         self.model = model
 
     def test_y_stress(self):
-        # TODO: changing px_w to 16 causes test failure
-
         maxima = np.max(self.model.mesh.nodes, axis=0)
         minima = np.min(self.model.mesh.nodes, axis=0)
         px_w = 16
