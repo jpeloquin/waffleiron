@@ -19,11 +19,30 @@ def face_normal(mesh, face):
     n = _cross(v1, v2)
     return n
 
-def point_in_element(element, point):
+def point_in_element(e, p):
     """Return true if element encloses point.
 
     Points on the boundary of the element are considered to be inside
     the element.
 
     """
-    return False
+    p = np.array(p)
+    # Find the normal and a point on each boundary edge/face.  The
+    # normals point outward by convention.
+    if e.is_planar:
+        normals = e.edge_normals()
+        raise Exception("Element2D.edges() needs implementation.")
+        bdry_pts = [e.x()[ids[0]] for ids in e.edges()]
+    else:
+        normals = e.face_normals()
+        bdry_pts = [e.x()[ids[0]] for ids in e.faces()]
+    # Find the distance to each boundary face by projection onto the
+    # face normal.  If any projection is positive, the point must lie
+    # outside that face.  If all projections are negative or zero, the
+    # point is inside the element.
+    for o, n in zip(bdry_pts, normals):
+        v = p - o
+        d = np.dot(v, n)
+        if d > 0:
+            return False
+    return True

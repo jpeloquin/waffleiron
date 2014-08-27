@@ -26,7 +26,7 @@ class RectangularPrismHex8(unittest.TestCase):
         # a rectangle (on left)
         self.e = feb.element.Hex8.from_ids([0, 1, 2, 3, 4, 5, 6, 7], nodes)
 
-    def test_point_in_rectangle(self):
+    def test_points_in_element(self):
         points = [(0, 0, 0),
                   (0.5, 0.5, 0),
                   (0.9, 5, 1),
@@ -34,3 +34,10 @@ class RectangularPrismHex8(unittest.TestCase):
                   (0.9, 5, 0.5)]
         for p in points:
             assert feb.geometry.point_in_element(self.e, p)
+
+    def test_points_not_in_element(self):
+        points = [(-0.1, 0, 0),
+                  (-0.5, 0.4, 0.5),
+                  (10, 10, 10)]
+        for p in points:
+            assert not feb.geometry.point_in_element(self.e, p)
