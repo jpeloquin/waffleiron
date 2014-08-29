@@ -291,10 +291,11 @@ class Mesh:
         candidates : {'auto', list of int}
             If 'auto' (the default), combine all nodes in the `other`
             mesh that are distance < `tol` from a node in the current
-            mesh.  The simplices of `other` will be updated
-            accordingly.  If `nodes` is a list, use only the node
-            indices in the list as candidates for combination.  These
-            indexes are in the domain of `other`.
+            mesh.  This is recommended for small meshes only.  The
+            simplices of `other` will be updated accordingly.  If
+            `nodes` is a list, use only the node indices in the list
+            as candidates for combination.  These indexes are in the
+            domain of `other`.
 
         Returns
         -------
@@ -302,19 +303,22 @@ class Mesh:
             The merged mesh
 
         """
-        dist = cdist(other.nodes, self.nodes, 'euclidean')
-        newind = [] # new indices for 'other' nodes after merge
-        # copy nodelist so any error will not corrupt the original mesh
+        if candidates == 'auto':
+            candidates = range(len(other.nodes))
+        # copy nodes so any error will not corrupt the original mesh
         nodelist = deepcopy(self.nodes)
+        nodes_cd = [other.nodes[i] for i in candidates]
+        dist = cdist(nodes_cd, self.nodes, 'euclidean')
+        # ^ i indexes candidate list (other), j indexes nodes in self
+        newind = [] # new indices for 'other' nodes after merge
         # Iterate over nodes in 'other'
         for i, p in enumerate(other.nodes):
-            try_combine = ((candidates == 'auto') or
-                           (candidates != 'auto' and i in candidates))
-            if try_combine:
+            if i in candidates:
                 # Find node in 'self' closest to p
                 imatch = self.find_nearest_node(*p)
                 pmatch = self.nodes[imatch]
-                if dist[i, imatch] < tol:
+                i_cd = candidates.index(i)
+                if dist[i_cd, imatch] < tol:
                     # Make all references in 'other' to p use pmatch
                     # instead
                     newind.append(imatch)
