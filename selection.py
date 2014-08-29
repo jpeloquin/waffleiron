@@ -2,8 +2,12 @@
 """Functions for conveniently selecting nodes and elements.
 
 """
-import febtools as feb
+import operator
+
 import numpy as np
+
+import febtools as feb
+from febtools import _canonical_face
 
 tol = np.finfo('float').eps
 
@@ -47,14 +51,16 @@ def surface_faces(mesh):
     adv_front = set([i])
     processed_nodes = set()
     while adv_front:
-        candidates = (f for i in adv_front
-                      for f in mesh.faces_with_node[i])
-        on_surface = (f for f in candidates
-                      if len(adj_faces(mesh, f, mode='face')) == 0)
+        candidate_faces = (f for i in adv_front
+                           for e in mesh.elem_with_node[i]
+                           for f in e.faces()
+                           if i in f)
+        on_surface = [f for f in candidate_faces
+                      if len(adj_faces(f, mesh, mode='face')) == 0]
         surf_faces.update(on_surface)
         processed_nodes.update(adv_front)
         adv_front = set.difference(set([i for f in surf_faces
-                                        for i in f.ids]),
+                                        for i in f]),
                                    processed_nodes)
     return surf_faces
 
@@ -168,11 +174,15 @@ def face_set(mesh, face, angle=30):
     """Select all adjacent faces with similar normals.
 
     """
-    faces = adj_faces(mesh, face, mode='edge')
+    faces = adj_faces(face, mesh, mode='edge')
     raise NotImplemented
 
-def adj_faces(mesh, face, mode='all'):
+def adj_faces(face, mesh, mode='all'):
     """Return faces connected to a face.
+
+    face : tuple of integers
+        The face for which adjacent faces will be identified, defined
+        by the ids of its nodes.
 
     mode : {'all', 'edge', 'face'}
         The type of adjacency desired. Specifying 'edge' returns only
@@ -181,18 +191,26 @@ def adj_faces(mesh, face, mode='all'):
         face.
 
     """
-    nc_faces = [mesh.faces_with_node[i] for i in face.ids]
-    # ^ faces sharing a node
-    fc_faces = set.intersection(*nc_faces) - set([face])
-    # ^ other faces sharing all nodes
-    if mode == 'face':
-        return fc_faces
-    edges = [(i, i + 1) for i in xrange(len(face.ids) - 1)]
-    edges.append((len(face.ids) - 1, 0))
-    ec_faces = set.union(*[set.intersection(nc_faces[i1], nc_faces[i2])
-                           for i1, i2 in edges]) - fc_faces - set([face])
-    # ^ other faces sharing two nodes
-    if mode == 'edge':
-        return ec_faces
-    elif mode == 'all':
-        return set.union(fc_faces, ec_faces)
+
+    def overlap(a, b):
+        """Return the type of adjacency between two faces.
+
+        """
+        o = len(set(a) & set(b))
+        return o
+
+    face = tuple(face)
+    face = _canonical_face(face)
+
+    # faces sharing at least one node, sans the queried face
+    nc_faces = set([b for i in face
+                    for b in mesh.faces_with_node(i)
+                    if b != face])
+
+    if mode == 'all':
+        return nc_faces
+    elif mode == 'edge':
+        return [b for b in nc_faces if overlap(face, b) == 2]
+    elif mode == 'face':
+        n = len(face)
+        return [b for b in nc_faces if overlap(face, b) == n]

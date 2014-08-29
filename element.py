@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from scipy.optimize import fsolve
+
+import febtools as feb
 from febtools.geometry import _cross
 
 def elem_obj(element, nodes, eid=None):
@@ -182,6 +184,7 @@ class Element:
                           for f in self.face_nodes)
         else:
             faces = self.face_nodes
+        faces = map(feb._canonical_face, faces)
         return faces
 
     def face_normals(self, config='reference'):

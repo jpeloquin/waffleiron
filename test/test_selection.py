@@ -65,6 +65,7 @@ class SelectionHex8Consolidated(unittest.TestCase):
                                            axis=(0, 0, 1))
         assert len(eset) == len(self.mesh.elements) / 2
 
+
 class SelectionHex8(unittest.TestCase):
     """Test selections for a hex8 mesh with a hole.
 
@@ -73,27 +74,25 @@ class SelectionHex8(unittest.TestCase):
         reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic.feb'))
         self.mesh = reader.mesh()
         # get a specific face
-        faces = self.mesh.faces_with_node[0]
-        nids = set((0, 1, 55, 56))
-        self.face = next(f for f in faces
-                         if not set(f.ids) - nids)
+        faces = self.mesh.faces_with_node(0)
+        self.face = (0, 55, 56, 1)
 
     ### Adjacent faces
 
     def test_all_adjacency(self):
-        faces = adj_faces(self.mesh, self.face, mode='all')
-        assert len(faces) == 10
+        faces = adj_faces(self.face, self.mesh, mode='all')
+        assert len(faces) == 22
         # make sure the input face is not returned
-        assert self.face not in faces
+        assert not any(b == self.face for b in faces)
 
     def test_edge_adjacency(self):
         """Test edge adjacency.
 
         """
-        faces = adj_faces(self.mesh, self.face, mode='edge')
+        faces = adj_faces(self.face, self.mesh, mode='edge')
         assert len(faces) == 10
         # make sure the input face is not returned
-        assert self.face not in faces
+        assert not any(b == self.face for b in faces)
 
     def test_full_adjacency(self):
         """Test full adjacency (superimposition).
@@ -102,7 +101,7 @@ class SelectionHex8(unittest.TestCase):
         superimposed faces.
 
         """
-        faces = adj_faces(self.mesh, self.face, mode='face')
+        faces = adj_faces(self.face, self.mesh,  mode='face')
         assert len(faces) == 0
         # make sure the input face is not returned
         assert self.face not in faces

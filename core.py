@@ -1,3 +1,5 @@
+from operator import itemgetter
+
 import numpy as np
 from scipy.spatial import KDTree
 from scipy.spatial.distance import cdist
@@ -182,16 +184,17 @@ class Mesh:
                 elem_with_node[i].append(e)
         self.elem_with_node = elem_with_node
 
-        # Faces
-        self.faces = [Face(f) for e in self.elements
-                      for f in e.faces()]
+    def faces_with_node(self, idx):
+        """Return face tuples containing node index.
 
-        # Create list of parent faces by node
-        faces_with_node = [set() for i in xrange(len(self.nodes))]
-        for f in self.faces:
-            for i in f.ids:
-                faces_with_node[i].add(f)
-        self.faces_with_node = faces_with_node
+        The faces are tuples of integers.
+
+        """
+        candidate_elements = self.elem_with_node[idx]
+        faces = [f for e in candidate_elements
+                 for f in e.faces()
+                 if idx in f]
+        return faces
 
     def clean_nodes(self):
         """Remove any nodes that are not part of an element.
@@ -352,25 +355,6 @@ class Mesh:
             pass
 
 
-class Face:
-    """An oriented list of nodes representing a face.
-
-    """
-    def __init__(self, ids, mesh=None):
-        """Create a face from a list of node ids.
-
-        """
-        # Defaults
-        self.fc_faces = set() # neighboring faces sharing all nodes;
-                              # i.e. fully connected
-        self.ec_faces = set() # neighboring faces sharing an edge;
-                              # i.e. edge connected
-        self.normal = None # To be used by a mesh object to store
-                           # normals.
-        # Set ids
-        self.ids = tuple(ids)
-
-
 class Sequence:
     """A time-varying sequence for step control.
 
@@ -384,3 +368,14 @@ class Sequence:
         self.points = seq
         self.typ = typ
         self.extend = extend
+
+
+# define the canonical face tuple to be sorted (by rotation only)
+# such that the least node index is first
+def _canonical_face(face):
+    """Return the canonical face tuple.
+
+    """
+    i, inode = min(enumerate(face), key=itemgetter(1))
+    face = tuple(face[i:] + face[:i])
+    return face

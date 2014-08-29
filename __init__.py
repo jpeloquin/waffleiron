@@ -1,4 +1,4 @@
-from core import *
+from core import Mesh, Model, Sequence, _canonical_face
 import analysis
 import compare
 import element

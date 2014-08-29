@@ -16,7 +16,7 @@ class FaceConnectivityHex8(unittest.TestCase):
         self.mesh = reader.mesh()
 
     def test_edge(self):
-        faces = self.mesh.faces_with_node[0]
+        faces = self.mesh.faces_with_node(0)
         # Check total number of connected faces
         assert len(faces) == 6
 
