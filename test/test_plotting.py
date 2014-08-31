@@ -5,6 +5,8 @@ import matplotlib.image as mpimg
 import unittest
 import os
 
+import fixtures
+
 #@unittest.skip("Very slow with bisection used to locate element containing a point.")
 class ScalarFieldTest(unittest.TestCase):
     
@@ -32,9 +34,31 @@ class ScalarFieldTest(unittest.TestCase):
         # calculate y-stress
         fn = lambda f, e: e.material.tstress(f)[1,1]
         img = feb.plotting.scalar_field(self.model.mesh, fn, pts)
-        
+
+        fig = plt.figure()
         imgplot = plt.imshow(img)
         imgplot.set_interpolation('nearest')
         plt.ion()
         plt.savefig(os.path.join("test", "test_output", "scalar_field_test.png"))
-        plt.show()
+
+
+class JDomainPlotTest(fixtures.Hex8IsotropicCenterCrack):
+    """Test functions for visualizing J integral domain.
+
+    """
+    def test_plot_q(self):
+        """Test 3D quiver plot of q vectors.
+
+        """
+        b = self.crack_line[1] # right crack tip
+        tip_line = [i for i, (x, y, z)
+                    in enumerate(self.model.mesh.nodes)
+                    if np.allclose(x, b[0]) and np.allclose(y, b[1])]
+        zslice = feb.selection.element_slice(self.model.mesh.elements,
+            v=0.0, axis=np.array([0, 0, 1]))
+        qdomain = feb.analysis.apply_q_3d(zslice, tip_line, n=5,
+                                          q=np.array([1, 0, 0]))
+        fig, ax = feb.plotting.plot_q(zslice, length=1e-4)
+        fp_out = os.path.join("test", "test_output",
+                              "jdomain_plot_test.png")
+        fig.savefig(fp_out)

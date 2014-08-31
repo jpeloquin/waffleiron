@@ -14,31 +14,7 @@ from febtools.material import fromlame, tolame
 from febtools.analysis import *
 from febtools import material
 
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt
-def plot_q(elements):
-    """Plot q function from mesh.
-
-    """
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    # get list of q values
-    nodes = np.array([x for e in elements for x in e.nodes])
-    n = nodes.shape[0]
-    q = np.array([v for e in elements for v in e.properties['q']])
-    # plot 1-values
-    xyz = nodes[np.any(q, axis=1)]
-    ax.scatter(xyz[:,0], xyz[:,1], xyz[:,2],
-               s=16, c='b', marker='o', edgecolor='b')
-    # plot 0-values
-    xyz = nodes[~np.any(q, axis=1)]
-    ax.scatter(xyz[:,0], xyz[:,1], xyz[:,2],
-               s=16, c='r', marker='*', edgecolor='r')
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    return fig, ax
-
+import fixtures
 
 class temp():
 
@@ -75,22 +51,10 @@ class temp():
         npt.assert_array_equal(q, qexpected)
 
 
-class CenterCrackHex8(unittest.TestCase):
+class CenterCrackHex8(fixtures.Hex8IsotropicCenterCrack):
     """Center cracked isotropic elastic plate in 3d.
 
     """
-    def setUp(self):
-        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic_hex8.feb'))
-        self.model = reader.model()
-        self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic_hex8.xplt'))
-        self.model.apply_solution(self.soln)
-
-        material = self.model.mesh.elements[0].material
-        y = material.y
-        mu = material.mu
-        E, nu = fromlame(y, mu)
-        self.E = E
-        self.nu = nu
 
     def _griffith(self):
         """Calculate Griffith strain energy.

@@ -1,5 +1,9 @@
-import numpy as np
+# -*- coding: utf-8 -*-
 import sys
+
+import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
 
 def scalar_field(mesh, fn, pts):
     """Return a field evaluated over a grid of points.
@@ -46,3 +50,32 @@ def scalar_field(mesh, fn, pts):
     sys.stdout.flush()
 
     return field
+
+def plot_q(elements, length=1.0):
+    """Plot nodal q vectors in elements.
+
+    Requires matplotlib ≥ 1.4.0
+    
+    """
+    # get subset of elements that actually has q values
+    qelements = [e for e in elements if 'q' in e.properties]
+    # get list of q values
+    q = np.array([v for e in qelements for v in e.properties['q']])
+    qnodes = np.array([x for e in qelements for x in e.nodes])
+    nodes = np.array([x for e in elements for x in e.nodes])
+    # plot vectors
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(qnodes[:,0], qnodes[:,1], qnodes[:,2],
+               c='k', edgecolor='k', s=4)
+    ax.quiver(qnodes[:,0], qnodes[:,1], qnodes[:,2],
+              q[:,0], q[:,1], q[:,2],
+              color='k', length=length)
+    # plot 0-values
+    #xyz = nodes[~np.any(q, axis=1)]
+    #ax.scatter(xyz[:,0], xyz[:,1], xyz[:,2],
+#               s=16, c='r', marker='*', edgecolor='r')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    return fig, ax
