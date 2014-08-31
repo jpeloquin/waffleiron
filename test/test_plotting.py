@@ -60,5 +60,5 @@ class JDomainPlotTest(fixtures.Hex8IsotropicCenterCrack):
                                           q=np.array([1, 0, 0]))
         fig, ax = feb.plotting.plot_q(zslice, length=1e-4)
         fp_out = os.path.join("test", "test_output",
-                              "jdomain_plot_test.png")
+                              "jdomain_plot_test.svg")
         fig.savefig(fp_out)

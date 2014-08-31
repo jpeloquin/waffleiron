@@ -68,9 +68,14 @@ def plot_q(elements, length=1.0):
     ax = fig.add_subplot(111, projection='3d')
     ax.scatter(qnodes[:,0], qnodes[:,1], qnodes[:,2],
                c='k', edgecolor='k', s=4)
-    ax.quiver(qnodes[:,0], qnodes[:,1], qnodes[:,2],
+    # the vector length is added to the node locations because
+    # matplotlib draws the arrows such that the head is at the
+    # provided point
+    ax.quiver(qnodes[:,0] + length*q[:,0],
+              qnodes[:,1] + length*q[:,1],
+              qnodes[:,2] + length*q[:,2],
               q[:,0], q[:,1], q[:,2],
-              color='k', length=length)
+              color='r', length=length)
     # plot 0-values
     #xyz = nodes[~np.any(q, axis=1)]
     #ax.scatter(xyz[:,0], xyz[:,1], xyz[:,2],
