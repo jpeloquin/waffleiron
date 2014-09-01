@@ -17,6 +17,22 @@ def _nstrip(string):
             return string[:i]
     return string
 
+def load_model(fpath):
+    """Loads a model (feb) and its solution (xplt).
+
+    """
+    if (fpath[-4:].lower() == '.feb'
+        or fpath[-5:].lower() == '.xplt'):
+        base, ext = os.path.splitext(fpath)
+    else:
+        base = fpath
+    fp_feb = base + '.feb'
+    fp_xplt = base + '.xplt'
+    model = feb.input.FebReader(base + '.feb').model()
+    if os.path.exists(fp_xplt):
+        soln = feb.input.XpltReader(fp_xplt)
+        model.apply_solution(soln)
+    return model
 
 def readlog(fpath):
     """Reads FEBio logfile as a list of the steps' data.
