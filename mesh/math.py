@@ -37,7 +37,7 @@ def bias_pt_series(line, n=None, type='log', minstep=None,
     v = p2 - p1
     length = np.linalg.norm(v) # line length
     if length == 0.0:
-        raise ValueError
+        raise ValueError("Line has zero length.")
     u = v / length # unit vector pointing in line direction
 
     if type == 'log':
