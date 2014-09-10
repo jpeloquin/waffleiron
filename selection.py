@@ -119,25 +119,25 @@ def element_slice(elements, v, extent=tol, axis=(0, 0, 1)):
     elements = bisect(elements, p=v2 * axis, v=-axis)
     return set(elements)
 
-def expand_element_set(superset, subset, n):
+def e_grow(selection, candidates, n):
     """Grow element selection by n elements.
 
-    subset := The growing selection.
+    seed := The growing selection.
 
-    superset := The set of elements that are candidates for growing
-    the subset.
+    candidates := The set of elements that are candidates for growing
+    the seed.
 
     """
-    subset = set(subset)
+    seed = set(selection)
     inactive_nodes = set([])
-    active_nodes = set([i for e in subset for i in e.ids])
-    candidates = set(superset) - subset
+    active_nodes = set([i for e in seed for i in e.ids])
+    candidates = set(candidates) - seed
     for iring in xrange(n):
         # Find adjacent elements
         adjacent = set(e for e in candidates
                        if any(i in active_nodes for i in e.ids))
-        # Grow the subset
-        subset = subset | adjacent
+        # Grow the seed
+        seed = seed | adjacent
         # Inactivate former boundary nodes
         inactive_nodes.update(active_nodes)
         # Get new boundary (active) nodes
@@ -145,7 +145,7 @@ def expand_element_set(superset, subset, n):
         active_nodes = nodes - inactive_nodes
         # Update list of candidates
         candidates = candidates - adjacent
-    return subset
+    return seed
 
 def faces_by_normal(elements, normal, delta=10*tol):
     """Return all faces with target normal.
