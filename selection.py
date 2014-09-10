@@ -159,17 +159,6 @@ def faces_by_normal(elements, normal, delta=10*tol):
                 faces.append(f)
     return faces
 
-def elements_with_face(mesh, face):
-    """Return elements connected to a face.
-
-    The face is represented as a sequence of nodes.  The order of
-    nodes does not matter here.
-
-    """
-    face = frozenset(face)
-    all_faces = set(frozenset(e.faces()) for e in mesh.elements)
-    raise NotImplemented
-
 def face_set(mesh, face, angle=30):
     """Select all adjacent faces with similar normals.
 
