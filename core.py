@@ -9,6 +9,7 @@ from copy import deepcopy
 import febtools as feb
 from febtools.input import XpltReader
 from febtools.element import elem_obj
+from febtools.geometry import _cross
 
 # Set tolerances
 default_tol = 10*np.finfo(float).eps
@@ -369,11 +370,12 @@ class Sequence:
         self.typ = typ
         self.extend = extend
 
-
-# define the canonical face tuple to be sorted (by rotation only)
-# such that the least node index is first
 def _canonical_face(face):
     """Return the canonical face tuple.
+
+    The canonical face tuple is the ordering of the face nodes such
+    that the lowest node id is first.  To achieve this ordering, only
+    rotational shifts are allowed.
 
     """
     i, inode = min(enumerate(face), key=itemgetter(1))

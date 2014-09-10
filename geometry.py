@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+from math import acos
+
 import numpy as np
 
 def _cross(u, v):
@@ -9,15 +12,41 @@ def _cross(u, v):
                   u[0]*v[1] - u[1]*v[0]])
     return w
 
-def face_normal(mesh, face):
-    """Return a vector normal to a face.
+def face_normal(face, mesh, config='reference'):
+    """Return the face normal vector.
+
+    config := only 'reference' supported right now
 
     """
-    pts = [mesh.nodes[i] for i in face]
-    v1 = points[f[1]] - points[f[0]]
-    v2 = points[f[-1]] - points[f[0]]
-    n = _cross(v1, v2)
-    return n
+    points = np.vstack([mesh.nodes[i] for i in face])
+    # Define vectors for two face edges, using the first face node
+    # as the origin.  For quadrilateral faces, one node is left
+    # unused.
+    v1 = points[1] - points[0]
+    v2 = points[-1] - points[0]
+    # compute the face normal
+    normal = _cross(v1, v2)
+    return normal
+
+def inter_face_angle(f1, f2, mesh, tol=2 * np.finfo(float).eps):
+    """Compute angle (radians) between two faces.
+
+    The faces are oriented tuples of node ids.  The angle returned is
+    in [0, π].
+
+    """
+    v1 = face_normal(f1, mesh)
+    v2 = face_normal(f2, mesh)
+    n1 = np.linalg.norm(v1)
+    n2 = np.linalg.norm(v2)
+    b = np.dot(v1, v2) / n1 / n2
+    if -1 - tol < b < -1:
+        b = -1
+    elif 1 < b < 1 + tol:
+        b = 1
+    angle = acos(b)
+    return angle
+
 
 def point_in_element(e, p):
     """Return true if element encloses point.

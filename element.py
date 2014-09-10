@@ -191,17 +191,10 @@ class Element:
         """List of face normals
 
         """
-        points = self.x(config)
         normals = []
         # Iterate over faces
         for f in self.face_nodes:
-            # Define vectors for two face edges, using the first face
-            # node as the origin.  For quadrilateral faces, one node
-            # is left unused.
-            v1 = points[f[1]] - points[f[0]]
-            v2 = points[f[-1]] - points[f[0]]
-            # compute the face normal
-            normals.append(_cross(v1, v2))
+            normals.append(feb.geometry.face_normal(f, self))
         return normals
 
     def faces_with_node(self, node_id):

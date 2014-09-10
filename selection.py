@@ -2,12 +2,15 @@
 """Functions for conveniently selecting nodes and elements.
 
 """
+from math import degrees, radians
 import operator
+from copy import copy
 
 import numpy as np
 
 import febtools as feb
 from febtools import _canonical_face
+from febtools.geometry import inter_face_angle, face_normal
 
 tol = np.finfo('float').eps
 
@@ -159,12 +162,41 @@ def faces_by_normal(elements, normal, delta=10*tol):
                 faces.append(f)
     return faces
 
-def face_set(mesh, face, angle=30):
+def f_grow_to_edge(faces, mesh, delta=30):
     """Select all adjacent faces with similar normals.
 
+    The selection is restricted to faces on the surface of the mesh.
+
+    faces := sequence of face tuples
+
+    delta := the angle change that defines an edge between adjacent
+    faces (degrees)
+
     """
-    faces = adj_faces(face, mesh, mode='edge')
-    raise NotImplemented
+    # work in radians internally
+    delta_deg = delta
+    delta_rad = radians(delta_deg)
+
+    f_surface = surface_faces(mesh)
+    faces = [_canonical_face(f) for f in faces]
+    # make sure given faces are on surface
+    for f in faces:
+        assert f in f_surface
+
+    f_subsurface = set(faces)
+    new_faces = set(faces)
+    while new_faces:
+        seed_faces = copy(new_faces)
+        new_faces = set()
+        for seed_face in seed_faces:
+            af = adj_faces(seed_face, mesh, mode='edge')
+            af = [f for f in af
+                  if (inter_face_angle(f, seed_face, mesh)
+                      < delta_rad)]
+            new_faces.update(af)
+        new_faces.difference_update(f_subsurface)
+        f_subsurface.update(new_faces)
+    return f_subsurface
 
 def adj_faces(face, mesh, mode='all'):
     """Return faces connected to a face.
@@ -182,7 +214,7 @@ def adj_faces(face, mesh, mode='all'):
     """
 
     def overlap(a, b):
-        """Return the type of adjacency between two faces.
+        """Return the number of shared nodes between two faces.
 
         """
         o = len(set(a) & set(b))
