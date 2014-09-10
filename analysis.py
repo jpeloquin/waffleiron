@@ -111,7 +111,8 @@ def apply_q_2d(mesh, crack_tip, q=[1, 0, 0], n=3, qtype='plateau'):
 
     return elements
 
-def apply_q_3d(domain, crack_tip, q=[1, 0, 0], qtype='plateau'):
+def apply_q_3d(domain, crack_faces, tip_nodes,
+               q=[1, 0, 0], qtype='plateau'):
     """Define q for for the J integral.
 
     domain := A list or set of elements comprising the domain.
@@ -137,11 +138,7 @@ def apply_q_3d(domain, crack_tip, q=[1, 0, 0], qtype='plateau'):
 
     # Initialize node selections
     all_nodes = set(i for e in domain for i in e.ids)
-    crack_tip = set(crack_tip) & all_nodes
-
-    # Grow a sub-selection of elements from the crack tip
-    # tip_elements = [e for e in domain if set(e.ids) & crack_tip]
-    # elements = e_grow(tip_elements, domain, n - 1)
+    tip_nodes = set(tip_nodes) & all_nodes
 
     # Find boundary nodes
     refcount = {} # how many elements each node is connected to
@@ -150,7 +147,7 @@ def apply_q_3d(domain, crack_tip, q=[1, 0, 0], qtype='plateau'):
             refcount[i] = refcount.setdefault(i, 0) + 1
     boundary_nodes = (set(k for k, v in refcount.iteritems()
                           if v < 8)
-                      | crack_tip)
+                      | tip_nodes)
     interior_nodes = all_nodes - boundary_nodes
     if not interior_nodes:
         raise SelectionException("All nodes in `elements` are boundary nodes.")
@@ -159,35 +156,18 @@ def apply_q_3d(domain, crack_tip, q=[1, 0, 0], qtype='plateau'):
     # the crack tip line (sharing at least 2 nodes), then grow the
     # selection by the same adjacency rules until reaching the edge of
     # the domain.
-    surface_faces = set(frozenset(f) for e in domain
+    surface_faces = set(f for e in domain
                         for f in e.faces()
                         if set(f) <= boundary_nodes)
-    active_nodes = set(crack_tip)
-    # ^ faces connected to these nodes will be added to crack_faces
-    candidates = surface_faces
-    crack_faces = set()
-    new_faces = True
-    while new_faces:
-        # Find adjacent crack line faces
-        new_faces = [f for f in candidates
-                     if (len(f & active_nodes) > 1) # ≥ 2 shared nodes
-                     and (f not in crack_faces)] # not already added
-        new_nodes = set([i for f in new_faces for i in f
-                         if i not in active_nodes])
-        crack_faces.update(new_faces)
-        # move the active front
-        active_nodes = new_nodes
-    crack_nodes_q0 = active_nodes
+    non_crack_faces = surface_faces - crack_faces
+    crack_surface_nodes = set([i for f in crack_faces
+                               for i in f])
+    non_crack_face_nodes = set([i for f in non_crack_faces
+                                for i in f])
+    crack_nodes_q0 = non_crack_face_nodes & crack_surface_nodes
 
-    # Find crack nodes on interior of crack face surface mesh
-    refcount = {}
-    for f in crack_faces:
-        for i in f:
-            refcount[i] = refcount.setdefault(i, 0) + 1
-    crack_surface_nodes_interior = set(k for k, v
-                                       in refcount.iteritems()
-                                       if v == 4)
-    crack_nodes_q1 = crack_surface_nodes_interior - crack_nodes_q0
+    crack_nodes_q1 = crack_surface_nodes - crack_nodes_q0
+
     # Apply
     if qtype == 'plateau':
         q0_nodes = boundary_nodes - crack_nodes_q1
