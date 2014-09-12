@@ -109,10 +109,6 @@ class Element(object):
         the mesh.  The list elements can be scalar or vector valued
         (but must be consistent).
 
-        For example, to obtain the centroid of a 2d element:
-
-            element.interp((0,0), element.xnode_mesh)
-
         """
         v = self.properties[prop] # nodal values
         return np.dot(v.T, self.N(*r))
@@ -327,7 +323,9 @@ class Tri3(Element2D):
 
         """
         x = self.x(config)
-        return self.interp((1.0/3.0, 1.0/3.0), x)
+        r = (1.0/3.0, 1.0/3.0)
+        c = np.dot(x.T, self.N(*r))
+        return c
 
     @staticmethod
     def N(r, s, t=None):
