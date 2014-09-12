@@ -145,25 +145,29 @@ def write_feb(model, fpath):
 
     # Elements and ElementData sections
 
-    # assemble elements into blocks with like type and material
+    # Assemble elements into blocks with like type and material.
+    # Elemsets uses material instances as keys.  Each item is a
+    # dictionary using element classes as keys,
+    # with items being tuples of (element_id, element).
     elemsets= {}
     for i, elem in enumerate(model.mesh.elements):
-        typ = elem.__class__.__name__.lower()
         mid = material_ids[elem.material]
-        elemsets.setdefault(elem.material, {}).setdefault(elem.__class__, []).append(elem)
+        subdict = elemsets.setdefault(elem.material, {})
+        like_elements = subdict.setdefault(elem.__class__, [])
+        like_elements.append((i, elem))
 
     # write element sets
     e_elementdata = ET.SubElement(Geometry, 'ElementData')
     for mat, d in elemsets.iteritems():
-        for typ, elems in d.iteritems():
+        for ecls, like_elems in d.iteritems():
             e_elements = ET.SubElement(Geometry, 'Elements',
-                mat=str(material_ids[elem.material] + 1),
-                type=typ.__name__.lower())
-            for i, elem in enumerate(elems):
+                                       mat=str(material_ids[mat] + 1),
+                                       type=ecls.__name__.lower())
+            for i, e in like_elems:
                 # write the element's node ids
                 e_elem = ET.SubElement(e_elements, 'elem',
                                        id=str(i + 1))
-                e_elem.text = ','.join(str(i + 1) for i in elem.ids)
+                e_elem.text = ','.join(str(i + 1) for i in e.ids)
                 # write any defined element data
                 tagged = False
                 # ^ track if an element tag has been created in
