@@ -185,6 +185,15 @@ def write_feb(model, fpath):
                         tagged = True
                     ET.SubElement(e_edata, 'fiber').text = ','.join(str(a) for a in elem.properties['v_fiber'])
 
+    # FEBio needs Nodes to precede Elements to precede ElementData.
+    # It apparently has very limited xml parsing.
+    geo_subs = {'Nodes': [],
+                'Elements': [],
+                'ElementData': []}
+    for e in Geometry:
+        geo_subs[e.tag].append(e)
+    Geometry[:] = geo_subs['Nodes'] + geo_subs['Elements'] + geo_subs['ElementData']
+
     # Boundary section (fixed nodal BCs)
     for axis, nodeset in model.fixed_nodes.iteritems():
         if nodeset:
