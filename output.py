@@ -142,32 +142,44 @@ def write_feb(model, fpath):
         tag.attrib['id'] = str(i + 1)
         Material.append(tag)
 
-    # Elements section
+
+    # Elements and ElementData sections
+
     # assemble elements into blocks with like type and material
     elemsets= {}
     for i, elem in enumerate(model.mesh.elements):
         typ = elem.__class__.__name__.lower()
         mid = material_ids[elem.material]
         elemsets.setdefault(elem.material, {}).setdefault(elem.__class__, []).append(elem)
+
     # write element sets
+    e_elementdata = ET.SubElement(Geometry, 'ElementData')
     for mat, d in elemsets.iteritems():
         for typ, elems in d.iteritems():
             e_elements = ET.SubElement(Geometry, 'Elements',
                 mat=str(material_ids[elem.material] + 1),
                 type=typ.__name__.lower())
             for i, elem in enumerate(elems):
+                # write the element's node ids
                 e_elem = ET.SubElement(e_elements, 'elem',
                                        id=str(i + 1))
                 e_elem.text = ','.join(str(i + 1) for i in elem.ids)
-
-        # # write thicknesses for shells
-        # if label == 'tri3' or label == 'quad4':
-        #     ElementData = root.find('Geometry/ElementData')
-        #     if ElementData is None:
-        #         ElementData = ET.SubElement(Geometry, 'ElementData')
-        #     e = ET.SubElement(ElementData, 'element', id=str(feb_eid))
-        #     t = ET.SubElement(e, 'thickness')
-        #     t.text = '0.001, 0.001, 0.001'
+                # write any defined element data
+                tagged = False
+                # ^ track if an element tag has been created in
+                # ElementData for the current element
+                if 'thickness' in elem.properties:
+                    if not tagged:
+                        e_edata = ET.SubElement(e_elementdata, 'element',
+                                                id=str(i + 1))
+                        tagged = True
+                    ET.SubElement(e_edata, 'thickness').text = ','.join(str(t) for t in elem.properties['thickness'])
+                if 'v_fiber' in elem.properties:
+                    if not tagged:
+                        e_edata = ET.SubElement(e_elementdata, 'element',
+                                                id=str(i + 1))
+                        tagged = True
+                    ET.SubElement(e_edata, 'fiber').text = ','.join(str(a) for a in elem.properties['v_fiber'])
 
     # Boundary section (fixed nodal BCs)
     for axis, nodeset in model.fixed_nodes.iteritems():
