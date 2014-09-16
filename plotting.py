@@ -38,7 +38,7 @@ def scalar_field(mesh, fn, pts):
             x = pts[i, j, 0]
             y = pts[i, j, 1]
             z = pts[i, j, 2]
-            elems = mesh.elements_containing_point((x, y, z))
+            elems = feb.selection.elements_containing_point((x, y, z), mesh.elements)
             if not elems:
                 field[i, j] = None
             else:

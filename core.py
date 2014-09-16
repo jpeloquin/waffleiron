@@ -269,22 +269,6 @@ class Mesh:
             elements = elements + self.elem_with_node[idx]
         return set(elements)
 
-    def elements_containing_point(self, point):
-        """Return element(s) containing a point
-
-        Returns [] if no elements contain point.
-
-        """
-        p = np.array(point)
-        candidates = [e for e in self.elements
-                      if (np.all(np.max(e.nodes, axis=0)
-                                 >= p - default_tol)
-                          and np.all(np.min(e.nodes, axis=0)
-                                     <= p + default_tol))]
-        elements = [e for e in candidates
-                    if feb.geometry.point_in_element(e, point)]
-        return elements
-
     def merge(self, other, candidates='auto', tol=default_tol):
         """Merge this mesh with another
 

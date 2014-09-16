@@ -12,7 +12,7 @@ import febtools as feb
 from febtools import _canonical_face
 from febtools.geometry import inter_face_angle, face_normal
 
-tol = np.finfo('float').eps
+default_tol = 10*np.finfo(float).eps
 
 class ElementSelection:
     def __init__(self, mesh, elements=None):
@@ -33,6 +33,22 @@ class ElementSelection:
             self.elements = set(mesh.elements)
         else:
             self.elements = elements
+
+def elements_containing_point(point, elements):
+    """Return element(s) containing a point
+
+    Returns [] if no elements contain point.
+
+    """
+    p = np.array(point)
+    candidates = [e for e in elements
+                  if (np.all(np.max(e.nodes, axis=0)
+                             >= p - default_tol)
+                      and np.all(np.min(e.nodes, axis=0)
+                                 <= p + default_tol))]
+    elements = [e for e in candidates
+                if feb.geometry.point_in_element(e, point)]
+    return elements
 
 def corner_nodes(mesh):
     """Return ids of corner nodes.
@@ -74,7 +90,7 @@ def bisect(elements, p, v):
 
     v := A vector (vx, vy, vz) normal to the plane.
 
-    The elements reterned are those either intersected by the cut
+    The elements returned are those either intersected by the cut
     plane or on the side of the plane towards which `v` points.
 
     """
@@ -92,7 +108,8 @@ def bisect(elements, p, v):
     eset = [e for e in elements if on_pside(e)]
     return set(eset)
 
-def element_slice(elements, v, extent=tol, axis=(0, 0, 1)):
+def element_slice(elements, v, extent=default_tol,
+                  axis=(0, 0, 1)):
     """Return a slice of elements.
 
     v := The distance along `axis` at which the slice plane is
@@ -150,7 +167,7 @@ def e_grow(selection, candidates, n):
         candidates = candidates - adjacent
     return seed
 
-def faces_by_normal(elements, normal, delta=10*tol):
+def faces_by_normal(elements, normal, delta=default_tol):
     """Return all faces with target normal.
 
     """
