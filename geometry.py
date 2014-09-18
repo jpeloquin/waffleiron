@@ -3,6 +3,8 @@ from math import acos
 
 import numpy as np
 
+tol = np.finfo(float).eps
+
 def _cross(u, v):
     """Cross product for two vectors in R3.
 
@@ -72,6 +74,6 @@ def point_in_element(e, p):
     for o, n in zip(bdry_pts, normals):
         v = p - o
         d = np.dot(v, n)
-        if d > 0:
+        if d > tol:
             return False
     return True
