@@ -79,18 +79,23 @@ class CenterCrackHex8(fixtures.Hex8IsotropicCenterCrack):
     def test_right_tip(self):
         G = self._griffith()
         # Calculate J
-        tip_line = [i for i, (x, y, z)
-                    in enumerate(self.model.mesh.nodes)
-                    if np.allclose(x, 1e-3) and np.allclose(y, 0)]
+
         zslice = feb.selection.element_slice(self.model.mesh.elements,
                                              v=0e-3, axis=(0, 0, 1))
         nodes = [n for e in zslice for n in e.nodes]
         maxima = np.max(nodes, axis=0)
         minima = np.min(nodes, axis=0)
         deltaL = maxima[2] - minima[2]
-        domain = feb.analysis.apply_q_3d(zslice, tip_line, n=3,
+
+        # define integration domain
+        domain = [e for e in zslice
+                  if self.tip_line_r.intersection(e.ids)]
+        domain = feb.selection.e_grow(domain, zslice, n=2)
+        domain = feb.analysis.apply_q_3d(domain, self.crack_faces,
+                                         self.tip_line_r,
                                          q=[1, 0, 0])
         assert len(domain) == 6 * 6 * 2
+
         jbdl = feb.analysis.jintegral(domain)
         jbar = jbdl / (0.5 * deltaL)
         # 0.5 * deltaL is standing in for ∫q(η)dη; this is ok for a
@@ -108,18 +113,22 @@ class CenterCrackHex8(fixtures.Hex8IsotropicCenterCrack):
         """Test if J is valid for left crack tip.
 
         """
-        tip_line = [i for i, (x, y, z)
-                    in enumerate(self.model.mesh.nodes)
-                    if np.allclose(x, -1e-3) and np.allclose(y, 0)]
         zslice = feb.selection.element_slice(self.model.mesh.elements,
                                              v=0e-3, axis=(0, 0, 1))
         nodes = [n for e in zslice for n in e.nodes]
         maxima = np.max(nodes, axis=0)
         minima = np.min(nodes, axis=0)
         deltaL = maxima[2] - minima[2]
-        domain = feb.analysis.apply_q_3d(zslice, tip_line, n=3,
+
+        # define integration domain
+        domain = [e for e in zslice
+                  if self.tip_line_l.intersection(e.ids)]
+        domain = feb.selection.e_grow(domain, zslice, n=2)
+        domain = feb.analysis.apply_q_3d(domain, self.crack_faces,
+                                         self.tip_line_l,
                                          q=[-1, 0, 0])
         assert len(domain) == 6 * 6 * 2
+
         jbdl = feb.analysis.jintegral(domain)
         jbar = jbdl / (0.5 * deltaL)
         # 0.5 * deltaL is standing in for ∫q(η)dη; this is ok for a
@@ -141,11 +150,6 @@ class CenterCrackHex8(fixtures.Hex8IsotropicCenterCrack):
         """
         mesh = self.model.mesh
         G = self._griffith()
-        # Geometry (easier before rotation)
-        tip_line_r = [i for i, (x, y, z)
-                      in enumerate(self.model.mesh.nodes)
-                      if np.allclose(x, 1e-3) and np.allclose(y, 0)]
-        # ^ right crack tip
 
         # Create object transform (rotation matrix)
         angle = radians(30)
@@ -167,10 +171,15 @@ class CenterCrackHex8(fixtures.Hex8IsotropicCenterCrack):
         deltaL = np.max(nodes, axis=0)[2] - np.min(nodes, axis=0)[2]
 
         # Right tip
-        domain_r = feb.analysis.apply_q_3d(zslice, tip_line_r, n=3,
-                                           q=[cos(angle), sin(angle), 0])
-        assert len(domain_r) == 6 * 6 * 2
-        jbar_r = feb.analysis.jintegral(domain_r) / (0.5 * deltaL)
+        domain = [e for e in zslice
+                  if self.tip_line_r.intersection(e.ids)]
+        domain = feb.selection.e_grow(domain, zslice, n=2)
+        domain = feb.analysis.apply_q_3d(domain, self.crack_faces,
+                                         self.tip_line_r,
+                                         q=[cos(angle), sin(angle), 0])
+        assert len(domain) == 6 * 6 * 2
+
+        jbar_r = feb.analysis.jintegral(domain) / (0.5 * deltaL)
         npt.assert_allclose(jbar_r, G, rtol=0.07)
         # Test for consistency with value calculated when code
         # initially verified
@@ -183,10 +192,6 @@ class CenterCrackHex8(fixtures.Hex8IsotropicCenterCrack):
         mesh = self.model.mesh
         G = self._griffith()
         # Geometry (easier before rotation)
-        tip_line_l = [i for i, (x, y, z)
-                      in enumerate(self.model.mesh.nodes)
-                      if np.allclose(x, -1e-3) and np.allclose(y, 0)]
-        # ^ left crack tip
 
         # Create object transform (rotation matrix)
         angle = radians(30)
@@ -204,12 +209,21 @@ class CenterCrackHex8(fixtures.Hex8IsotropicCenterCrack):
         # Calculate J
         zslice = feb.selection.element_slice(self.model.mesh.elements,
                                              v=0e-3, axis=(0, 0, 1))
+
         nodes = [n for e in zslice for n in e.nodes]
         deltaL = np.max(nodes, axis=0)[2] - np.min(nodes, axis=0)[2]
-        domain_l = feb.analysis.apply_q_3d(zslice, tip_line_l, n=3,
-                                           q=[-cos(angle), -sin(angle), 0])
-        assert len(domain_l) == 6 * 6 * 2
-        jbar_l = feb.analysis.jintegral(domain_l) / (0.5 * deltaL)
+
+        # define integration domain
+                # Right tip
+        domain = [e for e in zslice
+                  if self.tip_line_l.intersection(e.ids)]
+        domain = feb.selection.e_grow(domain, zslice, n=2)
+        domain = feb.analysis.apply_q_3d(domain, self.crack_faces,
+                                         self.tip_line_l,
+                                         q=[-cos(angle), -sin(angle), 0])
+        assert len(domain) == 6 * 6 * 2
+
+        jbar_l = feb.analysis.jintegral(domain) / (0.5 * deltaL)
         npt.assert_allclose(jbar_l, G, rtol=0.07)
         # Test for consistency with value calculated when code
         # initially verified
@@ -268,7 +282,7 @@ class CenterCrackQuad4(unittest.TestCase):
         # Felderson; accurate to 0.3% for a/W ≤ 0.35
         G = K_I**2.0 / self.E
         id_crack_tip = [self.model.mesh.find_nearest_node(*(1e-3, 0.0, 0.0))]
-        elements = apply_q_2d(self.model.mesh, id_crack_tip, n=3,
+        elements = apply_q_2d(self.model.mesh, id_crack_tip, n=2,
                               q=[1, 0, 0])
         J = jintegral(elements)
         npt.assert_allclose(J, G, rtol=0.05)

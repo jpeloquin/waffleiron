@@ -133,6 +133,9 @@ def apply_q_3d(domain, crack_faces, tip_nodes,
     are connected to 6 edges (8 elements).
 
     """
+    if not domain:
+        raise SelectionException("Integration domain is an empty set.")
+
     # Define q vector
     q = np.array(q)
 

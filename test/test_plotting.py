@@ -1,9 +1,10 @@
-import febtools as feb
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import unittest
 import os
+
+import febtools as feb
 
 import fixtures
 
@@ -58,9 +59,20 @@ class JDomainPlotTest(fixtures.Hex8IsotropicCenterCrack):
         tip_line = [i for i, (x, y, z)
                     in enumerate(self.model.mesh.nodes)
                     if np.allclose(x, b[0]) and np.allclose(y, b[1])]
+        tip_line = set(tip_line)
         zslice = feb.selection.element_slice(self.model.mesh.elements,
             v=0.0, axis=np.array([0, 0, 1]))
-        qdomain = feb.analysis.apply_q_3d(zslice, tip_line, n=5,
+
+        # find the crack faces
+        candidates = feb.selection.surface_faces(self.model.mesh)
+        f_seed = [f for f in candidates
+                  if (len(set(f) & set(tip_line)) > 1)]
+        crack_faces = feb.selection.f_grow_to_edge(f_seed, self.model.mesh)
+        
+        qdomain = [e for e in self.model.mesh.elements
+                   if tip_line.intersection(e.ids)]
+        qdomain = feb.selection.e_grow(qdomain, zslice, n=5)
+        qdomain = feb.analysis.apply_q_3d(zslice, crack_faces, tip_line,
                                           q=np.array([1, 0, 0]))
         fig, ax = feb.plotting.plot_q(zslice, length=1e-4)
         fp_out = os.path.join("test", "test_output",

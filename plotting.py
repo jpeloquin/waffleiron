@@ -5,6 +5,8 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
+import febtools as feb
+
 def scalar_field(mesh, fn, pts):
     """Return a field evaluated over a grid of points.
 
