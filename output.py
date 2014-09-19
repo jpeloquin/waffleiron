@@ -142,32 +142,57 @@ def write_feb(model, fpath):
         tag.attrib['id'] = str(i + 1)
         Material.append(tag)
 
-    # Elements section
-    # assemble elements into blocks with like type and material
+
+    # Elements and ElementData sections
+
+    # Assemble elements into blocks with like type and material.
+    # Elemsets uses material instances as keys.  Each item is a
+    # dictionary using element classes as keys,
+    # with items being tuples of (element_id, element).
     elemsets= {}
     for i, elem in enumerate(model.mesh.elements):
-        typ = elem.__class__.__name__.lower()
         mid = material_ids[elem.material]
-        elemsets.setdefault(elem.material, {}).setdefault(elem.__class__, []).append(elem)
+        subdict = elemsets.setdefault(elem.material, {})
+        like_elements = subdict.setdefault(elem.__class__, [])
+        like_elements.append((i, elem))
+
     # write element sets
+    e_elementdata = ET.SubElement(Geometry, 'ElementData')
     for mat, d in elemsets.iteritems():
-        for typ, elems in d.iteritems():
+        for ecls, like_elems in d.iteritems():
             e_elements = ET.SubElement(Geometry, 'Elements',
-                mat=str(material_ids[elem.material] + 1),
-                type=typ.__name__.lower())
-            for i, elem in enumerate(elems):
+                                       mat=str(material_ids[mat] + 1),
+                                       type=ecls.__name__.lower())
+            for i, e in like_elems:
+                # write the element's node ids
                 e_elem = ET.SubElement(e_elements, 'elem',
                                        id=str(i + 1))
-                e_elem.text = ','.join(str(i + 1) for i in elem.ids)
+                e_elem.text = ','.join(str(i + 1) for i in e.ids)
+                # write any defined element data
+                tagged = False
+                # ^ track if an element tag has been created in
+                # ElementData for the current element
+                if 'thickness' in elem.properties:
+                    if not tagged:
+                        e_edata = ET.SubElement(e_elementdata, 'element',
+                                                id=str(i + 1))
+                        tagged = True
+                    ET.SubElement(e_edata, 'thickness').text = ','.join(str(t) for t in elem.properties['thickness'])
+                if 'v_fiber' in elem.properties:
+                    if not tagged:
+                        e_edata = ET.SubElement(e_elementdata, 'element',
+                                                id=str(i + 1))
+                        tagged = True
+                    ET.SubElement(e_edata, 'fiber').text = ','.join(str(a) for a in elem.properties['v_fiber'])
 
-        # # write thicknesses for shells
-        # if label == 'tri3' or label == 'quad4':
-        #     ElementData = root.find('Geometry/ElementData')
-        #     if ElementData is None:
-        #         ElementData = ET.SubElement(Geometry, 'ElementData')
-        #     e = ET.SubElement(ElementData, 'element', id=str(feb_eid))
-        #     t = ET.SubElement(e, 'thickness')
-        #     t.text = '0.001, 0.001, 0.001'
+    # FEBio needs Nodes to precede Elements to precede ElementData.
+    # It apparently has very limited xml parsing.
+    geo_subs = {'Nodes': [],
+                'Elements': [],
+                'ElementData': []}
+    for e in Geometry:
+        geo_subs[e.tag].append(e)
+    Geometry[:] = geo_subs['Nodes'] + geo_subs['Elements'] + geo_subs['ElementData']
 
     # Boundary section (fixed nodal BCs)
     for axis, nodeset in model.fixed_nodes.iteritems():

@@ -26,7 +26,7 @@ def elem_obj(element, nodes, eid=None):
     return etype(element, nodes, elem_id=eid)
 
 
-class Element:
+class Element(object):
     """Data and metadata for an element.
 
     Attributes
@@ -67,7 +67,7 @@ class Element:
         # Nodal coordinates
         self.nodes = np.array(nodes)
         assert self.nodes.shape[1] >= 2
-            
+
     @classmethod
     def from_ids(cls, ids, nodelist, material=None):
         """Create an element from nodal indices.
@@ -108,10 +108,6 @@ class Element:
         values := A list with a 1:1 mapping to the list of nodes in
         the mesh.  The list elements can be scalar or vector valued
         (but must be consistent).
-
-        For example, to obtain the centroid of a 2d element:
-
-            element.interp((0,0), element.xnode_mesh)
 
         """
         v = self.properties[prop] # nodal values
@@ -310,13 +306,19 @@ class Tri3(Element2D):
     # oriented so positive normal follows node ordering convention
     face_nodes = [[0, 1, 2]]
 
+    def __init__(self, *args, **kwargs):
+        super(Tri3, self).__init__(*args, **kwargs)
+        self.properties['thickness'] = (1.0, 1.0, 1.0)
+
     @property
     def centroid(self, config='reference'):
         """Centroid of element.
 
         """
         x = self.x(config)
-        return self.interp((1.0/3.0, 1.0/3.0), x)
+        r = (1.0/3.0, 1.0/3.0)
+        c = np.dot(x.T, self.N(*r))
+        return c
 
     @staticmethod
     def N(r, s, t=None):
@@ -472,6 +474,10 @@ class Quad4(Element2D):
           ( a, a),
           (-a, a))
     gwt = (1, 1, 1, 1)          # Gauss weights
+
+    def __init__(self, *args, **kwargs):
+        super(Quad4, self).__init__(*args, **kwargs)
+        self.properties['thickness'] = (1.0, 1.0, 1.0, 1.0)
 
     @staticmethod
     def N(r, s):
