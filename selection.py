@@ -47,7 +47,7 @@ def elements_containing_point(point, elements):
                       and np.all(np.min(e.nodes, axis=0)
                                  <= p + default_tol))]
     elements = [e for e in candidates
-                if feb.geometry.point_in_element(e, point)]
+                if feb.geometry.point_in_element(e, p)]
     return elements
 
 def corner_nodes(mesh):
