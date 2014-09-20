@@ -12,7 +12,6 @@ fp_out = os.path.join("test", "test_output")
 if not os.path.exists(fp_out):
     os.mkdir(fp_out)
 
-#@unittest.skip("Very slow with bisection used to locate element containing a point.")
 class ScalarFieldTest(unittest.TestCase):
     
     def setUp(self):

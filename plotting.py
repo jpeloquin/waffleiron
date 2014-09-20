@@ -31,14 +31,16 @@ def scalar_field(mesh, fn, pts):
     if pts.shape[2] == 2:
         zv = np.zeros(pts[:,:,0].shape)
         pts = np.concatenate([pts, zv[...,np.newaxis]], axis=2)
-    
+
+    bb = feb.core._e_bb(mesh.elements)
+
     field = np.empty(pts.shape[0:2])
     for i in xrange(pts.shape[0]):
         for j in xrange(pts.shape[1]):
             x = pts[i, j, 0]
             y = pts[i, j, 1]
             z = pts[i, j, 2]
-            elems = feb.selection.elements_containing_point((x, y, z), mesh.elements)
+            elems = feb.selection.elements_containing_point((x, y, z), mesh.elements, bb=bb)
             if not elems:
                 field[i, j] = None
             else:
@@ -57,7 +59,7 @@ def plot_q(elements, length=1.0):
     """Plot nodal q vectors in elements.
 
     Requires matplotlib ≥ 1.4.0
-    
+
     """
     # get subset of elements that actually has q values
     qelements = [e for e in elements if 'q' in e.properties]
