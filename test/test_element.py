@@ -101,14 +101,6 @@ class ElementMethodsTestQuad4(unittest.TestCase):
         self.model = febreader.model()
         self.model.apply_solution(self.soln)
 
-    def test_physical_to_natural_outside(self):
-        """Test if an exception is raised when the computed natural
-        coordinates are outside an element.
-
-        """
-        e = self.model.mesh.elements[0]
-        self.assertRaises(Exception,
-                          e.to_natural, (-10.1e-3, -9.5e-3, 0.0))
 
 class FTestTri3(unittest.TestCase):
     """Test F tensor calculations for Tri3 mesh.
