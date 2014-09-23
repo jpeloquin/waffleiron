@@ -38,26 +38,32 @@ class Hex8ElementTest(unittest.TestCase):
         self.l = 2.5
         self.h = 4.2
 
-        c = np.array([2.0, -1.4, 3.1,
-                      -1.0, 2.5, 0.7])
+        c = np.array([10.0,
+                      2.0, -1.4, 3.1,
+                      -1.0, 2.5, 0.7,
+                      0.5])
+
         def f(p, c=c):
-            return (10.0
-                    + c[0] * p[0]
-                    + c[1] * p[1]
-                    + c[2] * p[2]
-                    + c[3] * p[0] * p[1]
-                    + c[4] * p[0] * p[2]
-                    + c[5] * p[1] * p[2])
+            return (c[0]
+                    + c[1] * p[0]
+                    + c[2] * p[1]
+                    + c[3] * p[2]
+                    + c[4] * p[0] * p[1]
+                    + c[5] * p[0] * p[2]
+                    + c[6] * p[1] * p[2]
+                    + c[7] * p[0] * p[1] * p[2])
 
         def df(p, c=c):
-            return np.array([c[0] + c[3] * p[1] + c[4] * p[2],
-                             c[1] + c[3] * p[0] + c[5] * p[2],
-                             c[2] + c[4] * p[0] + c[5] * p[1]])
+            a = np.array([c[1] + c[4] * p[1] + c[5] * p[2] + c[7] * p[1] * p[2],
+                             c[2] + c[4] * p[0] + c[6] * p[2] + c[7] * p[0] * p[2],
+                             c[3] + c[5] * p[0] + c[6] * p[1] + c[7] * p[0] * p[1]])
+            return a
 
         def ddf(p, c=c):
-            return np.array([[0.0, c[3], c[4]],
-                             [c[3], 0.0, c[5]],
-                             [c[4], c[5], 0.0]])
+            a = np.array([[0.0, c[4] + c[7] * p[2], c[5] + c[7] * p[1]],
+                          [c[4] + c[7] * p[2], 0.0, c[6] + c[7] * p[0]],
+                          [c[5] + c[7] * p[1], c[6] + c[7] * p[0], 0.0]])
+            return a
 
         self.f = f
         self.df = df
