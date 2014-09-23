@@ -1,7 +1,7 @@
 import febtools as feb
 import numpy as np
 import numpy.testing as npt
-import unittest, os 
+import unittest, os
 
 def f_tensor_logfile(elemdata, step, eid):
     """Return F tensor read from a logfile.
@@ -22,21 +22,49 @@ def f_tensor_logfile(elemdata, step, eid):
     return F
 
 
-class Hex8Element(unittest.TestCase):
+class Hex8ElementTest(unittest.TestCase):
 
     def setUp(self):
         nodes = [(-2, -1.5, -3),
-                 (2, -1.5, -3),
-                 (2, 1.0, -3),
+                 ( 2, -1.5, -3),
+                 ( 2, 1.0, -3),
                  (-2, 1.0, -3),
                  (-2, -1.5, 1.2),
-                 (2, -1.5, 1.2),
-                 (2, 1.0, 1.2),
+                 ( 2, -1.5, 1.2),
+                 ( 2, 1.0, 1.2),
                  (-2, 1.0, 1.2)]
         self.element = feb.element.Hex8(nodes)
         self.w = 4.0
         self.l = 2.5
         self.h = 4.2
+
+        c = np.array([2.0, -1.4, 3.1,
+                      -1.0, 2.5, 0.7])
+        def f(p, c=c):
+            return (10.0
+                    + c[0] * p[0]
+                    + c[1] * p[1]
+                    + c[2] * p[2]
+                    + c[3] * p[0] * p[1]
+                    + c[4] * p[0] * p[2]
+                    + c[5] * p[1] * p[2])
+
+        def df(p, c=c):
+            return np.array([c[0] + c[3] * p[1] + c[4] * p[2],
+                             c[1] + c[3] * p[0] + c[5] * p[2],
+                             c[2] + c[4] * p[0] + c[5] * p[1]])
+
+        def ddf(p, c=c):
+            return np.array([[0.0, c[3], c[4]],
+                             [c[3], 0.0, c[5]],
+                             [c[4], c[5], 0.0]])
+
+        self.f = f
+        self.df = df
+        self.ddf = ddf
+
+        v = np.array([f(pt) for pt in self.element.x()])
+        self.element.properties['scalar_test'] = v
 
     def test_j(self):
         desired = np.array([[self.w / 2, 0, 0],
@@ -50,24 +78,39 @@ class Hex8Element(unittest.TestCase):
             actual = self.element.j(pt, config='reference')
             npt.assert_allclose(actual, desired, atol=np.spacing(1))
 
-    def test_dinterp_1d(self):
-        dx = 1.5
-        dy = -0.8
-        dz = 0.7
-        deltax = self.w * dx
-        deltay = self.l * dy
-        deltaz = self.h * dz
-        self.element.properties['testval'] = np.array(
-            (0.0, deltax,
-             deltax + deltay, deltay,
-             deltaz, deltax + deltaz,
-             deltax + deltay + deltaz, deltay + deltaz))
-        desired = np.array([dx, dy, dz])
-        actual = self.element.dinterp((0, 0, 0), prop='testval')
-        npt.assert_allclose(actual, desired)
-        for pt in self.element.gloc:
-            actual = self.element.dinterp(pt, prop='testval')
+    def test_shape_fn(self):
+        """Test calculation of node positions from nat coords.
+
+        """
+        nodes = self.element.x()
+        for node, r in zip(nodes, self.element.vloc):
+            desired = np.dot(self.element.x().T,
+                             self.element.N(*r))
+            actual = node
             npt.assert_allclose(actual, desired)
+
+    def test_dinterp_scalar(self):
+        """Test first derivative against linear gradients.
+
+        """
+        for r in self.element.gloc:
+            pt = self.element.interp(r, prop='position')
+            desired = self.df(pt)
+            actual = self.element.dinterp(r, prop='scalar_test')
+            npt.assert_allclose(actual, desired)
+
+    def test_ddinterp_scalr(self):
+        """Test the second derivative against linear gradients.
+
+        The second derivative of a linear gradient should equal zero.
+
+        """
+        for r in self.element.gloc:
+            pt = self.element.interp(r, prop='position')
+            desired = self.ddf(pt)
+            actual = self.element.ddinterp(r, prop='scalar_test')
+            npt.assert_allclose(actual, desired,
+                                atol=10*np.finfo(float).eps)
 
     def test_integration_volume(self):
         truth = self.w * self.l * self.h

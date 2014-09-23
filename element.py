@@ -110,7 +110,10 @@ class Element(object):
         (but must be consistent).
 
         """
-        v = self.properties[prop] # nodal values
+        if prop == 'position':
+            v = self.x()
+        else:
+            v = self.properties[prop] # nodal values
         return np.dot(v.T, self.N(*r))
 
     def dinterp(self, r, prop='displacement'):
@@ -124,10 +127,24 @@ class Element(object):
         """
         v = self.properties[prop] # nodal values
         j = self.j(r)
-        jinv = np.linalg.pinv(j).T
+        jinv = np.linalg.pinv(j)
         ddr = np.vstack(self.dN(*r))
         dvdr = np.dot(v.T, ddr)
-        dvdx = np.dot(jinv, dvdr.T).T
+        # if len(v.shape) == 1:
+        #     import pdb; pdb.set_trace()
+        dvdx = np.dot(jinv.T, dvdr.T).T
+        return dvdx
+
+    def ddinterp(self, r, prop='displacement'):
+        values = self.properties[prop]
+        j = self.j(r)
+        jinv = np.linalg.pinv(j)
+        derivatives = self.ddN(*r)
+        dvdx = np.zeros((3, 3))
+        dvdr_sum = np.zeros((3, 3))
+        dvdr = sum(np.dot(v.T, d)
+                   for v, d in zip(values, derivatives))
+        dvdx = np.dot(np.dot(jinv, dvdr.T), jinv.T).T
         return dvdx
 
     def f(self, r):
@@ -372,7 +389,17 @@ class Hex8(Element3D):
                   (4, 5, 6, 7),
                   (0, 3, 2, 1))
 
-    # Guass point locations
+    # Vertex point locations
+    vloc = ((-1.0, -1.0, -1.0),
+            ( 1.0, -1.0, -1.0),
+            ( 1.0,  1.0, -1.0),
+            (-1.0,  1.0, -1.0),
+            (-1.0, -1.0,  1.0),
+            ( 1.0, -1.0,  1.0),
+            ( 1.0,  1.0,  1.0),
+            (-1.0,  1.0,  1.0))
+
+    # Gauss point locations
     g = 1.0 / 3.0**0.5
     gloc = ((-g, -g, -g),
             ( g, -g, -g),
@@ -382,6 +409,7 @@ class Hex8(Element3D):
             ( g, -g,  g),
             ( g,  g,  g),
             (-g,  g,  g))
+
     # Guass weights
     gwt = (1, 1, 1, 1, 1, 1, 1, 1)
 
@@ -393,14 +421,14 @@ class Hex8(Element3D):
 
         """
         n = [0.0] * 8
-        n[0] = 1. / 8. * (1 - r) * (1 - s) * (1 - t)
-        n[1] = 1. / 8. * (1 + r) * (1 - s) * (1 - t)
-        n[2] = 1. / 8. * (1 + r) * (1 - s) * (1 - t)
-        n[3] = 1. / 8. * (1 - r) * (1 - s) * (1 - t)
-        n[4] = 1. / 8. * (1 - r) * (1 - s) * (1 - t)
-        n[5] = 1. / 8. * (1 + r) * (1 - s) * (1 - t)
-        n[6] = 1. / 8. * (1 + r) * (1 - s) * (1 - t)
-        n[7] = 1. / 8. * (1 - r) * (1 - s) * (1 - t)
+        n[0] = 0.125 * (1 - r) * (1 - s) * (1 - t)
+        n[1] = 0.125 * (1 + r) * (1 - s) * (1 - t)
+        n[2] = 0.125 * (1 + r) * (1 + s) * (1 - t)
+        n[3] = 0.125 * (1 - r) * (1 + s) * (1 - t)
+        n[4] = 0.125 * (1 - r) * (1 - s) * (1 + t)
+        n[5] = 0.125 * (1 + r) * (1 - s) * (1 + t)
+        n[6] = 0.125 * (1 + r) * (1 + s) * (1 + t)
+        n[7] = 0.125 * (1 - r) * (1 + s) * (1 + t)
         return n
 
     @staticmethod
@@ -409,33 +437,33 @@ class Hex8(Element3D):
 
         """
         dn = [np.zeros(3) for i in xrange(8)]
-        # d/dr
-        dn[0][0] = -1. / 8. * (1 - s) * (1 - t)
-        dn[1][0] =  1. / 8. * (1 - s) * (1 - t)
-        dn[2][0] =  1. / 8. * (1 + s) * (1 - t)
-        dn[3][0] = -1. / 8. * (1 + s) * (1 - t)
-        dn[4][0] = -1. / 8. * (1 - s) * (1 + t)
-        dn[5][0] =  1. / 8. * (1 - s) * (1 + t)
-        dn[6][0] =  1. / 8. * (1 + s) * (1 + t)
-        dn[7][0] = -1. / 8. * (1 + s) * (1 + t)
-        # d/ds
-        dn[0][1] = -1. / 8. * (1 - r) * (1 - t)
-        dn[1][1] = -1. / 8. * (1 + r) * (1 - t)
-        dn[2][1] =  1. / 8. * (1 + r) * (1 - t)
-        dn[3][1] =  1. / 8. * (1 - r) * (1 - t)
-        dn[4][1] = -1. / 8. * (1 - r) * (1 + t)
-        dn[5][1] = -1. / 8. * (1 + r) * (1 + t)
-        dn[6][1] =  1. / 8. * (1 + r) * (1 + t)
-        dn[7][1] =  1. / 8. * (1 - r) * (1 + t)
-        # d/dt
-        dn[0][2] = -1. / 8. * (1 - r) * (1 - s)
-        dn[1][2] = -1. / 8. * (1 + r) * (1 - s)
-        dn[2][2] = -1. / 8. * (1 + r) * (1 + s)
-        dn[3][2] = -1. / 8. * (1 - r) * (1 + s)
-        dn[4][2] =  1. / 8. * (1 - r) * (1 - s)
-        dn[5][2] =  1. / 8. * (1 + r) * (1 - s)
-        dn[6][2] =  1. / 8. * (1 + r) * (1 + s)
-        dn[7][2] =  1. / 8. * (1 - r) * (1 + s)
+        # dN/dr
+        dn[0][0] = -0.125 * (1 - s) * (1 - t)
+        dn[1][0] =  0.125 * (1 - s) * (1 - t)
+        dn[2][0] =  0.125 * (1 + s) * (1 - t)
+        dn[3][0] = -0.125 * (1 + s) * (1 - t)
+        dn[4][0] = -0.125 * (1 - s) * (1 + t)
+        dn[5][0] =  0.125 * (1 - s) * (1 + t)
+        dn[6][0] =  0.125 * (1 + s) * (1 + t)
+        dn[7][0] = -0.125 * (1 + s) * (1 + t)
+        # dN/ds
+        dn[0][1] = -0.125 * (1 - r) * (1 - t)
+        dn[1][1] = -0.125 * (1 + r) * (1 - t)
+        dn[2][1] =  0.125 * (1 + r) * (1 - t)
+        dn[3][1] =  0.125 * (1 - r) * (1 - t)
+        dn[4][1] = -0.125 * (1 - r) * (1 + t)
+        dn[5][1] = -0.125 * (1 + r) * (1 + t)
+        dn[6][1] =  0.125 * (1 + r) * (1 + t)
+        dn[7][1] =  0.125 * (1 - r) * (1 + t)
+        # dN/dt
+        dn[0][2] = -0.125 * (1 - r) * (1 - s)
+        dn[1][2] = -0.125 * (1 + r) * (1 - s)
+        dn[2][2] = -0.125 * (1 + r) * (1 + s)
+        dn[3][2] = -0.125 * (1 - r) * (1 + s)
+        dn[4][2] =  0.125 * (1 - r) * (1 - s)
+        dn[5][2] =  0.125 * (1 + r) * (1 - s)
+        dn[6][2] =  0.125 * (1 + r) * (1 + s)
+        dn[7][2] =  0.125 * (1 - r) * (1 + s)
         return dn
 
     @staticmethod
@@ -443,7 +471,65 @@ class Hex8(Element3D):
         """"Shape function 2nd derivatives.
 
         """
-        raise NotImplementedError()
+        ddn = [np.zeros((3,3)) for i in xrange(8)]
+        # dN/dr^2 = 0
+        # dN / drds
+        ddn[0][0][1] =  0.125 * (1 - t)
+        ddn[1][0][1] = -0.125 * (1 - t)
+        ddn[2][0][1] =  0.125 * (1 - t)
+        ddn[3][0][1] = -0.125 * (1 - t)
+        ddn[4][0][1] =  0.125 * (1 + t)
+        ddn[5][0][1] = -0.125 * (1 + t)
+        ddn[6][0][1] =  0.125 * (1 + t)
+        ddn[7][0][1] = -0.125 * (1 + t)
+        # dN / drdt
+        ddn[0][0][2] =  0.125 * (1 - s)
+        ddn[1][0][2] = -0.125 * (1 - s)
+        ddn[2][0][2] = -0.125 * (1 + s)
+        ddn[3][0][2] =  0.125 * (1 + s)
+        ddn[4][0][2] = -0.125 * (1 - s)
+        ddn[5][0][2] =  0.125 * (1 - s)
+        ddn[6][0][2] =  0.125 * (1 + s)
+        ddn[7][0][2] = -0.125 * (1 + s)
+        # dN / dsdr
+        ddn[0][1][0] =  0.125 * (1 - t)
+        ddn[1][1][0] = -0.125 * (1 - t)
+        ddn[2][1][0] =  0.125 * (1 - t)
+        ddn[3][1][0] = -0.125 * (1 - t)
+        ddn[4][1][0] =  0.125 * (1 + t)
+        ddn[5][1][0] = -0.125 * (1 + t)
+        ddn[6][1][0] =  0.125 * (1 + t)
+        ddn[7][1][0] = -0.125 * (1 + t)
+        # dN / ds^2 = 0
+        # dN / dsdt
+        ddn[0][1][2] =  0.125 * (1 - r)
+        ddn[1][1][2] =  0.125 * (1 + r)
+        ddn[2][1][2] = -0.125 * (1 + r)
+        ddn[3][1][2] = -0.125 * (1 - r)
+        ddn[4][1][2] = -0.125 * (1 - r)
+        ddn[5][1][2] = -0.125 * (1 + r)
+        ddn[6][1][2] =  0.125 * (1 + r)
+        ddn[7][1][2] =  0.125 * (1 - r)
+        # dN / dtdr
+        ddn[0][2][0] =  0.125 * (1 - s)
+        ddn[1][2][0] = -0.125 * (1 - s)
+        ddn[2][2][0] = -0.125 * (1 + s)
+        ddn[3][2][0] =  0.125 * (1 + s)
+        ddn[4][2][0] = -0.125 * (1 - s)
+        ddn[5][2][0] =  0.125 * (1 - s)
+        ddn[6][2][0] =  0.125 * (1 + s)
+        ddn[7][2][0] = -0.125 * (1 + s)
+        # dN / dtds
+        ddn[0][2][1] =  0.125 * (1 - r)
+        ddn[1][2][1] =  0.125 * (1 + r)
+        ddn[2][2][1] = -0.125 * (1 + r)
+        ddn[3][2][1] = -0.125 * (1 - r)
+        ddn[4][2][1] = -0.125 * (1 - r)
+        ddn[5][2][1] = -0.125 * (1 + r)
+        ddn[6][2][1] =  0.125 * (1 + r)
+        ddn[7][2][1] =  0.125 * (1 - r)
+        # dN/ dt^2 = 0
+        return ddn
 
 
 class Quad4(Element2D):
