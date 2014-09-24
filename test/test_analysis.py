@@ -16,40 +16,6 @@ from febtools import material
 
 import fixtures
 
-class temp():
-
-    def set_up_center_crack_2d_iso():
-        soln = febtools.input.XpltReader(os.path.join('test', 'fixtures', 'center-crack-2d-1mm.xplt'))
-        model = febtools.input.FebReader(os.path.join('test', 'fixtures', 'center-crack-2d-1mm.feb')).model()
-        model.apply_solution(soln)
-
-    @with_setup(set_up_center_crack_2d_iso)
-    def test_select_elems_around_node():
-        id_crack_tip = 1669
-        elements = select_elems_around_node(model.mesh, id_crack_tip, n=2)
-        expected = [1585, 1637, 1638, 1586, # ring 1
-                    1534, 1535, 1587, 1639, # ring 2
-                    1691, 1690, 1689, 1688,
-                    1636, 1584, 1532, 1533]
-        expected = set([model.mesh.elements[i] for i in expected])
-        assert not elements - expected
-
-    @with_setup(set_up_center_crack_2d_iso)
-    def test_jdomain_q():
-        id_crack_tip = 1669
-        elements, q = jdomain(model.mesh, id_crack_tip, n=2, qtype='plateau')
-        qexpected = [None] * len(model.mesh.nodes)
-        i_inner = [1615, 1616, 1617, 1668, 1669, 1670,
-                   1721, 1722, 1723, 2921]
-        for i in i_inner:
-            qexpected[i] = 1.0
-        i_outer = [1561, 1562, 1563, 1564, 1565, 1614, 1618,
-                   1667, 1671, 1720, 1724, 1773, 1774, 1775,
-                   1776, 1777, 2920]
-        for i in i_outer:
-            qexpected[i] = 0.0
-        npt.assert_array_equal(q, qexpected)
-
 
 class CenterCrackHex8(fixtures.Hex8IsotropicCenterCrack):
     """Center cracked isotropic elastic plate in 3d.
