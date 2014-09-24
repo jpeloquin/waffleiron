@@ -125,7 +125,10 @@ class Element(object):
         the node-valued data.
 
         """
-        v = self.properties[prop] # nodal values
+        if type(prop) is str:
+            v = self.properties[prop] # nodal values
+        else:
+            v = prop
         j = self.j(r)
         jinv = np.linalg.pinv(j)
         ddr = np.vstack(self.dN(*r))
@@ -134,12 +137,20 @@ class Element(object):
         return dvdx
 
     def ddinterp(self, r, prop='displacement'):
-        values = self.properties[prop]
+        if type(prop) is str:
+            nodal_v = self.properties[prop] # nodal values
+        else:
+            nodal_v = prop
         j = self.j(r)
         jinv = np.linalg.pinv(j)
         derivatives = self.ddN(*r)
-        dvdr = (np.dot(v.T, d).T
-                for v, d in zip(values, derivatives))
+
+        shape = (3, 3) + nodal_v.shape[1:]
+
+        dvdr = [np.array([a * d
+                          for a in v.flatten()]).reshape(shape)
+                for v, d in zip(nodal_v, derivatives)]
+        # ^ indexes are: nodes, values (omit for scalar), dr, dr
         dvdx = sum(np.dot(np.dot(jinv.T, a), jinv).T
                    for a in dvdr)
         return dvdx
@@ -386,7 +397,7 @@ class Hex8(Element3D):
                   (4, 5, 6, 7),
                   (0, 3, 2, 1))
 
-    # Vertex point locations
+    # Vertex point locations in natural coordinates
     vloc = ((-1.0, -1.0, -1.0),
             ( 1.0, -1.0, -1.0),
             ( 1.0,  1.0, -1.0),

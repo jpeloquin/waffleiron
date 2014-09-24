@@ -33,7 +33,18 @@ class Hex8ElementTest(unittest.TestCase):
                  ( 2, -1.5, 1.2),
                  ( 2, 1.0, 1.2),
                  (-2, 1.0, 1.2)]
-        self.element = feb.element.Hex8(nodes)
+        m = feb.material.IsotropicElastic({'E': 1e8,
+                                           'v': 0.3})
+        self.element = feb.element.Hex8(nodes, material=m)
+
+        # apply displacement
+        f = np.array([[1.1, 0.2,  0.1],
+                      [0.2, 0.9, -0.14],
+                      [0.1, -0.14, 1.02]])
+        self.ftensor = f
+        d = np.array([np.dot(f - np.eye(3), node) for node in nodes])
+        self.element.properties['displacement'] = d
+
         self.w = 4.0
         self.l = 2.5
         self.h = 4.2
@@ -105,7 +116,7 @@ class Hex8ElementTest(unittest.TestCase):
             actual = self.element.dinterp(r, prop='scalar_test')
             npt.assert_allclose(actual, desired)
 
-    def test_ddinterp_scalr(self):
+    def test_ddinterp_scalar(self):
         """Test the second derivative against linear gradients.
 
         The second derivative of a linear gradient should equal zero.
@@ -117,6 +128,17 @@ class Hex8ElementTest(unittest.TestCase):
             actual = self.element.ddinterp(r, prop='scalar_test')
             npt.assert_allclose(actual, desired,
                                 atol=10*np.finfo(float).eps)
+
+    def test_dinterp_vector(self):
+        dudx = self.element.dinterp((0, 0, 0), prop='displacement')
+        f = dudx + np.eye(3)
+        npt.assert_allclose(f, self.ftensor)
+
+    def test_ddinterp_vector(self):
+        import pdb; pdb.set_trace()
+        actual = self.element.ddinterp((0, 0, 0), prop='displacement')
+        assert actual.shape == (3, 3, 3)
+        import pdb; pdb.set_trace()
 
     def test_integration_volume(self):
         truth = self.w * self.l * self.h
