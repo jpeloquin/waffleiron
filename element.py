@@ -130,8 +130,6 @@ class Element(object):
         jinv = np.linalg.pinv(j)
         ddr = np.vstack(self.dN(*r))
         dvdr = np.dot(v.T, ddr)
-        # if len(v.shape) == 1:
-        #     import pdb; pdb.set_trace()
         dvdx = np.dot(jinv.T, dvdr.T).T
         return dvdx
 
@@ -140,11 +138,10 @@ class Element(object):
         j = self.j(r)
         jinv = np.linalg.pinv(j)
         derivatives = self.ddN(*r)
-        dvdx = np.zeros((3, 3))
-        dvdr_sum = np.zeros((3, 3))
-        dvdr = sum(np.dot(v.T, d)
-                   for v, d in zip(values, derivatives))
-        dvdx = np.dot(np.dot(jinv, dvdr.T), jinv.T).T
+        dvdr = (np.dot(v.T, d).T
+                for v, d in zip(values, derivatives))
+        dvdx = sum(np.dot(np.dot(jinv.T, a), jinv).T
+                   for a in dvdr)
         return dvdx
 
     def f(self, r):
