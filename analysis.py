@@ -210,7 +210,7 @@ def jintegral(domain):
 
         """
         F = e.f(r)
-        s = e.material.tstress(F) # 2nd Piola-Kirchoff stress
+        s = e.material.sstress(F) # 2nd Piola-Kirchoff stress
         dudx = e.dinterp(r, prop='displacement')
         w = e.material.w(F) # strain energy
         q = e.interp(r, prop='q')
@@ -241,33 +241,29 @@ def jintegral(domain):
         igrand1 = work + pe
 
         # The non-infinitessimal strain part
-        igrand2 = sum(q[k] * (dsdx[i, j, i] * dudx[j, k]
-                              + s[i, j] * d2udx2[j, k, i]
-                              - dwdx[i] * kd[k, i])
-                      for i in xrange(3)
-                      for j in xrange(3)
-                      for k in xrange(3))
 
+        # The Hakimelahi_Ghazavi_2008 version
         igrand2 = sum(q[k] * (dsdx[i, 2, 2] * dudx[i, k]
-                              + s[i, 2] * d2udx2[i, 0, 2]
+                              + s[i, 2] * d2udx2[i, k, 2]
                               - dwdx[2] * kd[i,2])
                       for i in xrange(3)
                       for k in xrange(3))
 
-        igrand2_1 = sum(q[k] * (dsdx[i, j, i] * dudx[j, k])
+        # The Anderson version
+        igrand2_1 = sum(q[k] * (dsdx[i,j,i] * dudx[j,k])
                         for i in xrange(3)
                         for j in xrange(3)
                         for k in xrange(3))
 
-        igrand2_2 = sum(q[k] * (s[i, j] * d2udx2[j, k, i])
+        igrand2_2 = sum(q[k] * (s[i,j] * d2udx2[j,k,i])
                         for i in xrange(3)
                         for j in xrange(3)
                         for k in xrange(3))
 
-        igrand2_3 = sum(q[k] * (-dwdx[i] * kd[k, i])
-                      for i in xrange(3)
-                      for j in xrange(3)
-                      for k in xrange(3))
+        igrand2_3 = sum(q[i] * (-dwdx[i])
+                        for i in xrange(3))
+
+        igrand2 = igrand2_1 + igrand2_2 + igrand2_3
 
         if debug:
             return igrand1, igrand2
@@ -279,7 +275,7 @@ def jintegral(domain):
         # calculate 2nd piola-kirchoff stress for each node so we can
         # take its derivative
         nodal_f = [e.f(r) for r in e.vloc]
-        nodal_s = [e.material.tstress(f) for f in nodal_f]
+        nodal_s = [e.material.sstress(f) for f in nodal_f]
         nodal_s = np.array(nodal_s)
         e.properties['S'] = nodal_s
         # same for strain energy

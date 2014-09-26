@@ -56,7 +56,7 @@ class CenterCrackHex8(fixtures.Hex8IsotropicCenterCrack):
         # define integration domain
         domain = [e for e in zslice
                   if self.tip_line_r.intersection(e.ids)]
-        domain = feb.selection.e_grow(domain, zslice, n=3)
+        domain = feb.selection.e_grow(domain, zslice, n=2)
         domain = feb.analysis.apply_q_3d(domain, self.crack_faces,
                                          self.tip_line_r,
                                          q=[1, 0, 0])
