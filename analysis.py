@@ -249,13 +249,14 @@ def jintegral(domain):
                       for i in xrange(3)
                       for k in xrange(3))
 
-        # The Anderson version
-        igrand2_1 = sum(q[k] * (dsdx[i,j,i] * dudx[j,k])
+        # The Anderson version, corrected to use the divergence
+        # operator correctly
+        igrand2_1 = sum(q[k] * (dsdx[i,j,j] * dudx[j,k])
                         for i in xrange(3)
                         for j in xrange(3)
                         for k in xrange(3))
 
-        igrand2_2 = sum(q[k] * (s[i,j] * d2udx2[j,k,i])
+        igrand2_2 = sum(q[k] * (s[i,j] * d2udx2[j,k,j])
                         for i in xrange(3)
                         for j in xrange(3)
                         for k in xrange(3))

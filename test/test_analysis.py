@@ -43,7 +43,6 @@ class CenterCrackHex8(fixtures.Hex8IsotropicCenterCrack):
         return G
 
     def test_right_tip(self):
-        G = self._griffith()
         # Calculate J
 
         zslice = feb.selection.element_slice(self.model.mesh.elements,
@@ -67,9 +66,8 @@ class CenterCrackHex8(fixtures.Hex8IsotropicCenterCrack):
         # 0.5 * deltaL is standing in for ∫q(η)dη; this is ok for a
         # tringular q(η)
 
-        elems = [e for e in list(domain)
-                 if np.any(np.array(e.nodes)[:,2] == minima[1])]
         # Test if approximately equal to G
+        G = self._griffith()
         npt.assert_allclose(jbar, G, rtol=0.07)
         # Test for consistency with value calculated when code
         # initially verified
@@ -100,8 +98,6 @@ class CenterCrackHex8(fixtures.Hex8IsotropicCenterCrack):
         # 0.5 * deltaL is standing in for ∫q(η)dη; this is ok for a
         # tringular q(η)
 
-        elems = [e for e in list(domain)
-                 if np.any(np.array(e.nodes)[:,2] == minima[1])]
         # Test if approximately equal to G
         G = self._griffith()
         npt.assert_allclose(jbar, G, rtol=0.07)
