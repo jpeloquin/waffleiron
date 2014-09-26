@@ -145,14 +145,19 @@ class Element(object):
         jinv = np.linalg.pinv(j)
         derivatives = self.ddN(*r)
 
-        shape = (3, 3) + nodal_v.shape[1:]
+        shape = nodal_v.shape[1:] + (3, 3)
 
-        dvdr = [np.array([a * d
-                          for a in v.flatten()]).reshape(shape)
-                for v, d in zip(nodal_v, derivatives)]
-        # ^ indexes are: nodes, values (omit for scalar), dr, dr
-        dvdx = sum(np.dot(np.dot(jinv.T, a), jinv).T
-                   for a in dvdr)
+        dvdr = sum([np.array([a * d
+                              for a in v.flatten()]).reshape(shape)
+                    for v, d in zip(nodal_v, derivatives)])
+        # ^ indices before sum are: nodes, values (omit for scalar),
+        # dr, dr
+
+        n = np.prod(shape[:-2])
+        dvdx = np.array([np.dot(np.dot(jinv.T, a), jinv)
+                         for a in dvdr.reshape(n, 3, 3)])
+        dvdx = dvdx.reshape(shape)
+
         return dvdx
 
     def f(self, r):
@@ -174,7 +179,7 @@ class Element(object):
         J = np.dot(np.array(self.nodes).T, ddr)
         return J
 
-    def integrate(self, fn, *args):
+    def integrate(self, fn, *args, **kwargs):
         """Integrate a function over the element.
 
         f := The function to integrate.  Must be callable as `f(e,
@@ -183,7 +188,7 @@ class Element(object):
             coordinate at which f is evaluated.
 
         """
-        return sum((fn(self, r, *args) * self.jdet(r) * w
+        return sum((fn(self, r, *args, **kwargs) * self.jdet(r) * w
                     for r, w in zip(self.gloc, self.gwt)))
 
     def centroid(self, config='reference'):
