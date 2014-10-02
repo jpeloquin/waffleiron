@@ -640,4 +640,18 @@ class Quad4(Element2D):
         """Shape function 2nd derivatives.
 
         """
-        raise NotImplementedError()
+        ddn = np.zeros((4, 2, 2))
+        # dN / dr² = 0
+        # dN / drds
+        ddn[0][0][1] =  0.25
+        ddn[1][0][1] = -0.25
+        ddn[2][0][1] =  0.25
+        ddn[3][0][1] = -0.25
+        # dN / dsdr
+        ddn[0][1][0] =  0.25
+        ddn[1][1][0] = -0.25
+        ddn[2][1][0] =  0.25
+        ddn[3][1][0] = -0.25
+        # dN / ds² = 0
+
+        return ddn
