@@ -180,14 +180,28 @@ class Hex8ElementTest(unittest.TestCase):
         """Check 2nd derivative of stress tensor.
 
         """
-        actual = self.element.ddinterp((0, 0, 0), prop='S')
+        random.seed(0)
+        r_pt = (0, 0, 0)
+        x_pt = self.element.interp(r_pt, prop='position')
+
+        # Construct node-valued tensors with known spatial second
+        # derivative
+        desired = np.zeros((3, 3, 3, 3))
+        nodal_tensors = np.zeros((8, 3, 3))
+        for i in xrange(3):
+            for j in xrange(3):
+                c = [random.randrange(-100, 100) / 10.0
+                     for a in xrange(8)]
+                desired[i, j, ...] = self.ddfn(x_pt, c=c)
+                for k, x_p in enumerate(self.element.x()):
+                    nodal_tensors[k, i, j] = self.fn(x_p, c=c)
+        self.element.properties['tensor'] = nodal_tensors
+
+        actual = self.element.ddinterp(r_pt, prop='tensor')
         # check shape
         assert actual.shape == (3, 3, 3, 3)
-        # check symmetry
-
         # check value
-
-        # TODO: check nonzero value in different case
+        npt.assert_almost_equal(actual, desired)
 
     def test_integration_volume(self):
         truth = self.w * self.l * self.h
