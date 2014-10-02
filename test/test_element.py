@@ -1,7 +1,10 @@
-import febtools as feb
+import os, random
+import unittest
+
 import numpy as np
 import numpy.testing as npt
-import unittest, os
+
+import febtools as feb
 
 def f_tensor_logfile(elemdata, step, eid):
     """Return F tensor read from a logfile.
@@ -38,12 +41,21 @@ class Hex8ElementTest(unittest.TestCase):
         self.element = feb.element.Hex8(nodes, material=m)
 
         # apply displacement
-        f = np.array([[1.1, 0.2,  0.1],
-                      [0.2, 0.9, -0.14],
-                      [0.1, -0.14, 1.02]])
-        self.ftensor = f
-        d = np.array([np.dot(f - np.eye(3), node) for node in nodes])
+        self.ftensor = np.array([[1.1, 0.2,  0.1],
+                                 [0.2, 0.9, -0.14],
+                                 [0.1, -0.14, 1.02]])
+        d = np.array([np.dot(self.ftensor - np.eye(3), node)
+                      for node in nodes])
         self.element.properties['displacement'] = d
+
+        # Calculate nodal stress tensors.  These will actually all be
+        # the same here, since the applied displacements result in a
+        # uniform f tensor.
+        nodal_f = np.array([self.element.f(r)
+                            for r in self.element.vloc])
+        nodal_s = np.array([self.element.material.sstress(f)
+                            for f in nodal_f])
+        self.element.properties['S'] = nodal_s
 
         self.w = 4.0
         self.l = 2.5
@@ -54,7 +66,7 @@ class Hex8ElementTest(unittest.TestCase):
                       -1.0, 2.5, 0.7,
                       0.5])
 
-        def f(p, c=c):
+        def fn(p, c=c):
             return (c[0]
                     + c[1] * p[0]
                     + c[2] * p[1]
@@ -64,23 +76,23 @@ class Hex8ElementTest(unittest.TestCase):
                     + c[6] * p[1] * p[2]
                     + c[7] * p[0] * p[1] * p[2])
 
-        def df(p, c=c):
+        def dfn(p, c=c):
             a = np.array([c[1] + c[4] * p[1] + c[5] * p[2] + c[7] * p[1] * p[2],
                              c[2] + c[4] * p[0] + c[6] * p[2] + c[7] * p[0] * p[2],
                              c[3] + c[5] * p[0] + c[6] * p[1] + c[7] * p[0] * p[1]])
             return a
 
-        def ddf(p, c=c):
+        def ddfn(p, c=c):
             a = np.array([[0.0, c[4] + c[7] * p[2], c[5] + c[7] * p[1]],
                           [c[4] + c[7] * p[2], 0.0, c[6] + c[7] * p[0]],
                           [c[5] + c[7] * p[1], c[6] + c[7] * p[0], 0.0]])
             return a
 
-        self.f = f
-        self.df = df
-        self.ddf = ddf
+        self.fn = fn
+        self.dfn = dfn
+        self.ddfn = ddfn
 
-        v = np.array([f(pt) for pt in self.element.x()])
+        v = np.array([fn(pt) for pt in self.element.x()])
         self.element.properties['scalar_test'] = v
 
     def test_j(self):
@@ -112,7 +124,7 @@ class Hex8ElementTest(unittest.TestCase):
         """
         for r in self.element.gloc:
             pt = self.element.interp(r, prop='position')
-            desired = self.df(pt)
+            desired = self.dfn(pt)
             actual = self.element.dinterp(r, prop='scalar_test')
             npt.assert_allclose(actual, desired)
 
@@ -124,7 +136,7 @@ class Hex8ElementTest(unittest.TestCase):
         """
         for r in self.element.gloc:
             pt = self.element.interp(r, prop='position')
-            desired = self.ddf(pt)
+            desired = self.ddfn(pt)
             actual = self.element.ddinterp(r, prop='scalar_test')
             npt.assert_allclose(actual, desired,
                                 atol=10*np.finfo(float).eps)
@@ -135,10 +147,47 @@ class Hex8ElementTest(unittest.TestCase):
         npt.assert_allclose(f, self.ftensor)
 
     def test_ddinterp_vector(self):
-        import pdb; pdb.set_trace()
         actual = self.element.ddinterp((0, 0, 0), prop='displacement')
         assert actual.shape == (3, 3, 3)
-        import pdb; pdb.set_trace()
+        # TODO: check value
+
+    def test_dinterp_tensor(self):
+        """Check 1st derivative of stress tensor.
+
+        """
+        random.seed(0)
+        # Construct node-valued tensors with known gradient
+        desired = np.zeros((3, 3, 3))
+        nodal_tensors = np.zeros((8, 3, 3))
+        r_pt = (0, 0, 0)
+        x_pt = self.element.interp(r_pt, prop='position')
+        for i in xrange(3):
+            for j in xrange(3):
+                c = [random.randrange(-100, 100) / 10.0
+                     for a in xrange(8)]
+                desired[i, j, :] = self.dfn(x_pt, c=c)
+                for k, x_p in enumerate(self.element.x()):
+                    nodal_tensors[k, i, j] = self.fn(x_p, c=c)
+        self.element.properties['tensor'] = nodal_tensors
+
+        actual = self.element.dinterp(r_pt, prop='tensor')
+        # check shape
+        assert actual.shape == (3, 3, 3)
+        # check value
+        npt.assert_almost_equal(actual, desired)
+
+    def test_ddinterp_tensor(self):
+        """Check 2nd derivative of stress tensor.
+
+        """
+        actual = self.element.ddinterp((0, 0, 0), prop='S')
+        # check shape
+        assert actual.shape == (3, 3, 3, 3)
+        # check symmetry
+
+        # check value
+
+        # TODO: check nonzero value in different case
 
     def test_integration_volume(self):
         truth = self.w * self.l * self.h
@@ -228,7 +277,10 @@ def test_integration():
     desired = 3.0 # A_trapezoid = 0.5 * (b1 + b2) * h
     npt.assert_approx_equal(actual, desired)
 
-def test_dinterp():
+def test_dinterp_2d():
+    """Test dinterp with a truly 2D element.
+
+    """
     # create square element
     nodes = ((0.0, 0.0),
              (1.0, 0.0),

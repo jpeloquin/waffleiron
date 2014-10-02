@@ -119,22 +119,43 @@ class Element(object):
     def dinterp(self, r, prop='displacement'):
         """Return d/dx of node-valued data at natural basis point r
 
-        The node-valued data may be scalar or vector.
+        The node-valued data may be scalar, vector, or tensor.
 
-        The returned matrix is n x 3 where n is the dimensionality of
-        the node-valued data.
+        The returned array indexes into the spatial derivative
+        denomator with its last dimension.  The other indexes are the
+        same as in the input array.
+
+        Given a scalar, the returned array is 1 × 3.
+
+        Given a n-length vector, the returned array is n × 3.
+
+        Given an n × m matrix, the returned array is n × m × 3.
+
+        And so on for higher order tensors.
 
         """
         if type(prop) is str:
-            v = self.properties[prop] # nodal values
+            nodal_v = self.properties[prop] # nodal values
         else:
-            v = prop
+            nodal_v = prop
+
         j = self.j(r)
         jinv = np.linalg.pinv(j)
         ddr = np.vstack(self.dN(*r))
-        dvdr = np.dot(v.T, ddr)
-        dvdx = np.dot(jinv.T, dvdr.T).T
-        return dvdx
+
+        ishape = nodal_v.shape[1:]
+        if not ishape:
+            ishape = (1,)
+        oshape = ishape + (j.shape[0],) # allow true 2d elements
+
+        flat_v = np.array([a.ravel() for a in nodal_v])
+        dvdr = np.dot(ddr.T, flat_v).T
+        dvdx = np.dot(dvdr, jinv)
+
+        # Undo raveling
+        out = dvdx.reshape(oshape)
+
+        return out.squeeze()
 
     def ddinterp(self, r, prop='displacement'):
         if type(prop) is str:
@@ -567,11 +588,17 @@ class Quad4(Element2D):
                   [2, 3],
                   [3, 0]]
 
+    ## vertex point locations in natural coordinates
+    vloc = ((-1.0, -1.0),
+            ( 1.0, -1.0),
+            ( 1.0, 1.0),
+            (-1.0, 1.0))
+
     a = 1.0 / 3.0**0.5
     gloc = ((-a, -a),           # Gauss point locations
-          ( a, -a),
-          ( a, a),
-          (-a, a))
+            ( a, -a),
+            ( a, a),
+            (-a, a))
     gwt = (1, 1, 1, 1)          # Gauss weights
 
     def __init__(self, *args, **kwargs):
