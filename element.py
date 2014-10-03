@@ -162,24 +162,33 @@ class Element(object):
             nodal_v = self.properties[prop] # nodal values
         else:
             nodal_v = prop
+
         j = self.j(r)
         jinv = np.linalg.pinv(j)
         derivatives = self.ddN(*r)
 
-        shape = nodal_v.shape[1:] + (3, 3)
+        # shape of nodal arrays
+        ishape = nodal_v.shape[1:]
+        if not ishape:
+            ishape = (1,)
+        # desired shape of output array
+        oshape = ishape + (j.shape[0], j.shape[0])
+        #                  ^ allow true 2d elements
 
-        dvdr = sum([np.array([a * d
-                              for a in v.flatten()]).reshape(shape)
-                    for v, d in zip(nodal_v, derivatives)])
-        # ^ indices before sum are: nodes, values (omit for scalar),
-        # dr, dr
+        # Flatten input
+        flat_v = np.array([a.ravel() for a in nodal_v])
+        dvdr = np.dot(derivatives.T, flat_v).T
+        dvdx = np.dot(jinv.T, np.dot(dvdr, jinv))
 
-        n = np.prod(shape[:-2])
-        dvdx = np.array([np.dot(np.dot(jinv.T, a), jinv)
-                         for a in dvdr.reshape(n, 3, 3)])
-        dvdx = dvdx.reshape(shape)
+        # Right now, dv[i,j,...] / dx[u, v] has its axis in order of
+        # u, flattened i,j,... , and v.  The i and j indices must
+        # be unflattened and k moved to the second to last position.
 
-        return dvdx
+        # Unflatten output
+        out = dvdx.reshape(oshape)
+        out = np.rollaxis(out, 0, start=-1)
+
+        return out.squeeze()
 
     def f(self, r):
         """Calculate F tensor (convenience function).
@@ -505,7 +514,7 @@ class Hex8(Element3D):
         """"Shape function 2nd derivatives.
 
         """
-        ddn = [np.zeros((3,3)) for i in xrange(8)]
+        ddn = np.zeros((8,3,3))
         # dN/dr^2 = 0
         # dN / drds
         ddn[0][0][1] =  0.125 * (1 - t)
@@ -606,7 +615,7 @@ class Quad4(Element2D):
         self.properties['thickness'] = (1.0, 1.0, 1.0, 1.0)
 
     @staticmethod
-    def N(r, s):
+    def N(r, s, t=None):
         """Shape functions.
 
         """
