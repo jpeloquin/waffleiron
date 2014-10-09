@@ -191,7 +191,7 @@ def apply_q_3d(domain, crack_faces, tip_nodes,
 
     return domain
 
-def jintegral(domain):
+def jintegral(domain, infinitessimal=False):
     """Calculate J integral.
 
     Parameters
@@ -266,8 +266,8 @@ def jintegral(domain):
 
         igrand2 = igrand2_1 + igrand2_2 + igrand2_3
 
-        if debug:
-            return igrand1, igrand2
+        if infinitessimal:
+            return igrand1
         else:
             return igrand1 + igrand2
 
