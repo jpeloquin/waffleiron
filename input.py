@@ -394,6 +394,8 @@ class XpltReader:
             step = self.step_index(time)
         elif time is None and step is None:
             step = -1
+        elif time is not None and step is not None:
+            raise Exception("Do not specify both `step` and `time`.")
 
         var = {}
         var['global'] = self._rdict('global')
