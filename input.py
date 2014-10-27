@@ -390,9 +390,9 @@ class XpltReader:
         The last step is the default.
 
         """
-        if time and not step:
+        if time is not None and step is None:
             step = self.step_index(time)
-        elif not time and not step:
+        elif time is None and step is None:
             step = -1
 
         var = {}
