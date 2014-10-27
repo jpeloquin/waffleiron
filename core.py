@@ -93,7 +93,7 @@ class Model:
         self.solution = solution
         # apply node data
         if t is None: # use last timestep
-            t = solution.time[-1]
+            t = solution.times[-1]
         data = solution.stepdata(time=t)
         properties = data['node']
         for k,v  in properties.iteritems():

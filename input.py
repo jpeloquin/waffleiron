@@ -288,7 +288,7 @@ class XpltReader:
                 self.f.seek(a[0][0])
                 s = self.f.read(a[0][1])
                 time.append(struct.unpack(self.endian + 'f', s)[0])
-            self.time = time
+            self.times = time
 
     def mesh(self):
         """Reads node and element lists.
@@ -374,7 +374,7 @@ class XpltReader:
         """Return step index for a given time.
 
         """
-        idx, d = min(enumerate(abs(t - time) for t in self.time),
+        idx, d = min(enumerate(abs(t - time) for t in self.times),
                      key=itemgetter(1))
         return idx
 
@@ -403,7 +403,7 @@ class XpltReader:
         var['surface'] = self._rdict('surface')
 
         data = {}
-        data['time'] = self.time[step]
+        data['time'] = self.times[step]
 
         steploc = self.steploc[step]
         for k, v in var.iteritems():
