@@ -337,18 +337,19 @@ class XpltReader:
                                             + 'I',
                                             data[0:4])[0]
                     elem_id = elem_id - 1 # 0-index
-                    node_id = struct.unpack(self.endian
+                    node_ids = struct.unpack(self.endian
                                           + 'I' * ((s - 1) / 4),
                                           data[4:])
                     # the nodes are already 0-indexed in the binary
                     # database
-                    element = etype(node_id, node_list,
-                                    elem_id=elem_id,
-                                    matl_id=mat_id)
+                    element = etype.from_ids(node_ids, node_list,
+                                             material=mat_id)
                     element_list.append(element)
         finally:
             self.f.close()
-        return node_list, element_list
+        node_list = np.array(node_list)
+        mesh = feb.Mesh(node_list, element_list)
+        return mesh
 
     def material(self):
         """Read material codes (integer -> name)
