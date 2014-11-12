@@ -93,7 +93,7 @@ class Model:
         self.solution = solution
         # apply node data
         if t is None: # use last timestep
-            t = solution.time[-1]
+            t = solution.times[-1]
         data = solution.stepdata(time=t)
         properties = data['node']
         for k,v  in properties.iteritems():
@@ -269,22 +269,6 @@ class Mesh:
             elements = elements + self.elem_with_node[idx]
         return set(elements)
 
-    def elements_containing_point(self, point):
-        """Return element(s) containing a point
-
-        Returns [] if no elements contain point.
-
-        """
-        p = np.array(point)
-        candidates = [e for e in self.elements
-                      if (np.all(np.max(e.nodes, axis=0)
-                                 >= p - default_tol)
-                          and np.all(np.min(e.nodes, axis=0)
-                                     <= p + default_tol))]
-        elements = [e for e in candidates
-                    if feb.geometry.point_in_element(e, point)]
-        return elements
-
     def merge(self, other, candidates='auto', tol=default_tol):
         """Merge this mesh with another
 
@@ -381,3 +365,14 @@ def _canonical_face(face):
     i, inode = min(enumerate(face), key=itemgetter(1))
     face = tuple(face[i:] + face[:i])
     return face
+
+def _e_bb(elements):
+    """Create bounding box array from element list.
+
+    """
+    bb_max = np.vstack(np.max(e.nodes, axis=0)
+                       for e in elements)
+    bb_min = np.vstack(np.min(e.nodes, axis=0)
+                       for e in elements)
+    bb = (bb_min, bb_max)
+    return bb

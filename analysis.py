@@ -191,7 +191,7 @@ def apply_q_3d(domain, crack_faces, tip_nodes,
 
     return domain
 
-def jintegral(domain):
+def jintegral(domain, infinitessimal=False):
     """Calculate J integral.
 
     Parameters
@@ -201,7 +201,7 @@ def jintegral(domain):
 
     """
 
-    def integrand(e, r):
+    def integrand(e, r, debug=False):
         """Integrate over a single element.
 
         Parameters
@@ -212,19 +212,85 @@ def jintegral(domain):
         F = e.f(r)
         s = e.material.sstress(F) # 2nd Piola-Kirchoff stress
         dudx = e.dinterp(r, prop='displacement')
-        dudx1 = dudx[:,0]
         w = e.material.w(F) # strain energy
+        q = e.interp(r, prop='q')
         dqdx = e.dinterp(r, prop='q')
-        # integrand terms, partially expanded
+
+        # compute ∂s/∂x at this point
+        dsdx = np.zeros((3, 3, 3))
+        for i in xrange(3):
+            for j in xrange(3):
+                dsdx[i,j,:] = \
+                    e.dinterp(r, prop=e.properties['S'][:,i,j])
+
+        # compute ∂²u/∂x²
+        d2udx2 = e.ddinterp(r, prop='displacement')
+
+        # comput ∂ψ/∂x
+        dwdx = e.dinterp(r, prop='w')
+
+        kd = np.eye(3) # kronecker delta
+
+        # The usual part.
         work = sum(s[i][j] * dudx[j,k] * dqdx[k][i]
                    for i in xrange(3)
                    for j in xrange(3)
                    for k in xrange(3))
         pe = sum(-w * dqdx[ik][ik]
                  for ik in xrange(3))
-        return work + pe
+        igrand1 = work + pe
 
+        # The non-infinitessimal strain part
+
+        # The Hakimelahi_Ghazavi_2008 version
+        igrand2 = sum(q[k] * (dsdx[i, 2, 2] * dudx[i, k]
+                              + s[i, 2] * d2udx2[i, k, 2]
+                              - dwdx[2] * kd[i,2])
+                      for i in xrange(3)
+                      for k in xrange(3))
+
+        # The Anderson version, corrected to use the divergence
+        # operator correctly
+        igrand2_1 = sum(q[k] * (dsdx[i,j,j] * dudx[j,k])
+                        for i in xrange(3)
+                        for j in xrange(3)
+                        for k in xrange(3))
+
+        igrand2_2 = sum(q[k] * (s[i,j] * d2udx2[j,k,j])
+                        for i in xrange(3)
+                        for j in xrange(3)
+                        for k in xrange(3))
+
+        igrand2_3 = sum(q[i] * (-dwdx[i])
+                        for i in xrange(3))
+
+        igrand2 = igrand2_1 + igrand2_2 + igrand2_3
+
+        if infinitessimal:
+            return igrand1
+        else:
+            return igrand1 + igrand2
+
+    # apply stress and strain energy to element nodes
+    for e in domain:
+        # calculate 2nd piola-kirchoff stress for each node so we can
+        # take its derivative
+        nodal_f = [e.f(r) for r in e.vloc]
+        nodal_s = [e.material.sstress(f) for f in nodal_f]
+        nodal_s = np.array(nodal_s)
+        e.properties['S'] = nodal_s
+        # same for strain energy
+        nodal_w = np.array([e.material.w(f) for f in nodal_f])
+        e.properties['w'] = nodal_w
+
+    for e in domain:
+        dsdx = e.dinterp((0, 0, 0), prop='S')
+        # print dsdx[0, 0, 0] + dsdx[0,1,1] + dsdx[0,2,2]
+        #print sum([integrand(e, r, debug=True)[1] for r in e.gloc])
+
+    # compute j
     j = 0.0
     for e in domain:
         j += e.integrate(integrand)
+
     return j

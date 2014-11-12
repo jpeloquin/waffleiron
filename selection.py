@@ -12,7 +12,7 @@ import febtools as feb
 from febtools import _canonical_face
 from febtools.geometry import inter_face_angle, face_normal
 
-tol = np.finfo('float').eps
+default_tol = 10*np.finfo(float).eps
 
 class ElementSelection:
     def __init__(self, mesh, elements=None):
@@ -33,6 +33,37 @@ class ElementSelection:
             self.elements = set(mesh.elements)
         else:
             self.elements = elements
+
+def elements_containing_point(point, elements, bb=None,
+                              tol=default_tol):
+    """Return element(s) containing a point
+
+    point := (x, y, z)
+
+    elements : list of elements
+        The ordering of `elements` must match the ordering of
+        `bb`.
+
+    bb : array (optional)
+        An array with shape (n, 3, 2), where n is the length of
+        `elements`.  The second dimension is x, y, z.  The third
+        dimension indexes the minimum and maximum bounding box
+        coordinates, in that order.
+
+    Returns [] if no elements contain point.
+
+    """
+    p = np.array(point)
+    if not bb:
+        bb = feb.core._e_bb(elements)
+    in_bb = np.all(np.logical_and((point + tol) >= bb[0],
+                                  (point - tol) <= bb[1]),
+                   axis=1)
+    inds = np.nonzero(in_bb)[0]
+    candidates = [elements[i] for i in inds]
+    elements = [e for e in candidates
+                if feb.geometry.point_in_element(e, p)]
+    return elements
 
 def corner_nodes(mesh):
     """Return ids of corner nodes.
@@ -74,7 +105,7 @@ def bisect(elements, p, v):
 
     v := A vector (vx, vy, vz) normal to the plane.
 
-    The elements reterned are those either intersected by the cut
+    The elements returned are those either intersected by the cut
     plane or on the side of the plane towards which `v` points.
 
     """
@@ -92,7 +123,8 @@ def bisect(elements, p, v):
     eset = [e for e in elements if on_pside(e)]
     return set(eset)
 
-def element_slice(elements, v, extent=tol, axis=(0, 0, 1)):
+def element_slice(elements, v, extent=default_tol,
+                  axis=(0, 0, 1)):
     """Return a slice of elements.
 
     v := The distance along `axis` at which the slice plane is
@@ -150,7 +182,7 @@ def e_grow(selection, candidates, n):
         candidates = candidates - adjacent
     return seed
 
-def faces_by_normal(elements, normal, delta=10*tol):
+def faces_by_normal(elements, normal, delta=default_tol):
     """Return all faces with target normal.
 
     """

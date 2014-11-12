@@ -110,25 +110,85 @@ class Element(object):
         (but must be consistent).
 
         """
-        v = self.properties[prop] # nodal values
+        if prop == 'position':
+            v = self.x()
+        else:
+            v = self.properties[prop] # nodal values
         return np.dot(v.T, self.N(*r))
 
     def dinterp(self, r, prop='displacement'):
         """Return d/dx of node-valued data at natural basis point r
 
-        The node-valued data may be scalar or vector.
+        The node-valued data may be scalar, vector, or tensor.
 
-        The returned matrix is n x 3 where n is the dimensionality of
-        the node-valued data.
+        The returned array indexes into the spatial derivative
+        denomator with its last dimension.  The other indexes are the
+        same as in the input array.
+
+        Given a scalar, the returned array is 1 × 3.
+
+        Given a n-length vector, the returned array is n × 3.
+
+        Given an n × m matrix, the returned array is n × m × 3.
+
+        And so on for higher order tensors.
 
         """
-        v = self.properties[prop] # nodal values
+        if type(prop) is str:
+            nodal_v = self.properties[prop] # nodal values
+        else:
+            nodal_v = prop
+
         j = self.j(r)
-        jinv = np.linalg.pinv(j).T
+        jinv = np.linalg.pinv(j)
         ddr = np.vstack(self.dN(*r))
-        dvdr = np.dot(v.T, ddr)
-        dvdx = np.dot(jinv, dvdr.T).T
-        return dvdx
+
+        ishape = nodal_v.shape[1:]
+        if not ishape:
+            ishape = (1,)
+        oshape = ishape + (j.shape[0],) # allow true 2d elements
+
+        flat_v = np.array([a.ravel() for a in nodal_v])
+        dvdr = np.dot(ddr.T, flat_v).T
+        dvdx = np.dot(dvdr, jinv)
+
+        # Undo raveling
+        out = dvdx.reshape(oshape)
+
+        return out.squeeze()
+
+    def ddinterp(self, r, prop='displacement'):
+        if type(prop) is str:
+            nodal_v = self.properties[prop] # nodal values
+        else:
+            nodal_v = prop
+
+        j = self.j(r)
+        jinv = np.linalg.pinv(j)
+        derivatives = self.ddN(*r)
+
+        # shape of nodal arrays
+        ishape = nodal_v.shape[1:]
+        if not ishape:
+            ishape = (1,)
+        # desired shape of output array
+        oshape = ishape + (j.shape[0], j.shape[0])
+        #                  ^ allow true 2d elements
+
+        # Flatten input
+        flat_v = np.array([a.ravel() for a in nodal_v])
+        dvdr = np.dot(derivatives.T, flat_v).T
+        dvdx = np.dot(jinv.T, np.dot(dvdr, jinv))
+
+        # Right now, dv[i,j,...] / dx[u, v] has its axis in order of
+        # u, flattened i,j,... , and v.  The i and j indices must
+        # be unflattened and k moved to the second to last position.
+
+        # Unflatten output
+        out = dvdx.reshape(oshape)
+        out = np.rollaxis(out, 0, start=-1)
+
+        return out.squeeze()
 
     def f(self, r):
         """Calculate F tensor (convenience function).
@@ -149,7 +209,7 @@ class Element(object):
         J = np.dot(np.array(self.nodes).T, ddr)
         return J
 
-    def integrate(self, fn, *args):
+    def integrate(self, fn, *args, **kwargs):
         """Integrate a function over the element.
 
         f := The function to integrate.  Must be callable as `f(e,
@@ -158,7 +218,7 @@ class Element(object):
             coordinate at which f is evaluated.
 
         """
-        return sum((fn(self, r, *args) * self.jdet(r) * w
+        return sum((fn(self, r, *args, **kwargs) * self.jdet(r) * w
                     for r, w in zip(self.gloc, self.gwt)))
 
     def centroid(self, config='reference'):
@@ -213,10 +273,10 @@ class Element(object):
         j = self.j([0]*self.r_n)
         jinv = np.linalg.pinv(j)
         nat_coords = np.dot(jinv, v)
-        tol = np.finfo(float).eps * 100
+        tol = 1e-5
         if ((nat_coords > (1 + tol)).any()
             or (nat_coords < (-1 - tol)).any()):
-            raise Exception("Computed natural basis coordinates "
+            print("Warning: Computed natural basis coordinates "
                             "{} are outside the element's "
                             "domain.".format(nat_coords))
         return nat_coords
@@ -372,7 +432,17 @@ class Hex8(Element3D):
                   (4, 5, 6, 7),
                   (0, 3, 2, 1))
 
-    # Guass point locations
+    # Vertex point locations in natural coordinates
+    vloc = ((-1.0, -1.0, -1.0),
+            ( 1.0, -1.0, -1.0),
+            ( 1.0,  1.0, -1.0),
+            (-1.0,  1.0, -1.0),
+            (-1.0, -1.0,  1.0),
+            ( 1.0, -1.0,  1.0),
+            ( 1.0,  1.0,  1.0),
+            (-1.0,  1.0,  1.0))
+
+    # Gauss point locations
     g = 1.0 / 3.0**0.5
     gloc = ((-g, -g, -g),
             ( g, -g, -g),
@@ -382,6 +452,7 @@ class Hex8(Element3D):
             ( g, -g,  g),
             ( g,  g,  g),
             (-g,  g,  g))
+
     # Guass weights
     gwt = (1, 1, 1, 1, 1, 1, 1, 1)
 
@@ -393,14 +464,14 @@ class Hex8(Element3D):
 
         """
         n = [0.0] * 8
-        n[0] = 1. / 8. * (1 - r) * (1 - s) * (1 - t)
-        n[1] = 1. / 8. * (1 + r) * (1 - s) * (1 - t)
-        n[2] = 1. / 8. * (1 + r) * (1 - s) * (1 - t)
-        n[3] = 1. / 8. * (1 - r) * (1 - s) * (1 - t)
-        n[4] = 1. / 8. * (1 - r) * (1 - s) * (1 - t)
-        n[5] = 1. / 8. * (1 + r) * (1 - s) * (1 - t)
-        n[6] = 1. / 8. * (1 + r) * (1 - s) * (1 - t)
-        n[7] = 1. / 8. * (1 - r) * (1 - s) * (1 - t)
+        n[0] = 0.125 * (1 - r) * (1 - s) * (1 - t)
+        n[1] = 0.125 * (1 + r) * (1 - s) * (1 - t)
+        n[2] = 0.125 * (1 + r) * (1 + s) * (1 - t)
+        n[3] = 0.125 * (1 - r) * (1 + s) * (1 - t)
+        n[4] = 0.125 * (1 - r) * (1 - s) * (1 + t)
+        n[5] = 0.125 * (1 + r) * (1 - s) * (1 + t)
+        n[6] = 0.125 * (1 + r) * (1 + s) * (1 + t)
+        n[7] = 0.125 * (1 - r) * (1 + s) * (1 + t)
         return n
 
     @staticmethod
@@ -409,33 +480,33 @@ class Hex8(Element3D):
 
         """
         dn = [np.zeros(3) for i in xrange(8)]
-        # d/dr
-        dn[0][0] = -1. / 8. * (1 - s) * (1 - t)
-        dn[1][0] =  1. / 8. * (1 - s) * (1 - t)
-        dn[2][0] =  1. / 8. * (1 + s) * (1 - t)
-        dn[3][0] = -1. / 8. * (1 + s) * (1 - t)
-        dn[4][0] = -1. / 8. * (1 - s) * (1 + t)
-        dn[5][0] =  1. / 8. * (1 - s) * (1 + t)
-        dn[6][0] =  1. / 8. * (1 + s) * (1 + t)
-        dn[7][0] = -1. / 8. * (1 + s) * (1 + t)
-        # d/ds
-        dn[0][1] = -1. / 8. * (1 - r) * (1 - t)
-        dn[1][1] = -1. / 8. * (1 + r) * (1 - t)
-        dn[2][1] =  1. / 8. * (1 + r) * (1 - t)
-        dn[3][1] =  1. / 8. * (1 - r) * (1 - t)
-        dn[4][1] = -1. / 8. * (1 - r) * (1 + t)
-        dn[5][1] = -1. / 8. * (1 + r) * (1 + t)
-        dn[6][1] =  1. / 8. * (1 + r) * (1 + t)
-        dn[7][1] =  1. / 8. * (1 - r) * (1 + t)
-        # d/dt
-        dn[0][2] = -1. / 8. * (1 - r) * (1 - s)
-        dn[1][2] = -1. / 8. * (1 + r) * (1 - s)
-        dn[2][2] = -1. / 8. * (1 + r) * (1 + s)
-        dn[3][2] = -1. / 8. * (1 - r) * (1 + s)
-        dn[4][2] =  1. / 8. * (1 - r) * (1 - s)
-        dn[5][2] =  1. / 8. * (1 + r) * (1 - s)
-        dn[6][2] =  1. / 8. * (1 + r) * (1 + s)
-        dn[7][2] =  1. / 8. * (1 - r) * (1 + s)
+        # dN/dr
+        dn[0][0] = -0.125 * (1 - s) * (1 - t)
+        dn[1][0] =  0.125 * (1 - s) * (1 - t)
+        dn[2][0] =  0.125 * (1 + s) * (1 - t)
+        dn[3][0] = -0.125 * (1 + s) * (1 - t)
+        dn[4][0] = -0.125 * (1 - s) * (1 + t)
+        dn[5][0] =  0.125 * (1 - s) * (1 + t)
+        dn[6][0] =  0.125 * (1 + s) * (1 + t)
+        dn[7][0] = -0.125 * (1 + s) * (1 + t)
+        # dN/ds
+        dn[0][1] = -0.125 * (1 - r) * (1 - t)
+        dn[1][1] = -0.125 * (1 + r) * (1 - t)
+        dn[2][1] =  0.125 * (1 + r) * (1 - t)
+        dn[3][1] =  0.125 * (1 - r) * (1 - t)
+        dn[4][1] = -0.125 * (1 - r) * (1 + t)
+        dn[5][1] = -0.125 * (1 + r) * (1 + t)
+        dn[6][1] =  0.125 * (1 + r) * (1 + t)
+        dn[7][1] =  0.125 * (1 - r) * (1 + t)
+        # dN/dt
+        dn[0][2] = -0.125 * (1 - r) * (1 - s)
+        dn[1][2] = -0.125 * (1 + r) * (1 - s)
+        dn[2][2] = -0.125 * (1 + r) * (1 + s)
+        dn[3][2] = -0.125 * (1 - r) * (1 + s)
+        dn[4][2] =  0.125 * (1 - r) * (1 - s)
+        dn[5][2] =  0.125 * (1 + r) * (1 - s)
+        dn[6][2] =  0.125 * (1 + r) * (1 + s)
+        dn[7][2] =  0.125 * (1 - r) * (1 + s)
         return dn
 
     @staticmethod
@@ -443,7 +514,65 @@ class Hex8(Element3D):
         """"Shape function 2nd derivatives.
 
         """
-        raise NotImplementedError()
+        ddn = np.zeros((8,3,3))
+        # dN/dr^2 = 0
+        # dN / drds
+        ddn[0][0][1] =  0.125 * (1 - t)
+        ddn[1][0][1] = -0.125 * (1 - t)
+        ddn[2][0][1] =  0.125 * (1 - t)
+        ddn[3][0][1] = -0.125 * (1 - t)
+        ddn[4][0][1] =  0.125 * (1 + t)
+        ddn[5][0][1] = -0.125 * (1 + t)
+        ddn[6][0][1] =  0.125 * (1 + t)
+        ddn[7][0][1] = -0.125 * (1 + t)
+        # dN / drdt
+        ddn[0][0][2] =  0.125 * (1 - s)
+        ddn[1][0][2] = -0.125 * (1 - s)
+        ddn[2][0][2] = -0.125 * (1 + s)
+        ddn[3][0][2] =  0.125 * (1 + s)
+        ddn[4][0][2] = -0.125 * (1 - s)
+        ddn[5][0][2] =  0.125 * (1 - s)
+        ddn[6][0][2] =  0.125 * (1 + s)
+        ddn[7][0][2] = -0.125 * (1 + s)
+        # dN / dsdr
+        ddn[0][1][0] =  0.125 * (1 - t)
+        ddn[1][1][0] = -0.125 * (1 - t)
+        ddn[2][1][0] =  0.125 * (1 - t)
+        ddn[3][1][0] = -0.125 * (1 - t)
+        ddn[4][1][0] =  0.125 * (1 + t)
+        ddn[5][1][0] = -0.125 * (1 + t)
+        ddn[6][1][0] =  0.125 * (1 + t)
+        ddn[7][1][0] = -0.125 * (1 + t)
+        # dN / ds^2 = 0
+        # dN / dsdt
+        ddn[0][1][2] =  0.125 * (1 - r)
+        ddn[1][1][2] =  0.125 * (1 + r)
+        ddn[2][1][2] = -0.125 * (1 + r)
+        ddn[3][1][2] = -0.125 * (1 - r)
+        ddn[4][1][2] = -0.125 * (1 - r)
+        ddn[5][1][2] = -0.125 * (1 + r)
+        ddn[6][1][2] =  0.125 * (1 + r)
+        ddn[7][1][2] =  0.125 * (1 - r)
+        # dN / dtdr
+        ddn[0][2][0] =  0.125 * (1 - s)
+        ddn[1][2][0] = -0.125 * (1 - s)
+        ddn[2][2][0] = -0.125 * (1 + s)
+        ddn[3][2][0] =  0.125 * (1 + s)
+        ddn[4][2][0] = -0.125 * (1 - s)
+        ddn[5][2][0] =  0.125 * (1 - s)
+        ddn[6][2][0] =  0.125 * (1 + s)
+        ddn[7][2][0] = -0.125 * (1 + s)
+        # dN / dtds
+        ddn[0][2][1] =  0.125 * (1 - r)
+        ddn[1][2][1] =  0.125 * (1 + r)
+        ddn[2][2][1] = -0.125 * (1 + r)
+        ddn[3][2][1] = -0.125 * (1 - r)
+        ddn[4][2][1] = -0.125 * (1 - r)
+        ddn[5][2][1] = -0.125 * (1 + r)
+        ddn[6][2][1] =  0.125 * (1 + r)
+        ddn[7][2][1] =  0.125 * (1 - r)
+        # dN/ dt^2 = 0
+        return ddn
 
 
 class Quad4(Element2D):
@@ -468,11 +597,17 @@ class Quad4(Element2D):
                   [2, 3],
                   [3, 0]]
 
+    ## vertex point locations in natural coordinates
+    vloc = ((-1.0, -1.0),
+            ( 1.0, -1.0),
+            ( 1.0, 1.0),
+            (-1.0, 1.0))
+
     a = 1.0 / 3.0**0.5
     gloc = ((-a, -a),           # Gauss point locations
-          ( a, -a),
-          ( a, a),
-          (-a, a))
+            ( a, -a),
+            ( a, a),
+            (-a, a))
     gwt = (1, 1, 1, 1)          # Gauss weights
 
     def __init__(self, *args, **kwargs):
@@ -480,7 +615,7 @@ class Quad4(Element2D):
         self.properties['thickness'] = (1.0, 1.0, 1.0, 1.0)
 
     @staticmethod
-    def N(r, s):
+    def N(r, s, t=None):
         """Shape functions.
 
         """
@@ -514,4 +649,18 @@ class Quad4(Element2D):
         """Shape function 2nd derivatives.
 
         """
-        raise NotImplementedError()
+        ddn = np.zeros((4, 2, 2))
+        # dN / dr² = 0
+        # dN / drds
+        ddn[0][0][1] =  0.25
+        ddn[1][0][1] = -0.25
+        ddn[2][0][1] =  0.25
+        ddn[3][0][1] = -0.25
+        # dN / dsdr
+        ddn[0][1][0] =  0.25
+        ddn[1][1][0] = -0.25
+        ddn[2][1][0] =  0.25
+        ddn[3][1][0] = -0.25
+        # dN / ds² = 0
+
+        return ddn
