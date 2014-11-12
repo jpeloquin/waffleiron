@@ -262,7 +262,7 @@ class Element(object):
         return [i for i, f in enumerate(self.face_nodes)
                 if node_id in f]
 
-    def to_natural(self, pt, config='reference'):
+    def to_natural(self, pt, config='reference', warn=True):
         """Return natural coordinates for pt = (x, y, z)
 
         """
@@ -274,11 +274,12 @@ class Element(object):
         jinv = np.linalg.pinv(j)
         nat_coords = np.dot(jinv, v)
         tol = 1e-5
-        if ((nat_coords > (1 + tol)).any()
-            or (nat_coords < (-1 - tol)).any()):
-            print("Warning: Computed natural basis coordinates "
-                            "{} are outside the element's "
-                            "domain.".format(nat_coords))
+        if warn:
+            if ((nat_coords > (1 + tol)).any()
+                or (nat_coords < (-1 - tol)).any()):
+                print("Warning: Computed natural basis coordinates "
+                      "{} are outside the element's "
+                      "domain.".format(nat_coords))
         return nat_coords
 
 
