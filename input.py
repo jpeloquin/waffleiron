@@ -1,8 +1,9 @@
-#! /usr/bin/env python2.7
+import warnings
+import os
+
 from lxml import etree as ET
 import struct
 import numpy as np
-import os
 import febtools as feb
 import febtools.element
 from febtools.element import elem_obj
@@ -413,10 +414,15 @@ class XpltReader:
                         '/state_var/variable_data')
                 a = self._findall(path, steploc)
                 for (loc, sz), (typ, fmt, name) in zip(a, v):
-                    self.f.seek(loc)
-                    s = self.f.read(sz)
-                    data.setdefault(k, {})[name] = \
-                        self._unpack_variable_data(s, typ)
+                    if sz == 0:
+                        warnings.warn("{} data ({}, {}) at position {} has size {}".format(name, typ, fmt, loc, sz))
+                    else:
+                        self.f.seek(loc)
+                        s = self.f.read(sz)
+                        data.setdefault(k, {})[name] = \
+                            self._unpack_variable_data(s, typ)
+
+        # "element" is alias for FEBio's "domain category
         data['element'] = data['domain']
         return data
 
