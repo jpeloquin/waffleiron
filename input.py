@@ -218,6 +218,7 @@ class XpltReader:
         'elem_type':       17047810,  # 0x01042102
         'mat_id':          17047811,  # 0x01042103
         'elements':        16982276,  # 0x01032104
+        'domain_id':       16982277,  # 0x01032105
         'element_list':    17048064,  # 0x01042200
         'element':         17048065,  # 0x01042201
         'surface_section': 17051648,  # 0x01043000
