@@ -62,7 +62,22 @@ def elements_containing_point(point, elements, bb=None,
     inds = np.nonzero(in_bb)[0]
     candidates = [elements[i] for i in inds]
     elements = [e for e in candidates
-                if feb.geometry.point_in_element(e, p)]
+                if feb.geometry.point_in_element(e, p, dtol=tol)]
+
+    pt = point
+    if elements:
+        pass
+    elif (-18.0 < pt[0] < 18.0) and (-13.0 < pt[1] < 13.0) and (-4.0 < pt[2] < 4.0):
+        import matplotlib.pyplot as plt
+        plt.ion()
+        for ii in xrange(0, len(candidates)):
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            ax.scatter(candidates[ii].nodes[:,0], candidates[ii].nodes[:,1], candidates[ii].nodes[:,2], c='b')
+            ax.scatter(point[0], point[1], point[2], marker='*', color='r')
+            import ipdb; ipdb.set_trace()
+            feb.geometry.point_in_element(e, p, dtol=tol)
+
     return elements
 
 def corner_nodes(mesh):

@@ -50,7 +50,7 @@ def inter_face_angle(f1, f2, mesh, tol=2 * np.finfo(float).eps):
     return angle
 
 
-def point_in_element(e, p):
+def point_in_element(e, p, config='reference', dtol=tol, rtol=0.05):
     """Return true if element encloses point.
 
     Points on the boundary of the element are considered to be inside
@@ -62,18 +62,18 @@ def point_in_element(e, p):
     # normals point outward by convention.
     if e.is_planar:
         normals = e.edge_normals()
-        bdry_pts = [e.x()[ids[0]] for ids in e.edge_nodes]
+        bdry_pts = [e.x(config=config)[ids[0]] for ids in e.edge_nodes]
+        # Find the distance to each boundary face by projection onto
+        # the face normal.  If any projection is positive, the point
+        # must lie outside that face.  If all projections are negative
+        # or zero, the point is inside the element.
+        for o, n in zip(bdry_pts, normals):
+            v = p - o
+            d = np.dot(v, n)
+            if d > tol:
+                return False
+        return True
     else:
-        normals = e.face_normals()
-        # these ids are intra-element
-        bdry_pts = [e.x()[ids[0]] for ids in e.face_nodes]
-    # Find the distance to each boundary face by projection onto the
-    # face normal.  If any projection is positive, the point must lie
-    # outside that face.  If all projections are negative or zero, the
-    # point is inside the element.
-    for o, n in zip(bdry_pts, normals):
-        v = p - o
-        d = np.dot(v, n)
-        if d > tol:
-            return False
-    return True
+        r = e.to_natural(p, config=config)
+        return np.all(np.logical_and(np.greater_equal(r, -1 - rtol),
+                                     np.less_equal(r, 1 + rtol)))

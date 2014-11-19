@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from scipy.optimize import fsolve
+from scipy.optimize import fmin
 
 import febtools as feb
 from febtools.geometry import _cross
@@ -134,8 +134,9 @@ class Element(object):
         And so on for higher order tensors.
 
         """
+        # nodal values
         if type(prop) is str:
-            nodal_v = self.properties[prop] # nodal values
+            nodal_v = self.properties[prop]
         else:
             nodal_v = prop
 
@@ -262,7 +263,7 @@ class Element(object):
         return [i for i, f in enumerate(self.face_nodes)
                 if node_id in f]
 
-    def to_natural(self, pt, config='reference', warn=True):
+    def to_natural(self, pt, config='reference'):
         """Return natural coordinates for pt = (x, y, z)
 
         """
@@ -272,16 +273,24 @@ class Element(object):
         v = pt - x0
         j = self.j([0]*self.r_n)
         jinv = np.linalg.pinv(j)
-        nat_coords = np.dot(jinv, v)
-        tol = 1e-5
-        if warn:
-            if ((nat_coords > (1 + tol)).any()
-                or (nat_coords < (-1 - tol)).any()):
-                print("Warning: Computed natural basis coordinates "
-                      "{} are outside the element's "
-                      "domain.".format(nat_coords))
-        return nat_coords
+        r = np.dot(jinv, v)
 
+        def fn(r, e=self, p=pt):
+            return np.sum((np.array(p)
+                           - e.interp(r, prop='position'))**2.0)
+
+        # def dfn(r, e=self, p=pt):
+        #     sign = np.sign(np.array(pt)
+        #                     - e.interp(r, prop='position'))
+        #     sign = np.atleast_2d(sign).T
+        #     # make sign column vector so it is broadcast over the
+        #     # columns of dvdr
+        #     ddr = np.vstack(self.dN(*r))
+        #     dvdr = np.dot(ddr.T, self.x()).T
+        #     return np.sum(sign * -dvdr, axis=0)
+
+        r = fmin(fn, r, disp=False)
+        return r
 
 class Element3D(Element):
     """Class for 3D elements.
