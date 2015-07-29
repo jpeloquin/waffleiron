@@ -7,6 +7,7 @@ import numpy as np
 import febtools as feb
 import febtools.element
 from febtools.element import elem_obj
+from febtools.exceptions import UnsupportedFormatError
 from operator import itemgetter
 
 def _nstrip(string):
@@ -21,6 +22,8 @@ def _nstrip(string):
 def load_model(fpath):
     """Loads a model (feb) and its solution (xplt).
 
+    This has been tested the most with FEBio file specification 2.0.
+
     """
     if (fpath[-4:].lower() == '.feb'
         or fpath[-5:].lower() == '.xplt'):
@@ -29,7 +32,21 @@ def load_model(fpath):
         base = fpath
     fp_feb = base + '.feb'
     fp_xplt = base + '.xplt'
-    model = feb.input.FebReader(base + '.feb').model()
+    try:
+        model = feb.input.FebReader(fp_feb).model()
+    except UnsupportedFormatError as err:
+        # The .feb file is some unsupported version
+        msg = "{}.  Falling back to defining the model from the .xplt "
+        "file alone.  Values given only in the .feb file will not be "
+        "available.  Using FEBio file format 2.x is recommended."
+        msg = msg.format(err.message)
+        warnings.warn(msg)
+        # Attempt to work around the problem
+        soln = feb.input.XpltReader(fp_xplt)
+        model = feb.Model(soln.mesh())
+        model.apply_solution(soln)
+        return model
+    # Apply the solution to the model
     if os.path.exists(fp_xplt):
         soln = feb.input.XpltReader(fp_xplt)
         model.apply_solution(soln)
@@ -82,11 +99,13 @@ class FebReader:
         """
         self.file = file
         self.root = ET.parse(self.file).getroot()
+        version = self.root.attrib['version']
         if self.root.tag != "febio_spec":
             raise Exception("Root node is not 'febio_spec': '" +
                             fpath + "is not an FEBio xml file.")
-        if self.root.attrib['version'] != '2.0':
-            raise ValueError('{} is not febio_spec 2.0'.format(file))
+        if version != '2.0':
+            msg = '{} is not febio_spec 2.0'.format(file)
+            raise UnsupportedFormatError(msg, file, version)
 
     def materials(self):
         """Return dictionary of material objects keyed by id.
