@@ -73,6 +73,8 @@ class RigidBody:
 class ExponentialFiber:
     """Fiber with exponential power law.
 
+    This is the coupled formulation ("fiber-exp-pow" in FEBio").
+
     References
     ----------
     FEBio users manual 2.0, page 104.
@@ -88,7 +90,7 @@ class ExponentialFiber:
             # zenith; 0° := +z, 90° := x-y plane
 
     def w(self, F):
-        """(Deviatoric) strain energy density.
+        """Strain energy density.
 
         Input angles in degrees.
 
@@ -96,15 +98,16 @@ class ExponentialFiber:
         F = np.array(F)
 
         # deviatoric components
-        J = det(F)
-        Fdev = J**(-1.0/3.0) * F
-        Cdev = dot(Fdev.T, Fdev)
+        # J = det(F)
+        # Fdev = J**(-1.0/3.0) * F
+        # Cdev = dot(Fdev.T, Fdev)
+        C = dot(F.T, F)
         # fiber unit vector
         N = np.array([sin(self.phi) * cos(self.theta),
                       sin(self.phi) * sin(self.theta),
                       cos(self.phi)])
         # square of fiber stretch
-        In = dot(N, dot(Cdev, N))
+        In = dot(N, dot(C, N))
         a = self.alpha
         b = self.beta
         xi = self.xi
@@ -112,7 +115,7 @@ class ExponentialFiber:
         return w
 
     def tstress(self, F):
-        """(Deviatoric) Cauchy stress tensor.
+        """Cauchy stress tensor.
 
         """
         F = np.array(F)
@@ -124,14 +127,14 @@ class ExponentialFiber:
             else:
                 return 0.0
 
-        # Deviatoric components
+        # Components
         J = det(F)
         C = dot(F.T, F)
         # fiber unit vector
         N = np.array([sin(self.phi) * cos(self.theta),
                       sin(self.phi) * sin(self.theta),
                       cos(self.phi)])
-        # (deviatoric) square of fiber stretch
+        # Square of fiber stretch
         In = dot(N, dot(C, N))
         yf = In**0.5 # fiber stretch
         n = dot(F, N) / yf
