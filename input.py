@@ -108,44 +108,79 @@ class FebReader:
             raise UnsupportedFormatError(msg, file, version)
 
     def materials(self):
-        """Return dictionary of material objects keyed by id.
+        """Return dictionary of materials keyed by id.
 
         """
         materials = {}
-        for mat in self.root.findall('./Material/material'):
-            # Read material attributes
-            mat_type = mat.attrib['type']
-            if 'name' in mat.attrib:
-                name = mat.attrib['name']
-            else:
-                name = ''
-            mat_id = int(mat.attrib['id']) - 1 # convert to 0-index
-            if mat_type == "solid mixture":
-                # collect child materials
-                solids = []
-                for child in mat:
-                    solid = self._elem2mat(child)
-                    solids.append(solid)
-                material = febtools.material.SolidMixture(solids)
-            else:
-                material = self._elem2mat(mat)
-            # Store material object in materials dictionary
-            material.name = name
+        mat_names = {}
+        for m in self.root.findall('./Material/material'):
+            # Read material into dictionary
+            material = self._read_material(m)
+            mat_id = int(m.attrib['id']) - 1 # FEBio counts from 1
+
+            # Convert material to class if possible
+            def convert_mat(d):
+                if d['material'] in feb.material.class_from_name:
+                    cls = feb.material.class_from_name[d['material']]
+                    if d['material'] == 'solid mixture':
+                        constituents = []
+                        for d_child in d['constituents']:
+                            constituents.append(convert_mat(d_child))
+                        return cls(constituents)
+                    else:
+                        return cls(d['properties'])
+                else:
+                    raise NotImplemented
+
+            try:
+                material = convert_mat(material)
+            except NotImplemented:
+                warnings.warn("Warning: Material type `{}` is not implemented for post-processing.  It will be represented as a dictionary of properties.".format(m.attrib['type']))
+
+            # Store material in index
             materials[mat_id] = material
+            mat_names[mat_id] = m.attrib['name']
         return materials
 
-    def _elem2mat(self, element):
-        """Get material properties dictionary from a material element.
+    def _read_material(self, tag):
+        """Get material properties dictionary from <material>.
+
+        tag := the XML <material> element.
+
+        A material is represented as
 
         """
-        props = {}
-        for child in element:
-            v = map(float, child.text.split(','))
-            if len(v) == 1:
-                v = v[0]
-            props[child.tag] = v
-        cls = febtools.material.class_from_name[element.attrib['type']]
-        return cls(props)
+        m = {}
+        m['material'] = tag.attrib['type']
+        m['properties'] = {}
+        constituents = []
+        for child in tag:
+            if child.tag in ['material', 'solid']:
+                # Child element is a material
+                constituents.append(self._read_material(child))
+            else:
+                # Child element is a property
+                m['properties'][child.tag] = self._read_property(child)
+        if constituents:
+            m['constituents'] = constituents
+        return m
+
+    def _read_property(self, tag):
+        """Read a permeability element."""
+        p = {}
+        p.update(tag.attrib)
+        for child in tag:
+            p_child = self._read_property(child)
+            p[child.tag] = p_child
+        v = tag.text.lstrip().rstrip()
+        if v:
+            v = map(float, v.split(','))
+            if len(v) == 1: v = v[0]
+            if not p:
+                return v
+            else:
+                p['value'] = v
+        return p
 
     def model(self):
         """Return model.
