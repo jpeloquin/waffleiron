@@ -130,11 +130,11 @@ class FebReader:
                     else:
                         return cls(d['properties'])
                 else:
-                    raise NotImplemented
+                    raise NotImplementedError
 
             try:
                 material = convert_mat(material)
-            except NotImplemented:
+            except NotImplementedError:
                 warnings.warn("Warning: Material type `{}` is not implemented for post-processing.  It will be represented as a dictionary of properties.".format(m.attrib['type']))
 
             # Store material in index
