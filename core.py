@@ -44,6 +44,7 @@ class Model:
         self.mesh = mesh
 
         self.materials = {}
+        self.material_names = {}
         self.solution = None # the solution for the model
 
         self.fixed_nodes = {'x': set(),

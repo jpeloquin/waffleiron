@@ -111,7 +111,7 @@ class FebReader:
         """Return dictionary of materials keyed by id.
 
         """
-        materials = {}
+        mats = {}
         mat_names = {}
         for m in self.root.findall('./Material/material'):
             # Read material into dictionary
@@ -138,10 +138,10 @@ class FebReader:
                 warnings.warn("Warning: Material type `{}` is not implemented for post-processing.  It will be represented as a dictionary of properties.".format(m.attrib['type']))
 
             # Store material in index
-            materials[mat_id] = material
+            mats[mat_id] = material
             mat_names[mat_id] = m.attrib['name']
             # TODO: Use material names
-        return materials
+        return mats, mat_names
 
     def _read_material(self, tag):
         """Get material properties dictionary from <material>.
@@ -191,7 +191,7 @@ class FebReader:
         mesh = self.mesh()
         model = feb.Model(mesh)
         # Store materials
-        model.materials = self.materials()
+        model.materials, model.material_names = self.materials()
         # Boundary condition: fixed nodes
         internal_label = {'x': 'x',
                           'y': 'y',
@@ -218,7 +218,7 @@ class FebReader:
         """Return mesh.
 
         """
-        materials = self.materials()
+        mats, mat_names = self.materials()
         nodes = [tuple([float(a) for a in b.text.split(",")])
                  for b in self.root.findall("./Geometry/Nodes/*")]
         # Read elements
@@ -232,7 +232,8 @@ class FebReader:
             for elem in elset.findall("./elem"):
                 ids = [int(a) - 1 for a in elem.text.split(",")]
                 e = cls.from_ids(ids, nodes,
-                                 material=materials[mat_id])
+                                 mat_id=mat_id,
+                                 mat=mats[mat_id])
                 elements.append(e)
         # Create mesh
         mesh = feb.Mesh(nodes, elements)
