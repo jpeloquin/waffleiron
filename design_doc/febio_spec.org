@@ -1,0 +1,76 @@
+#+TITLE: Unofficial documentation on FEBio Spec 2.0
+#+AUTHOR: John M. Peloquin
+#+DATE: 2016-03-08
+
+* Introduction
+
+This is an unofficial specification of the FEBio XML spec 2.0.
+The official manual is user-oriented.
+Information on sections is scattered and information on how the XML should actually be handled (and how discrepancies should be resolved) is not presented in a way that is convenient for developers.
+This document supplements the official user manual by providing information on how the XML file should be interpreted when this is not clear from the user manual.
+
+* Material section
+
+** Child tags of =<Material>=
+
+=<Material>= must have zero or more child tags.
+The only child tag allowed for =<Material>= is =<material>=.
+
+** Types of =<material>=
+
+*** biphasic
+
+#+begin_example
+<material id="1" name="Biphasic tissue" type="biphasic"> 
+  <solid name="Elasticity" type="neo-Hookean"> 
+    <E>1.0</E> 
+    <v>0.3</v> 
+  </solid> 
+  <phi0>0.2</phi0> 
+  <permeability name="Permeability" type="perm-const-iso"> 
+    <perm>0.001</perm> 
+  </permeability> 
+</material> 
+#+end_example
+
+*** biphasic-solute
+
+*** multiphasic
+
+*** solid mixture
+
+** Child tags of =<material>=
+
+*** Material properties
+
+Material properties are specified by =<property>value</property>=.
+=value= may be given in decimal or engineering notation.
+For example, the property E could be given as =<E>1e9</E>=.
+
+The above is one kind.
+Some properties, like =<cF0>= for Donnan equilibrium materials, have attributes.
+Others, like =<permeability>=, have child tags.
+
+*** =<solid>=
+
+Material types can be listed as the children of some materials.
+If so, the tag used is =<solid>= rather than =<material>=.
+
+*** =<permeability>=
+
+=<permeability>= may only be a child of =<element>= tags that are of type =biphasic=, =biphasic-solute=, or =multiphasic=.
+
+*** =<mat_axis>=
+
+=<mat_axis>= is like a material property, but has a =type= attribute.
+The =type= can be =local= or =vector=.
+It can also be a child of a =<solid>= tag.
+
+The =<mat_axis>= tag can also be defined for an element in =<ElementData>=; this overrides the material's =<mat_axis>=.
+Hence, =<mat_axis>= is an optional child of =<material>= or =<solid>=.
+However, if the material requires a material axis it must be defined in at least one place.
+
+** Material ids
+
+Material ids must be in the range [1, number of materials].
+=<material>= tags must be written in ascending order of =id=.
