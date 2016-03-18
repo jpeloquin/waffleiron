@@ -190,8 +190,13 @@ class FebReader:
         mesh = self.mesh() # materials handled in here
         model = feb.Model(mesh)
         # Boundary condition: fixed nodes
+        internal_label = {'x': 'x',
+                          'y': 'y',
+                          'z': 'z',
+                          'p': 'pressure'}
+        # TODO: Solutes
         for e_fix in self.root.findall("Boundary/fix"):
-            lbl = e_fix.attrib['bc']
+            lbl = internal_label[e_fix.attrib['bc']]
             node_ids = set()
             for e_node in e_fix:
                 node_ids.add(int(e_node.attrib['id']))

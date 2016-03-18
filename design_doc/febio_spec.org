@@ -74,3 +74,8 @@ However, if the material requires a material axis it must be defined in at least
 
 Material ids must be in the range [1, number of materials].
 =<material>= tags must be written in ascending order of =id=.
+
+* Boundary conditions
+
+Fixed boundary conditions are specified with the =<fix>= tag.
+The fixed variable is specified with the =bc= attribute, which may have the value ="x"=, ="y"=, or ="z"= for displacements, ="p"= for pressure, or ="c{n}"= for solutes where ={n}= is the integer solute id (from the solutes table).
