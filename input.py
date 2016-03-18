@@ -140,6 +140,7 @@ class FebReader:
             # Store material in index
             materials[mat_id] = material
             mat_names[mat_id] = m.attrib['name']
+            # TODO: Use material names
         return materials
 
     def _read_material(self, tag):
@@ -187,8 +188,10 @@ class FebReader:
 
         """
         # Create model from mesh
-        mesh = self.mesh() # materials handled in here
+        mesh = self.mesh()
         model = feb.Model(mesh)
+        # Store materials
+        model.materials = self.materials()
         # Boundary condition: fixed nodes
         internal_label = {'x': 'x',
                           'y': 'y',
