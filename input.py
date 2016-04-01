@@ -10,6 +10,12 @@ from febtools.element import elem_obj
 from febtools.exceptions import UnsupportedFormatError
 from operator import itemgetter
 
+# map FEBio xml boundary condition labels to internal labels
+label_bc = {'x': 'x',
+            'y': 'y',
+            'z': 'z',
+            'p': 'pressure'}
+
 def _nstrip(string):
     """Remove trailing nulls from string.
 
@@ -200,6 +206,10 @@ class FebReader:
         # TODO: Solutes
         for e_fix in self.root.findall("Boundary/fix"):
             lbl = internal_label[e_fix.attrib['bc']]
+            # Convert from FEBio XML label to internal label, if
+            # conversion is provided
+            if lbl in label_bc:
+                lbl = label_bc[lbl]
             node_ids = set()
             for e_node in e_fix:
                 node_ids.add(int(e_node.attrib['id']))
