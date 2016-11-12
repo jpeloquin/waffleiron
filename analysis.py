@@ -23,7 +23,7 @@ def select_elems_around_node(mesh, i, n=3):
     """
     nodelist = set([i])
     elements = set([])
-    for n in xrange(n):
+    for n in range(n):
         for i in nodelist:
             elements = elements | set(mesh.elem_with_node[i])
         nodelist = set(i for e in elements
@@ -80,7 +80,7 @@ def apply_q_2d(mesh, crack_tip, q=[1, 0, 0], n=3, qtype='plateau'):
     all_nodes = set(crack_tip)
     inner_nodes = set()
     elements = set()
-    for ring in xrange(n):
+    for ring in range(n):
         # The current nodeset becomes interior nodes
         inner_nodes.update(all_nodes)
         # Add connected elements
@@ -218,8 +218,8 @@ def jintegral(domain, infinitessimal=False):
 
         # compute ∂s/∂x at this point
         dsdx = np.zeros((3, 3, 3))
-        for i in xrange(3):
-            for j in xrange(3):
+        for i in range(3):
+            for j in range(3):
                 dsdx[i,j,:] = \
                     e.dinterp(r, prop=e.properties['S'][:,i,j])
 
@@ -233,11 +233,11 @@ def jintegral(domain, infinitessimal=False):
 
         # The usual part.
         work = sum(s[i][j] * dudx[j,k] * dqdx[k][i]
-                   for i in xrange(3)
-                   for j in xrange(3)
-                   for k in xrange(3))
+                   for i in range(3)
+                   for j in range(3)
+                   for k in range(3))
         pe = sum(-w * dqdx[ik][ik]
-                 for ik in xrange(3))
+                 for ik in range(3))
         igrand1 = work + pe
 
         # The non-infinitessimal strain part
@@ -246,23 +246,23 @@ def jintegral(domain, infinitessimal=False):
         igrand2 = sum(q[k] * (dsdx[i, 2, 2] * dudx[i, k]
                               + s[i, 2] * d2udx2[i, k, 2]
                               - dwdx[2] * kd[i,2])
-                      for i in xrange(3)
-                      for k in xrange(3))
+                      for i in range(3)
+                      for k in range(3))
 
         # The Anderson version, corrected to use the divergence
         # operator correctly
         igrand2_1 = sum(q[k] * (dsdx[i,j,j] * dudx[j,k])
-                        for i in xrange(3)
-                        for j in xrange(3)
-                        for k in xrange(3))
+                        for i in range(3)
+                        for j in range(3)
+                        for k in range(3))
 
         igrand2_2 = sum(q[k] * (s[i,j] * d2udx2[j,k,j])
-                        for i in xrange(3)
-                        for j in xrange(3)
-                        for k in xrange(3))
+                        for i in range(3)
+                        for j in range(3)
+                        for k in range(3))
 
         igrand2_3 = sum(q[i] * (-dwdx[i])
-                        for i in xrange(3))
+                        for i in range(3))
 
         igrand2 = igrand2_1 + igrand2_2 + igrand2_3
 

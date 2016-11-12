@@ -35,8 +35,8 @@ def scalar_field(mesh, fn, pts):
     bb = feb.core._e_bb(mesh.elements)
 
     field = np.empty(pts.shape[0:2])
-    for i in xrange(pts.shape[0]):
-        for j in xrange(pts.shape[1]):
+    for i in range(pts.shape[0]):
+        for j in range(pts.shape[1]):
             x = pts[i, j, 0]
             y = pts[i, j, 1]
             z = pts[i, j, 2]

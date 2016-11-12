@@ -161,10 +161,10 @@ class Hex8ElementTest(unittest.TestCase):
         nodal_tensors = np.zeros((8, 3, 3))
         r_pt = (0, 0, 0)
         x_pt = self.element.interp(r_pt, prop='position')
-        for i in xrange(3):
-            for j in xrange(3):
+        for i in range(3):
+            for j in range(3):
                 c = [random.randrange(-100, 100) / 10.0
-                     for a in xrange(8)]
+                     for a in range(8)]
                 desired[i, j, :] = self.dfn(x_pt, c=c)
                 for k, x_p in enumerate(self.element.x()):
                     nodal_tensors[k, i, j] = self.fn(x_p, c=c)
@@ -188,10 +188,10 @@ class Hex8ElementTest(unittest.TestCase):
         # derivative
         desired = np.zeros((3, 3, 3, 3))
         nodal_tensors = np.zeros((8, 3, 3))
-        for i in xrange(3):
-            for j in xrange(3):
+        for i in range(3):
+            for j in range(3):
                 c = [random.randrange(-100, 100) / 10.0
-                     for a in xrange(8)]
+                     for a in range(8)]
                 desired[i, j, ...] = self.ddfn(x_pt, c=c)
                 for k, x_p in enumerate(self.element.x()):
                     nodal_tensors[k, i, j] = self.fn(x_p, c=c)
@@ -257,7 +257,7 @@ class Quad4ElementTest(unittest.TestCase):
 
         random.seed(10)
         c = [random.randrange(-100, 100) / 10.0
-             for i in xrange(5)]
+             for i in range(5)]
 
         def fn(p, c=c):
             return (c[0]
@@ -361,10 +361,10 @@ class Quad4ElementTest(unittest.TestCase):
         nodal_tensors = np.zeros((self.element.n, 3, 3))
         r_pt = (0, 0, 0)
         x_pt = self.element.interp(r_pt, prop='position')
-        for i in xrange(3):
-            for j in xrange(3):
+        for i in range(3):
+            for j in range(3):
                 c = [random.randrange(-100, 100) / 10.0
-                     for a in xrange(5)]
+                     for a in range(5)]
                 desired[i, j, :] = self.dfn(x_pt, c=c)
                 for k, x_p in enumerate(self.element.x()):
                     nodal_tensors[k, i, j] = self.fn(x_p, c=c)
@@ -388,10 +388,10 @@ class Quad4ElementTest(unittest.TestCase):
         # derivative
         desired = np.zeros((3, 3, 3, 3))
         nodal_tensors = np.zeros((self.element.n, 3, 3))
-        for i in xrange(3):
-            for j in xrange(3):
+        for i in range(3):
+            for j in range(3):
                 c = [random.randrange(-100, 100) / 10.0
-                     for a in xrange(5)]
+                     for a in range(5)]
                 desired[i, j, ...] = self.ddfn(x_pt, c=c)
                 for k, x_p in enumerate(self.element.x()):
                     nodal_tensors[k, i, j] = self.fn(x_p, c=c)
@@ -421,7 +421,7 @@ class ElementMethodsTestHex8(unittest.TestCase):
     def test_f(self):
         istep = -1
         u = self.soln.stepdata(istep)['node']['displacement']
-        for eid in xrange(len(self.model.mesh.elements) - 1):
+        for eid in range(len(self.model.mesh.elements) - 1):
             # don't check rigid body (last element)
             F_expected = f_tensor_logfile(self.elemdata, istep, eid)
             F = self.model.mesh.elements[eid].f((0, 0, 0))
@@ -454,7 +454,7 @@ class FTestTri3(unittest.TestCase):
     def test_f(self):
         istep = -1
         u = self.soln.stepdata(step=istep)['node']['displacement']
-        for eid in xrange(len(self.model.mesh.elements)):
+        for eid in range(len(self.model.mesh.elements)):
             F_expected = f_tensor_logfile(self.elemdata, istep, eid)
             F = self.model.mesh.elements[eid].f((1.0/3.0, 1.0/3.0))
             npt.assert_almost_equal(F[:2,:2], F_expected[:2,:2],
@@ -474,7 +474,7 @@ class FTestQuad4(unittest.TestCase):
     def test_f(self):
         istep = -1
         u = self.soln.reader.stepdata(istep)['displacement']
-        for eid in xrange(len(self.soln.elements)):
+        for eid in range(len(self.soln.elements)):
             F_expected = f_tensor_logfile(self.elemdata, istep, eid)
             F = self.soln.elements[eid].f((1.0/3.0, 1.0/3.0), u)
             npt.assert_almost_equal(F[:2,:2], F_expected[:2,:2],

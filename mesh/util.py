@@ -22,7 +22,7 @@ def zstack(mesh, zcoords):
     eid = 0
     elements = []
     # Iterate over element layers
-    for i in xrange(len(zcoords) - 1):
+    for i in range(len(zcoords) - 1):
         # Iterate over elements in 2d mesh
         for e2d in mesh.elements:
             nids = ([a + i * len(mesh.nodes)

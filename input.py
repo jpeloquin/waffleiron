@@ -373,7 +373,7 @@ class XpltReader:
             for loc, sz in a:
                 self.f.seek(loc)
                 v = struct.unpack('f' * (sz / 4), self.f.read(sz))
-                for i in xrange(0, len(v), 3):
+                for i in range(0, len(v), 3):
                     node_list.append(tuple(v[i:i+3]))
 
             element_list = []
