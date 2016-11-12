@@ -148,7 +148,7 @@ def apply_q_3d(domain, crack_faces, tip_nodes,
     for e in domain:
         for i in e.ids:
             refcount[i] = refcount.setdefault(i, 0) + 1
-    boundary_nodes = (set(k for k, v in refcount.iteritems()
+    boundary_nodes = (set(k for k, v in refcount.items()
                           if v < 8)
                       | tip_nodes)
     interior_nodes = all_nodes - boundary_nodes

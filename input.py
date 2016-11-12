@@ -474,7 +474,7 @@ class XpltReader:
         data['time'] = self.times[step]
 
         steploc = self.steploc[step]
-        for k, v in var.iteritems():
+        for k, v in var.items():
             if v:
                 path = ('state_data/' + k + '_data'
                         '/state_var/variable_data')

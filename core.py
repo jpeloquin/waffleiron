@@ -97,7 +97,7 @@ class Model:
             t = solution.times[-1]
         data = solution.stepdata(time=t)
         properties = data['node']
-        for k,v  in properties.iteritems():
+        for k,v  in properties.items():
             self.apply_nodal_properties(k, v)
 
     def apply_nodal_properties(self, key, values):

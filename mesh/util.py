@@ -33,7 +33,7 @@ def zstack(mesh, zcoords):
                 cls = feb.element.Hex8
             else:
                 raise ValueError("Only Quad4 meshes can be used in zstack right now.")
-            e3d = cls.from_ids(nids, nodes, material=e2d.material)
+            e3d = cls.from_ids(nids, nodes, mat=e2d.material)
             elements.append(e3d)
 
     mesh3d = feb.Mesh(nodes=nodes, elements=elements)
