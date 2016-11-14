@@ -192,7 +192,11 @@ def write_feb(model, fpath):
                 'ElementData': []}
     for e in Geometry:
         geo_subs[e.tag].append(e)
-    Geometry[:] = geo_subs['Nodes'] + geo_subs['Elements'] + geo_subs['ElementData']
+    Geometry[:] = geo_subs['Nodes'] + geo_subs['Elements']
+    # Only add optional tags if they contain data.  Otherwise FEBio
+    # chockes and gives an incorrect error message (+1 line).
+    if e_elementdata[:] != []:
+        Geometry[:] += geo_subs['ElementData']
 
     # Boundary section (fixed nodal BCs)
     for axis, nodeset in model.fixed_nodes.items():
