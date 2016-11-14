@@ -14,10 +14,9 @@ from febtools.material import fromlame, tolame
 from febtools.analysis import *
 from febtools import material
 
-import fixtures
+from fixtures import Hex8IsotropicCenterCrack
 
-
-class CenterCrackHex8(fixtures.Hex8IsotropicCenterCrack):
+class CenterCrackHex8(Hex8IsotropicCenterCrack):
     """Center cracked isotropic elastic plate in 3d.
 
     """
@@ -104,7 +103,6 @@ class CenterCrackHex8(fixtures.Hex8IsotropicCenterCrack):
         # Test for consistency with value calculated when code
         # initially verified
         npt.assert_allclose(jbar, 73.33, rtol=1e-4)
-
 
     def test_rotated_right_tip(self):
         """Test if J is the same after a coordinate shift.
@@ -234,10 +232,10 @@ class CenterCrackQuad4(unittest.TestCase):
 
         e_top = [(i, e) for i, e
                  in enumerate(self.model.mesh.elements)
-                 if np.any(np.isclose(zip(*e.nodes)[1], ymin))]
+                 if np.any(np.isclose(e.nodes[:,1], ymin))]
         e_bot = [(i, e) for i, e
                  in enumerate(self.model.mesh.elements)
-                 if np.any(np.isclose(zip(*e.nodes)[1], ymax))]
+                 if np.any(np.isclose(e.nodes[:,1], ymax))]
         P = list(pk1([i for i, e in e_top + e_bot]))
         Pavg = sum(P) / len(P)
         stress = Pavg[1][1]

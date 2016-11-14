@@ -10,15 +10,6 @@ from febtools.element import elem_obj
 from febtools.exceptions import UnsupportedFormatError
 from operator import itemgetter
 
-def _nstrip(string):
-    """Remove trailing nulls from string.
-
-    """
-    for i, c in enumerate(string):
-        if c == '\x00':
-            return string[:i]
-    return string
-
 def load_model(fpath):
     """Loads a model (feb) and its solution (xplt).
 
@@ -175,7 +166,7 @@ class FebReader:
             p[child.tag] = p_child
         v = tag.text.lstrip().rstrip()
         if v:
-            v = map(float, v.split(','))
+            v = [float(a) for a in v.split(',')]
             if len(v) == 1: v = v[0]
             if not p:
                 return v
@@ -334,9 +325,9 @@ class XpltReader:
             # Endianness
             self.endian = '<' # initial assumption
             s = f.read(4)
-            if s == 'BEF\x00':
+            if s == b'BEF\x00':
                 self.endian = '<'
-            elif s == '\x00FEB':
+            elif s == b'\x00FEB':
                 self.endian = '>'
             else:
                 raise Exception("The first 4 bytes of %s "
@@ -431,7 +422,8 @@ class XpltReader:
             mat_id = struct.unpack(self.endian + 'i', self.f.read(sz))[0]
             st, sz = self._findall('material_name', loc)[0]
             self.f.seek(st)
-            mat_name = _nstrip(self.f.read(sz))
+            b = self.f.read(sz)
+            mat_name = b[:b.find(b'\x00')].decode()
             matl_index.append({'material_id': mat_id,
                               'material_name': mat_name})
         return matl_index
@@ -519,7 +511,7 @@ class XpltReader:
                     fmt.append(self.tag2item_format[
                         struct.unpack(self.endian + 'I', data)[0]])
                 elif label == 'item_name':
-                    name.append(_nstrip(data))
+                    name.append(data[:data.find(b'\x00')].decode())
                 else:
                     raise Exception('%s block not expected as '
                                     'child of dict_item.' % (label,))
@@ -556,8 +548,8 @@ class XpltReader:
             i = i + 8 + sz
             # unpack and append the values
             if typ == 'float':
-                v = list(struct.unpack(self.endian + 'f'*(len(data)/4),
-                                       data))
+                fmt = self.endian + 'f' * int(len(data)/4)
+                v = list(struct.unpack(fmt, data))
             elif typ == 'vec3f':
                 if len(data) % 12 != 0:
                     raise Exception('Input data cannot be '

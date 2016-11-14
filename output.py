@@ -272,6 +272,6 @@ def write_feb(model, fpath):
                     e_node = ET.SubElement(e_pres, 'node', id=str(nid + 1)).text = str(v)
 
     tree = ET.ElementTree(root)
-    with open(fpath, 'w') as f:
+    with open(fpath, 'wb') as f:
         tree.write(f, pretty_print=True, xml_declaration=True,
                    encoding='us-ascii')
