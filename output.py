@@ -278,4 +278,4 @@ def write_feb(model, fpath):
     tree = ET.ElementTree(root)
     with open(fpath, 'wb') as f:
         tree.write(f, pretty_print=True, xml_declaration=True,
-                   encoding='us-ascii')
+                   encoding='iso-8859-1')
