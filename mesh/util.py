@@ -22,7 +22,7 @@ def zstack(mesh, zcoords):
     eid = 0
     elements = []
     # Iterate over element layers
-    for i in xrange(len(zcoords) - 1):
+    for i in range(len(zcoords) - 1):
         # Iterate over elements in 2d mesh
         for e2d in mesh.elements:
             nids = ([a + i * len(mesh.nodes)
@@ -33,7 +33,7 @@ def zstack(mesh, zcoords):
                 cls = feb.element.Hex8
             else:
                 raise ValueError("Only Quad4 meshes can be used in zstack right now.")
-            e3d = cls.from_ids(nids, nodes, material=e2d.material)
+            e3d = cls.from_ids(nids, nodes, mat=e2d.material)
             elements.append(e3d)
 
     mesh3d = feb.Mesh(nodes=nodes, elements=elements)

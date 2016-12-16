@@ -105,8 +105,8 @@ def write_feb(model, fpath):
     seq_id = {}
     for step in model.steps:
         # Sequences in nodal displacement boundary conditions
-        for node_id, bc in step['bc'].iteritems():
-            for axis, d in bc.iteritems():
+        for node_id, bc in step['bc'].items():
+            for axis, d in bc.items():
                 seq = d['sequence']
                 if seq not in seq_id:
                     seq_id[seq] = i
@@ -134,7 +134,7 @@ def write_feb(model, fpath):
 
     # make material tags
     # sort by id to get around FEBio bug
-    materials = [(i, mat) for mat, i in material_ids.iteritems()]
+    materials = [(i, mat) for mat, i in material_ids.items()]
     materials.sort()
     for i, m in materials:
         tag = feb.output.material_to_feb(m)
@@ -158,8 +158,8 @@ def write_feb(model, fpath):
 
     # write element sets
     e_elementdata = ET.SubElement(Geometry, 'ElementData')
-    for mat, d in elemsets.iteritems():
-        for ecls, like_elems in d.iteritems():
+    for mat, d in elemsets.items():
+        for ecls, like_elems in d.items():
             e_elements = ET.SubElement(Geometry, 'Elements',
                                        mat=str(material_ids[mat] + 1),
                                        type=ecls.__name__.lower())
@@ -192,10 +192,14 @@ def write_feb(model, fpath):
                 'ElementData': []}
     for e in Geometry:
         geo_subs[e.tag].append(e)
-    Geometry[:] = geo_subs['Nodes'] + geo_subs['Elements'] + geo_subs['ElementData']
+    Geometry[:] = geo_subs['Nodes'] + geo_subs['Elements']
+    # Only add optional tags if they contain data.  Otherwise FEBio
+    # chockes and gives an incorrect error message (+1 line).
+    if e_elementdata[:] != []:
+        Geometry[:] += geo_subs['ElementData']
 
     # Boundary section (fixed nodal BCs)
-    for axis, nodeset in model.fixed_nodes.iteritems():
+    for axis, nodeset in model.fixed_nodes.items():
         if nodeset:
             e_fix = ET.SubElement(e_boundary, 'fix', bc=axis)
             for nid in nodeset:
@@ -203,7 +207,7 @@ def write_feb(model, fpath):
 
     # LoadData (load curves)
     # sort sequences by id to get around FEBio bug
-    sequences = [(i, seq) for seq, i in seq_id.iteritems()]
+    sequences = [(i, seq) for seq, i in seq_id.items()]
     sequences.sort()
     for i, seq in sequences:
         e_lc = ET.SubElement(e_loaddata, 'loadcurve', id=str(i+1),
@@ -234,7 +238,7 @@ def write_feb(model, fpath):
                'rtol': 'rtol',
                'lstol': 'lstol',
                'plot level': 'plot_level'}
-        for lbl1, lbl2 in tbl.iteritems():
+        for lbl1, lbl2 in tbl.items():
             ET.SubElement(e_con, lbl2).text = \
                 str(step['control'][lbl1])
         e_ts = ET.SubElement(e_con, 'time_stepper')
@@ -257,21 +261,21 @@ def write_feb(model, fpath):
         e_bd = ET.SubElement(e_step, 'Boundary')
         # collect BCs into FEBio-like data structure
         prescribed = {}
-        for i, ax_bc in step['bc'].iteritems():
-            for ax, d in ax_bc.iteritems():
+        for i, ax_bc in step['bc'].items():
+            for ax, d in ax_bc.items():
                 v = d['value']
                 seq = d['sequence']
                 prescribed.setdefault(seq, {}).setdefault(ax, {})[i] = v
         # write out data
-        for seq, d in prescribed.iteritems():
-            for axis, vnodes in d.iteritems():
+        for seq, d in prescribed.items():
+            for axis, vnodes in d.items():
                 e_pres = ET.SubElement(e_bd, 'prescribe',
                                        bc=str(axis),
                                        lc=str(seq_id[seq] + 1))
-                for nid, v in vnodes.iteritems():
+                for nid, v in vnodes.items():
                     e_node = ET.SubElement(e_pres, 'node', id=str(nid + 1)).text = str(v)
 
     tree = ET.ElementTree(root)
-    with open(fpath, 'w') as f:
+    with open(fpath, 'wb') as f:
         tree.write(f, pretty_print=True, xml_declaration=True,
-                   encoding='us-ascii')
+                   encoding='iso-8859-1')

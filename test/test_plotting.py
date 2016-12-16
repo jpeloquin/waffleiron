@@ -12,6 +12,7 @@ fp_out = os.path.join("test", "test_output")
 if not os.path.exists(fp_out):
     os.mkdir(fp_out)
 
+
 class ScalarFieldTest(unittest.TestCase):
     
     def setUp(self):
@@ -42,8 +43,9 @@ class ScalarFieldTest(unittest.TestCase):
         fig = plt.figure()
         imgplot = plt.imshow(img)
         imgplot.set_interpolation('nearest')
-        plt.ion()
-        plt.savefig(os.path.join("test", "test_output", "scalar_field_test.png"))
+        fp = os.path.join("test", "test_output",
+                          "scalar_field_test.png")
+        plt.savefig(fp)
 
 
 class JDomainPlotTest(fixtures.Hex8IsotropicCenterCrack):
@@ -75,5 +77,5 @@ class JDomainPlotTest(fixtures.Hex8IsotropicCenterCrack):
                                           q=np.array([1, 0, 0]))
         fig, ax = feb.plotting.plot_q(zslice, length=1e-4)
         fp_out = os.path.join("test", "test_output",
-                              "jdomain_plot_test.svg")
+                              "jdomain_plot_test.png")
         fig.savefig(fp_out)

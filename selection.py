@@ -69,7 +69,7 @@ def corner_nodes(mesh):
     """Return ids of corner nodes.
 
     """
-    ids = [i for i in xrange(len(mesh.nodes))
+    ids = [i for i in range(len(mesh.nodes))
            if len(mesh.elem_with_node[i]) == 1]
     return ids
 
@@ -167,7 +167,7 @@ def e_grow(selection, candidates, n):
     inactive_nodes = set([])
     active_nodes = set([i for e in seed for i in e.ids])
     candidates = set(candidates) - seed
-    for iring in xrange(n):
+    for iring in range(n):
         # Find adjacent elements
         adjacent = set(e for e in candidates
                        if any(i in active_nodes for i in e.ids))

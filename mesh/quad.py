@@ -37,7 +37,7 @@ def quadrilateral(col1, col2, row1, row2):
     # Compute corresponding normalized path length for each point
     def spts_norm(pts):
         s = [0]
-        for i in xrange(1, len(pts)):
+        for i in range(1, len(pts)):
             p0 = np.array(pts[i-1])
             p1 = np.array(pts[i])
             s.append(s[i-1] + np.linalg.norm(p1 - p0))
@@ -63,12 +63,12 @@ def quadrilateral(col1, col2, row1, row2):
     elements = []
     nodes = prevrow_pts
     # loop over rows of nodes, creating one row at a time
-    for i in xrange(1, nr - 1):
+    for i in range(1, nr - 1):
 
         # Add interpolated points for this row
         thisrow_pts = [col1[i]]
         v = np.array(col1[i]) - np.array(col2[i])
-        for j in xrange(1, nc - 1):
+        for j in range(1, nc - 1):
             ln_r = LineString([col1[i], col2[i]])
             ln_c = LineString([row1[j], row2[j]])
             pt = ln_r.intersection(ln_c)
@@ -84,12 +84,12 @@ def quadrilateral(col1, col2, row1, row2):
     nodes = nodes + row2
 
     ## Stitch elements
-    for i in xrange(1, nr):
+    for i in range(1, nr):
         # some setup
         n_base = (i - 1) * nc # number of nodes already fully stitched
         prevrow_pts = thisrow_pts
         # do the actual stitching
-        for j in xrange(nc - 1):
+        for j in range(nc - 1):
             e = np.array([0, 1, nc + 1, nc]) + n_base + j
             elements.append(e)
 

@@ -97,7 +97,7 @@ class Model:
             t = solution.times[-1]
         data = solution.stepdata(time=t)
         properties = data['node']
-        for k,v  in properties.iteritems():
+        for k,v  in properties.items():
             self.apply_nodal_properties(k, v)
 
     def apply_nodal_properties(self, key, values):
@@ -180,7 +180,7 @@ class Mesh:
         self.nodetree = KDTree(self.nodes)
 
         # Create list of parent elements by node
-        elem_with_node = [[] for i in xrange(len(self.nodes))]
+        elem_with_node = [[] for i in range(len(self.nodes))]
         for e in self.elements:
             for i in e.ids:
                 elem_with_node[i].append(e)
@@ -203,7 +203,7 @@ class Mesh:
 
         """
         refcount = self.node_connectivity()
-        for i in reversed(xrange(len(self.nodes))):
+        for i in reversed(range(len(self.nodes))):
             if refcount[i] == 0:
                 self.remove_node(i)
 

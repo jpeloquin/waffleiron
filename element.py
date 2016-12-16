@@ -407,7 +407,7 @@ class Tri3(Element2D):
         """Shape function 1st derivatives.
 
         """
-        dn = [np.zeros(2) for i in xrange(3)]
+        dn = [np.zeros(2) for i in range(3)]
         # d/dr
         dn[0][0] = -1.0
         dn[1][0] = 1.0
@@ -490,7 +490,7 @@ class Hex8(Element3D):
         """Shape function 1st derivatives.
 
         """
-        dn = [np.zeros(3) for i in xrange(8)]
+        dn = [np.zeros(3) for i in range(8)]
         # dN/dr
         dn[0][0] = -0.125 * (1 - s) * (1 - t)
         dn[1][0] =  0.125 * (1 - s) * (1 - t)
@@ -642,7 +642,7 @@ class Quad4(Element2D):
         """Shape function 1st derivatives.
 
         """
-        dn = [np.zeros(2) for i in xrange(4)]
+        dn = [np.zeros(2) for i in range(4)]
         # d/dr
         dn[0][0] = -0.25 * (1 - s)
         dn[1][0] =  0.25 * (1 - s)
