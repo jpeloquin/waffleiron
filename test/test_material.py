@@ -192,3 +192,38 @@ class HolmesMowTest(unittest.TestCase):
                 * np.dot(f, np.dot(s_try, f.T))
         t_true = self.soln.stepdata()['element']['stress'][0]
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
+
+
+class NeoHookeanTest(unittest.TestCase):
+    """Tests Holmes Mow material definition.
+
+    """
+
+    def setUp(self):
+        self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'neo_hookean.xplt'))
+        febreader = FebReader(open(os.path.join('test', 'fixtures', 'neo_hookean.feb')))
+        self.model = febreader.model()
+        self.model.apply_solution(self.soln)
+
+    def tstress_test(self):
+        """Check Cauchy stress"""
+        e = self.model.mesh.elements[0]
+        F = e.f((0, 0, 0))
+        t_try = e.material.tstress(F)
+        t_true = self.soln.stepdata()['element']['stress'][0]
+        npt.assert_allclose(t_try, t_true, rtol=1e-5)
+
+    def sstress_test(self):
+        """Check second Piola-Kirchoff stress via transform."""
+        r = (0, 0, 0)
+        elem = self.model.mesh.elements[0]
+        f = elem.f(r)
+        s_try = elem.material.sstress(f)
+        t_try = (1.0 / np.linalg.det(f)) \
+                * np.dot(f, np.dot(s_try, f.T))
+        t_true = self.soln.stepdata()['element']['stress'][0]
+        npt.assert_allclose(t_try, t_true, rtol=1e-5)
+
+    # Don't bother with 1st Piola-Kirchoff stress; it's implemented as a
+    # transform, so the accepted value would just duplicate the
+    # implementation.

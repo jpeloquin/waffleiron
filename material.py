@@ -300,9 +300,76 @@ class IsotropicElastic:
         s = y * trE * np.eye(3) + 2.0 * mu * E
         return s
 
+class NeoHookean:
+    """Neo-Hookean compressible hyperelastic material.
+
+    Specified in FEBio xml as `neo-Hookean`.
+
+    Note that there are multiple compressible "Neo-Hookean" formulations
+    floating around in the literature; this particular one reduces to
+    linear elasticity for small strains and small rotations.
+
+    """
+    y = None
+    mu = None
+
+    def __init__(self, props):
+        if 'E' in props and 'v' in props:
+            y, mu = feb.material.tolame(props['E'], props['v'])
+        elif 'lambda' in props and 'mu' in props:
+            y = props['lambda']
+            mu = props['lambda']
+        else:
+            raise Exception('The combination of material properties '
+                            'in ' + str(props) + ' is not yet '
+                            'implemented.')
+        self.mu = mu
+        self.y = y
+
+    def w(self, F):
+        y = self.y
+        mu = self.mu
+        C = np.dot(F.T, F)
+        i1 = np.trace(C)
+        J = np.linalg.det(F)
+        w = mu / 2.0 * (i1 - 1) - mu * log(J) + y / 2.0 * (log(J))**2.0
+        return w
+
+    def tstress(self, F):
+        """Cauchy stress tensor.
+
+        """
+        y = self.y
+        mu = self.mu
+        J = det(F)
+        B = dot(F, F.T) # left cauchy-green
+        t = mu / J * (B - np.eye(3)) + y / J * log(J) * np.eye(3)
+        return t
+
+    def pstress(self, F):
+        """1st Piola-Kirchoff stress.
+
+        """
+        s = self.sstress(F)
+        p = dot(F, s)
+        return p
+
+    def sstress(self, F):
+        """2nd Piola-Kirchoff stress.
+
+        """
+        y = self.y
+        mu = self.mu
+        J = det(F)
+        C = dot(F.T, F)
+        Cinv = np.linalg.inv(C)
+        s = mu * (np.eye(3) - Cinv) + y * log(J) * Cinv
+        return s
+
 class_from_name = {'isotropic elastic': IsotropicElastic,
                    'Holmes-Mow': HolmesMow,
                    'fiber-exp-pow': ExponentialFiber,
+                   'neo-Hookean': NeoHookean,
                    'solid mixture': SolidMixture,
-                   'rigid body': RigidBody}
+                   'rigid body': RigidBody,}
 name_from_class = {v:k for k, v in class_from_name.items()}

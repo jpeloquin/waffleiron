@@ -45,6 +45,16 @@ def isotropicelastic_to_feb(mat):
     ET.SubElement(e, 'v').text = str(v)
     return e
 
+def neo_hookean_to_feb(mat):
+    """Convert NeoHookean material instance to FEBio xml.
+
+    """
+    e = ET.Element('material', type='neo-Hookean')
+    E, v = feb.material.fromlame(mat.y, mat.mu)
+    ET.SubElement(e, 'E').text = str(E)
+    ET.SubElement(e, 'v').text = str(v)
+    return e
+
 def solidmixture_to_feb(mat):
     """Convert SolidMixture material instance to FEBio xml.
 
@@ -62,16 +72,17 @@ def material_to_feb(mat):
     """
     if mat is None:
         e = ET.Element('material', type='unknown')
-    elif isinstance(mat, feb.material.ExponentialFiber):
-        e = exponentialfiber_to_feb(mat)
-    elif isinstance(mat, feb.material.HolmesMow):
-        e = holmesmow_to_feb(mat)
-    elif isinstance(mat, feb.material.IsotropicElastic):
-        e = isotropicelastic_to_feb(mat)
-    elif isinstance(mat, feb.material.SolidMixture):
-        e = solidmixture_to_feb(mat)
     else:
-        raise Exception("{} not implemented for conversion to FEBio xml.".format(mat.__class__))
+        f = {feb.material.ExponentialFiber: exponentialfiber_to_feb,
+             feb.material.HolmesMow: holmesmow_to_feb,
+             feb.material.IsotropicElastic: isotropicelastic_to_feb,
+             feb.material.NeoHookean: neo_hookean_to_feb,
+             feb.material.SolidMixture: solidmixture_to_feb}
+        try:
+            e = f[type(mat)](mat)
+        except ValueError:
+            print("{} not implemented for conversion to FEBio xml.".format(mat.__class__))
+            raise
     return e
 
 def write_feb(model, fpath):
