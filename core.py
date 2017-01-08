@@ -328,6 +328,8 @@ class Mesh:
             e.ids = new_ids
             # Merge the element to the first mesh
             self.elements.append(e)
+            # Update the reference to the element's parent mesh
+            e.mesh = self
 
     def _build_node_graph(self):
         """Create a node connectivity graph for faster node lookup.
