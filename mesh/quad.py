@@ -7,9 +7,12 @@ import febtools as feb
 def quadrilateral(col1, col2, row1, row2):
     """Mesh a quadrilateral with quad elements.
 
-    Each input variable is a list of (x, y) points specifying node locations
-    on the boundary of the mesh domain.  `col1` and `col2` are
+    Each input variable is a list of (x, y) points specifying node
+    locations on the boundary of the mesh domain.  `col1` and `col2` are
     opposite edges, as are `row1` and `row2`.
+
+    Take care when ordering of the inputs.  Row1 should be below row2
+    and col1 should be left of col2 in a right hand coordinate system.
 
     """
 
