@@ -246,7 +246,7 @@ class CenterCrackQuad4(unittest.TestCase):
         # Felderson; accurate to 0.3% for a/W ≤ 0.35
         G = K_I**2.0 / self.E
 
-        id_crack_tip = [self.model.mesh.find_nearest_node(*(1e-3, 0.0, 0.0))]
+        id_crack_tip = [self.model.mesh.find_nearest_nodes(*(1e-3, 0.0, 0.0))[0]]
         elements = apply_q_2d(self.model.mesh, id_crack_tip, n=2,
                               q=[1, 0, 0])
         J = jintegral(elements)

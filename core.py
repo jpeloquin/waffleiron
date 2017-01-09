@@ -1,4 +1,4 @@
-from operator import itemgetter
+[from operator import itemgetter
 
 import numpy as np
 from scipy.spatial import KDTree
@@ -241,12 +241,12 @@ class Mesh:
                 refcount[i] += 1
         return refcount
 
-    def find_nearest_node(self, x, y, z=None):
-        """Find node nearest (x, y, z)
+    def find_nearest_nodes(self, x, y, z=None):
+        """Return array of node id(s) nearest (x, y, z)
 
-        Notes
-        -----
-        Does not handle the case where nodes are superimposed.
+        This function returns an array so that in cases where nodes are
+        equidistant (and possibly superimposed), all the relevant node
+        ids are returned.
 
         """
         if z is None:
@@ -256,7 +256,7 @@ class Mesh:
         d = np.array(self.nodes) - p
         d = np.sum(d**2., axis=1) # don't need square root if just
                                   # finding nearest
-        idx = np.argmin(abs(d))
+        idx = np.nonzero(d == np.min(d))[0]
         return idx
 
     def conn_elem(self, elements):
@@ -304,16 +304,17 @@ class Mesh:
         for i, p in enumerate(other.nodes):
             if i in candidates:
                 # Find node in 'self' closest to p
-                imatch = self.find_nearest_node(*p)
-                pmatch = self.nodes[imatch]
-                i_cd = candidates.index(i)
-                if dist[i_cd, imatch] < tol:
-                    # Make all references in 'other' to p use pmatch
-                    # instead
-                    newind.append(imatch)
-                else:
-                    newind.append(len(nodelist))
-                    nodelist.append(p)
+                imatch = self.find_nearest_nodes(*p)
+                for node_id in imatch:
+                    pmatch = self.nodes[node_id]
+                    i_cd = candidates.index(i)
+                    if dist[i_cd, node_id] < tol:
+                        # Make all references in 'other' to p use pmatch
+                        # instead
+                        newind.append(node_id)
+                    else:
+                        newind.append(len(nodelist))
+                        nodelist.append(p)
             else:
                 # This node will not be combined; just append it
                 # to the 'self' nodelist
