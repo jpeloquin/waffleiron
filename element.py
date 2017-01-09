@@ -228,7 +228,7 @@ class Element(object):
 
         """
         x = self.x(config)
-        return self.interp((0,0,0), x)
+        return self.interp((0,0,0), 'position')
 
     def faces(self):
         """Return the faces of this element.
