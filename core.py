@@ -331,6 +331,7 @@ class Mesh:
             self.elements.append(e)
             # Update the reference to the element's parent mesh
             e.mesh = self
+        self.prepare()
 
     def _build_node_graph(self):
         """Create a node connectivity graph for faster node lookup.
