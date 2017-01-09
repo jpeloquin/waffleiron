@@ -17,7 +17,7 @@ def select_elems_around_node(mesh, i, n=3):
     i : integer
         The index of the central node.
 
-    r : integer, optional
+    n : integer, optional
         The number of concentric rings of elements to select.
 
     """
