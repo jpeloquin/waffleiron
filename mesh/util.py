@@ -1,3 +1,4 @@
+import numpy as np
 import febtools as feb
 
 def zstack(mesh, zcoords):
@@ -38,3 +39,32 @@ def zstack(mesh, zcoords):
 
     mesh3d = feb.Mesh(nodes=nodes, elements=elements)
     return mesh3d
+
+def merge_node_ids(mesh, nodes):
+    """Merge node ids in nodes in `mesh`
+
+    Note that this function does not clean up any orphaned nodes.
+
+    """
+    # Adjust references in elements
+    nodes = np.array(nodes)
+    for e in mesh.elements:
+        for j, k in enumerate(e.ids):
+            if k in nodes:
+                e.ids[j] = nodes[0]
+
+def merge_node_positions(mesh, candidates=None, tol=feb._default_tol):
+    """Merge overlapping nodes.
+
+    candidates := list-like of integer node ids.
+
+    """
+    if candidates is None:
+        candidates = range(len(mesh.nodes))
+    for i in candidates:
+        # Find nodes in mesh closest to i's position
+        x_i = np.array(mesh.nodes[i])
+        imatch = set(mesh.find_nearest_nodes(*x_i)) - set([i])
+        to_merge = [j for j in imatch if np.linalg.norm(x_i - np.array(mesh.nodes[j])) < tol]
+        merge_node_ids(mesh, [i] + to_merge)
+

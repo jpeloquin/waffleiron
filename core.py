@@ -1,4 +1,4 @@
-[from operator import itemgetter
+from operator import itemgetter
 
 import numpy as np
 from scipy.spatial import KDTree
@@ -12,7 +12,7 @@ from febtools.element import elem_obj
 from febtools.geometry import _cross
 
 # Set tolerances
-default_tol = 10*np.finfo(float).eps
+_default_tol = 10*np.finfo(float).eps
 
 # Increase recursion limit for kdtree
 import sys
@@ -270,7 +270,7 @@ class Mesh:
             elements = elements + self.elem_with_node[idx]
         return set(elements)
 
-    def merge(self, other, candidates='auto', tol=default_tol):
+    def merge(self, other, candidates='auto', tol=_default_tol):
         """Merge this mesh with another
 
         Inputs
