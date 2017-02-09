@@ -14,7 +14,7 @@ if not os.path.exists(fp_out):
 
 
 class ScalarFieldTest(unittest.TestCase):
-    
+
     def setUp(self):
         soln = feb.input.XpltReader(os.path.join( \
             "test", "fixtures", "center_crack_uniax_isotropic_elastic_quad4.xplt"))
@@ -69,7 +69,7 @@ class JDomainPlotTest(fixtures.Hex8IsotropicCenterCrack):
         f_seed = [f for f in candidates
                   if (len(set(f) & set(tip_line)) > 1)]
         crack_faces = feb.selection.f_grow_to_edge(f_seed, self.model.mesh)
-        
+
         qdomain = [e for e in self.model.mesh.elements
                    if tip_line.intersection(e.ids)]
         qdomain = feb.selection.e_grow(qdomain, zslice, n=5)
