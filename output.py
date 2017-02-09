@@ -209,6 +209,12 @@ def write_feb(model, fpath):
     if e_elementdata[:] != []:
         Geometry[:] += geo_subs['ElementData']
 
+    # FEBio can't handle empty elements.  Why not? (I ask
+    # incredulously.)  ElementData might be empty.  Handle this.
+    e = Geometry.find('ElementData')
+    if len(e) == 0:
+        Geometry.remove(e)
+
     # Boundary section (fixed nodal BCs)
     for axis, nodeset in model.fixed_nodes.items():
         if nodeset:
