@@ -201,15 +201,10 @@ def xml(model):
         geo_subs[e.tag].append(e)
     Geometry[:] = geo_subs['Nodes'] + geo_subs['Elements']
     # Only add optional tags if they contain data.  Otherwise FEBio
-    # chockes and gives an incorrect error message (+1 line).
+    # chokes and gives an error message incorrectly blaming the
+    # following line in the XML file.
     if e_elementdata[:] != []:
         Geometry[:] += geo_subs['ElementData']
-
-    # FEBio can't handle empty elements.  Why not? (I ask
-    # incredulously.)  ElementData might be empty.  Handle this.
-    e = Geometry.find('ElementData')
-    if len(e) == 0:
-        Geometry.remove(e)
 
     # Boundary section (fixed nodal BCs)
     for axis, nodeset in model.fixed_nodes.items():
