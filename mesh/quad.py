@@ -66,7 +66,7 @@ def quadrilateral(col1, col2, row1, row2):
     elements = []
     nodes = prevrow_pts
     # loop over rows of nodes, creating one row at a time
-    for i in range(1, nr - 1):
+    for i in range(1, nr):
 
         # Add interpolated points for this row
         thisrow_pts = [col1[i]]
