@@ -85,15 +85,11 @@ def material_to_feb(mat):
             raise
     return e
 
-def write_feb(model, fpath):
-    """Write model to FEBio xml file.
+def xml(model):
+    """Convert a model to an FEBio XML tree.
 
-    Inputs
-    ------
-    fpath : string
-        Path for output file.
-
-    materials : list of Material objects
+    This is meant to allow XML-editing trickery, if necessary, prior to
+    writing the XML to an on-disk .feb .
 
     """
     root = ET.Element('febio_spec', version="{}".format(feb_version))
@@ -293,6 +289,19 @@ def write_feb(model, fpath):
                     e_node = ET.SubElement(e_pres, 'node', id=str(nid + 1)).text = str(v)
 
     tree = ET.ElementTree(root)
-    with open(fpath, 'wb') as f:
-        tree.write(f, pretty_print=True, xml_declaration=True,
-                   encoding='iso-8859-1')
+    return tree
+
+def write_feb(model, f):
+    """Write model's FEBio XML representation to a file object.
+
+    Inputs
+    ------
+    fpath : string
+        Path for output file.
+
+    materials : list of Material objects
+
+    """
+    tree = xml(model)
+    tree.write(f, pretty_print=True, xml_declaration=True,
+               encoding='iso-8859-1')
