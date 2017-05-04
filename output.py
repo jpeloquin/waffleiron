@@ -286,6 +286,11 @@ def xml(model):
     tree = ET.ElementTree(root)
     return tree
 
+def write_xml(tree, f):
+    """Write an XML tree to a .feb file"""
+    tree.write(f, pretty_print=True, xml_declaration=True,
+               encoding='iso-8859-1')
+
 def write_feb(model, f):
     """Write model's FEBio XML representation to a file object.
 
@@ -298,5 +303,4 @@ def write_feb(model, f):
 
     """
     tree = xml(model)
-    tree.write(f, pretty_print=True, xml_declaration=True,
-               encoding='iso-8859-1')
+    write_xml(tree, f)
