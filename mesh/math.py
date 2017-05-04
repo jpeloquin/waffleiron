@@ -74,3 +74,16 @@ def bias_pt_series(line, n=None, type='log', minstep=None,
     pts = [sc * length * u + p1 for sc in s]
 
     return pts
+
+def even_pt_series(line, n):
+    """Return a list of n points evenly spaced along line segment.
+
+    line := a list of n-tuples (points), or equivalent iterable
+
+    The returned points are numpy arrays of dimension equal to A and B.
+
+    """
+    A = np.array(line[0])
+    B = np.array(line[1])
+    v = B - A
+    return [A + s * v for s in np.linspace(0, 1, n)]
