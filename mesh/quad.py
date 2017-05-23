@@ -65,7 +65,8 @@ def quadrilateral(col1, col2, row1, row2):
     prevrow_pts = row1
     elements = []
     nodes = prevrow_pts
-    # loop over rows of nodes, creating one row at a time
+    # Loop over rows of nodes, creating one row at a time, from -x2 to
+    # +x2.  We already initialized the -x2 most row above.
     for i in range(1, nr):
 
         # Add interpolated points for this row
@@ -84,7 +85,6 @@ def quadrilateral(col1, col2, row1, row2):
             thisrow_pts.append(pt)
         thisrow_pts.append(col2[i])
         nodes = nodes + thisrow_pts
-    nodes = nodes + row2
 
     ## Stitch elements
     for i in range(1, nr):
