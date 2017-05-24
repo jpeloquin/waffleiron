@@ -85,7 +85,7 @@ class Model:
             bc_node[axis] = {'sequence': sequence,
                              'value': v}
 
-    def apply_solution(self, solution, t=None):
+    def apply_solution(self, solution, t=None, step=None):
         """Attach a solution to the model.
 
         By default, the last timepoint in the solution is applied.
@@ -93,9 +93,14 @@ class Model:
         """
         self.solution = solution
         # apply node data
-        if t is None: # use last timestep
-            t = solution.times[-1]
-        data = solution.stepdata(time=t)
+        if t is None and step is None: # use last timestep
+            data = solution.stepdata(time=solution.times[-1])
+        elif t is not None and step is None:
+            data = solution.stepdata(time=t)
+        elif t is None and step is not None:
+            data = solution.stepdata(step=step)
+        else:
+            raise ValueError("Provide either `t` or `step`, not both.")
         properties = data['node']
         for k,v  in properties.items():
             self.apply_nodal_properties(k, v)
