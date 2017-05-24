@@ -145,7 +145,7 @@ class FebReader:
 
             # Store material in index
             mats[mat_id] = material
-            mat_names[mat_id] = m.attrib['name']
+            mat_names[mat_id] = m.attrib['type']
             # TODO: Use material names
         return mats, mat_names
 
