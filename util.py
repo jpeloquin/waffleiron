@@ -37,25 +37,25 @@ def mesh_from_elems(elems):
         c_elems.append(c_e)
     return nodes, c_elems
 
-def apply_uniax_stretch(model, stretches, axis='x'):
+def apply_uniax_stretch(model, stretches, axis='x1'):
     """Apply stretch with must points and a fixed width grip line.
 
-    axis := 'x' or 'y'; the direction along which to stretch the mesh.
+    axis := 'x1' or 'x2'; the direction along which to stretch the mesh.
     Displacement is prescribed to the node(s) furthest +ve and -ve along
     the specified axis.
 
     """
     axis1 = axis
-    if axis == 'x':
-        axis2 = 'y'
+    if axis == 'x1':
+        axis2 = 'x2'
         iaxis1 = 0
         iaxis2 = 1
-    elif axis == 'y':
-        axis2 = 'x'
+    elif axis == 'x2':
+        axis2 = 'x1'
         iaxis1 = 1
         iaxis2 = 0
     else:
-        raise ValueError("`axis` must be 'x' or 'y'; {} was provided".format(axis))
+        raise ValueError("`axis` must be 'x1' or 'x2'; {} was provided".format(axis))
     maxima = np.max(model.mesh.nodes, 0)
     minima = np.min(model.mesh.nodes, 0)
     length = maxima[iaxis1] - minima[iaxis1]
@@ -71,7 +71,7 @@ def apply_uniax_stretch(model, stretches, axis='x'):
     model.fixed_nodes[axis2].update(gripped_nodes)
     gripped_nodes_back = [i for i in gripped_nodes
                           if model.mesh.nodes[i][2] == minima[2]]
-    model.fixed_nodes['z'].update(gripped_nodes_back)
+    model.fixed_nodes['x3'].update(gripped_nodes_back)
     # Define number of steps
     nsteps = len(stretches) * 1 + 1
     nmust = len(stretches) * 1 + 1

@@ -7,6 +7,10 @@ import febtools as feb
 
 feb_version = 2.0
 
+axis_to_febio = {'x1': 'x',
+                 'x2': 'y',
+                 'x3': 'z'}
+
 def exponentialfiber_to_feb(mat):
     """Convert ExponentialFiber material instance to FEBio xml.
 
@@ -209,7 +213,7 @@ def xml(model):
     # Boundary section (fixed nodal BCs)
     for axis, nodeset in model.fixed_nodes.items():
         if nodeset:
-            e_fix = ET.SubElement(e_boundary, 'fix', bc=axis)
+            e_fix = ET.SubElement(e_boundary, 'fix', bc=axis_to_febio[axis])
             for nid in nodeset:
                 ET.SubElement(e_fix, 'node', id=str(nid + 1))
 
@@ -278,7 +282,7 @@ def xml(model):
         for seq, d in prescribed.items():
             for axis, vnodes in d.items():
                 e_pres = ET.SubElement(e_bd, 'prescribe',
-                                       bc=str(axis),
+                                       bc=str(axis_to_febio[axis]),
                                        lc=str(seq_id[seq] + 1))
                 for nid, v in vnodes.items():
                     e_node = ET.SubElement(e_pres, 'node', id=str(nid + 1)).text = str(v)

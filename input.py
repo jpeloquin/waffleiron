@@ -20,9 +20,9 @@ def _nstrip(string):
     return string
 
 # map FEBio xml boundary condition labels to internal labels
-label_bc = {'x': 'x',
-            'y': 'y',
-            'z': 'z',
+label_bc = {'x': 'x1',
+            'y': 'x2',
+            'z': 'x3',
             'p': 'pressure'}
 
 def load_model(fpath):
@@ -199,9 +199,9 @@ class FebReader:
         # Store materials
         model.materials, model.material_names = self.materials()
         # Boundary condition: fixed nodes
-        internal_label = {'x': 'x',
-                          'y': 'y',
-                          'z': 'z',
+        internal_label = {'x': 'x1',
+                          'y': 'x2',
+                          'z': 'x3',
                           'p': 'pressure'}
         # TODO: Solutes
         for e_fix in self.root.findall("Boundary/fix"):

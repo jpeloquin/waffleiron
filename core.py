@@ -47,9 +47,9 @@ class Model:
         self.material_names = {}
         self.solution = None # the solution for the model
 
-        self.fixed_nodes = {'x': set(),
-                            'y': set(),
-                            'z': set(),
+        self.fixed_nodes = {'x1': set(),
+                            'x2': set(),
+                            'x3': set(),
                             'pressure': set(),
                             'concentration': set()}
         # Note: for multiphasic problems, concentration is a list of
@@ -78,6 +78,8 @@ class Model:
     def apply_nodal_displacement(self, node_ids, values, sequence,
                                  axis, step_id=-1):
         """Apply a boundary condition to a step.
+
+        axis := 'x1', 'x2', or 'x3'
 
         """
         for i, v in zip(node_ids, values):
