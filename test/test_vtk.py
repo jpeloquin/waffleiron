@@ -20,7 +20,7 @@ class ExportVTK(unittest.TestCase):
         fp_out = os.path.join("test", "output",
                               "unstructured_grid.vtu")
         if not os.path.exists(os.path.dirname(fp_out)):
-            os.makedir(os.path.dirname(fp_out))
+            os.mkdir(os.path.dirname(fp_out))
         w = tvtk.XMLUnstructuredGridWriter(file_name=fp_out)
         configure_input(w, ugrid)
         w.write()
