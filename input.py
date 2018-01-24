@@ -386,7 +386,7 @@ class XpltReader:
                               'node_coords')
             for loc, sz in a:
                 self.f.seek(loc)
-                v = struct.unpack('f' * (sz / 4), self.f.read(sz))
+                v = struct.unpack('f' * (sz // 4), self.f.read(sz))
                 for i in range(0, len(v), 3):
                     node_list.append(tuple(v[i:i+3]))
 
@@ -417,8 +417,8 @@ class XpltReader:
                                             data[0:4])[0]
                     elem_id = elem_id - 1 # 0-index
                     node_ids = struct.unpack(self.endian
-                                          + 'I' * ((s - 1) / 4),
-                                          data[4:])
+                                             + 'I' * ((s - 1) // 4),
+                                             data[4:])
                     # the nodes are already 0-indexed in the binary
                     # database
                     element = etype.from_ids(node_ids, node_list,
