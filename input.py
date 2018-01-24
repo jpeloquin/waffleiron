@@ -317,7 +317,7 @@ class XpltReader:
     tag2str = dict((v, k) for k, v in str2tag.items())
     tag2elem_type = {
         0: febtools.element.Hex8,
-        1: 'penta6',
+        1: febtools.element.Penta6,
         2: 'tet4',
         3: febtools.element.Quad4,
         4: febtools.element.Tri3,

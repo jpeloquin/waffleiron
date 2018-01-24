@@ -584,6 +584,134 @@ class Hex8(Element3D):
         # dN/ dt^2 = 0
         return ddn
 
+class Penta6(Element3D):
+    """Functions for penta6 linear elements.
+
+    """
+    n = 6 # number of vertices
+    r_n = 3 # number of natural basis parameters
+
+    node_connectivity = [[1, 2, 3], # 0
+                         [0, 2, 4], # 1
+                         [0, 1, 5], # 2
+                         [0, 4, 5], # 3
+                         [1, 3, 5], # 4
+                         [2, 3, 4]] # 5
+
+    # Oriented positive = out
+    face_nodes = ((0, 1, 4, 3),
+                  (1, 2, 4, 5),
+                  (2, 0, 3, 5),
+                  (0, 2, 1),
+                  (3, 4, 5))
+
+    # Vertex point locations in natural coordinates.
+    # TODO: confirm these coordinates are correct
+    # vloc = ((0.0, 0.0, -1.0),
+    #         (1.0, 0.0, -1.0),
+    #         (0.0, 1.0, -1.0),
+    #         (0.0, 0.0,  1.0),
+    #         (1.0, 0.0,  1.0),
+    #         (0.0, 1.0,  1.0))
+
+    # Gauss point locations
+    g = 1.0 / 3.0**0.5
+    gloc = ((1/6, 1/6, -g),
+            (2/3, 1/6, -g),
+            (1/6, 2/3, -g),
+            (1/6, 1/6,  g),
+            (2/3, 1/6,  g),
+            (1/6, 2/3,  g))
+
+    # Guass weights
+    gwt = (1/6, 1/6, 1/6, 1/6, 1/6, 1/6)
+
+    @staticmethod
+    def N(r, s, t):
+        """Shape functions.
+
+        8-element vector
+
+        """
+        n = [0.0] * 6
+        n[0] = 0.5 * (1 - r - s) * (1 - t)
+        n[1] = 0.5 * r * (1 - t)
+        n[2] = 0.5 * s * (1 - t)
+        n[3] = 0.5 * (1 - r - s) * (1 + t)
+        n[4] = 0.5 * r * (1 + t)
+        n[5] = 0.5 * s * (1 + t)
+        return n
+
+    @staticmethod
+    def dN(r, s, t):
+        """Shape function 1st derivatives.
+
+        """
+        dn = [np.zeros(3) for i in range(6)]
+        # dN/dr
+        dn[0][0] = -0.5 * (1 - t)
+        dn[1][0] =  0.5 * (1 - t)
+        dn[2][0] =  0.0
+        dn[3][0] = -0.5 * (1 + t)
+        dn[4][0] =  0.5 * (1 + t)
+        dn[5][0] =  0.0
+        # dN/ds
+        dn[0][1] = -0.5 * (1 - t)
+        dn[1][1] =  0.0
+        dn[2][1] =  0.5 * (1 - t)
+        dn[3][1] = -0.5 * (1 + t)
+        dn[4][1] =  0.0
+        dn[5][1] =  0.5 * (1 + t)
+        # dN/dt
+        dn[0][2] =  0.0
+        dn[1][2] = -0.5 * r
+        dn[2][2] = -0.5 * s
+        dn[3][2] = 0.0
+        dn[4][2] = 0.5 * r
+        dn[5][2] = 0.5 * s
+        return dn
+
+    @staticmethod
+    def ddN(r, s, t):
+        """"Shape function 2nd derivatives.
+
+        """
+        ddn = np.zeros((6,3,3))
+        # dN/dr^2 = 0
+        # dN / drds = 0
+        # dN / drdt
+        ddn[0][0][2] =  0.5
+        ddn[1][0][2] = -0.5
+        ddn[2][0][2] =  0.0
+        ddn[3][0][2] = -0.5
+        ddn[4][0][2] =  0.5
+        ddn[5][0][2] =  0.0
+        # dN / dsdr = 0
+        # dN / ds^2 = 0
+        # dN / dsdt
+        ddn[0][1][2] =  0.5
+        ddn[1][1][2] =  0.0
+        ddn[2][1][2] = -0.5
+        ddn[3][1][2] = -0.5
+        ddn[4][1][2] =  0.0
+        ddn[5][1][2] =  0.5
+        # dN / dtdr
+        ddn[0][2][0] =  0.0
+        ddn[1][2][0] = -0.5
+        ddn[2][2][0] =  0.0
+        ddn[3][2][0] =  0.0
+        ddn[4][2][0] =  0.5
+        ddn[5][2][0] =  0.0
+        # dN / dtds
+        ddn[0][2][1] =  0.0
+        ddn[1][2][1] =  0.0
+        ddn[2][2][1] = -0.5
+        ddn[3][2][1] =  0.0
+        ddn[4][2][1] =  0.0
+        ddn[5][2][1] =  0.5
+        # dN/ dt^2 = 0
+        return ddn
+
 
 class Quad4(Element2D):
     """Shape functions for quad4 bilinear shell element.
