@@ -334,11 +334,15 @@ class XpltReader:
         2: 'mult'
         }
 
-    def __init__(self, fpath):
+    def __init__(self, f):
         """Load an .xplt file.
 
         """
-        with open(fpath,'rb') as f:
+        if type(f) is str:
+            fpath = f
+            with open(fpath,'rb') as f:
+                self.f = f
+        else:
             self.f = f
 
             # Endianness
