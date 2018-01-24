@@ -424,7 +424,7 @@ class XpltReader:
                     # the nodes are already 0-indexed in the binary
                     # database
                     element = etype.from_ids(node_ids, node_list,
-                                             material=mat_id)
+                                             mat_id=mat_id)
                     element_list.append(element)
         finally:
             self.f.close()
