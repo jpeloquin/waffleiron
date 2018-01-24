@@ -400,6 +400,8 @@ class XpltReader:
                                       + 'I',
                                       self.f.read(s))[0]
                 etype = self.tag2elem_type[ecode]
+                if type(etype) is str:
+                    raise NotImplementedError("`{}` element type is not implemented.".format(etype))
                 # Determine material id
                 # convert 1-index to 0-index
                 l, s = self._findall('domain_header/mat_id', loc)[0]
