@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from math import acos
 
 import numpy as np

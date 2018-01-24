@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Run these tests with nose
 import unittest
 import febtools as feb

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Run these tests with nose
 from nose.tools import with_setup
 import unittest

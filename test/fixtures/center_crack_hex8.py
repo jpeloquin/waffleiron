@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Create a center crack mesh with a low number of elements.
 
 """
