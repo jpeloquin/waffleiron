@@ -7,7 +7,6 @@ from lxml import etree as ET
 from copy import deepcopy
 
 import febtools as feb
-from febtools.input import XpltReader
 from febtools.element import elem_obj
 from febtools.geometry import _cross
 
