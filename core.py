@@ -40,6 +40,9 @@ class Model:
                        'plot level': 'PLOT_MAJOR_ITRS'}
 
     def __init__(self, mesh):
+        if type(mesh) is not feb.core.Mesh:
+            raise TypeError("{} is not of type febtools.core.Model".format(mesh))
+
         self.mesh = mesh
 
         self.materials = {}
