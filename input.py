@@ -6,9 +6,9 @@ import struct
 import numpy as np
 import febtools as feb
 import febtools.element
-from febtools.element import elem_obj
 from febtools.exceptions import UnsupportedFormatError
 from operator import itemgetter
+
 
 def _nstrip(string):
     """Remove trailing nulls from string.
@@ -19,11 +19,13 @@ def _nstrip(string):
             return string[:i]
     return string
 
+
 # map FEBio xml boundary condition labels to internal labels
 label_bc = {'x': 'x1',
             'y': 'x2',
             'z': 'x3',
             'p': 'pressure'}
+
 
 def load_model(fpath):
     """Loads a model (feb) and its solution (xplt).
@@ -31,8 +33,7 @@ def load_model(fpath):
     This has been tested the most with FEBio file specification 2.0.
 
     """
-    if (fpath[-4:].lower() == '.feb'
-        or fpath[-5:].lower() == '.xplt'):
+    if (fpath[-4:].lower() == '.feb' or fpath[-5:].lower() == '.xplt'):
         base, ext = os.path.splitext(fpath)
     else:
         base = fpath
@@ -57,6 +58,7 @@ def load_model(fpath):
         soln = feb.input.XpltReader(fp_xplt)
         model.apply_solution(soln)
     return model
+
 
 def readlog(fpath):
     """Reads FEBio logfile as a list of the steps' data.
@@ -90,10 +92,11 @@ def readlog(fpath):
                     linedata.append(v)
                 for k, v in zip(keys, linedata):
                     stepdata.setdefault(k, []).append(v)
-        allsteps += [stepdata] # append last step
+        allsteps += [stepdata]  # append last step
     finally:
         f.close()
     return allsteps
+
 
 class FebReader:
     """Read an FEBio xml file.
@@ -108,7 +111,7 @@ class FebReader:
         version = self.root.attrib['version']
         if self.root.tag != "febio_spec":
             raise Exception("Root node is not 'febio_spec': '" +
-                            fpath + "is not an FEBio xml file.")
+                            file.name + "is not an FEBio xml file.")
         if version != '2.0':
             msg = '{} is not febio_spec 2.0'.format(file)
             raise UnsupportedFormatError(msg, file, version)
@@ -122,7 +125,7 @@ class FebReader:
         for m in self.root.findall('./Material/material'):
             # Read material into dictionary
             material = self._read_material(m)
-            mat_id = int(m.attrib['id']) - 1 # FEBio counts from 1
+            mat_id = int(m.attrib['id']) - 1  # FEBio counts from 1
 
             # Convert material to class if possible
             def convert_mat(d):
@@ -141,7 +144,10 @@ class FebReader:
             try:
                 material = convert_mat(material)
             except NotImplementedError:
-                warnings.warn("Warning: Material type `{}` is not implemented for post-processing.  It will be represented as a dictionary of properties.".format(m.attrib['type']))
+                warnings.warn("Warning: Material type `{}` is not implemented "
+                              "for post-processing.  It will be represented "
+                              "as a dictionary of properties."
+                              "".format(m.attrib['type']))
 
             # Store material in index
             mats[mat_id] = material
@@ -182,7 +188,8 @@ class FebReader:
         v = tag.text.lstrip().rstrip()
         if v:
             v = [float(a) for a in v.split(',')]
-            if len(v) == 1: v = v[0]
+            if len(v) == 1:
+                v = v[0]
             if not p:
                 return v
             else:
@@ -216,11 +223,11 @@ class FebReader:
             model.fixed_nodes[lbl].update(node_ids)
         # Load curves (sequences)
         # Steps
-        for e_step in self.root.findall('Step'):
-            e_module = e_step.find('Module')
-            module = e_module.attrib['type']
-            e_control = e_step.find('Control')
-            e_boundary = e_step.find('Boundary')
+        # for e_step in self.root.findall('Step'):
+            # e_module = e_step.find('Module')
+            # module = e_module.attrib['type']
+            # e_control = e_step.find('Control')
+            # e_boundary = e_step.find('Boundary')
             # TBD
         return model
 
@@ -232,9 +239,9 @@ class FebReader:
         nodes = [tuple([float(a) for a in b.text.split(",")])
                  for b in self.root.findall("./Geometry/Nodes/*")]
         # Read elements
-        elements = [] # nodal index format
+        elements = []  # nodal index format
         for elset in self.root.findall("./Geometry/Elements"):
-            mat_id = int(elset.attrib['mat']) - 1 # zero-index
+            mat_id = int(elset.attrib['mat']) - 1  # zero-index
 
             # map element type strings to classes
             cls = self._element_class(elset.attrib['type'])
@@ -258,6 +265,7 @@ class FebReader:
              'tri3': feb.element.Tri3,
              'hex8': feb.element.Hex8}
         return d[label]
+
 
 class XpltReader:
     """Parses an FEBio xplt file.
@@ -396,7 +404,7 @@ class XpltReader:
                     node_list.append(tuple(v[i:i+3]))
 
             element_list = []
-            domains =  self._findall('root/geometry/domain_section/domain')
+            domains = self._findall('root/geometry/domain_section/domain')
             for loc, sz in domains:
                 # Determine element type
                 l, s = self._findall('domain_header/elem_type', loc)[0]
@@ -406,7 +414,8 @@ class XpltReader:
                                       self.f.read(s))[0]
                 etype = self.tag2elem_type[ecode]
                 if type(etype) is str:
-                    raise NotImplementedError("`{}` element type is not implemented.".format(etype))
+                    msg = "`{}` element type is not implemented."
+                    raise NotImplementedError(msg.format(etype))
                 # Determine material id
                 # convert 1-index to 0-index
                 l, s = self._findall('domain_header/mat_id', loc)[0]
@@ -422,7 +431,7 @@ class XpltReader:
                     elem_id = struct.unpack(self.endian
                                             + 'I',
                                             data[0:4])[0]
-                    elem_id = elem_id - 1 # 0-index
+                    elem_id = elem_id - 1  # 0-index
                     node_ids = struct.unpack(self.endian
                                              + 'I' * ((s - 1) // 4),
                                              data[4:])
@@ -503,7 +512,8 @@ class XpltReader:
                 a = self._findall(path, steploc)
                 for (loc, sz), (typ, fmt, name) in zip(a, v):
                     if sz == 0:
-                        warnings.warn("{} data ({}, {}) at position {} has size {}".format(name, typ, fmt, loc, sz))
+                        msg = "{} data ({}, {}) at position {} has size {}"
+                        warnings.warn(msg.format(name, typ, fmt, loc, sz))
                     else:
                         self.f.seek(loc)
                         s = self.f.read(sz)
@@ -566,7 +576,7 @@ class XpltReader:
         if typ not in ['float', 'vec3f', 'mat3fs']:
             raise Exception('Type %s  not recognized.' % (str(typ),))
 
-        values = [] # list of values
+        values = []  # list of values
 
         # iterate over any pseudo-blocks (region id, size, data) that
         # may exist
@@ -607,7 +617,7 @@ class XpltReader:
             values = values + v
         return tuple(values)
 
-    def _findall(self, pathstr, start = 0):
+    def _findall(self, pathstr, start=0):
         """Finds position and size of blocks.
 
         self._findall(pathstr[, start])
@@ -654,7 +664,7 @@ class XpltReader:
                     out += [(loc, size)]
                     self.f.seek(size, 1)
             else:
-                 self.f.seek(size, 1)
+                self.f.seek(size, 1)
         return out
 
     def _children(self, start):
