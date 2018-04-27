@@ -338,15 +338,11 @@ class XpltReader:
         """Load an .xplt file.
 
         """
-        if type(f) is str:
-            fpath = f
-            with open(fpath,'rb') as f:
-                self.f = f
-        else:
+        def from_fobj(self, f):
             self.f = f
 
             # Endianness
-            self.endian = '<' # initial assumption
+            self.endian = '<'  # initial assumption
             s = f.read(4)
             if s == b'BEF\x00':
                 self.endian = '<'
@@ -356,7 +352,7 @@ class XpltReader:
                 raise Exception("The first 4 bytes of %s "
                                 "do not match the FEBio spec: "
                                 "it is not a valid .feb file."
-                                % (fpath,))
+                                % (f.name,))
 
             # Find timepoints
             time = []
@@ -368,6 +364,15 @@ class XpltReader:
                 s = self.f.read(a[0][1])
                 time.append(struct.unpack(self.endian + 'f', s)[0])
             self.times = time
+
+            return self
+
+        if type(f) is str:
+            fpath = f
+            with open(fpath, 'rb') as f:
+                from_fobj(self, f)
+        else:
+            from_fobj(self, f)
 
     def mesh(self):
         """Reads node and element lists.
