@@ -1,21 +1,19 @@
 from operator import itemgetter
+import sys
 
 import numpy as np
 from scipy.spatial import KDTree
 from scipy.spatial.distance import cdist
-from lxml import etree as ET
 from copy import deepcopy
 
 import febtools as feb
-from febtools.element import elem_obj
-from febtools.geometry import _cross
 
 # Set tolerances
 _default_tol = 10*np.finfo(float).eps
 
 # Increase recursion limit for kdtree
-import sys
 sys.setrecursionlimit(10000)
+
 
 class Model:
     """An FE model: geometry, boundary conditions, solution.
@@ -41,13 +39,14 @@ class Model:
 
     def __init__(self, mesh):
         if type(mesh) is not feb.core.Mesh:
-            raise TypeError("{} is not of type febtools.core.Model".format(mesh))
+            raise TypeError("{} is not of type"
+                            "febtools.core.Model".format(mesh))
 
         self.mesh = mesh
 
         self.materials = {}
         self.material_names = {}
-        self.solution = None # the solution for the model
+        self.solution = None  # the solution for the model
 
         self.fixed_nodes = {'x1': set(),
                             'x2': set(),
@@ -97,7 +96,7 @@ class Model:
         """
         self.solution = solution
         # apply node data
-        if t is None and step is None: # use last timestep
+        if t is None and step is None:  # use last timestep
             data = solution.stepdata(time=solution.times[-1])
         elif t is not None and step is None:
             data = solution.stepdata(time=t)
@@ -106,7 +105,7 @@ class Model:
         else:
             raise ValueError("Provide either `t` or `step`, not both.")
         properties = data['node']
-        for k,v  in properties.items():
+        for k, v in properties.items():
             self.apply_nodal_properties(k, v)
 
     def apply_nodal_properties(self, key, values):
@@ -233,7 +232,10 @@ class Mesh:
                 return i - 1
             else:
                 return None
-        removal = lambda e: [nodemap(i) for i in e]
+
+        def removal(e):
+            return [nodemap(i) for i in e]
+
         elems = [removal(e.ids) for e in self.elements]
         for i, ids in enumerate(elems):
             self.elements[i].ids = ids
@@ -263,8 +265,7 @@ class Mesh:
         else:
             p = (x, y, z)
         d = np.array(self.nodes) - p
-        d = np.sum(d**2., axis=1) # don't need square root if just
-                                  # finding nearest
+        d = np.sum(d**2., axis=1)
         idx = np.nonzero(d == np.min(d))[0]
         return idx
 
@@ -308,14 +309,14 @@ class Mesh:
         nodes_cd = [other.nodes[i] for i in candidates]
         dist = cdist(nodes_cd, self.nodes, 'euclidean')
         # ^ i indexes candidate list (other), j indexes nodes in self
-        newind = [] # new indices for 'other' nodes after merge
+        newind = []  # new indices for 'other' nodes after merge
         # Iterate over nodes in 'other'
         for i, p in enumerate(other.nodes):
             if i in candidates:
                 # Find node in 'self' closest to p
                 imatch = self.find_nearest_nodes(*p)
                 for node_id in imatch:
-                    pmatch = self.nodes[node_id]
+                    # pmatch = self.nodes[node_id]
                     i_cd = candidates.index(i)
                     if dist[i_cd, node_id] < tol:
                         # Make all references in 'other' to p use pmatch
@@ -332,7 +333,7 @@ class Mesh:
         # Update this mesh's node list
         self.nodes = nodelist
         # Define new elements for "other" mesh
-        new_simplices = [list(e.ids) for e in other.elements]
+        # new_simplices = [list(e.ids) for e in other.elements]
         for i, e in enumerate(other.elements):
             new_ids = [newind[j] for j in e.ids]
             e.ids = new_ids
@@ -368,6 +369,7 @@ class Sequence:
         self.typ = typ
         self.extend = extend
 
+
 def _canonical_face(face):
     """Return the canonical face tuple.
 
@@ -379,6 +381,7 @@ def _canonical_face(face):
     i, inode = min(enumerate(face), key=itemgetter(1))
     face = tuple(face[i:] + face[:i])
     return face
+
 
 def _e_bb(elements):
     """Create bounding box array from element list.
