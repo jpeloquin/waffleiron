@@ -4,7 +4,7 @@ from numpy.linalg import det
 import math
 from math import log, exp, sin, cos
 import febtools as feb
-from lxml import etree as ET
+
 
 def tolame(E, v):
     """Convert Young's modulus & Poisson ratio to Lamé parameters.
@@ -14,6 +14,7 @@ def tolame(E, v):
     mu = E / (2.0 * (1.0 + v))
     return y, mu
 
+
 def fromlame(y, u):
     """Convert Lamé parameters to modulus & Poisson's ratio.
 
@@ -21,6 +22,7 @@ def fromlame(y, u):
     E = u / (y + u) * (2.0 * u + 3.0 * y)
     v = 0.5 * y / (y + u)
     return E, v
+
 
 class SolidMixture:
     """Mixture of solids with no interdependencies or residual stress.
@@ -62,12 +64,14 @@ class SolidMixture:
         return sum(material.sstress(F)
                    for material in self.materials)
 
+
 class RigidBody:
     """Rigid body.
 
     """
     def __init__(self, props):
         pass
+
 
 class ExponentialFiber:
     """Fiber with exponential power law.
@@ -84,9 +88,9 @@ class ExponentialFiber:
         self.beta = props['beta']
         self.xi = props['ksi']
         self.theta = math.radians(props['theta'])
-            # azimuth; 0° := +x, 90° := +y
+        # ^ azimuth; 0° := +x, 90° := +y
         self.phi = math.radians(props['phi'])
-            # zenith; 0° := +z, 90° := x-y plane
+        # ^ zenith; 0° := +z, 90° := x-y plane
 
     def w(self, F):
         """Strain energy density.
@@ -135,7 +139,7 @@ class ExponentialFiber:
                       cos(self.phi)])
         # Square of fiber stretch
         In = dot(N, dot(C, N))
-        yf = In**0.5 # fiber stretch
+        yf = In**0.5  # fiber stretch
         n = dot(F, N) / yf
 
         a = self.alpha
@@ -161,6 +165,7 @@ class ExponentialFiber:
         s = det(F) * dot(np.linalg.inv(F),
                          dot(t, np.linalg.inv(F).T))
         return s
+
 
 class HolmesMow:
     """Holmes-Mow coupled hyperelastic material.
@@ -210,7 +215,7 @@ class HolmesMow:
         b = self.beta
 
         J = det(F)
-        B = dot(F, F.T) # left cauchy-green
+        B = dot(F, F.T)  # left cauchy-green
         i1 = np.trace(B)
         i2 = 0.5 * (i1**2.0 - trace(dot(B, B)))
         Q = b / (y + 2.0 * mu) * ((2.0 * mu - y) * (i1 - 3.0)
@@ -258,7 +263,7 @@ class IsotropicElastic:
 
     def w(self, F):
         """Strain energy for isotropic elastic material.
-        
+
         F = deformation tensor
         y = Lamé parameter λ
         mu = Lamé parameter μ
@@ -298,6 +303,7 @@ class IsotropicElastic:
         trE = np.trace(E)
         s = y * trE * np.eye(3) + 2.0 * mu * E
         return s
+
 
 class NeoHookean:
     """Neo-Hookean compressible hyperelastic material.
@@ -341,7 +347,7 @@ class NeoHookean:
         y = self.y
         mu = self.mu
         J = det(F)
-        B = dot(F, F.T) # left cauchy-green
+        B = dot(F, F.T)  # left cauchy-green
         t = mu / J * (B - np.eye(3)) + y / J * log(J) * np.eye(3)
         return t
 
@@ -365,10 +371,11 @@ class NeoHookean:
         s = mu * (np.eye(3) - Cinv) + y * log(J) * Cinv
         return s
 
+
 class_from_name = {'isotropic elastic': IsotropicElastic,
                    'Holmes-Mow': HolmesMow,
                    'fiber-exp-pow': ExponentialFiber,
                    'neo-Hookean': NeoHookean,
                    'solid mixture': SolidMixture,
-                   'rigid body': RigidBody,}
-name_from_class = {v:k for k, v in class_from_name.items()}
+                   'rigid body': RigidBody}
+name_from_class = {v: k for k, v in class_from_name.items()}
