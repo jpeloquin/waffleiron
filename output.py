@@ -287,8 +287,11 @@ def xml(model):
     for i, step in enumerate(model.steps):
         e_step = ET.SubElement(root, 'Step',
                                name='Step{}'.format(i + 1))
-        e_module = ET.SubElement(e_step, 'Module',
-                                 type=step['module'])
+        ET.SubElement(e_step, 'Module',
+                      type=step['module'])
+        # TODO: Warn if there's a poroelastic material and a solid
+        # analysis is requested.  Or set the appropriate module
+        # automatically.
         e_con = ET.SubElement(e_step, 'Control')
         ET.SubElement(e_con, 'analysis',
                       type=step['control']['analysis type'])
