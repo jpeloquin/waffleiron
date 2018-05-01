@@ -9,7 +9,8 @@ feb_version = 2.0
 
 axis_to_febio = {'x1': 'x',
                  'x2': 'y',
-                 'x3': 'z'}
+                 'x3': 'z',
+                 'pressure': 'p'}
 
 
 def exponentialfiber_to_feb(mat):
