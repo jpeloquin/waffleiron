@@ -24,6 +24,18 @@ def fromlame(y, u):
     return E, v
 
 
+class PoroelasticSolid:
+    """Fluid-saturated solid.
+
+    Currently only isotropic permeability is allowed.
+
+    """
+    def __init__(self, solid, permeability):
+        self.solid_material = solid
+        self.kind = 'constant isotropic'
+        self.permeability = permeability
+
+
 class SolidMixture:
     """Mixture of solids with no interdependencies or residual stress.
 
@@ -303,6 +315,27 @@ class IsotropicElastic:
         trE = np.trace(E)
         s = y * trE * np.eye(3) + 2.0 * mu * E
         return s
+
+
+class LinearOrthotropicElastic:
+    """Linear orthotropic elastic material definition.
+
+    """
+    def __init__(self, props, axes):
+        # Define material properties
+        self.E1 = props['E1']
+        self.E2 = props['E2']
+        self.E3 = props['E3']
+        self.G12 = props['G12']
+        self.G23 = props['G23']
+        self.G31 = props['G31']
+        self.v12 = props['ν12']
+        self.v23 = props['ν23']
+        self.v31 = props['ν31']
+        # Define basis vectors
+        self.x1 = axes[0]
+        self.x2 = axes[1]
+        self.x3 = axes[2]
 
 
 class NeoHookean:
