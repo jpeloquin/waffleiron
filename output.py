@@ -11,6 +11,7 @@ axis_to_febio = {'x1': 'x',
                  'x2': 'y',
                  'x3': 'z'}
 
+
 def exponentialfiber_to_feb(mat):
     """Convert ExponentialFiber material instance to FEBio xml.
 
@@ -28,6 +29,7 @@ def exponentialfiber_to_feb(mat):
     p.text = str(degrees(mat.phi))
     return e
 
+
 def holmesmow_to_feb(mat):
     """Convert HolmesMow material instance to FEBio xml.
 
@@ -35,9 +37,10 @@ def holmesmow_to_feb(mat):
     e = ET.Element('material', type='Holmes-Mow')
     E, v = feb.material.fromlame(mat.y, mat.mu)
     ET.SubElement(e, 'E').text = str(E)
-    p = ET.SubElement(e, 'v').text = str(v)
+    ET.SubElement(e, 'v').text = str(v)
     ET.SubElement(e, 'beta').text = str(mat.beta)
     return e
+
 
 def isotropicelastic_to_feb(mat):
     """Convert IsotropicElastic material instance to FEBio xml.
@@ -49,6 +52,7 @@ def isotropicelastic_to_feb(mat):
     ET.SubElement(e, 'v').text = str(v)
     return e
 
+
 def neo_hookean_to_feb(mat):
     """Convert NeoHookean material instance to FEBio xml.
 
@@ -58,6 +62,7 @@ def neo_hookean_to_feb(mat):
     ET.SubElement(e, 'E').text = str(E)
     ET.SubElement(e, 'v').text = str(v)
     return e
+
 
 def solidmixture_to_feb(mat):
     """Convert SolidMixture material instance to FEBio xml.
@@ -69,6 +74,7 @@ def solidmixture_to_feb(mat):
         m.tag = 'solid'
         e.append(m)
     return e
+
 
 def material_to_feb(mat):
     """Convert a material instance to FEBio xml.
@@ -85,9 +91,11 @@ def material_to_feb(mat):
         try:
             e = f[type(mat)](mat)
         except ValueError:
-            print("{} not implemented for conversion to FEBio xml.".format(mat.__class__))
+            msg = "{} not implemented for conversion to FEBio xml."
+            print(msg.format(mat.__class__))
             raise
     return e
+
 
 def xml(model):
     """Convert a model to an FEBio XML tree.
@@ -133,15 +141,15 @@ def xml(model):
 
     # Nodes section
     for i, x in enumerate(model.mesh.nodes):
-        feb_nid = i + 1 # 1-indexed
+        feb_nid = i + 1  # 1-indexed
         e = ET.SubElement(Nodes, 'node', id="{}".format(feb_nid))
         e.text = ",".join("{:e}".format(n) for n in x)
         Nodes.append(e)
 
     # Materials section
     # enumerate materials
-    material_ids = {k:v for v, k in enumerate(set(e.material
-                        for e in model.mesh.elements))}
+    material_ids = {k: v for v, k
+                    in enumerate(set(e.material for e in model.mesh.elements))}
 
     # make material tags
     # sort by id to get around FEBio bug
@@ -153,16 +161,14 @@ def xml(model):
         tag.attrib['id'] = str(i + 1)
         Material.append(tag)
 
-
     # Elements and ElementData sections
 
     # Assemble elements into blocks with like type and material.
     # Elemsets uses material instances as keys.  Each item is a
     # dictionary using element classes as keys,
     # with items being tuples of (element_id, element).
-    elemsets= {}
+    elemsets = {}
     for i, elem in enumerate(model.mesh.elements):
-        mid = material_ids[elem.material]
         subdict = elemsets.setdefault(elem.material, {})
         like_elements = subdict.setdefault(elem.__class__, [])
         like_elements.append((i, elem))
@@ -188,13 +194,15 @@ def xml(model):
                         e_edata = ET.SubElement(e_elementdata, 'element',
                                                 id=str(i + 1))
                         tagged = True
-                    ET.SubElement(e_edata, 'thickness').text = ','.join(str(t) for t in elem.properties['thickness'])
+                    ET.SubElement(e_edata, 'thickness').text = \
+                        ','.join(str(t) for t in elem.properties['thickness'])
                 if 'v_fiber' in elem.properties:
                     if not tagged:
                         e_edata = ET.SubElement(e_elementdata, 'element',
                                                 id=str(i + 1))
                         tagged = True
-                    ET.SubElement(e_edata, 'fiber').text = ','.join(str(a) for a in elem.properties['v_fiber'])
+                    ET.SubElement(e_edata, 'fiber').text = \
+                        ','.join(str(a) for a in elem.properties['v_fiber'])
 
     # FEBio needs Nodes to precede Elements to precede ElementData.
     # It apparently has very limited xml parsing.
@@ -290,10 +298,12 @@ def xml(model):
     tree = ET.ElementTree(root)
     return tree
 
+
 def write_xml(tree, f):
     """Write an XML tree to a .feb file"""
     tree.write(f, pretty_print=True, xml_declaration=True,
                encoding='iso-8859-1')
+
 
 def write_feb(model, f):
     """Write model's FEBio XML representation to a file object.
