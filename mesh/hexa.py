@@ -7,7 +7,11 @@ from .math import even_pt_series
 from .. import Model
 
 def rectangular_prism(length, width, thickness, hmin):
-    """Create an FE mesh of a rectangular prism."""
+    """Create an FE mesh of a rectangular prism.
+
+    The origin is in the center of the rectangle.
+
+    """
     # Create rectangle in xy plane
     A = np.array([-length/2, -width/2])
     B = np.array([ length/2, -width/2])
