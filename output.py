@@ -1,4 +1,5 @@
 # Base packages
+from collections import defaultdict
 from math import degrees
 # System packages
 from lxml import etree as ET
@@ -169,10 +170,11 @@ def xml(model):
         # Sequences in nodal displacement boundary conditions
         for node_id, bc in step['bc'].items():
             for axis, d in bc.items():
-                seq = d['sequence']
-                if seq not in seq_id:
-                    seq_id[seq] = i
-                    i += 1
+                if 'sequence' in d:
+                    seq = d['sequence']
+                    if seq not in seq_id:
+                        seq_id[seq] = i
+                        i += 1
         # Sequences in dtmax
         if 'time stepper' in step['control']:
             if 'dtmax' in step['control']['time stepper']:
@@ -326,20 +328,29 @@ def xml(model):
         # Boundary conditions
         e_bd = ET.SubElement(e_step, 'Boundary')
         # collect BCs into FEBio-like data structure
-        prescribed = {}
+        varying = defaultdict(dict)
+        fixed = defaultdict(set)
         for i, ax_bc in step['bc'].items():
             for ax, d in ax_bc.items():
-                v = d['value']
-                seq = d['sequence']
-                prescribed.setdefault(seq, {}).setdefault(ax, {})[i] = v
-        # write out data
-        for seq, d in prescribed.items():
+                if d == 'fixed':  # fixed BC
+                    fixed[ax].add(i)
+                else:  # varying ("prescribed") BC
+                    v = d['value']
+                    seq = d['sequence']
+                    varying[seq].setdefault(ax, {})[i] = v
+        # Write varying nodal BCs
+        for seq, d in varying.items():
             for axis, vnodes in d.items():
                 e_pres = ET.SubElement(e_bd, 'prescribe',
-                                       bc=str(axis_to_febio[axis]),
+                                       bc=axis_to_febio[axis],
                                        lc=str(seq_id[seq] + 1))
                 for nid, v in vnodes.items():
                     e_node = ET.SubElement(e_pres, 'node', id=str(nid + 1)).text = str(v)
+        # Write fixed nodal BCs
+        for axis, node_ids in fixed.items():
+            e_axis = ET.SubElement(e_bd, 'fix', bc=axis_to_febio[axis])
+            for i in node_ids:
+                ET.SubElement(e_axis, 'node', id=str(i))
 
     tree = ET.ElementTree(root)
     return tree

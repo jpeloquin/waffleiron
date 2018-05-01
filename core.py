@@ -88,6 +88,14 @@ class Model:
             bc_node[axis] = {'sequence': sequence,
                              'value': v}
 
+    def apply_nodal_bc_fixed(self, node_ids, axis, step_id=-1):
+        """Apply a fixed boundary condition to nodes during a step.
+
+        """
+        for i in node_ids:
+            bc_node = self.steps[step_id]['bc'].setdefault(i, {})
+            bc_node[axis] = 'fixed'
+
     def apply_solution(self, solution, t=None, step=None):
         """Attach a solution to the model.
 
