@@ -226,7 +226,7 @@ def jintegral(domain, infinitessimal=False):
         # compute ∂²u/∂x²
         d2udx2 = e.ddinterp(r, prop='displacement')
 
-        # comput ∂ψ/∂x
+        # compute ∂ψ/∂x
         dwdx = e.dinterp(r, prop='w')
 
         kd = np.eye(3)  # kronecker delta
