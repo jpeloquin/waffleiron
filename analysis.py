@@ -1,8 +1,7 @@
 import numpy as np
-import febtools as feb
 
-from febtools.selection import e_grow
-from febtools.exceptions import *
+from febtools.exceptions import SelectionException
+
 
 def select_elems_around_node(mesh, i, n=3):
     """Select elements centered on node i.
@@ -32,6 +31,7 @@ def select_elems_around_node(mesh, i, n=3):
         # graph data structure.
     return elements
 
+
 def eval_fn_x(soln, fn, pt):
     """Evaluate a function at a specific point.
 
@@ -57,7 +57,6 @@ def eval_fn_x(soln, fn, pt):
         f = e.f(r, soln.data['displacement'])
         return fn(f, e)
 
-from febtools.selection import adj_faces
 
 def apply_q_2d(mesh, crack_tip, q=[1, 0, 0], n=3, qtype='plateau'):
     """Define q for for the J integral.
@@ -109,6 +108,7 @@ def apply_q_2d(mesh, crack_tip, q=[1, 0, 0], n=3, qtype='plateau'):
 
     return elements
 
+
 def apply_q_3d(domain, crack_faces, tip_nodes,
                q=[1, 0, 0], qtype='plateau'):
     """Define q for for the J integral.
@@ -142,7 +142,7 @@ def apply_q_3d(domain, crack_faces, tip_nodes,
     tip_nodes = set(tip_nodes) & all_nodes
 
     # Find boundary nodes
-    refcount = {} # how many elements each node is connected to
+    refcount = {}  # how many elements each node is connected to
     for e in domain:
         for i in e.ids:
             refcount[i] = refcount.setdefault(i, 0) + 1
@@ -179,15 +179,17 @@ def apply_q_3d(domain, crack_faces, tip_nodes,
                 if node_id in q0_nodes:
                     qprop[i] = 0.0 * q
                 elif node_id in q1_nodes:
-                    qprop[i]= 1.0 * q
+                    qprop[i] = 1.0 * q
                 else:
-                    raise Exception("Element {} node {} does not have q defined.".format(e, i))
+                    msg = "Element {} node {} does not have q defined."
+                    raise Exception(msg.format(e, i))
             e.apply_property('q', qprop)
     else:
         raise NotImplemented('{}-type q functions are not '
                              'implemented.'.format(qtype))
 
     return domain
+
 
 def jintegral(domain, infinitessimal=False):
     """Calculate J integral.
@@ -208,9 +210,9 @@ def jintegral(domain, infinitessimal=False):
 
         """
         F = e.f(r)
-        s = e.material.sstress(F) # 2nd Piola-Kirchoff stress
+        s = e.material.sstress(F)  # 2nd Piola-Kirchoff stress
         dudx = e.dinterp(r, prop='displacement')
-        w = e.material.w(F) # strain energy
+        w = e.material.w(F)  # strain energy
         q = e.interp(r, prop='q')
         dqdx = e.dinterp(r, prop='q')
 
@@ -218,8 +220,8 @@ def jintegral(domain, infinitessimal=False):
         dsdx = np.zeros((3, 3, 3))
         for i in range(3):
             for j in range(3):
-                dsdx[i,j,:] = \
-                    e.dinterp(r, prop=e.properties['S'][:,i,j])
+                dsdx[i, j, :] = \
+                    e.dinterp(r, prop=e.properties['S'][:, i, j])
 
         # compute ∂²u/∂x²
         d2udx2 = e.ddinterp(r, prop='displacement')
@@ -227,10 +229,10 @@ def jintegral(domain, infinitessimal=False):
         # comput ∂ψ/∂x
         dwdx = e.dinterp(r, prop='w')
 
-        kd = np.eye(3) # kronecker delta
+        kd = np.eye(3)  # kronecker delta
 
         # The usual part.
-        work = sum(s[i][j] * dudx[j,k] * dqdx[k][i]
+        work = sum(s[i][j] * dudx[j, k] * dqdx[k][i]
                    for i in range(3)
                    for j in range(3)
                    for k in range(3))
@@ -243,18 +245,18 @@ def jintegral(domain, infinitessimal=False):
         # The Hakimelahi_Ghazavi_2008 version
         igrand2 = sum(q[k] * (dsdx[i, 2, 2] * dudx[i, k]
                               + s[i, 2] * d2udx2[i, k, 2]
-                              - dwdx[2] * kd[i,2])
+                              - dwdx[2] * kd[i, 2])
                       for i in range(3)
                       for k in range(3))
 
         # The Anderson version, corrected to use the divergence
         # operator correctly
-        igrand2_1 = sum(q[k] * (dsdx[i,j,j] * dudx[j,k])
+        igrand2_1 = sum(q[k] * (dsdx[i, j, j] * dudx[j, k])
                         for i in range(3)
                         for j in range(3)
                         for k in range(3))
 
-        igrand2_2 = sum(q[k] * (s[i,j] * d2udx2[j,k,j])
+        igrand2_2 = sum(q[k] * (s[i, j] * d2udx2[j, k, j])
                         for i in range(3)
                         for j in range(3)
                         for k in range(3))
@@ -284,7 +286,7 @@ def jintegral(domain, infinitessimal=False):
     for e in domain:
         dsdx = e.dinterp((0, 0, 0), prop='S')
         # print dsdx[0, 0, 0] + dsdx[0,1,1] + dsdx[0,2,2]
-        #print sum([integrand(e, r, debug=True)[1] for r in e.gloc])
+        # print sum([integrand(e, r, debug=True)[1] for r in e.gloc])
 
     # compute j
     j = 0.0
