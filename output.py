@@ -350,7 +350,7 @@ def xml(model):
         for axis, node_ids in fixed.items():
             e_axis = ET.SubElement(e_bd, 'fix', bc=axis_to_febio[axis])
             for i in node_ids:
-                ET.SubElement(e_axis, 'node', id=str(i))
+                ET.SubElement(e_axis, 'node', id=str(i + 1))
 
     tree = ET.ElementTree(root)
     return tree
