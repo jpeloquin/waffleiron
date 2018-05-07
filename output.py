@@ -128,8 +128,7 @@ def material_to_feb(mat):
              feb.material.HolmesMow: holmesmow_to_feb,
              feb.material.IsotropicElastic: isotropicelastic_to_feb,
              feb.material.NeoHookean: neo_hookean_to_feb,
-             feb.material.LinearOrthotropicElastic:
-             linear_orthotropic_elastic_to_feb,
+             feb.material.LinearOrthotropicElastic: linear_orthotropic_elastic_to_feb,
              feb.material.PoroelasticSolid: poroelastic_to_feb,
              feb.material.SolidMixture: solidmixture_to_feb}
         try:
