@@ -359,7 +359,7 @@ class XpltReader:
             else:
                 raise Exception("The first 4 bytes of %s "
                                 "do not match the FEBio spec: "
-                                "it is not a valid .feb file."
+                                "it is not a valid .xplt file."
                                 % (f.name,))
 
             # Find timepoints
