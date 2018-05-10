@@ -2,6 +2,9 @@
 import struct
 import sys
 
+# Same-package modules
+from . import element
+
 # Specification metadata for each (documented) tag.
 #
 # `name` := string.  A human-readable name for the tag.  Names may be
@@ -183,6 +186,45 @@ tags_table = {
                'format': 'variable'}
 }
 
+element_type_from_id = {
+    0: element.Hex8,
+    1: element.Penta6,
+    2: 'tet4',
+    3: element.Quad4,
+    4: element.Tri3,
+    5: 'truss2'
+}
+
+item_type_from_id = {
+        0: 'float',
+        1: 'vec3f',
+        2: 'mat3fs'
+}
+
+item_format_from_id = {
+    0: 'node',
+    1: 'item',
+    2: 'mult'
+}
+
+
+def parse_endianness(data):
+    """Return endianness of xplt data.
+
+    """
+    # Parse identifier tag
+    if data[:4] == b'BEF\x00':
+        endian = '<'
+    elif data[:4] == b'\x00FEB':
+        endian = '>'
+    else:
+        msg = "Input data is not valid as an FEBio binary database file.  "\
+            "The first four bytes are {}, but should be 'BEF\x00' or "\
+            "'\x00F\EB'."
+        raise ValueError(msg.format(data[:4]))
+
+    return endian
+
 
 def parse_blocks(data, offset=0, endian='<'):
     """Parse data as a FEBio binary database block.
@@ -274,16 +316,8 @@ def parse_xplt(data):
     misaligned tags or incomplete tags.
 
     """
-    # Parse identifier tag
-    if data[:4] == b'BEF\x00':
-        endian = '<'
-    elif data[:4] == b'\x00FEB':
-        endian = '>'
-    else:
-        msg = "Input data is not valid as an FEBio binary database file.  "\
-            "The first four bytes are {}, but should be 'BEF\x00' or "\
-            "'\x00F\EB'."
-        raise ValueError(msg.format(data[:4]))
+    # Parse FEBio tag
+    endian = parse_endianness(data[:4])
 
     # Parse the rest of the file
     parse_tree = parse_blocks(data[4:], offset=4, endian=endian)

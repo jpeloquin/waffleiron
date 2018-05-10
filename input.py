@@ -9,6 +9,8 @@ import febtools.element
 from febtools.exceptions import UnsupportedFormatError
 from operator import itemgetter
 
+from . import xplt
+
 
 def _nstrip(string):
     """Remove trailing nulls from string.
@@ -271,77 +273,6 @@ class XpltReader:
     """Parses an FEBio xplt file.
 
     """
-    str2tag = {
-        'root':            16777216,  # 0x01000000
-        'header':          16842752,  # 0x01010000
-        'version':         16842753,  # 0x01010001
-        'nodes':           16842754,  # 0x01010002
-        'dictionary':      16908288,  # 0x01020000
-        'dict_item':       16908289,  # 0x01020001
-        'item_type':       16908290,  # 0x01020002
-        'item_format':     16908291,  # 0x01020003
-        'item_name':       16908292,  # 0x01020004
-        'global_var':      16912384,  # 0x01021000
-        'material_var':    16916480,  # 0x01022000
-        'nodeset_var':     16920576,  # 0x01023000
-        'domain_var':      16924672,  # 0x01024000
-        'surface_var':     16928768,  # 0x01025000
-        'materials':       16973824,  # 0x01030000
-        'material':        16973825,  # 0x01030001
-        'material_id':     16973826,  # 0x01030002
-        'material_name':   16973827,  # 0x01030003
-        'geometry':        17039360,  # 0x01040000
-        'node_section':    17043456,  # 0x01041000
-        'node_coords':     17043457,  # 0x01041001
-        'domain_section':  17047552,  # 0x01042000
-        'domain':          17047808,  # 0x01042100
-        'domain_header':   17047809,  # 0x01042101
-        'elem_type':       17047810,  # 0x01042102
-        'mat_id':          17047811,  # 0x01042103
-        'elements':        16982276,  # 0x01032104
-        'domain_id':       16982277,  # 0x01032105
-        'element_list':    17048064,  # 0x01042200
-        'element':         17048065,  # 0x01042201
-        'surface_section': 17051648,  # 0x01043000
-        'surface':         17051904,  # 0x01043100
-        'surface_header':  17051905,  # 0x01043101
-        'surface_id':      17051906,  # 0x01043102
-        'faces':           17051907,  # 0x01043103
-        'face_list':       17052160,  # 0x01043200
-        'face':            17052161,  # 0x01043201
-        'state_section':   33554432,  # 0x02000000
-        'state_header':    33619968,  # 0x02010000
-        'time':            33619970,  # 0x02010002
-        'state_data':      33685504,  # 0x02020000
-        'state_var':       33685505,  # 0x02020001
-        'variable_id':     33685506,  # 0x02020002
-        'variable_data':   33685507,  # 0x02020003
-        'global_data':     33685760,  # 0x02020100
-        'material_data':   33686016,  # 0x02020200
-        'node_data':       33686272,  # 0x02020300
-        'domain_data':     33686528,  # 0x02020400
-        'surface_data':    33686784   # 0x02020500
-        }
-    tag2str = dict((v, k) for k, v in str2tag.items())
-    tag2elem_type = {
-        0: febtools.element.Hex8,
-        1: febtools.element.Penta6,
-        2: 'tet4',
-        3: febtools.element.Quad4,
-        4: febtools.element.Tri3,
-        5: 'truss2'
-        }
-    tag2item_type = {
-        0: 'float',
-        1: 'vec3f',
-        2: 'mat3fs'
-        }
-    tag2item_format = {
-        0: 'node',
-        1: 'item',
-        2: 'mult'
-        }
-
     def __init__(self, f):
         """Load an .xplt file.
 
@@ -350,24 +281,15 @@ class XpltReader:
             self.f = f
 
             # Endianness
-            self.endian = '<'  # initial assumption
-            s = f.read(4)
-            if s == b'BEF\x00':
-                self.endian = '<'
-            elif s == b'\x00FEB':
-                self.endian = '>'
-            else:
-                raise Exception("The first 4 bytes of %s "
-                                "do not match the FEBio spec: "
-                                "it is not a valid .xplt file."
-                                % (f.name,))
+            f.seek(0)
+            self.endian = xplt.parse_endianness(f.read(4))
 
             # Find timepoints
             time = []
-            a = self._findall('state_section')
+            a = self._findall('state')
             self.steploc = [loc for loc, sz in a]
             for l in self.steploc:
-                a = self._findall('state_header/time', l)
+                a = self._findall('state header/time', l)
                 self.f.seek(a[0][0])
                 s = self.f.read(a[0][1])
                 time.append(struct.unpack(self.endian + 'f', s)[0])
@@ -412,7 +334,7 @@ class XpltReader:
                 ecode = struct.unpack(self.endian
                                       + 'I',
                                       self.f.read(s))[0]
-                etype = self.tag2elem_type[ecode]
+                etype = xplt.element_type_from_id[ecode]
                 if type(etype) is str:
                     msg = "`{}` element type is not implemented."
                     raise NotImplementedError(msg.format(etype))
@@ -507,8 +429,8 @@ class XpltReader:
         steploc = self.steploc[step]
         for k, v in var.items():
             if v:
-                path = ('state_data/' + k + '_data'
-                        '/state_var/variable_data')
+                path = ('state data/' + k + ' data'
+                        '/state variable/data')
                 a = self._findall(path, steploc)
                 for (loc, sz), (typ, fmt, name) in zip(a, v):
                     if sz == 0:
@@ -537,20 +459,20 @@ class XpltReader:
         name = a textual description of the data
 
         """
-        path = 'root/dictionary/' + name + '_var/dict_item'
+        path = 'root/dictionary/' + name + ' variables/dictionary item'
         a = self._findall(path)
         typ = []
         fmt = []
         name = []
         for loc, sz in a:
             for label, data in self._children(loc - 8):
-                if label == 'item_type':
-                    typ.append(self.tag2item_type[
+                if label == 'item type':
+                    typ.append(xplt.item_type_from_id[
                         struct.unpack(self.endian + 'I', data)[0]])
-                elif label == 'item_format':
-                    fmt.append(self.tag2item_format[
+                elif label == 'item format':
+                    fmt.append(xplt.item_format_from_id[
                         struct.unpack(self.endian + 'I', data)[0]])
-                elif label == 'item_name':
+                elif label == 'item name':
                     name.append(data[:data.find(b'\x00')].decode())
                 else:
                     raise Exception('%s block not expected as '
@@ -703,6 +625,6 @@ class XpltReader:
         s = self.f.read(8)
         if len(s) == 8:
             d = struct.unpack(self.endian + 'II', s)
-            return self.tag2str[d[0]], d[1]
+            return xplt.tags_table[d[0]]['name'], d[1]
         else:
             return None
