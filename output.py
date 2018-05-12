@@ -5,6 +5,8 @@ from math import degrees
 from lxml import etree as ET
 # In-house packages
 import febtools as feb
+from .conditions import Sequence
+from .control import step_duration
 
 feb_version = 2.0
 
@@ -273,6 +275,28 @@ def xml(model):
     # sort sequences by id to get around FEBio bug
     sequences = [(i, seq) for seq, i in seq_id.items()]
     sequences.sort()
+    # Apply offset to load curves so they start at the same time the
+    # previous step ends (global time), as required by FEBio.  In
+    # `febtools`, each step has its own running time (local time).
+    cumulative_time = 0.0
+    for step in model.steps:
+        # Adjust must point curves
+        dtmax = step['control']['time stepper']['dtmax']
+        if isinstance(dtmax, Sequence):
+            dtmax.points = [(cumulative_time + t, v) for t, v in dtmax.points]
+        # Adjust variable boundary condition curves
+        curves_to_adjust = set([])
+        for i, ax_bc in step['bc'].items():
+            for ax, d in ax_bc.items():
+                if not d == 'fixed':  # varying ("prescribed") BC
+                    curves_to_adjust.update([d['sequence']])
+        for curve in curves_to_adjust:
+            curve.points = [(cumulative_time + t, v)
+                            for t, v in curve.points]
+        # Tally running time
+        duration = step_duration(step)
+        cumulative_time += duration
+    # Write adjusted sequences
     for i, seq in sequences:
         e_lc = ET.SubElement(e_loaddata, 'loadcurve', id=str(i+1),
                              type=seq.typ, extend=seq.extend)
@@ -285,6 +309,7 @@ def xml(model):
     ET.SubElement(plotfile, 'var', type='stress')
 
     # Step section(s)
+    cumulative_time = 0.0
     for i, step in enumerate(model.steps):
         e_step = ET.SubElement(root, 'Step',
                                name='Step{}'.format(i + 1))
@@ -318,7 +343,8 @@ def xml(model):
         # dtmax may have an associated sequence
         dtmax = step['control']['time stepper']['dtmax']
         e_dtmax = ET.SubElement(e_ts, 'dtmax')
-        if dtmax.__class__ is feb.Sequence:
+        if isinstance(dtmax, Sequence):
+            # Reference the load curve for dtmax
             e_dtmax.attrib['lc'] = str(seq_id[dtmax] + 1)
             e_dtmax.text = "1"
         else:

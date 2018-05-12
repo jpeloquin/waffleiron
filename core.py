@@ -19,24 +19,6 @@ class Model:
     """An FE model: geometry, boundary conditions, solution.
 
     """
-    # If a sequence is assigned to dtmax in this default dictionary,
-    # it will be copied when `default_control` is used to initialize a
-    # control step.  This may not be desirable.
-    default_control = {'time steps': 10,
-                       'step size': 0.1,
-                       'max refs': 15,
-                       'max ups': 10,
-                       'dtol': 0.001,
-                       'etol': 0.01,
-                       'rtol': 0,
-                       'lstol': 0.9,
-                       'time stepper': {'dtmin': 0.01,
-                                        'dtmax': 0.1,
-                                        'max retries': 5,
-                                        'opt iter': 10},
-                       'analysis type': 'static',
-                       'plot level': 'PLOT_MAJOR_ITRS'}
-
     def __init__(self, mesh):
         if type(mesh) is not feb.core.Mesh:
             raise TypeError("{} is not of type"
@@ -47,6 +29,11 @@ class Model:
         self.materials = {}
         self.material_names = {}
         self.solution = None  # the solution for the model
+
+        # If a sequence is assigned to dtmax in this default dictionary,
+        # it will be copied when `default_control` is used to initialize a
+        # control step.  This may not be desirable.
+        self.default_control = feb.control.default_control_section()
 
         self.fixed_nodes = {'x1': set(),
                             'x2': set(),
@@ -70,7 +57,7 @@ class Model:
 
         """
         if control is None:
-            control = deepcopy(self.default_control)
+            control = feb.control.default_control_section()
         step = {'module': module,
                 'control': control,
                 'bc': {}}
@@ -361,21 +348,6 @@ class Mesh:
         """
         for nid in self.nodes:
             pass
-
-
-class Sequence:
-    """A time-varying sequence for step control.
-
-    """
-    def __init__(self, seq, typ='smooth', extend='extrapolate'):
-        # Input checking
-        assert extend in ['extrapolate', 'constant', 'repeat',
-                          'repeat continuous']
-        assert typ in ['step', 'linear', 'smooth']
-        # Parameters
-        self.points = seq
-        self.typ = typ
-        self.extend = extend
 
 
 def _canonical_face(face):
