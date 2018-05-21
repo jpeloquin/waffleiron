@@ -442,7 +442,7 @@ class XpltReader:
                         data.setdefault(k, {})[name] = \
                             self._unpack_variable_data(s, typ)
 
-        # "element" is alias for FEBio's "domain category
+        # "element" is alias for FEBio's "domain" category
         data['element'] = data['domain']
         return data
 
