@@ -22,7 +22,7 @@ def auto_control_section(sequence, pts_per_segment=6):
     dt = np.concatenate([dt, dt[-1:]])  # len(dt) == len(time)
     dt_min = np.min(dt)
     # dt_max = np.max(dt)
-    nsteps = math.ceil(dt_min)
+    nsteps = math.ceil(duration / dt_min)
     dt_nominal = duration / nsteps
     control['time steps'] = nsteps
     control['step size'] = dt_nominal
