@@ -10,7 +10,8 @@ from febtools.exceptions import UnsupportedFormatError
 from operator import itemgetter
 
 from . import xplt
-
+from .conditions import Sequence
+from .febioxml import control_tagnames_from_febio
 
 def _nstrip(string):
     """Remove trailing nulls from string.
@@ -224,13 +225,48 @@ class FebReader:
                 node_ids.add(int(e_node.attrib['id']))
             model.fixed_nodes[lbl].update(node_ids)
         # Load curves (sequences)
+        sequences = {}
+        for e_lc in self.root.findall('LoadData/loadcurve'):
+            def parse_pt(text):
+                x, y = text.split(',')
+                return float(x), float(y)
+            curve = [parse_pt(a.text) for a in e_lc.getchildren()]
+            if 'extend' in e_lc.attrib:
+                extend = e_lc.attrib['extend']
+            else:
+                extend = 'extrapolate'  # default
+            if 'type' in e_lc.attrib:
+                typ = e_lc.attrib['type']
+            else:
+                typ = 'linear'  # default
+            sequences[e_lc.attrib['id']] = Sequence(curve, typ=typ, extend=extend)
         # Steps
-        # for e_step in self.root.findall('Step'):
-            # e_module = e_step.find('Module')
-            # module = e_module.attrib['type']
-            # e_control = e_step.find('Control')
-            # e_boundary = e_step.find('Boundary')
-            # TBD
+        model.steps = []
+        for e_step in self.root.findall('Step'):
+            step = {'control': {}}
+            # Module
+            e_module = e_step.find('Module')
+            step['module'] = e_module.attrib['type']
+            # Control section
+            e_control = e_step.find('Control')
+            for e in e_control:
+                if e.tag in control_tagnames_from_febio:
+                    # TODO: handle types correctly
+                    step['control'][control_tagnames_from_febio[e.tag]] = e.text
+            # Control/time_stepper section
+            step['control']['time stepper'] = {}
+            e_stepper = e_control.find('time_stepper')
+            for e in e_stepper:
+                if e.tag in control_tagnames_from_febio:
+                    # TODO: handle types correctly
+                    k = control_tagnames_from_febio[e.tag]
+                    step['control']['time stepper'][k] = float(e.text)
+            # Handle dtmax; it might have an associated sequence
+            e_dtmax = e_stepper.find('dtmax')
+            if 'lc' in e_dtmax.attrib:
+                # dtmax has a must point sequence
+                step['control']['time stepper']['dtmax'] = sequences[e_dtmax.attrib['lc']]
+            model.steps.append(step)
         return model
 
     def mesh(self):

@@ -7,6 +7,7 @@ from lxml import etree as ET
 import febtools as feb
 from .conditions import Sequence
 from .control import step_duration
+from .febioxml import control_tagnames_to_febio
 
 feb_version = 2.0
 
@@ -321,18 +322,10 @@ def xml(model):
         e_con = ET.SubElement(e_step, 'Control')
         ET.SubElement(e_con, 'analysis',
                       type=step['control']['analysis type'])
-        tbl = {'time steps': 'time_steps',
-               'step size': 'step_size',
-               'max refs': 'max_refs',
-               'max ups': 'max_ups',
-               'dtol': 'dtol',
-               'etol': 'etol',
-               'rtol': 'rtol',
-               'lstol': 'lstol',
-               'plot level': 'plot_level'}
-        for lbl1, lbl2 in tbl.items():
-            ET.SubElement(e_con, lbl2).text = \
-                str(step['control'][lbl1])
+        for lbl1, lbl2 in control_tagnames_to_febio.items():
+            if lbl1 in step['control'] and lbl1 != 'time stepper':
+                txt = str(step['control'][lbl1])
+                ET.SubElement(e_con, lbl2).text = txt
         e_ts = ET.SubElement(e_con, 'time_stepper')
         ET.SubElement(e_ts, 'dtmin').text = \
             str(step['control']['time stepper']['dtmin'])
