@@ -226,7 +226,7 @@ def parse_endianness(data):
     return endian
 
 
-def parse_blocks(data, offset=0, endian='<'):
+def parse_blocks(data, offset=0, store_data=True, endian='<'):
     """Parse data as a FEBio binary database block.
 
     Inputs:
@@ -235,6 +235,13 @@ def parse_blocks(data, offset=0, endian='<'):
 
     offset := integer.  The parser returns the address of each tag as
     `offset` + (number of bytes in `data` before the start of the tag).
+    This is to facilitate recursive use.
+
+    store_data := logical (default True).  If True, load the data of
+    leaf blocks into memory and store it under the 'data' key in the
+    returned metadata dictionary for the block.  If False, do not load
+    the data of leaf blocks into memory.  The returned dictionary of
+    metadata for a block will then have no 'data' key.
 
     endian := '<' (little endian) or '>' (big endian).  Endianness
     numeric values in `data`.
@@ -278,38 +285,43 @@ def parse_blocks(data, offset=0, endian='<'):
                  'tag': s_id,
                  'type': 'unknown',
                  'address': i + offset,
-                 'size': i_size,
-                 'data': []}
+                 'size': i_size}
+        if store_data:
+            block['data'] = []
+
         # Try looking up specification metadata.  If we fail, treat this
         # block as a leaf and return the basic metadata.
         try:
             tag_metadata = tags_table[i_id]
         except KeyError:
-            block['data'] = child
+            if store_data:
+                block['data'] = child
             blocks.append(block)
             i += 8 + i_size
             continue
         block['name'] = tag_metadata['name']
         # If this is a leaf block, parse its data.  If it is a branch
         # block, parse its children.
-        if tag_metadata['leaf']:
+        if tag_metadata['leaf']:  # is a leaf block
             block['type'] = 'leaf'
             if 'format' in tag_metadata:
                 fmt = tag_metadata['format']
-                block['data'] = unpack_block_data(child, fmt, endian)
+                if store_data:
+                    block['data'] = unpack_block_data(child, fmt, endian)
             else:
-                block['data'] = child
-        else:
+                if store_data:
+                    block['data'] = child
+        else:  # is a branch block
             block['type'] = 'branch'
             block['data'] = parse_blocks(child, offset + i + 8,
-                                         endian=endian)
+                                         endian=endian, store_data=store_data)
         # Record this block's metadata and move on
         blocks.append(block)
         i += 8 + i_size
     return blocks
 
 
-def parse_xplt(data):
+def parse_xplt(data, store_data=True):
     """Parse data as an FEBio binary database file.
 
     The parser is robust to unknown tags, but is not currently robust to
@@ -320,7 +332,7 @@ def parse_xplt(data):
     endian = parse_endianness(data[:4])
 
     # Parse the rest of the file
-    parse_tree = parse_blocks(data[4:], offset=4, endian=endian)
+    parse_tree = parse_blocks(data[4:], offset=4, endian=endian, store_data=store_data)
 
     return parse_tree
 
@@ -334,14 +346,18 @@ def pprint_blocks(blocks, indent=0):
         else:
             # Write the new block's indent & brace
             sys.stdout.write(" " * (indent + 1) + "{")
-        print("'name': '{}',".format(block['name']))
+        sys.stdout.write("'name': '{}'".format(block['name']))
         for k in ['tag', 'type', 'address', 'size']:
-            print(s_indent + "'{}': '{}',".format(k, block[k]))
-        if block['type'] == 'branch':
-            print(s_indent + "'children':")
-            pprint_blocks(block['data'], indent=indent+2)
-        else:  # Leaf or unknown
-            sys.stdout.write(s_indent + "'data': {}".format(block['data']))
+            sys.stdout.write(",\n" + s_indent + "'{}': '{}'".format(k, block[k]))
+
+        # Write block data/children
+        if 'data' in block:
+            if block['type'] == 'branch':
+                sys.stdout.write(",\n" + s_indent + "'children':\n")
+                pprint_blocks(block['data'], indent=indent+2)
+            else:  # Leaf or unknown
+                sys.stdout.write(",\n" + s_indent + "'data': {}".format(block['data']))
+
         if i < len(blocks) - 1:  # Before last block
             # Close the braces for the current block and write a
             # continuation comma
