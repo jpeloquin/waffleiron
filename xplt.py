@@ -1,4 +1,5 @@
 # Base packages
+from math import inf
 import struct
 import sys
 
@@ -226,7 +227,7 @@ def parse_endianness(data):
     return endian
 
 
-def parse_blocks(data, offset=0, store_data=True, endian='<'):
+def parse_blocks(data, offset=0, store_data=True, max_depth=inf, endian='<'):
     """Parse data as a FEBio binary database block.
 
     Inputs:
@@ -245,6 +246,10 @@ def parse_blocks(data, offset=0, store_data=True, endian='<'):
 
     endian := '<' (little endian) or '>' (big endian).  Endianness
     numeric values in `data`.
+
+    max_depth := integer or inf.  Blocks will be be parsed `max_depth`
+    levels deep.  A minimum of one level is always parsed in the parse
+    tree.
 
     Output:
 
@@ -266,8 +271,10 @@ def parse_blocks(data, offset=0, store_data=True, endian='<'):
     blocks occur in `data`.
 
     """
-    i = 0
+    # Initialize variables used throughout
+    i = 0  # index of current byte in `data`
     blocks = []
+
     # Traverse the data, looking for blocks
     while i < len(data):
         # Get block id
@@ -286,8 +293,6 @@ def parse_blocks(data, offset=0, store_data=True, endian='<'):
                  'type': 'unknown',
                  'address': i + offset,
                  'size': i_size}
-        if store_data:
-            block['data'] = []
 
         # Try looking up specification metadata.  If we fail, treat this
         # block as a leaf and return the basic metadata.
@@ -313,15 +318,17 @@ def parse_blocks(data, offset=0, store_data=True, endian='<'):
                     block['data'] = child
         else:  # is a branch block
             block['type'] = 'branch'
-            block['data'] = parse_blocks(child, offset + i + 8,
-                                         endian=endian, store_data=store_data)
+            if max_depth > 1:
+                block['data'] = parse_blocks(child, offset + i + 8, endian=endian,
+                                             store_data=store_data,
+                                             max_depth=max_depth - 1)
         # Record this block's metadata and move on
         blocks.append(block)
         i += 8 + i_size
     return blocks
 
 
-def parse_xplt(data, store_data=True):
+def parse_xplt(data, **kwargs):
     """Parse data as an FEBio binary database file.
 
     The parser is robust to unknown tags, but is not currently robust to
@@ -332,7 +339,7 @@ def parse_xplt(data, store_data=True):
     endian = parse_endianness(data[:4])
 
     # Parse the rest of the file
-    parse_tree = parse_blocks(data[4:], offset=4, endian=endian, store_data=store_data)
+    parse_tree = parse_blocks(data[4:], offset=4, endian=endian, **kwargs)
 
     return parse_tree
 
