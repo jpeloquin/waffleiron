@@ -3,8 +3,11 @@ from math import inf
 import struct
 import sys
 
+# Third-party public packages
+import numpy as np
+
 # Same-package modules
-from . import element
+from . import element, Mesh
 
 # Specification metadata for each (documented) tag.
 #
@@ -50,9 +53,9 @@ tags_table = {
                'leaf': False},
     16916480: {'name': 'material variables',  # 0x01022000
                'leaf': False},
-    16920576: {'name': 'nodeset variables',  # 0x01023000
+    16920576: {'name': 'node variables',  # 0x01023000
                'leaf': False},
-    16924672: {'name': 'domain variables',  # 0x01024000
+    16924672: {'name': 'element variables',  # 0x01024000
                'leaf': False},
     16928768: {'name': 'surface variables',  # 0x01025000
                'leaf': False},
@@ -171,7 +174,7 @@ tags_table = {
                'leaf': False},
     33686272: {'name': 'node data',  # 0x02020300
                'leaf': False},
-    33686528: {'name': 'domain data',  # 0x02020400
+    33686528: {'name': 'element data',  # 0x02020400
                'leaf': False},
     33686784: {'name': 'surface data',  # 0x02020500
                'leaf': False},
@@ -319,7 +322,7 @@ def parse_blocks(data, offset=0, store_data=True, max_depth=inf, endian='<'):
         else:  # is a branch block
             block['type'] = 'branch'
             if max_depth > 1:
-                block['data'] = parse_blocks(child, offset + i + 8, endian=endian,
+                block['data'] = parse_blocks(child, offset=offset + i + 8, endian=endian,
                                              store_data=store_data,
                                              max_depth=max_depth - 1)
         # Record this block's metadata and move on
@@ -328,7 +331,7 @@ def parse_blocks(data, offset=0, store_data=True, max_depth=inf, endian='<'):
     return blocks
 
 
-def parse_xplt(data, **kwargs):
+def parse_xplt_data(data, **kwargs):
     """Parse data as an FEBio binary database file.
 
     The parser is robust to unknown tags, but is not currently robust to
@@ -381,10 +384,177 @@ def unpack_block_data(data, fmt, endian):
         n = int(len(data) / 4)
         if fmt == 'int':
             v = struct.unpack(endian + n * 'I', data)
-        else:
+        else:  # float
             v = struct.unpack(endian + n * 'f', data)
         if len(v) == 1:  # Flatten singleton tuple
+            # TODO: Distinguish b/w nodeset floats (which could, in
+            # principle, be of length one) and singleton floats.
             v = v[0]
-        return v
-    else:  # 'str' or 'variable' → pass through
+    elif fmt == 'vec3f':
+        if len(data) % 12 != 0:
+            raise ValueError("Input data cannot be evenly divided into "
+                             "vectors.")
+        v = []
+        for j in range(0, len(data), 12):
+            v.append(np.array(struct.unpack(endian + 'f' * 3,
+                                            data[j:j+12])))
+    elif fmt == 'mat3fs':
+        if len(data) % 24 != 0:
+            raise ValueError("Input data cannot be evenly divided into "
+                             "tensor.")
+        v = []
+        for j in range(0, len(data), 24):
+            a = struct.unpack(endian + 'f' * 6, data[j:j+24])
+            # The FEBio database spec does not document the
+            # tensor order, but this should be accurate.
+            v.append(np.array([[a[0], a[3], a[5]],
+                               [a[3], a[1], a[4]],
+                               [a[5], a[4], a[2]]]))
+    elif fmt == 'str':
+        # FEBio uses null-terminated strings.  Strip the null byte and
+        # everything after it, and decode from bytes to text.
+        v = data[0:data.find(b'\x00')].decode()
+    else:
+        # Pass through unrecognized values.
+        v = data
+    return v
+
+
+class XpltBlocks:
+    """Xplt parse structure with accessor methods.
+
+    """
+    def __init__(self, blocks):
+        self.blocks = blocks
+
+    def __repr__(self):
+        return repr(self.blocks)
+
+    def get_all(self, pth):
+
+        for key in keys:
+            matches = [b['data'] for b in self.blocks if b['name'] == key]
+        return XpltBlocks(matches)
+
+def get_bdata_by_name(blocks, pth):
+    """Return a list of the contents of all blocks matching a path.
+
+    """
+    if type(blocks) is not  list:
+        blocks = [blocks]
+    names = pth.split('/')
+    while len(names) != 0:
+        name, names = names[0], names[1:]
+        matches = []
+        for b in blocks:
+            if b['name'] == name:
+                if b['type'] == 'branch':
+                    matches += b['data']
+                elif b['type'] == 'leaf' and len(names) == 0:
+                    # Leaf blocks can only match the end of the given
+                    # name path.
+                    matches.append(b['data'])
+        blocks = matches
+    return matches
+
+
+class XpltData:
+    """In-memory storage and reading of xplt file data.
+
+    """
+    def __init__(self, data):
+        """Initialize XpltData object from xplt bytes data.
+
+        """
+        self.endian = parse_endianness(data[:4])
+        blocks = parse_xplt_data(data, store_data=True)
+        # Store header data
+        self.header_blocks = blocks[0]['data']
+        # Store step data
+        self.step_blocks = blocks[1:]
+        # Step times
+        self.step_times = []
+        for b in self.step_blocks:
+            t = get_bdata_by_name(b['data'], 'state header/time')[0]
+            self.step_times.append(t)
+        # Step data dictionary
+        b_data_dictionary = get_bdata_by_name(self.header_blocks, 'dictionary')
+        self.data_dictionary = {}
+        for b_cat in b_data_dictionary:
+            for b_var in b_cat['data']:
+                var = {}
+                for b in b_var['data']:
+                    value = b['data']
+                    var[b['name']] = value
+                # Convert coded values
+                var['item type'] = item_type_from_id[var['item type']]
+                var['item format'] = item_format_from_id[var['item format']]
+                # Append variable entry to its category in the main data
+                # dictionary.
+                self.data_dictionary.setdefault(b_cat['name'], []).append(var)
+
+    def material_names(self):
+        """Return dict of material IDs → names.
+
+        """
+        pass
+
+    def mesh(self):
+        # Get list of nodes as spatial coordinates.  According to the
+        # FEBio binary database spec, there is only one `node coords`
+        # section.
+        node_data = get_bdata_by_name(self.header_blocks,
+            'geometry/nodes/node coords')[0]
+        x_nodes = [node_data[3*i:3*i+3] for i in range(len(node_data) // 3)]
+        # Get list of elements for each domain.
+        b_domains = get_bdata_by_name(self.header_blocks, 'geometry/domains')
+        elements = []
+        for b in b_domains:
+            # Get list of elements as tuples of node ids.  Note that the
+            # binary database format uses 0-indexing for nodes, same as febtools.
+            i_elements = get_bdata_by_name(b['data'], 'element_list/element')
+            # Get material.  Note that the febio binary database
+            # uses 1-indexing for element IDs.
+            i_mat = get_bdata_by_name(b['data'], 'domain_header/material ID')[0] - 1
+            # Get element type
+            ecode = get_bdata_by_name(b['data'], 'domain_header/elem_type')[0]
+            etype = element_type_from_id[ecode]
+            # Create list of element objects
+            elements += [etype.from_ids(i_element, x_nodes, mat_id=i_mat)
+                         for i_element in i_elements]
+        mesh = Mesh(x_nodes, elements)
+        return mesh
+
+    def step_data(self, idx):
+        """Retrieve data for a specific solution step.
+
+        The solution data is returned as a dictionary.  The data names
+        (e.g. stress, displacement) are the keys.  These keys are read
+        from the file's dictionary section.  Data is formatted into a
+        list of floats, vectors, or tensors according to the data type
+        specified in the file's dictionary section.
+
+        """
+        data = {}
+        b_statedata = get_bdata_by_name(self.step_blocks[idx]['data'], 'state data')
+        for b_cat in b_statedata:  # iterate over data category blocks
+            base_name = b_cat['name'].split(' ')[0]
+            cat_name = base_name + ' variables'
+            for b_var in b_cat['data']:  # iterate over state variable blocks
+                var = {}
+                for b in b_var['data']:
+                    var[b['name']] = b['data']
+                # Unpack variable data
+                var_id = var['variable ID'] - 1  # to 0-index
+                entry = self.data_dictionary[cat_name][var_id]
+                # FEBio stores 8 bytes of undocumented extra information
+                # at the beginning of each variable data.  Slice these
+                # bytes away before unpacking.
+                values = unpack_block_data(var['data'][8:], fmt=entry['item type'],
+                                           endian=self.endian)
+                data.setdefault(cat_name, {})[entry['item name']] = values
+
+        # Add step time as a convenience
+        data['time'] = self.step_times[idx]
+
         return data

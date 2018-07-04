@@ -23,8 +23,7 @@ class MeshSolutionTest(unittest.TestCase):
         self.soln = febtools.input.XpltReader(os.path.join('test', 'fixtures', 'complex_loading.xplt'))
         reader = febtools.input.FebReader(os.path.join('test', 'fixtures', 'complex_loading.feb'))
         self.model = reader.model()
-        self.model.apply_solution(self.soln
-)
+        self.model.apply_solution(self.soln)
         self.elemdata = febtools.input.readlog(os.path.join('test', 'fixtures', 'complex_loading_elem_data.txt'))
         self.nodedata = febtools.input.readlog(os.path.join('test', 'fixtures', 'complex_loading_node_data.txt'))
 

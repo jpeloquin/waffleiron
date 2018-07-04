@@ -219,9 +219,9 @@ class CenterCrackQuad4(unittest.TestCase):
             """Convert Cauchy stress in each element to 1st P-K.
 
             """
-            data = self.soln.stepdata()
+            data = self.soln.step_data()
             for i in element_ids:
-                t = data['element']['stress'][i]
+                t = data['element variables']['stress'][i]
                 e = self.model.mesh.elements[i]
                 f = e.f((0,0))
                 fdet = np.linalg.det(f)

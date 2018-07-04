@@ -33,6 +33,8 @@ label_bc = {'x': 'x1',
 def load_model(fpath):
     """Loads a model (feb) and its solution (xplt).
 
+    The solution is not required to exist.
+
     This has been tested the most with FEBio file specification 2.0.
 
     """
@@ -40,10 +42,11 @@ def load_model(fpath):
         base, ext = os.path.splitext(fpath)
     else:
         base = fpath
+    # Attempt to read the FEBio xml file
     fp_feb = base + '.feb'
-    fp_xplt = base + '.xplt'
     try:
         model = feb.input.FebReader(fp_feb).model()
+        feb_ok = True
     except UnsupportedFormatError as err:
         # The .feb file is some unsupported version
         msg = "{}.  Falling back to defining the model from the .xplt "
@@ -51,15 +54,25 @@ def load_model(fpath):
         "available.  Using FEBio file format 2.x is recommended."
         msg = msg.format(err.message)
         warnings.warn(msg)
-        # Attempt to work around the problem
-        soln = feb.input.XpltReader(fp_xplt)
+        feb_ok = False
+    # Attempt to read the xplt file, if it exists
+    fp_xplt = base + '.xplt'
+    if os.path.exists(fp_xplt):
+        with open(fp_xplt, 'rb') as f:
+            soln = feb.xplt.XpltData(f.read())
+        xplt_ok = True
+    else:
+        xplt_ok = False
+    # Combine the feb and xplt data, preferring the feb data for model definition
+    if feb_ok and xplt_ok:
+        model.apply_solution(soln)
+    elif not feb_ok and xplt_ok:
+        # Use the xplt file to construct a model
         model = feb.Model(soln.mesh())
         model.apply_solution(soln)
-        return model
-    # Apply the solution to the model
-    if os.path.exists(fp_xplt):
-        soln = feb.input.XpltReader(fp_xplt)
-        model.apply_solution(soln)
+    elif not feb_ok and not xplt_ok:
+        raise ValueError("Neither `{}` nor `{}` could be read.  Check that they exist "
+                         "and are accessible.".format(fp_feb, fp_xplt))
     return model
 
 
@@ -308,11 +321,16 @@ class FebReader:
 class XpltReader:
     """Parses an FEBio xplt file.
 
+    Obsolete.  Does not support FEBio > 2.5.
+
     """
     def __init__(self, f):
         """Load an .xplt file.
 
         """
+        warnings.warn("XpltReader is deprected in favor of XpltData",
+                      DeprecationWarning)
+
         def from_fobj(self, f):
             self.f = f
 
@@ -433,7 +451,7 @@ class XpltReader:
                      key=itemgetter(1))
         return idx
 
-    def stepdata(self, step=None, time=None):
+    def step_data(self, step=None, time=None):
         """Retrieve data for a specific solution step.
 
         The solution data is returned as a dictionary.  The data names
@@ -453,11 +471,11 @@ class XpltReader:
             raise Exception("Do not specify both `step` and `time`.")
 
         var = {}
-        var['global'] = self._rdict('global')
-        var['material'] = self._rdict('material')
-        var['node'] = self._rdict('nodeset')
-        var['domain'] = self._rdict('domain')
-        var['surface'] = self._rdict('surface')
+        var['global variables'] = self._rdict('global')
+        var['material variables'] = self._rdict('material')
+        var['node variables'] = self._rdict('node')
+        var['element variables'] = self._rdict('element')
+        var['surface variables'] = self._rdict('surface')
 
         data = {}
         data['time'] = self.times[step]
@@ -465,7 +483,7 @@ class XpltReader:
         steploc = self.steploc[step]
         for k, v in var.items():
             if v:
-                path = ('state data/' + k + ' data'
+                path = ('state data/' + k.split(' ')[0] + ' data' +
                         '/state variable/data')
                 a = self._findall(path, steploc)
                 for (loc, sz), (typ, fmt, name) in zip(a, v):
@@ -477,9 +495,6 @@ class XpltReader:
                         s = self.f.read(sz)
                         data.setdefault(k, {})[name] = \
                             self._unpack_variable_data(s, typ)
-
-        # "element" is alias for FEBio's "domain" category
-        data['element'] = data['domain']
         return data
 
     def _rdict(self, name):

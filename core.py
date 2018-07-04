@@ -92,14 +92,14 @@ class Model:
         self.solution = solution
         # apply node data
         if t is None and step is None:  # use last timestep
-            data = solution.stepdata(time=solution.times[-1])
+            data = solution.step_data(-1)
         elif t is not None and step is None:
-            data = solution.stepdata(time=t)
+            data = solution.step_data(time=t)
         elif t is None and step is not None:
-            data = solution.stepdata(step=step)
+            data = solution.step_data(step=step)
         else:
             raise ValueError("Provide either `t` or `step`, not both.")
-        properties = data['node']
+        properties = data['node variables']
         for k, v in properties.items():
             self.apply_nodal_properties(k, v)
 

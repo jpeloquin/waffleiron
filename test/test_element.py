@@ -420,7 +420,7 @@ class ElementMethodsTestHex8(unittest.TestCase):
 
     def test_f(self):
         istep = -1
-        u = self.soln.stepdata(istep)['node']['displacement']
+        u = self.soln.step_data(istep)['node variables']['displacement']
         for eid in range(len(self.model.mesh.elements) - 1):
             # don't check rigid body (last element)
             F_expected = f_tensor_logfile(self.elemdata, istep, eid)
@@ -453,7 +453,7 @@ class FTestTri3(unittest.TestCase):
 
     def test_f(self):
         istep = -1
-        u = self.soln.stepdata(step=istep)['node']['displacement']
+        u = self.soln.step_data(step=istep)['node variables']['displacement']
         for eid in range(len(self.model.mesh.elements)):
             F_expected = f_tensor_logfile(self.elemdata, istep, eid)
             F = self.model.mesh.elements[eid].f((1.0/3.0, 1.0/3.0))
@@ -473,7 +473,7 @@ class FTestQuad4(unittest.TestCase):
                                     'square_quad4_elem_data.txt')
     def test_f(self):
         istep = -1
-        u = self.soln.reader.stepdata(istep)['displacement']
+        u = self.soln.reader.step_data(istep)['displacement']
         for eid in range(len(self.soln.elements)):
             F_expected = f_tensor_logfile(self.elemdata, istep, eid)
             F = self.soln.elements[eid].f((1.0/3.0, 1.0/3.0), u)
