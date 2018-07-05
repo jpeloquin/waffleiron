@@ -14,6 +14,19 @@ def biasrange_log(start, stop, n=10):
     x[-1] = stop
     return x
 
+
+def biasrange_sqrt(start, stop, n=10):
+    """Points spaced ∝ √x.
+
+    """
+    # x ∈ [0, 1]
+    x0 = 0
+    x1 = 1
+    x = np.linspace(x0**0.5, x1**0.5, n)**2.0
+    x = start + (stop - start) * x
+    return x
+
+
 def bias_pt_series(line, n=None, type='log', minstep=None,
                    bias_direction=1):
     """Return a series of points on a line segment with biased spacing.
@@ -74,15 +87,27 @@ def bias_pt_series(line, n=None, type='log', minstep=None,
 
     return pts
 
+
 def even_pt_series(line, n):
     """Return a list of n points evenly spaced along line segment.
 
+    """
+    # This is just a stub to postpone renaming all uses of
+    # `even_pt_series` to `pt_series`.
+    return pt_series(line, n, f=np.linspace)
+
+
+def pt_series(line, n, f=np.linspace):
+    """Return a list of points spaced along a line segment.
+
     line := a list of n-tuples (points), or equivalent iterable
 
-    The returned points are numpy arrays of dimension equal to A and B.
+    The returned points are numpy arrays of the same dimension as A and B.
 
     """
     A = np.array(line[0])
     B = np.array(line[1])
     v = B - A
-    return [A + s * v for s in np.linspace(0, 1, n)]
+    AB = [A + s * v for s in f(0, 1, n)]
+    AB[-1] = B # for exactness
+    return AB
