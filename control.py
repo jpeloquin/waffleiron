@@ -20,19 +20,24 @@ def auto_control_section(sequence, pts_per_segment=6):
     time = np.array([a for a, b in curve])
     dt = np.diff(time)
     dt = np.concatenate([dt, dt[-1:]])  # len(dt) == len(time)
-    dt_min = np.min(dt)
-    # dt_max = np.max(dt)
+    # Assign must point sequence
+    control['plot level'] = 'PLOT_MUST_POINTS'
+    curve_must_dt = densify([(a, b) for a, b in zip(time, dt)],
+                            n=pts_per_segment)
+    seq_dtmax = Sequence(curve_must_dt, extend='constant', typ='linear')
+    control['time stepper']['dtmax'] = seq_dtmax
+    # Calculate appropriate step size.  Need to work around FEBio bug
+    # https://forums.febio.org/project.php?issueid=765.  FEBio skips
+    # must points with t < step_size, so we must set step_size to a
+    # value less than the time of the first must point.
+    time_must = np.array([a for a, b in curve_must_dt])
+    dt_must = np.diff(time_must)
+    dt_min = np.min(dt_must)
     nsteps = math.ceil(duration / dt_min)
     dt_nominal = duration / nsteps
     control['time steps'] = nsteps
     control['step size'] = dt_nominal
     control['time stepper']['dtmin'] = 0.1 * dt_min
-    control['plot level'] = 'PLOT_MUST_POINTS'
-    # Assign must point sequence
-    curve_must_dt = densify([(a, b) for a, b in zip(time, dt)],
-                            n=pts_per_segment)
-    seq_dtmax = Sequence(curve_must_dt, extend='constant', typ='linear')
-    control['time stepper']['dtmax'] = seq_dtmax
 
     return control
 
