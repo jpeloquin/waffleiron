@@ -31,11 +31,9 @@ label_bc = {'x': 'x1',
 
 
 def load_model(fpath):
-    """Loads a model (feb) and its solution (xplt).
+    """Loads a model (feb) and the solution (xplt) if it exists.
 
-    The solution is not required to exist.
-
-    This has been tested the most with FEBio file specification 2.0.
+    This has been tested mostly with FEBio file specification 2.0.
 
     """
     if (fpath[-4:].lower() == '.feb' or fpath[-5:].lower() == '.xplt'):
