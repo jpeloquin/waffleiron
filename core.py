@@ -50,7 +50,6 @@ class Model:
         # Note: for multiphasic problems, concentration is a list of
         # lists.
         self.steps = []
-        self.add_step()
 
     def add_step(self, module='solid', control=None):
         """Add a step with default control values and no BCs.
