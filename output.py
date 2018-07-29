@@ -377,7 +377,7 @@ def xml(model):
 def write_xml(tree, f):
     """Write an XML tree to a .feb file"""
     tree.write(f, pretty_print=True, xml_declaration=True,
-               encoding='iso-8859-1')
+               encoding='utf-8')
 
 
 def write_feb(model, f):
