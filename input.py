@@ -122,20 +122,20 @@ class FebReader:
         """
         self.file = file
         self.root = ET.parse(self.file).getroot()
-        version = self.root.attrib['version']
+        self.feb_version = self.root.attrib['version']
         if self.root.tag != "febio_spec":
             raise Exception("Root node is not 'febio_spec': '" +
                             file.name + "is not an FEBio xml file.")
-        if version != '2.0':
-            msg = '{} is not febio_spec 2.0'.format(file)
-            raise UnsupportedFormatError(msg, file, version)
+        if self.feb_version not in ['2.0', '2.5']:
+            msg = 'FEBio XML version {} is not supported by febtools'.format(self.feb_version)
+            raise UnsupportedFormatError(msg, file, self.feb_version)
 
     def materials(self):
         """Return dictionary of materials keyed by id.
 
         """
         mats = {}
-        mat_names = {}
+        mat_labels = {}
         for m in self.root.findall('./Material/material'):
             # Read material into dictionary
             material = self._read_material(m)
@@ -165,9 +165,11 @@ class FebReader:
 
             # Store material in index
             mats[mat_id] = material
-            mat_names[mat_id] = m.attrib['type']
-            # TODO: Use material names
-        return mats, mat_names
+            if 'name' in m.attrib:
+                mat_labels[mat_id] = m.attrib['name']
+            else:
+                mat_labels[mat_id] = str(mat_id)
+        return mats, mat_labels
 
     def _read_material(self, tag):
         """Get material properties dictionary from <material>.
@@ -218,7 +220,7 @@ class FebReader:
         mesh = self.mesh()
         model = feb.Model(mesh)
         # Store materials
-        model.materials, model.material_names = self.materials()
+        model.materials, model.material_labels = self.materials()
         # Boundary condition: fixed nodes
         internal_label = {'x': 'x1',
                           'y': 'x2',
@@ -284,7 +286,7 @@ class FebReader:
         """Return mesh.
 
         """
-        mats, mat_names = self.materials()
+        mats, mat_labels = self.materials()
         nodes = [tuple([float(a) for a in b.text.split(",")])
                  for b in self.root.findall("./Geometry/Nodes/*")]
         # Read elements

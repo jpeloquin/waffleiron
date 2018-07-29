@@ -27,7 +27,7 @@ class Model:
         self.mesh = mesh
 
         self.materials = {}
-        self.material_names = {}
+        self.material_labels = {}
         self.solution = None  # the solution for the model
 
         # If a sequence is assigned to dtmax in this default dictionary,

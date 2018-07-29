@@ -204,7 +204,10 @@ def xml(model):
     materials.sort()
     for i, m in materials:
         tag = feb.output.material_to_feb(m)
-        tag.attrib['name'] = 'Material' + str(i + 1)
+        try:
+            tag.attrib['name'] = model.material_labels[i]
+        except KeyError:
+            pass
         tag.attrib['id'] = str(i + 1)
         Material.append(tag)
 
