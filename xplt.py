@@ -71,6 +71,10 @@ tags_table = {
     16908292: {'name': 'item name',  # 0x01020004
                'leaf': True,
                'format': 'str'},
+    0x01020005: {'name': 'item array size',
+                 'leaf': True},
+    0x01020006: {'name': 'item_array name',
+                 'leaf': True},
     # Root/Materials section tags
     16973825: {'name': 'material',  # 0x01030001
                'leaf': False},
