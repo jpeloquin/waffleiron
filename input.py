@@ -33,7 +33,9 @@ label_bc = {'x': 'x1',
 def load_model(fpath):
     """Loads a model (feb) and the solution (xplt) if it exists.
 
-    This has been tested mostly with FEBio file specification 2.0.
+    The following data is supported for FEBio XML 2.0 and 2.5:
+    - Materials
+    - Geometry: nodes and elements
 
     """
     if (fpath[-4:].lower() == '.feb' or fpath[-5:].lower() == '.xplt'):
