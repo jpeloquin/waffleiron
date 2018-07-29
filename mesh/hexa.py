@@ -12,6 +12,8 @@ def rectangular_prism(length, width, thickness, hmin):
     The origin is in the center of the rectangle.
 
     """
+    if type(hmin) in [float, int]:
+        hmin = [hmin]*3
     # Create rectangle in xy plane
     A = np.array([-length/2, -width/2])
     B = np.array([ length/2, -width/2])
