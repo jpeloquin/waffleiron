@@ -209,10 +209,11 @@ item_type_from_id = {
         2: 'mat3fs'
 }
 
-item_format_from_id = {
+item_format_from_id = {  # Refer to FE_enum.h:326
     0: 'node',
     1: 'item',
-    2: 'mult'
+    2: 'mult',
+    3: 'region'
 }
 
 
