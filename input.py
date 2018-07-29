@@ -10,6 +10,7 @@ from febtools.exceptions import UnsupportedFormatError
 from operator import itemgetter
 
 from . import xplt
+from . import febioxml
 from .conditions import Sequence
 from .febioxml import control_tagnames_from_febio
 

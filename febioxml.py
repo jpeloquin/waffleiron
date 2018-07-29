@@ -1,3 +1,8 @@
+axis_to_febio = {'x1': 'x',
+                 'x2': 'y',
+                 'x3': 'z',
+                 'pressure': 'p'}
+
 control_tagnames_to_febio = {'time steps': 'time_steps',
                              'step size': 'step_size',
                              'max refs': 'max_refs',

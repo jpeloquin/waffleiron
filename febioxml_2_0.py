@@ -1,140 +1,14 @@
 # Base packages
 from collections import defaultdict
-from math import degrees
 # System packages
 from lxml import etree as ET
-# In-house packages
+# Same-package modules
+from .output import material_to_feb
 from .conditions import Sequence
 from .control import step_duration
-from .febioxml import control_tagnames_to_febio
+from .febioxml import control_tagnames_to_febio, axis_to_febio
 
-feb_version = 2.5
-
-def exponentialfiber_to_feb(mat):
-    """Convert ExponentialFiber material instance to FEBio XML.
-
-    """
-    e = ET.Element('material', type='fiber-exp-pow')
-    p = ET.SubElement(e, 'alpha')
-    p.text = str(mat.alpha)
-    p = ET.SubElement(e, 'beta')
-    p.text = str(mat.beta)
-    p = ET.SubElement(e, 'ksi')
-    p.text = str(mat.xi)
-    p = ET.SubElement(e, 'theta')
-    p.text = str(degrees(mat.theta))
-    p = ET.SubElement(e, 'phi')
-    p.text = str(degrees(mat.phi))
-    return e
-
-
-def holmesmow_to_feb(mat):
-    """Convert HolmesMow material instance to FEBio XML.
-
-    """
-    e = ET.Element('material', type='Holmes-Mow')
-    E, v = feb.material.fromlame(mat.y, mat.mu)
-    ET.SubElement(e, 'E').text = str(E)
-    ET.SubElement(e, 'v').text = str(v)
-    ET.SubElement(e, 'beta').text = str(mat.beta)
-    return e
-
-
-def isotropicelastic_to_feb(mat):
-    """Convert IsotropicElastic material instance to FEBio XML.
-
-    """
-    e = ET.Element('material', type='isotropic elastic')
-    E, v = feb.material.fromlame(mat.y, mat.mu)
-    ET.SubElement(e, 'E').text = str(E)
-    ET.SubElement(e, 'v').text = str(v)
-    return e
-
-
-def linear_orthotropic_elastic_to_feb(mat):
-    """Convert LinearOrthotropicElastic material instance to FEBio XML.
-
-    """
-    e = ET.Element('material', type='orthotropic elastic')
-    # Material properties
-    ET.SubElement(e, 'E1').text = str(mat.E1)
-    ET.SubElement(e, 'E2').text = str(mat.E2)
-    ET.SubElement(e, 'E3').text = str(mat.E3)
-    ET.SubElement(e, 'G12').text = str(mat.G12)
-    ET.SubElement(e, 'G23').text = str(mat.G23)
-    ET.SubElement(e, 'G31').text = str(mat.G31)
-    ET.SubElement(e, 'v12').text = str(mat.v12)
-    ET.SubElement(e, 'v23').text = str(mat.v23)
-    ET.SubElement(e, 'v31').text = str(mat.v31)
-    # Symmetry axes
-    axes = ET.SubElement(e, 'mat_axis', type='vector')
-    ET.SubElement(axes, 'a').text = ','.join([str(a) for a in mat.x1])
-    ET.SubElement(axes, 'd').text = ','.join([str(a) for a in mat.x2])
-    return e
-
-
-def neo_hookean_to_feb(mat):
-    """Convert NeoHookean material instance to FEBio XML.
-
-    """
-    e = ET.Element('material', type='neo-Hookean')
-    E, v = feb.material.fromlame(mat.y, mat.mu)
-    ET.SubElement(e, 'E').text = str(E)
-    ET.SubElement(e, 'v').text = str(v)
-    return e
-
-
-def poroelastic_to_feb(mat):
-    """Convert Poroelastic material instance to FEBio XML.
-
-    """
-    e = ET.Element('material', type='biphasic')
-    # Add solid material
-    m = material_to_feb(mat.solid_material)
-    m.tag = 'solid'
-    e.append(m)
-    # Add permeability
-    txt_from_kind = {'constant isotropic': 'perm-const-iso'}
-    e_permeability = ET.SubElement(e, 'permeability',
-                                   type=txt_from_kind[mat.kind])
-    ET.SubElement(e_permeability, 'perm').text = str(mat.permeability)
-    return e
-
-
-def solidmixture_to_feb(mat):
-    """Convert SolidMixture material instance to FEBio XML.
-
-    """
-    e = ET.Element('material', type='solid mixture')
-    for submat in mat.materials:
-        m = material_to_feb(submat)
-        m.tag = 'solid'
-        e.append(m)
-    return e
-
-
-def material_to_feb(mat):
-    """Convert a material instance to FEBio XML.
-
-    """
-    if mat is None:
-        e = ET.Element('material', type='unknown')
-    else:
-        f = {feb.material.ExponentialFiber: exponentialfiber_to_feb,
-             feb.material.HolmesMow: holmesmow_to_feb,
-             feb.material.IsotropicElastic: isotropicelastic_to_feb,
-             feb.material.NeoHookean: neo_hookean_to_feb,
-             feb.material.LinearOrthotropicElastic: linear_orthotropic_elastic_to_feb,
-             feb.material.PoroelasticSolid: poroelastic_to_feb,
-             feb.material.SolidMixture: solidmixture_to_feb}
-        try:
-            e = f[type(mat)](mat)
-        except ValueError:
-            msg = "{} not implemented for conversion to FEBio XML."
-            print(msg.format(mat.__class__))
-            raise
-    return e
-
+feb_version = 2.0
 
 def xml(model):
     """Convert a model to an FEBio XML tree.
@@ -174,7 +48,7 @@ def xml(model):
         if 'time stepper' in step['control']:
             if 'dtmax' in step['control']['time stepper']:
                 dtmax = step['control']['time stepper']['dtmax']
-                if dtmax.__class__ is feb.Sequence:
+                if dtmax.__class__ is Sequence:
                     if dtmax not in seq_id:
                         seq_id[dtmax] = i
                         i += 1
@@ -196,7 +70,7 @@ def xml(model):
     materials = [(i, mat) for mat, i in material_ids.items()]
     materials.sort()
     for i, m in materials:
-        tag = feb.output.material_to_feb(m)
+        tag = material_to_feb(m)
         try:
             tag.attrib['name'] = model.material_labels[i]
         except KeyError:
@@ -368,24 +242,3 @@ def xml(model):
 
     tree = ET.ElementTree(root)
     return tree
-
-
-def write_xml(tree, f):
-    """Write an XML tree to a .feb file"""
-    tree.write(f, pretty_print=True, xml_declaration=True,
-               encoding='utf-8')
-
-
-def write_feb(model, f):
-    """Write model's FEBio XML representation to a file object.
-
-    Inputs
-    ------
-    fpath : string
-        Path for output file.
-
-    materials : list of Material objects
-
-    """
-    tree = xml(model)
-    write_xml(tree, f)
