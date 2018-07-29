@@ -204,9 +204,9 @@ element_type_from_id = {
 }
 
 item_type_from_id = {
-        0: 'float',
-        1: 'vec3f',
-        2: 'mat3fs'
+    0: 'float',
+    1: 'vec3f',
+    2: 'mat3fs'
 }
 
 item_format_from_id = {  # Refer to FE_enum.h:326
