@@ -552,11 +552,30 @@ class XpltData:
                 # Unpack variable data
                 var_id = var['variable ID'] - 1  # to 0-index
                 entry = self.data_dictionary[cat_name][var_id]
-                # FEBio stores 8 bytes of undocumented extra information
-                # at the beginning of each variable data.  Slice these
-                # bytes away before unpacking.
-                values = unpack_block_data(var['data'][8:], fmt=entry['item type'],
-                                           endian=self.endian)
+                # FEBio breaks from its documented tag format for
+                # variable_data tags.  The data payload consists of, for
+                # each region, a region ID (int; 4 bytes), the size of
+                # the varible_data payload for that region enumerated in
+                # bytes (int; 4 bytes), and the variable_data payload
+                # for that region.
+                i = 0  # offset into var['data'], in bytes
+                values = []
+                while i < len(var['data']):
+                    # Iterate by region over variable_data data.
+                    #
+                    # TODO: What happens if regions don't have
+                    # contiguous element numbering?  Do we need to
+                    # correlate variable_data for element variables
+                    # against element sets?  I don't think so; only
+                    # nodesets are defined in the FEBio XML, so any new
+                    # element ordering would have to be created de novo.
+                    region_id, n = struct.unpack(self.endian + 'II',
+                                                 var['data'][i:i+8])
+                    i += 8
+                    values += unpack_block_data(var['data'][i:i+n],
+                                                fmt=entry['item type'],
+                                                endian=self.endian)
+                    i += n
                 data.setdefault(cat_name, {})[entry['item name']] = values
 
         # Add step time as a convenience
