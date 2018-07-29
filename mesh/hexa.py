@@ -29,6 +29,4 @@ def rectangular_prism(length, width, thickness, hmin):
     # Create rectangular prism
     zi = np.linspace(-thickness/2, thickness/2, ceil(thickness/hmin[2]) + 1)
     mesh = zstack(mesh, zi)
-    # Create model
-    model = Model(mesh)
-    return model
+    return mesh
