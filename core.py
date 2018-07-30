@@ -43,6 +43,12 @@ class Model:
         # Note: for multiphasic problems, concentration is a list of
         # sets
 
+        # Initialize dictionaries to hold named nodesets, element sets,
+        # and facet sets.
+        self.named_sets = {'nodes': {},
+                           'facets': {},
+                           'elements': {}}
+
         # initial nodal values
         self.initial_values = {'velocity': [],
                                'fluid_pressure': [],

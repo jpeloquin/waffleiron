@@ -224,6 +224,8 @@ class FebReader:
         model = feb.Model(mesh)
         # Store materials
         model.materials, model.material_labels = self.materials()
+        # Named sets
+        model.named_sets = febioxml.read_named_sets(self.root)
         # Boundary condition: fixed nodes
         internal_label = {'x': 'x1',
                           'y': 'x2',

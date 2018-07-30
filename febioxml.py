@@ -24,3 +24,20 @@ control_tagnames_to_febio = {'time steps': 'time_steps',
                              'dtmin': 'dtmin',
                              'opt iter': 'opt_iter'}
 control_tagnames_from_febio = {v: k for k, v in control_tagnames_to_febio.items()}
+
+def read_named_sets(xml_root):
+    """Read nodesets, etc., and apply them to a model."""
+    sets = {'nodes': {},
+            'facets': {},
+            'elements': {}}
+    set_list = (('nodes', 'NodeSet'),
+                ('facets', 'Surface'),
+                ('elements', 'ElementSet'))
+    for k, tag in set_list:
+        for e_set in xml_root.findall('./Geometry/' + tag):
+            items = set([])
+            for e_item in e_set.getchildren():
+                i = int(e_item.attrib['id'])
+                items.update([i])
+            sets[k][e_set.attrib['name']] = items
+    return sets
