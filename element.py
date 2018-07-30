@@ -373,6 +373,8 @@ class Tri3(Element2D):
                          [0, 2],
                          [1, 0]]
 
+    feb_name = 'tri3'
+
     # oriented so positive normal follows node ordering convention
     face_nodes = [[0, 1, 2]]
 
@@ -424,6 +426,8 @@ class Hex8(Element3D):
     """
     n = 8 # number of vertices
     r_n = 3 # number of natural basis parameters
+
+    feb_name = 'hex8'
 
     node_connectivity = [[1, 3, 4], # 0
                          [0, 2, 3], # 1
@@ -591,6 +595,8 @@ class Penta6(Element3D):
     n = 6 # number of vertices
     r_n = 3 # number of natural basis parameters
 
+    feb_name = 'penta6'
+
     node_connectivity = [[1, 2, 3], # 0
                          [0, 2, 4], # 1
                          [0, 1, 5], # 2
@@ -727,6 +733,8 @@ class Quad4(Element2D):
                          [0, 2],
                          [1, 3],
                          [2, 0]]
+
+    feb_name = 'quad4'
 
     face_nodes = [[0, 1, 2, 3]]
 

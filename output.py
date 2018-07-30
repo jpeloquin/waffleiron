@@ -3,10 +3,15 @@ from collections import defaultdict
 from math import degrees
 # System packages
 from lxml import etree as ET
-# In-house packages
+# Within-module packages
+import febtools as feb
 from .conditions import Sequence
 from .control import step_duration
-from .febioxml import control_tagnames_to_febio
+from . import febioxml_2_5 as febioxml
+# ^ The intent here is to eventually be able to switch between FEBio XML
+# formats by exchanging this import statement for a different version.
+# Common functionality can be shared between febioxml_*_*.py files via
+# imports.
 
 feb_version = 2.5
 
@@ -139,15 +144,25 @@ def material_to_feb(mat):
 def xml(model):
     """Convert a model to an FEBio XML tree.
 
-    This is meant to allow XML-editing trickery, if necessary, prior to
-    writing the XML to an on-disk .feb .
+    Creating an FEBio XML tree from a model is useful because it allows
+    XML-editing trickery, if necessary, prior to writing the XML to an
+    on-disk .feb file.
 
     """
     root = ET.Element('febio_spec', version="{}".format(feb_version))
     Globals = ET.SubElement(root, 'Globals')
     Material = ET.SubElement(root, 'Material')
-    Geometry = ET.SubElement(root, 'Geometry')
-    Nodes = ET.SubElement(Geometry, 'Nodes')
+
+    # Enumerate materials.  We do this early because in FEBio XML the
+    # material ids are needed to define the geometry and meshdata
+    # sections.
+    material_ids = {k: v for v, k
+                    in enumerate(set(e.material for e in model.mesh.elements))}
+
+    parts = febioxml.parts(model)
+    Geometry = febioxml.geometry_section(model, parts, material_ids)
+    root.append(Geometry)
+
     e_boundary = ET.SubElement(root, 'Boundary')
     e_loaddata = ET.SubElement(root, 'LoadData')
     Output = ET.SubElement(root, 'Output')
@@ -179,87 +194,19 @@ def xml(model):
                         seq_id[dtmax] = i
                         i += 1
 
-    # Nodes section
-    for i, x in enumerate(model.mesh.nodes):
-        feb_nid = i + 1  # 1-indexed
-        e = ET.SubElement(Nodes, 'node', id="{}".format(feb_nid))
-        e.text = ",".join("{:e}".format(n) for n in x)
-        Nodes.append(e)
-
     # Materials section
-    # enumerate materials
-    material_ids = {k: v for v, k
-                    in enumerate(set(e.material for e in model.mesh.elements))}
-
     # make material tags
     # sort by id to get around FEBio bug
     materials = [(i, mat) for mat, i in material_ids.items()]
     materials.sort()
     for i, m in materials:
-        tag = feb.output.material_to_feb(m)
+        tag = material_to_feb(m)
         try:
             tag.attrib['name'] = model.material_labels[i]
         except KeyError:
             pass
         tag.attrib['id'] = str(i + 1)
         Material.append(tag)
-
-    # Elements and ElementData sections
-
-    # Assemble elements into blocks with like type and material.
-    # Elemsets uses material instances as keys.  Each item is a
-    # dictionary using element classes as keys,
-    # with items being tuples of (element_id, element).
-    elemsets = {}
-    for i, elem in enumerate(model.mesh.elements):
-        subdict = elemsets.setdefault(elem.material, {})
-        like_elements = subdict.setdefault(elem.__class__, [])
-        like_elements.append((i, elem))
-
-    # write element sets
-    e_elementdata = ET.SubElement(Geometry, 'ElementData')
-    for mat, d in elemsets.items():
-        for ecls, like_elems in d.items():
-            e_elements = ET.SubElement(Geometry, 'Elements',
-                                       mat=str(material_ids[mat] + 1),
-                                       type=ecls.__name__.lower())
-            for i, e in like_elems:
-                # write the element's node ids
-                e_elem = ET.SubElement(e_elements, 'elem',
-                                       id=str(i + 1))
-                e_elem.text = ','.join(str(i + 1) for i in e.ids)
-                # write any defined element data
-                tagged = False
-                # ^ track if an element tag has been created in
-                # ElementData for the current element
-                if 'thickness' in elem.properties:
-                    if not tagged:
-                        e_edata = ET.SubElement(e_elementdata, 'element',
-                                                id=str(i + 1))
-                        tagged = True
-                    ET.SubElement(e_edata, 'thickness').text = \
-                        ','.join(str(t) for t in elem.properties['thickness'])
-                if 'v_fiber' in elem.properties:
-                    if not tagged:
-                        e_edata = ET.SubElement(e_elementdata, 'element',
-                                                id=str(i + 1))
-                        tagged = True
-                    ET.SubElement(e_edata, 'fiber').text = \
-                        ','.join(str(a) for a in elem.properties['v_fiber'])
-
-    # FEBio needs Nodes to precede Elements to precede ElementData.
-    # It apparently has very limited xml parsing.
-    geo_subs = {'Nodes': [],
-                'Elements': [],
-                'ElementData': []}
-    for e in Geometry:
-        geo_subs[e.tag].append(e)
-    Geometry[:] = geo_subs['Nodes'] + geo_subs['Elements']
-    # Only add optional tags if they contain data.  Otherwise FEBio
-    # chokes and gives an error message incorrectly blaming the
-    # following line in the XML file.
-    if e_elementdata[:] != []:
-        Geometry[:] += geo_subs['ElementData']
 
     # Boundary section (fixed nodal BCs)
     for axis, nodeset in model.fixed_nodes.items():
@@ -318,7 +265,7 @@ def xml(model):
         e_con = ET.SubElement(e_step, 'Control')
         ET.SubElement(e_con, 'analysis',
                       type=step['control']['analysis type'])
-        for lbl1, lbl2 in control_tagnames_to_febio.items():
+        for lbl1, lbl2 in febioxml.control_tagnames_to_febio.items():
             if lbl1 in step['control'] and lbl1 != 'time stepper':
                 txt = str(step['control'][lbl1])
                 ET.SubElement(e_con, lbl2).text = txt

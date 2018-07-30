@@ -12,7 +12,7 @@ from operator import itemgetter
 from . import xplt
 from . import febioxml
 from .conditions import Sequence
-from .febioxml import control_tagnames_from_febio
+from .febioxml import control_tagnames_from_febio, elem_cls_from_feb
 
 def _nstrip(string):
     """Remove trailing nulls from string.
@@ -298,7 +298,7 @@ class FebReader:
             mat_id = int(elset.attrib['mat']) - 1  # zero-index
 
             # map element type strings to classes
-            cls = self._element_class(elset.attrib['type'])
+            cls = elem_cls_from_feb[elset.attrib['type']]
 
             for elem in elset.findall("./elem"):
                 ids = [int(a) - 1 for a in elem.text.split(",")]
@@ -309,16 +309,6 @@ class FebReader:
         # Create mesh
         mesh = feb.Mesh(nodes, elements)
         return mesh
-
-    @staticmethod
-    def _element_class(label):
-        """Return element class corresponding to type label.
-
-        """
-        d = {'quad4': feb.element.Quad4,
-             'tri3': feb.element.Tri3,
-             'hex8': feb.element.Hex8}
-        return d[label]
 
 
 class XpltReader:

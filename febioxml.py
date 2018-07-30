@@ -1,7 +1,13 @@
+from .element import Quad4, Tri3, Hex8
+
 axis_to_febio = {'x1': 'x',
                  'x2': 'y',
                  'x3': 'z',
                  'pressure': 'p'}
+
+elem_cls_from_feb = {'quad4': Quad4,
+                     'tri3': Tri3,
+                     'hex8': Hex8}
 
 control_tagnames_to_febio = {'time steps': 'time_steps',
                              'step size': 'step_size',
