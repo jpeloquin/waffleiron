@@ -118,6 +118,14 @@ def solidmixture_to_feb(mat):
     return e
 
 
+def rigid_body_to_feb(mat):
+    """Convert SolidMixture material instance to FEBio XML.
+
+    """
+    e = ET.Element('material', type='rigid body')
+    return e
+
+
 def material_to_feb(mat):
     """Convert a material instance to FEBio XML.
 
@@ -131,7 +139,8 @@ def material_to_feb(mat):
              feb.material.NeoHookean: neo_hookean_to_feb,
              feb.material.LinearOrthotropicElastic: linear_orthotropic_elastic_to_feb,
              feb.material.PoroelasticSolid: poroelastic_to_feb,
-             feb.material.SolidMixture: solidmixture_to_feb}
+             feb.material.SolidMixture: solidmixture_to_feb,
+             feb.material.RigidBody: rigid_body_to_feb}
         try:
             e = f[type(mat)](mat)
         except ValueError:
