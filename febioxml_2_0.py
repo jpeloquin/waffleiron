@@ -242,3 +242,12 @@ def xml(model):
 
     tree = ET.ElementTree(root)
     return tree
+
+
+def split_bc_names(s):
+    """Split boundary condition names.
+
+    In FEBio XML 2.5, each boundary condition is separated by a comma.
+
+    """
+    return [c for c in s]

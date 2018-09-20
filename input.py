@@ -10,7 +10,7 @@ from febtools.exceptions import UnsupportedFormatError
 from operator import itemgetter
 
 from . import xplt
-from . import febioxml
+from . import febioxml, febioxml_2_5, febioxml_2_0
 from .conditions import Sequence
 from .febioxml import control_tagnames_from_febio, elem_cls_from_feb
 
@@ -25,10 +25,10 @@ def _nstrip(string):
 
 
 # map FEBio xml boundary condition labels to internal labels
-label_bc = {'x': 'x1',
-            'y': 'x2',
-            'z': 'x3',
-            'p': 'pressure'}
+ft_bc_from_fx = {'x': 'x1',
+                 'y': 'x2',
+                 'z': 'x3',
+                 'p': 'pressure'}
 
 
 def load_model(fpath):
@@ -233,15 +233,26 @@ class FebReader:
                           'p': 'pressure'}
         # TODO: Solutes
         for e_fix in self.root.findall("Boundary/fix"):
-            lbl = internal_label[e_fix.attrib['bc']]
+            # In FEBio XML 2.0, > 1 bc label can be concatenated.  In
+            # FEBio XML 2.5, each label must be separated by a comma.
+            if self.feb_version == '2.0':
+                fx_bcs = febioxml_2_0.split_bc_names(e_fix.attrib['bc'])
+            elif self.feb_version == '2.5':
+                fx_bcs = febioxml_2_5.split_bc_names(e_fix.attrib['bc'])
             # Convert from FEBio XML label to internal label, if
             # conversion is provided
-            if lbl in label_bc:
-                lbl = label_bc[lbl]
-            node_ids = set()
-            for e_node in e_fix:
-                node_ids.add(int(e_node.attrib['id']))
-            model.fixed_nodes[lbl].update(node_ids)
+            ft_bcs = []
+            for nm in fx_bcs:
+                if nm in ft_bc_from_fx:
+                    ft_bcs.append(ft_bc_from_fx[nm])
+                else:
+                    ft_bcs.append(nm)
+            # Apply the BCs to our model
+            for nm in ft_bcs:
+                node_ids = set()
+                for e_node in e_fix:
+                    node_ids.add(int(e_node.attrib['id']))
+                model.fixed_nodes[nm].update(node_ids)
         # Load curves (sequences)
         sequences = {}
         for e_lc in self.root.findall('LoadData/loadcurve'):

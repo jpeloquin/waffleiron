@@ -126,3 +126,12 @@ def meshdata_section(model, parts):
                     e_val.attrib['lid'] = str(i + 1)
                     e_elementdata.append(e_val)
     return e_meshdata
+
+
+def split_bc_names(s):
+    """Split boundary condition names.
+
+    In FEBio XML 2.5, each boundary condition is separated by a comma.
+
+    """
+    return [bc.strip() for bc in s.split(",")]
