@@ -27,7 +27,7 @@ def biasrange_sqrt(start, stop, n=10):
     return x
 
 
-def bias_pt_series(line, n=None, type='log', minstep=None,
+def bias_pt_series(line, n=None, bias='log', minstep=None,
                    bias_direction=1):
     """Return a series of points on a line segment with biased spacing.
 
@@ -52,9 +52,9 @@ def bias_pt_series(line, n=None, type='log', minstep=None,
         raise ValueError("Line has zero length.")
     u = v / length # unit vector pointing in line direction
 
-    if type == 'log':
+    if bias == 'log':
         fspc = biasrange_log
-    elif type == 'linear':
+    elif bias == 'linear':
         fspc = np.linspace
 
     # Figure out how many points to return
