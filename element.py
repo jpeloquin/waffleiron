@@ -72,6 +72,8 @@ class Element(object):
         """Create an element from nodal indices.
 
         """
+        # TODO: Make mat_id only apply to models created from FEBio XML
+        # input
         nodes = np.array([nodelist[i] for i in ids])
         element = cls(nodes, mat)
         element.ids = ids
