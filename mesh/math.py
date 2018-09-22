@@ -56,6 +56,8 @@ def bias_pt_series(line, n=None, bias='log', minstep=None,
         fspc = biasrange_log
     elif bias == 'linear':
         fspc = np.linspace
+    elif bias == 'sqrt':
+        fspc = biasrange_sqrt
 
     # Figure out how many points to return
     if n is None and minstep is None:
