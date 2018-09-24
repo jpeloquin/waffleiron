@@ -80,10 +80,15 @@ def quadrilateral(col1, col2, row1, row2):
 
         # Add interpolated points for this row
         thisrow_pts = [col1[i]]
-        v = np.array(col1[i]) - np.array(col2[i])
+        v_c = np.array(col2[i] - col1[i])
+        u_c = v_c / np.linalg.norm(v_c)
         for j in range(1, nc - 1):
-            ln_r = LineString([col1[i], col2[i]])
-            ln_c = LineString([row1[j], row2[j]])
+            v_r = np.array(row2[j] - row1[j])
+            u_v = v_r / np.linalg.norm(v_r)
+            ln_r = LineString([col1[i] - v_c, col2[i] + v_c])
+            ln_c = LineString([row1[j] - v_r, row2[j] + v_r])
+            # ^ extend the lines a little bit to avoid missing an
+            # intersection due to finite precision
             pt = ln_r.intersection(ln_c)
             if pt.is_empty:
                 raise Exception("When placing a node, no "
