@@ -29,7 +29,7 @@ def quadrilateral(col1, col2, row1, row2):
     # Ensure both columns start on row1
     if pdist(row1[0], col1[0]) > pdist(row1[0], col1[-1]):
         col1 = col1[::-1]
-    if pdist(row1[0], col2[0]) > pdist(row1[0], col2[-1]):
+    if pdist(row1[-1], col2[0]) > pdist(row1[-1], col2[-1]):
         col2 = col2[::-1]
 
     # Ensure the row2 starts on col1 (parallels row1)
@@ -57,6 +57,16 @@ def quadrilateral(col1, col2, row1, row2):
     assert len(col1) == len(col2)
     nr = len(col1)
     nc = len(row1)
+
+    # For debugging
+    #
+    # import matplotlib.pyplot as plt
+    # plt.ion()
+    # plt.plot(np.array(row1)[:,0], np.array(row1)[:,1], 'k-o')
+    # plt.plot(np.array(row2)[:,0], np.array(row2)[:,1], 'k-*')
+    # plt.plot(np.array(col1)[:,0], np.array(col1)[:,1], 'r-o')
+    # plt.plot(np.array(col2)[:,0], np.array(col2)[:,1], 'r-*')
+    # plt.show()
 
     ## Create nodes
 
