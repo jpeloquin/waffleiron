@@ -67,4 +67,3 @@ def merge_node_positions(mesh, candidates=None, tol=feb._default_tol):
         imatch = set(mesh.find_nearest_nodes(*x_i)) - set([i])
         to_merge = [j for j in imatch if np.linalg.norm(x_i - np.array(mesh.nodes[j])) < tol]
         merge_node_ids(mesh, [i] + to_merge)
-

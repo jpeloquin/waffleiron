@@ -87,3 +87,16 @@ def plot_q(elements, length=1.0):
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
     return fig, ax
+
+def plot_element_nodes(element):
+    """Plot numbered element nodes in 3D"""
+    e = element
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot(e.nodes[:,0], e.nodes[:,1], e.nodes[:,2], '*k', markersize=8)
+    for i, pt in enumerate(e.nodes):
+        ax.text(pt[0], pt[1], pt[2], "{}".format(i), color="red", fontsize=16)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    return fig, ax
