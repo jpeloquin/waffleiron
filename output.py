@@ -220,7 +220,7 @@ def xml(model):
     # Boundary section (fixed nodal BCs)
     for axis, nodeset in model.fixed_nodes.items():
         if nodeset:
-            e_fix = ET.SubElement(e_boundary, 'fix', bc=axis_to_febio[axis])
+            e_fix = ET.SubElement(e_boundary, 'fix', bc=febioxml.axis_to_febio[axis])
             for nid in nodeset:
                 ET.SubElement(e_fix, 'node', id=str(nid + 1))
 
@@ -312,13 +312,13 @@ def xml(model):
         for seq, d in varying.items():
             for axis, vnodes in d.items():
                 e_pres = ET.SubElement(e_bd, 'prescribe',
-                                       bc=axis_to_febio[axis],
+                                       bc=febioxml.axis_to_febio[axis],
                                        lc=str(seq_id[seq] + 1))
                 for nid, v in vnodes.items():
                     e_node = ET.SubElement(e_pres, 'node', id=str(nid + 1)).text = str(v)
         # Write fixed nodal BCs
         for axis, node_ids in fixed.items():
-            e_axis = ET.SubElement(e_bd, 'fix', bc=axis_to_febio[axis])
+            e_axis = ET.SubElement(e_bd, 'fix', bc=febioxml.axis_to_febio[axis])
             for i in node_ids:
                 ET.SubElement(e_axis, 'node', id=str(i + 1))
 
