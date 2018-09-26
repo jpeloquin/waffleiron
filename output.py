@@ -13,8 +13,6 @@ from . import febioxml_2_5 as febioxml
 # Common functionality can be shared between febioxml_*_*.py files via
 # imports.
 
-feb_version = 2.5
-
 def exponentialfiber_to_feb(mat):
     """Convert ExponentialFiber material instance to FEBio XML.
 
@@ -150,7 +148,7 @@ def material_to_feb(mat):
     return e
 
 
-def xml(model):
+def xml(model, version='2.5'):
     """Convert a model to an FEBio XML tree.
 
     Creating an FEBio XML tree from a model is useful because it allows
@@ -158,7 +156,7 @@ def xml(model):
     on-disk .feb file.
 
     """
-    root = ET.Element('febio_spec', version="{}".format(feb_version))
+    root = ET.Element('febio_spec', version="{}".format(version))
     Globals = ET.SubElement(root, 'Globals')
     Material = ET.SubElement(root, 'Material')
 
@@ -332,7 +330,7 @@ def write_xml(tree, f):
                encoding='utf-8')
 
 
-def write_feb(model, f):
+def write_feb(model, f, version='2.5'):
     """Write model's FEBio XML representation to a file object.
 
     Inputs
@@ -343,5 +341,5 @@ def write_feb(model, f):
     materials : list of Material objects
 
     """
-    tree = xml(model)
+    tree = xml(model, version=version)
     write_xml(tree, f)
