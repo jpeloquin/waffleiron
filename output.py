@@ -122,6 +122,11 @@ def rigid_body_to_feb(mat):
 
     """
     e = ET.Element('material', type='rigid body')
+    if mat.density is None:
+        density = 1
+    else:
+        density = mat.density
+    ET.SubElement(e, 'density').text = str(density)
     return e
 
 
