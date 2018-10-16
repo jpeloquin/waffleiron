@@ -247,7 +247,7 @@ def xml(model):
 def split_bc_names(s):
     """Split boundary condition names.
 
-    In FEBio XML 2.5, each boundary condition is separated by a comma.
+    In FEBio XML 2.0, each BC is one character.
 
     """
     return [c for c in s]
