@@ -37,7 +37,7 @@ def xml(model):
     seq_id = {}
     for step in model.steps:
         # Sequences in nodal displacement boundary conditions
-        for node_id, bc in step['bc'].items():
+        for node_id, bc in step['bc']['node'].items():
             for axis, d in bc.items():
                 if 'sequence' in d:
                     seq = d['sequence']
@@ -136,7 +136,7 @@ def xml(model):
         Geometry[:] += geo_subs['ElementData']
 
     # Boundary section (fixed nodal BCs)
-    for axis, nodeset in model.fixed_nodes.items():
+    for axis, nodeset in model.fixed['node'].items():
         if nodeset:
             e_fix = ET.SubElement(e_boundary, 'fix', bc=axis_to_febio[axis])
             for nid in nodeset:
@@ -157,7 +157,7 @@ def xml(model):
             dtmax.points = [(cumulative_time + t, v) for t, v in dtmax.points]
         # Adjust variable boundary condition curves
         curves_to_adjust = set([])
-        for i, ax_bc in step['bc'].items():
+        for i, ax_bc in step['bc']['node'].items():
             for ax, d in ax_bc.items():
                 if not d == 'fixed':  # varying ("prescribed") BC
                     curves_to_adjust.update([d['sequence']])
@@ -218,7 +218,7 @@ def xml(model):
         # collect BCs into FEBio-like data structure
         varying = defaultdict(dict)
         fixed = defaultdict(set)
-        for i, ax_bc in step['bc'].items():
+        for i, ax_bc in step['bc']['node'].items():
             for ax, d in ax_bc.items():
                 if d == 'fixed':  # fixed BC
                     fixed[ax].add(i)

@@ -3,6 +3,9 @@ from .element import Quad4, Tri3, Hex8
 axis_to_febio = {'x1': 'x',
                  'x2': 'y',
                  'x3': 'z',
+                 'α1': 'Rx',
+                 'α2': 'Ry',
+                 'α3': 'Rz',
                  'pressure': 'p'}
 
 elem_cls_from_feb = {'quad4': Quad4,

@@ -72,10 +72,10 @@ def apply_uniax_stretch(model, stretches, axis='x1'):
     model.apply_nodal_displacement(gripped_nodes, values=u1, axis=axis1,
                                    sequence=seq_bc)
     # Fixed nodes
-    model.fixed_nodes[axis2].update(gripped_nodes)
+    model.fixed['node'][axis2].update(gripped_nodes)
     gripped_nodes_back = [i for i in gripped_nodes
                           if model.mesh.nodes[i][2] == minima[2]]
-    model.fixed_nodes['x3'].update(gripped_nodes_back)
+    model.fixed['node']['x3'].update(gripped_nodes_back)
     # Define number of steps
     nsteps = len(stretches) * 1 + 1
     nmust = len(stretches) * 1 + 1

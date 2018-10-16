@@ -252,7 +252,7 @@ class FebReader:
                 node_ids = set()
                 for e_node in e_fix:
                     node_ids.add(int(e_node.attrib['id']))
-                model.fixed_nodes[nm].update(node_ids)
+                model.fixed['node'][nm].update(node_ids)
         # Load curves (sequences)
         sequences = {}
         for e_lc in self.root.findall('LoadData/loadcurve'):

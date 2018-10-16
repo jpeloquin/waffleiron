@@ -83,12 +83,12 @@ dy = [c for i in up_face]
 model.apply_nodal_displacement(up_face, values=dy, axis='y',
                                sequence=seq_bc)
 # Fixed nodes
-model.fixed_nodes['x1'].update(down_face)
-model.fixed_nodes['x2'].update([i for i in up_face + down_face
+model.fixed['node']['x1'].update(down_face)
+model.fixed['node']['x2'].update([i for i in up_face + down_face
                                if np.allclose(model.mesh.nodes[i][0], 0)])
 back_corners = [i for i in feb.selection.corner_nodes(model.mesh)
                 if model.mesh.nodes[i][2] < 0]
-model.fixed_nodes['x3'].update(back_corners)
+model.fixed['node']['x3'].update(back_corners)
 
 # Save only final solution
 model.steps[0]['control']['plot level'] = 'PLOT_MUST_POINTS'

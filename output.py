@@ -7,6 +7,7 @@ from lxml import etree as ET
 import febtools as feb
 from .conditions import Sequence
 from .control import step_duration
+from .core import Body
 from . import febioxml_2_5 as febioxml
 # ^ The intent here is to eventually be able to switch between FEBio XML
 # formats by exchanging this import statement for a different version.
@@ -171,6 +172,7 @@ def xml(model, version='2.5'):
     root.append(Geometry)
 
     e_boundary = ET.SubElement(root, 'Boundary')
+    e_constraints = ET.SubElement(root, 'Constraints')
     e_loaddata = ET.SubElement(root, 'LoadData')
     Output = ET.SubElement(root, 'Output')
 
@@ -185,13 +187,14 @@ def xml(model, version='2.5'):
     seq_id = {}
     for step in model.steps:
         # Sequences in nodal displacement boundary conditions
-        for node_id, bc in step['bc'].items():
-            for axis, d in bc.items():
-                if 'sequence' in d:
-                    seq = d['sequence']
-                    if seq not in seq_id:
-                        seq_id[seq] = i
-                        i += 1
+        for obj in step['bc']:
+            for k in step['bc'][obj]:
+                for ax, v in step['bc'][obj][k].items():
+                    if type(v) is dict and 'sequence' in v:
+                        seq = v['sequence']
+                        if seq not in seq_id:
+                            seq_id[seq] = i
+                            i += 1
         # Sequences in dtmax
         if 'time stepper' in step['control']:
             if 'dtmax' in step['control']['time stepper']:
@@ -215,12 +218,24 @@ def xml(model, version='2.5'):
         tag.attrib['id'] = str(i + 1)
         Material.append(tag)
 
-    # Boundary section (fixed nodal BCs)
-    for axis, nodeset in model.fixed_nodes.items():
+    # Permanently fixed nodes
+    for axis, nodeset in model.fixed['node'].items():
         if nodeset:
             e_fix = ET.SubElement(e_boundary, 'fix', bc=febioxml.axis_to_febio[axis])
             for nid in nodeset:
                 ET.SubElement(e_fix, 'node', id=str(nid + 1))
+    # Permanently fixed bodies
+    body_bcs = {}
+    for axis, bodies in model.fixed['body'].items():
+        for body in bodies:
+            body_bcs.setdefault(body, set()).add(axis)
+    for body, axes in body_bcs.items():
+        mat_id = material_ids[body.elements[0].material]
+        # TODO: ensure that body is all one material
+        e_body = ET.SubElement(e_constraints, 'rigid_body',
+                               mat=str(mat_id + 1))
+        for ax in axes:
+            ET.SubElement(e_body, 'fixed', bc=febioxml.axis_to_febio[ax])
 
     # LoadData (load curves)
     # sort sequences by id to get around FEBio bug
@@ -237,7 +252,7 @@ def xml(model, version='2.5'):
             dtmax.points = [(cumulative_time + t, v) for t, v in dtmax.points]
         # Adjust variable boundary condition curves
         curves_to_adjust = set([])
-        for i, ax_bc in step['bc'].items():
+        for i, ax_bc in step['bc']['node'].items():
             for ax, d in ax_bc.items():
                 if not d == 'fixed':  # varying ("prescribed") BC
                     curves_to_adjust.update([d['sequence']])
@@ -294,31 +309,65 @@ def xml(model, version='2.5'):
             e_dtmax.text = str(dtmax)
 
         # Boundary conditions
-        e_bd = ET.SubElement(e_step, 'Boundary')
-        # collect BCs into FEBio-like data structure
-        varying = defaultdict(dict)
-        fixed = defaultdict(set)
-        for i, ax_bc in step['bc'].items():
-            for ax, d in ax_bc.items():
-                if d == 'fixed':  # fixed BC
-                    fixed[ax].add(i)
-                else:  # varying ("prescribed") BC
-                    v = d['value']
-                    seq = d['sequence']
-                    varying[seq].setdefault(ax, {})[i] = v
-        # Write varying nodal BCs
-        for seq, d in varying.items():
-            for axis, vnodes in d.items():
-                e_pres = ET.SubElement(e_bd, 'prescribe',
-                                       bc=febioxml.axis_to_febio[axis],
-                                       lc=str(seq_id[seq] + 1))
-                for nid, v in vnodes.items():
-                    e_node = ET.SubElement(e_pres, 'node', id=str(nid + 1)).text = str(v)
-        # Write fixed nodal BCs
-        for axis, node_ids in fixed.items():
-            e_axis = ET.SubElement(e_bd, 'fix', bc=febioxml.axis_to_febio[axis])
-            for i in node_ids:
-                ET.SubElement(e_axis, 'node', id=str(i + 1))
+        #
+        # FEBio XML spreads the boundary conditions (constraints) out in
+        # difficult-to-organize way.
+        #
+        # For nodal contraints, there is one parent tag per kind + axis
+        # + sequence, and one child tag per node + value.  The parent
+        # tag may be named 'prescribe' or 'fix'.
+        #
+        # For body constraints, there is one parent tag per body, and
+        # one child tag per kind + axis + sequence + value.  The parent
+        # tag may be named 'prescribed' or 'fixed'.  (So much for
+        # consistency.)
+        #
+        # FEBio does seem to handle empty tags appropriately, which
+        # helps.
+        tag_memo = {'node': {},
+                    'body': {}}
+        # ^ keeps track of which XML tags we've created already; access
+        # as tag_memo[obj][kind][ax][seq], where `kind` ∈ {'fixed',
+        # 'variable'}
+        bc_tag_nm = {'node': {'variable': 'prescribe',
+                              'fixed': 'fix'},
+                     'body': {'variable': 'prescribed',
+                              'fixed': 'fixed'}}
+        e_nodal = ET.SubElement(e_step, 'Boundary')
+        e_body = ET.SubElement(e_step, 'Constraints')
+        for obj in step['bc']:  # node or body
+            for k in step['bc'][obj]:  # node id or Body instance
+                for ax in step['bc'][obj][k]:  # axis
+                    v = step['bc'][obj][k][ax]
+                    if type(v) is str and v == 'fixed':
+                        kind = 'fixed'
+                    elif type(v) is dict:
+                        kind = 'variable'
+                        seq = v['sequence']
+                        v = v['value']
+                    if obj == 'node':
+                        e_grandfather = e_nodal
+                        e_parent = tag_memo[obj] \
+                            .setdefault(kind, {}) \
+                            .setdefault(ax, {}) \
+                            .setdefault(seq, ET.SubElement(e_grandfather,
+                                                           bc_tag_nm[obj][kind],
+                                                           bc=febioxml.axis_to_febio[ax],
+                                                           lc=str(seq_id[seq] + 1)))
+                        e_child = ET.SubElement(e_parent, 'node', id=str(k + 1))
+                        if kind == 'variable':
+                            e_child.text = str(v)
+                    elif obj == 'body':
+                        e_grandfather = e_body
+                        mat_id = material_ids[k.elements[0].material]
+                        e_parent = tag_memo[obj] \
+                            .setdefault(k, ET.SubElement(e_grandfather, 'rigid_body',
+                                                         mat=str(mat_id + 1)))
+                        e_child = ET.SubElement(e_parent, bc_tag_nm[obj][kind],
+                                                bc=febioxml.axis_to_febio[ax],
+                                                lc=str(seq_id[seq] + 1))
+                        if kind == 'variable':
+                            e_child.text = str(v)
 
     tree = ET.ElementTree(root)
     return tree

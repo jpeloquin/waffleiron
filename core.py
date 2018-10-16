@@ -1,3 +1,4 @@
+from copy import deepcopy
 from operator import itemgetter
 import sys
 
@@ -13,6 +14,15 @@ _default_tol = 10*np.finfo(float).eps
 
 # Increase recursion limit for kdtree
 sys.setrecursionlimit(10000)
+
+
+class Body:
+    """A geometric body of elements.
+
+    """
+    def __init__(self, elements):
+        self.elements = elements
+        # self.master_inode = elements[0].ids[0]
 
 
 class Model:
@@ -35,11 +45,16 @@ class Model:
         # control step.  This may not be desirable.
         self.default_control = feb.control.default_control_section()
 
-        self.fixed_nodes = {'x1': set(),
-                            'x2': set(),
-                            'x3': set(),
-                            'pressure': set(),
-                            'concentration': set()}
+        fixed_template = {'x1': set(),
+                          'x2': set(),
+                          'x3': set(),
+                          'pressure': set(),
+                          'concentration': set()}
+        self.fixed = {'node': deepcopy(fixed_template),
+                      'body': deepcopy(fixed_template)}
+        self.fixed['body'].update({'α1': set(),
+                                   'α2': set(),
+                                   'α3': set()})
         # Note: for multiphasic problems, concentration is a list of
         # sets
 
@@ -65,7 +80,8 @@ class Model:
             control = feb.control.default_control_section()
         step = {'module': module,
                 'control': control,
-                'bc': {}}
+                'bc': {'node': {},
+                       'body': {}}}
         self.steps.append(step)
 
     def apply_nodal_displacement(self, node_ids, values, sequence,
@@ -76,17 +92,43 @@ class Model:
 
         """
         for i, v in zip(node_ids, values):
-            bc_node = self.steps[step_id]['bc'].setdefault(i, {})
+            bc_node = self.steps[step_id]['bc']['node'].setdefault(i, {})
             bc_node[axis] = {'sequence': sequence,
                              'value': v}
 
-    def apply_nodal_bc_fixed(self, node_ids, axis, step_id=-1):
+    def apply_nodal_hold(self, node_ids, axis, step_id=-1):
         """Apply a fixed boundary condition to nodes during a step.
 
         """
         for i in node_ids:
-            bc_node = self.steps[step_id]['bc'].setdefault(i, {})
+            bc_node = self.steps[step_id]['bc']['node'].setdefault(i, {})
             bc_node[axis] = 'fixed'
+
+    def apply_body_displacement(self, body, value, sequence,
+                                axis, step_id=-1):
+        """Apply a variable displacement boundary condition to a body.
+
+        The boundary condition is applied only for the selected solution
+        step.
+
+        `body` is currently input as a list of elements; this may change.
+
+        """
+        bc = self.steps[step_id]['bc']['body'].setdefault(body, {})
+        bc[axis] = {'sequence': sequence,
+                    'value': value}
+
+    def apply_body_hold(self, body, axis, step_id=-1):
+        """Apply a fixed displacement boundary condition to a body.
+
+        The boundary condition is applied only for the selected solution
+        step.
+
+        `body` is currently input as a list of elements; this may change.
+
+        """
+        bc = self.steps[step_id]['bc']['body'].setdefault(body, {})
+        bc[axis] = 'fixed'
 
     def apply_solution(self, solution, t=None, step=None):
         """Attach a solution to the model.
