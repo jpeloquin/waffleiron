@@ -193,6 +193,8 @@ class Mesh:
             # Store reference to this mesh
             e.mesh = self
         self.elements = elements
+        # Bodies
+        self.bodies = set()
 
         # Precompute derived properties
         self.prepare()
@@ -239,6 +241,16 @@ class Mesh:
             for i in e.ids:
                 elem_with_node[i].append(e)
         self.elem_with_node = elem_with_node
+
+        # Create list of bodies.  Each body is a set of elements that
+        # are connected to each other via shared nodes.
+        self.bodies = set()
+        untouched_elements = set(self.elements)
+        while untouched_elements:
+            e = untouched_elements.pop()
+            body_elements = feb.selection.e_grow([e], untouched_elements, inf)
+            self.bodies.add(Body(body_elements))
+            untouched_elements = untouched_elements - set(body_elements)
 
     def faces_with_node(self, idx):
         """Return face tuples containing node index.
