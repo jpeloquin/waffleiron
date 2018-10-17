@@ -166,7 +166,8 @@ def e_grow(selection, candidates, n):
     inactive_nodes = set([])
     active_nodes = set([i for e in seed for i in e.ids])
     candidates = set(candidates) - seed
-    for iring in range(n):
+    n_iter = 0  # number of completed iterations
+    while active_nodes and n_iter != n:
         # Find adjacent elements
         adjacent = set(e for e in candidates
                        if any(i in active_nodes for i in e.ids))
@@ -179,6 +180,7 @@ def e_grow(selection, candidates, n):
         active_nodes = nodes - inactive_nodes
         # Update list of candidates
         candidates = candidates - adjacent
+        n_iter += 1
     return seed
 
 def faces_by_normal(elements, normal, delta=default_tol):
