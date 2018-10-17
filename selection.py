@@ -76,25 +76,28 @@ def surface_faces(mesh):
     """Return surface faces.
 
     """
-    # Pick a node to start. Nodes with minimum/maximum coordinate
-    # values must be surfaces nodes.
-    i, j, k = np.argmin(mesh.nodes, axis=0)
-    # Advance across the surface with a "front" of active nodes
     surf_faces = set()
-    adv_front = set([i])
-    processed_nodes = set()
-    while adv_front:
-        candidate_faces = (f for i in adv_front
-                           for e in mesh.elem_with_node[i]
-                           for f in e.faces()
-                           if i in f)
-        on_surface = [f for f in candidate_faces
-                      if len(adj_faces(f, mesh, mode='face')) == 0]
-        surf_faces.update(on_surface)
-        processed_nodes.update(adv_front)
-        adv_front = set.difference(set([i for f in surf_faces
-                                        for i in f]),
-                                   processed_nodes)
+    for body in mesh.bodies:
+        # Pick a node to start. Nodes with minimum/maximum coordinate
+        # values must be surfaces nodes.
+        nids, xnodes = body.nodes()
+        i, j, k = np.argmin(xnodes, axis=0)
+        i = nids[i]  # translate index to node index in mesh
+        # Advance across the surface with a "front" of active nodes
+        adv_front = set([i])
+        processed_nodes = set()
+        while adv_front:
+            candidate_faces = (f for i in adv_front
+                               for e in mesh.elem_with_node[i]
+                               for f in e.faces()
+                               if i in f)
+            on_surface = [f for f in candidate_faces
+                          if len(adj_faces(f, mesh, mode='face')) == 0]
+            surf_faces.update(on_surface)
+            processed_nodes.update(adv_front)
+            adv_front = set.difference(set([i for f in surf_faces
+                                            for i in f]),
+                                       processed_nodes)
     return surf_faces
 
 def bisect(elements, p, v):

@@ -25,6 +25,18 @@ class Body:
         self.elements = elements
         # self.master_inode = elements[0].ids[0]
 
+    def nodes(self):
+        """Return (node_ids, xnodes) for this body."""
+        nids = set()
+        for e in self.elements:
+            nids.update(e.ids)
+        nids = np.array([i for i in nids])
+        parent_mesh = next(iter(self.elements)).mesh
+        # ^ assumption: all elements are from same mesh
+        xnodes = np.array([parent_mesh.nodes[i] for i in nids])
+        return nids, xnodes
+
+
 
 class Model:
     """An FE model: geometry, boundary conditions, solution.
