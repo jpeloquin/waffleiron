@@ -189,6 +189,7 @@ def faces_by_normal(elements, normal, delta=default_tol):
     faces = []
     for e in elements:
         for n, f in zip(e.face_normals(), e.faces()):
+            n = n / np.linalg.norm(n)  # make unit vector
             if np.dot(n, normal) > target:
                 faces.append(f)
     return faces
