@@ -5,9 +5,9 @@ from math import degrees
 from lxml import etree as ET
 # Within-module packages
 import febtools as feb
+from .core import Body, ContactConstraint
 from .conditions import Sequence
 from .control import step_duration
-from .core import Body
 from . import febioxml_2_5 as febioxml
 # ^ The intent here is to eventually be able to switch between FEBio XML
 # formats by exchanging this import statement for a different version.
@@ -279,6 +279,12 @@ def xml(model, version='2.5'):
     ET.SubElement(plotfile, 'var', type='displacement')
     ET.SubElement(plotfile, 'var', type='stress')
 
+    e_contact = contact_section(model)
+    root.append(e_contact)
+    # The <Contact> tag must come before the <Step> tag or FEBio will
+    # only apply the specified contact constraints to the last step
+    # (this is an FEBio bug).
+
     # Step section(s)
     cumulative_time = 0.0
     for i, step in enumerate(model.steps):
@@ -377,6 +383,35 @@ def xml(model, version='2.5'):
     tree = ET.ElementTree(root)
     return tree
 
+
+def contact_section(model):
+    tag_branch = ET.Element('Contact')
+    contact_constraints = [constraint for constraint in model.constraints
+                           if type(constraint) is ContactConstraint]
+    for contact in contact_constraints:
+        tag_contact = ET.SubElement(tag_branch, 'contact', type=contact.algorithm)
+        # Write penalty-related tags
+        ET.SubElement(tag_contact, 'auto_penalty') \
+          .text = "1" if contact.penalty['type'] == 'auto' else "0"
+        ET.SubElement(tag_contact, 'penalty').text = f"{contact.penalty['factor']}"
+        # Write algorithm modification tags
+        ET.SubElement(tag_contact, 'laugon').text = "1" if contact.augmented_lagrange else "0"
+        # (two_pass would go here)
+        # Write surfaces
+        e_master = ET.SubElement(tag_contact, 'surface', type="master")
+        for f in contact.master:
+            e_master.append(tag_face(f))
+        e_follower = ET.SubElement(tag_contact, 'surface', type="slave")
+        for f in contact.follower:
+            e_follower.append(tag_face(f))
+    return tag_branch
+
+def tag_face(face):
+    nm = {3: "tri3",
+          4: "quad4"}
+    tag = ET.Element(nm[len(face)])
+    tag.text = ", ".join([f"{i+1}" for i in face])
+    return tag
 
 def write_xml(tree, f):
     """Write an XML tree to a .feb file"""

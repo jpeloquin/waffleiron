@@ -37,6 +37,30 @@ class Body:
         return nids, xnodes
 
 
+class ContactConstraint:
+    """A constraint defining contact between two surfaces."""
+    def __init__(self, master, follower, algorithm=None,
+                 auto_penalty=True,
+                 auto_penalty_scale=1,
+                 penalty_factor=None,
+                 augmented_lagrange=False,
+                 passes=1,
+                 **kwargs):
+        self.master = master
+        self.follower = follower
+        self.algorithm = algorithm
+        self.augmented_lagrange = augmented_lagrange
+        self.passes = passes
+        if auto_penalty:
+            self.penalty = {'type': 'auto',
+                            'factor': auto_penalty_scale}
+        else:
+            assert penalty_factor is not None
+            self.penalty = {'type': 'manual',
+                            'factor': penalty_factor}
+        # TODO: Warn if two passes are specified and at least one of the
+        # surfaces belongs to a rigid body.
+
 
 class Model:
     """An FE model: geometry, boundary conditions, solution.
@@ -74,6 +98,9 @@ class Model:
         # TODO: Make the specification of fixed-for-all-time BCs have
         # the same format as for BCs in steps.
 
+        # Contact
+        self.constraints = []
+
         # Initialize dictionaries to hold named nodesets, element sets,
         # and facet sets.
         self.named_sets = {'nodes': {},
@@ -87,6 +114,9 @@ class Model:
         # Note: for multiphasic problems, concentration is a list of
         # lists.
         self.steps = []
+
+    def add_contact(self, constraint):
+        self.constraints.append(constraint)
 
     def add_step(self, module='solid', control=None):
         """Add a step with default control values and no BCs.
