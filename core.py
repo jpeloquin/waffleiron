@@ -57,6 +57,9 @@ class Model:
                                    'α3': set()})
         # Note: for multiphasic problems, concentration is a list of
         # sets
+        #
+        # TODO: Make the specification of fixed-for-all-time BCs have
+        # the same format as for BCs in steps.
 
         # Initialize dictionaries to hold named nodesets, element sets,
         # and facet sets.
