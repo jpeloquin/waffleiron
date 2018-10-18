@@ -251,16 +251,22 @@ def xml(model, version='2.5'):
     # `febtools`, each step has its own running time (local time).
     cumulative_time = 0.0
     for step in model.steps:
-        # Adjust must point curves
+        # Gather must point curves
         dtmax = step['control']['time stepper']['dtmax']
         if isinstance(dtmax, Sequence):
             dtmax.points = [(cumulative_time + t, v) for t, v in dtmax.points]
-        # Adjust variable boundary condition curves
+        # Gather variable boundary condition / constraint curves
         curves_to_adjust = set([])
         for i, ax_bc in step['bc']['node'].items():
             for ax, d in ax_bc.items():
-                if not d == 'fixed':  # varying ("prescribed") BC
-                    curves_to_adjust.update([d['sequence']])
+                if d == 'variable':  # varying ("prescribed") BC
+                    curves_to_adjust.add(d['sequence'])
+        # Gather the body constraint curves
+        for body, body_constraints in step['bc']['body'].items():
+            for ax, params in body_constraints.items():
+                if type(params) is not str:  # params may := 'fixed'
+                    curves_to_adjust.add(params['sequence'])
+        # Adjust the curves
         for curve in curves_to_adjust:
             curve.points = [(cumulative_time + t, v)
                             for t, v in curve.points]
