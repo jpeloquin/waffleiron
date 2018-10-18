@@ -66,7 +66,7 @@ def geometry_section(model, parts, material_ids):
     return e_geometry
 
 def vec_to_text(v):
-    return ','.join(str(a) for a in v)
+    return ', '.join(f"{a:.7e}" for a in v)
 
 def elem_var_fiber_xml(e):
     tag = ET.Element('elem')
