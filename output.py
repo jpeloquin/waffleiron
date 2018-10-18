@@ -363,10 +363,10 @@ def xml(model, version='2.5'):
                             .setdefault(ax, {}) \
                             .setdefault(seq, ET.SubElement(e_grandfather,
                                                            bc_tag_nm[obj][kind],
-                                                           bc=febioxml.axis_to_febio[ax],
-                                                           lc=str(seq_id[seq] + 1)))
+                                                           bc=febioxml.axis_to_febio[ax]))
                         e_child = ET.SubElement(e_parent, 'node', id=str(k + 1))
                         if kind == 'variable':
+                            e_child.attrib['lc'] = str(seq_id[seq] + 1)
                             e_child.text = str(v)
                     elif obj == 'body':
                         e_grandfather = e_body
@@ -375,9 +375,9 @@ def xml(model, version='2.5'):
                             .setdefault(k, ET.SubElement(e_grandfather, 'rigid_body',
                                                          mat=str(mat_id + 1)))
                         e_child = ET.SubElement(e_parent, bc_tag_nm[obj][kind],
-                                                bc=febioxml.axis_to_febio[ax],
-                                                lc=str(seq_id[seq] + 1))
+                                                bc=febioxml.axis_to_febio[ax])
                         if kind == 'variable':
+                            e_child.attrib['lc'] = str(seq_id[seq] + 1)
                             e_child.text = str(v)
 
     tree = ET.ElementTree(root)
