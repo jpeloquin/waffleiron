@@ -298,9 +298,11 @@ def xml(model, version='2.5'):
                                name='Step{}'.format(i + 1))
         ET.SubElement(e_step, 'Module',
                       type=step['module'])
-        # TODO: Warn if there's a poroelastic material and a solid
-        # analysis is requested.  Or set the appropriate module
-        # automatically.
+        # Warn if there's an incompatibility between requested materials
+        # and modules.
+        for mat in material_ids:
+            if step['module'] not in febioxml.module_compat_by_mat[type(mat)]:
+                raise ValueError(f"Material `{type(mat)}` is not compatible with Module {step['module']}")
         e_con = ET.SubElement(e_step, 'Control')
         ET.SubElement(e_con, 'analysis',
                       type=step['control']['analysis type'])

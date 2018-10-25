@@ -1,4 +1,5 @@
 from .element import Quad4, Tri3, Hex8
+from . import material
 
 axis_to_febio = {'x1': 'x',
                  'x2': 'y',
@@ -27,6 +28,9 @@ control_tagnames_to_febio = {'time steps': 'time_steps',
                              'dtmin': 'dtmin',
                              'opt iter': 'opt_iter'}
 control_tagnames_from_febio = {v: k for k, v in control_tagnames_to_febio.items()}
+
+module_compat_by_mat = {material.PoroelasticSolid: set(['biphasic']),
+                        material.RigidBody: set(['solid', 'biphasic'])}
 
 def read_named_sets(xml_root):
     """Read nodesets, etc., and apply them to a model."""

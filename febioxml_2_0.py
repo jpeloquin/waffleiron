@@ -6,7 +6,7 @@ from lxml import etree as ET
 from .output import material_to_feb
 from .conditions import Sequence
 from .control import step_duration
-from .febioxml import control_tagnames_to_febio, axis_to_febio
+from .febioxml import control_tagnames_to_febio, axis_to_febio, module_compat_by_mat
 
 feb_version = 2.0
 

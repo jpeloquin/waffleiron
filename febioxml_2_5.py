@@ -5,7 +5,7 @@ from lxml import etree as ET
 # Same-package modules
 from .conditions import Sequence
 from .control import step_duration
-from .febioxml import control_tagnames_to_febio, axis_to_febio
+from .febioxml import control_tagnames_to_febio, axis_to_febio, module_compat_by_mat
 
 feb_version = 2.5
 
