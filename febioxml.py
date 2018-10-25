@@ -1,4 +1,4 @@
-from .element import Quad4, Tri3, Hex8
+from .element import Quad4, Tri3, Hex8, Penta6
 from . import material
 
 axis_to_febio = {'x1': 'x',
@@ -11,7 +11,8 @@ axis_to_febio = {'x1': 'x',
 
 elem_cls_from_feb = {'quad4': Quad4,
                      'tri3': Tri3,
-                     'hex8': Hex8}
+                     'hex8': Hex8,
+                     'penta6': Penta6}
 
 control_tagnames_to_febio = {'time steps': 'time_steps',
                              'step size': 'step_size',
