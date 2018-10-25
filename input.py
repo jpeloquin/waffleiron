@@ -179,8 +179,6 @@ class FebReader:
 
         tag := the XML <material> element.
 
-        A material is represented as
-
         """
         m = {}
         m['material'] = tag.attrib['type']
@@ -198,21 +196,22 @@ class FebReader:
         return m
 
     def _read_property(self, tag):
-        """Read a permeability element."""
+        """Read a material property element."""
         p = {}
         p.update(tag.attrib)
         for child in tag:
             p_child = self._read_property(child)
             p[child.tag] = p_child
-        v = tag.text.lstrip().rstrip()
-        if v:
-            v = [float(a) for a in v.split(',')]
-            if len(v) == 1:
-                v = v[0]
-            if not p:
-                return v
-            else:
-                p['value'] = v
+        if tag.text is not None:
+            v = tag.text.lstrip().rstrip()
+            if v:
+                v = [float(a) for a in v.split(',')]
+                if len(v) == 1:
+                    v = v[0]
+                if not p:
+                    return v
+                else:
+                    p['value'] = v
         return p
 
     def model(self):
