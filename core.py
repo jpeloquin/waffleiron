@@ -17,6 +17,16 @@ _default_tol = 10*np.finfo(float).eps
 sys.setrecursionlimit(10000)
 
 
+def _validate_axis(axis, rigid=False):
+    allowed_axes = ['x1', 'x2', 'x3', 'fluid', 'temperature', 'charge']
+    if rigid:
+       allowed_axes += ['α1', 'α2', 'α3']
+    if not axis in allowed_axes:
+        msg = f"{axis} is not a supported axis type.  The supported axis types are " +\
+            ", ".join(allowed_axes) + "."
+        raise ValueError(msg)
+
+
 class Body:
     """A geometric body of elements.
 
@@ -130,51 +140,57 @@ class Model:
                        'body': {}}}
         self.steps.append(step)
 
-    def apply_nodal_displacement(self, node_ids, values, sequence,
-                                 axis, step_id=-1):
-        """Apply a boundary condition to a step.
 
-        axis := 'x1', 'x2', or 'x3'
+    def apply_nodal_bc(self, node_ids, axis, variable, sequence,
+                       scales=None, step_id=-1):
+        """Apply a boundary condition to a set of nodes.
+
+        The boundary condition is applied to the selected solution step,
+        which by default is the last step.  (Note that if you export a
+        model to FEBio, it will automatically leak the boundary
+        condition to all subsequent steps.)
+
+        axis := 'x1', 'x2', 'x3', 'fluid', 'temperature', or 'charge'.
+
+        sequence := conditions.Sequence object or 'fixed'
 
         """
-        for i, v in zip(node_ids, values):
+        _validate_axis(axis)
+        if sequence == 'fixed':
+            scales = [None]*len(node_ids)
+        elif scales is None:  # variable BC
+            scales = [1]*len(node_ids)
+        for i, scale in zip(node_ids, scales):
             bc_node = self.steps[step_id]['bc']['node'].setdefault(i, {})
-            bc_node[axis] = {'sequence': sequence,
-                             'value': v}
+            bc_node[axis] = {'variable': variable,
+                             'sequence': sequence,
+                             'scale': scale}
 
-    def apply_nodal_hold(self, node_ids, axis, step_id=-1):
-        """Apply a fixed boundary condition to nodes during a step.
 
-        """
-        for i in node_ids:
-            bc_node = self.steps[step_id]['bc']['node'].setdefault(i, {})
-            bc_node[axis] = 'fixed'
-
-    def apply_body_displacement(self, body, value, sequence,
-                                axis, step_id=-1):
+    def apply_body_bc(self, body, axis, variable, sequence, scale=1,
+                      step_id=-1):
         """Apply a variable displacement boundary condition to a body.
 
-        The boundary condition is applied only for the selected solution
-        step.
+        The boundary condition is applied to the selected solution step,
+        which by default is the last step.  (Note that if you export a
+        model to FEBio, it will automatically leak the boundary
+        condition to all subsequent steps.)
 
-        `body` is currently input as a list of elements; this may change.
+        axis := 'x1', 'x2', 'x3', 'fluid', 'temperature', or 'charge'.
 
-        """
-        bc = self.steps[step_id]['bc']['body'].setdefault(body, {})
-        bc[axis] = {'sequence': sequence,
-                    'value': value}
+        sequence := conditions.Sequence object or 'fixed'
 
-    def apply_body_hold(self, body, axis, step_id=-1):
-        """Apply a fixed displacement boundary condition to a body.
-
-        The boundary condition is applied only for the selected solution
-        step.
-
-        `body` is currently input as a list of elements; this may change.
+        body := Body or ImplicitBody object
 
         """
+        _validate_axis(axis)
+        if sequence == 'fixed':
+            scale = None
         bc = self.steps[step_id]['bc']['body'].setdefault(body, {})
-        bc[axis] = 'fixed'
+        bc[axis] = {'variable': variable,
+                    'sequence': sequence,
+                    'scale': scale}
+
 
     def apply_solution(self, solution, t=None, step=None):
         """Attach a solution to the model.

@@ -195,7 +195,8 @@ def xml(model, version='2.5'):
         for obj in step['bc']:
             for k in step['bc'][obj]:
                 for ax, v in step['bc'][obj][k].items():
-                    if type(v) is dict and 'sequence' in v:
+                    # v['sequence'] is Sequence object or 'fixed'
+                    if type(v['sequence']) is Sequence:
                         seq = v['sequence']
                         if seq not in seq_id:
                             seq_id[seq] = i
@@ -264,8 +265,12 @@ def xml(model, version='2.5'):
         # Gather the body constraint curves
         for body, body_constraints in step['bc']['body'].items():
             for ax, params in body_constraints.items():
-                if type(params) is not str:  # params may := 'fixed'
+                # params = {'variable': variable <string>,
+                #           'sequence': Sequence object or 'fixed',
+                #           'scale': scale <numeric>
+                if type(params['sequence']) is Sequence:
                     curves_to_adjust.add(params['sequence'])
+                    # TODO: Add test to exercise this code
         # Adjust the curves
         for curve in curves_to_adjust:
             curve.points = [(cumulative_time + t, v)
@@ -358,12 +363,12 @@ def xml(model, version='2.5'):
             for k in step['bc'][obj]:  # node id or Body instance
                 for ax in step['bc'][obj][k]:  # axis
                     v = step['bc'][obj][k][ax]
-                    if type(v) is str and v == 'fixed':
+                    if v['sequence'] == 'fixed':
                         kind = 'fixed'
-                    elif type(v) is dict:
+                    else:  # v['sequence'] is Sequence
                         kind = 'variable'
                         seq = v['sequence']
-                        v = v['value']
+                        v = v['scale']
                     if obj == 'node':
                         e_grandfather = e_nodal
                         e_parent = tag_memo[obj] \
