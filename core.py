@@ -30,6 +30,8 @@ def _validate_axis(axis, rigid=False):
 class Body:
     """A geometric body of elements.
 
+    Explicit rigid bodies should be constructed using this type.
+
     """
     def __init__(self, elements):
         self.elements = elements
@@ -45,6 +47,21 @@ class Body:
         # ^ assumption: all elements are from same mesh
         xnodes = np.array([parent_mesh.nodes[i] for i in nids])
         return nids, xnodes
+
+
+class ImplicitBody:
+    """A geometric body defined by its interface with a mesh."""
+    def __init__(self, mesh, interface):
+        """Constructor for ImplicitBody object.
+
+        interface := a collection of node ids
+
+        At some some point in the future, support may be added to define
+        an interface using a list of faces.
+
+        """
+        self.mesh = mesh
+        self.interface = set(interface)
 
 
 class ContactConstraint:
