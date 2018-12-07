@@ -371,15 +371,16 @@ def xml(model, version='2.5'):
                         v = v['scale']
                     if obj == 'node':
                         e_grandfather = e_nodal
-                        e_parent = tag_memo[obj] \
-                            .setdefault(kind, {}) \
-                            .setdefault(ax, {}) \
-                            .setdefault(seq, ET.SubElement(e_grandfather,
-                                                           bc_tag_nm[obj][kind],
-                                                           bc=febioxml.axis_to_febio[ax]))
+                        if seq in tag_memo[obj].setdefault(kind, {}).setdefault(ax, {}):
+                            e_parent = tag_memo[obj][kind][ax][seq]
+                        else:
+                            e_parent = ET.SubElement(e_grandfather,
+                                                     bc_tag_nm[obj][kind],
+                                                     bc=febioxml.axis_to_febio[ax])
+                            tag_memo[obj][kind][ax][seq] = e_parent
                         e_child = ET.SubElement(e_parent, 'node', id=str(k + 1))
                         if kind == 'variable':
-                            e_child.attrib['lc'] = str(seq_id[seq] + 1)
+                            e_parent.attrib['lc'] = str(seq_id[seq] + 1)
                             e_child.text = str(v)
                     elif obj == 'body':
                         e_grandfather = e_body
