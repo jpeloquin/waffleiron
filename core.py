@@ -51,7 +51,7 @@ class Body:
 
 class ImplicitBody:
     """A geometric body defined by its interface with a mesh."""
-    def __init__(self, mesh, interface):
+    def __init__(self, mesh, interface, material=None):
         """Constructor for ImplicitBody object.
 
         interface := a collection of node ids
@@ -62,6 +62,7 @@ class ImplicitBody:
         """
         self.mesh = mesh
         self.interface = set(interface)
+        self.material = material
 
 
 class ContactConstraint:

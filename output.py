@@ -5,7 +5,7 @@ from math import degrees
 from lxml import etree as ET
 # Within-module packages
 import febtools as feb
-from .core import Body, ContactConstraint
+from .core import Body, ImplicitBody, ContactConstraint
 from .conditions import Sequence
 from .control import step_duration
 from . import febioxml_2_5 as febioxml
@@ -194,11 +194,19 @@ def xml(model, version='2.5'):
     on-disk .feb file.
 
     """
-    # Enumerate materials.  We do this early because in FEBio XML the
-    # material ids are needed to define the Module, Geometry and MeshData
-    # sections.
-    material_ids = {k: v for v, k
-                    in enumerate(set(e.material for e in model.mesh.elements))}
+    # Enumerate all materials assigned to elements.  We do this early
+    # because in FEBio XML the material ids are needed to define the
+    # geometry and meshdata sections.  Technically, implicit bodies also
+    # have a rigid material, but because the geometry is implicit they
+    # can be added to the end of the material section as they are
+    # encountered when handling boundary conditions.
+    material_ids_by_material = {k: v for v, k in
+                                enumerate(set(e.material for e in
+                                              model.mesh.elements))}
+
+    root = ET.Element('febio_spec', version="{}".format(version))
+    Globals = ET.SubElement(root, 'Globals')
+    Material = ET.SubElement(root, 'Material')
 
     root = ET.Element('febio_spec', version="{}".format(version))
     version_major, version_minor = [int(a) for a in version.split(".")]
@@ -207,17 +215,22 @@ def xml(model, version='2.5'):
         # <Module> must exist and be first tag for FEBio XML ≥ 2.5.  We
         # need to figure out what the module should be, but will do that
         # later once the materials are enumerated.
-        module = choose_module([m for m in material_ids])
+        module = choose_module([m for m in material_ids_by_material])
         e_module.attrib["type"] = module
 
     Globals = ET.SubElement(root, 'Globals')
     Material = ET.SubElement(root, 'Material')
 
     parts = febioxml.parts(model)
-    Geometry = febioxml.geometry_section(model, parts, material_ids)
+    Geometry = febioxml.geometry_section(model, parts, material_ids_by_material)
     root.append(Geometry)
 
     e_boundary = ET.SubElement(root, 'Boundary')
+    e_contact = contact_section(model)
+    root.append(e_contact)
+    # The <Contact> tag must come before the first <Step> tag or FEBio
+    # will only apply the specified contact constraints to the last step
+    # (this is an FEBio bug).
     e_constraints = ET.SubElement(root, 'Constraints')
     e_loaddata = ET.SubElement(root, 'LoadData')
     Output = ET.SubElement(root, 'Output')
@@ -252,18 +265,71 @@ def xml(model, version='2.5'):
                         i += 1
 
     # Materials section
-    # make material tags
-    # sort by id to get around FEBio bug
-    materials = [(i, mat) for mat, i in material_ids.items()]
+    #
+    # Make material tags for all materials assigned to elements.  Sort
+    # by id to get around FEBio bug (FEBio ignores the ID attribute and
+    # just uses tag order).
+    materials = [(i, mat) for mat, i in material_ids_by_material.items()]
     materials.sort()
     for i, m in materials:
         tag = material_to_feb(m)
-        try:
-            tag.attrib['name'] = model.material_labels[i]
-        except KeyError:
-            pass
+        if 'name' in tag.attrib:
+            tag.attrib['name'] = model.material_labels[mat]
         tag.attrib['id'] = str(i + 1)
         Material.append(tag)
+    # Assemble a list of all implicit rigid bodies used in the model.
+    # There is currently no list of rigid bodies in the model or mesh
+    # objects, so we have to search for them.  Rigid bodies may be
+    # referenced in fixed constraints (model.fixed['body'][k] where k ∈
+    # 'x1', 'x2', 'x3', 'α1', 'α2', 'α3') or in
+    # model.steps[i]['bc']['body'] for each step i.
+    implicit_bodies_to_process = set()  # memo
+    # Search fixed constraints for rigid bodies
+    for k in model.fixed['body']:
+        for body in model.fixed['body'][k]:
+            if isinstance(body, ImplicitBody):
+                implicit_bodies_to_process.add(body)
+    # Search steps' constraints for rigid bodies
+    for step in model.steps:
+        for body in step['bc']['body']:
+            if isinstance(body, ImplicitBody):
+                implicit_bodies_to_process.add(body)
+    # Create FEBio rigid materials for all implicit rigid bodies and add
+    # their rigid interfaces with the mesh.  That the implicit material
+    # is rigid is an assumption, but an implicit deformable material in
+    # FEA wouldn't make any sense.
+    implicit_rigid_material_by_body = {}
+    for i, implicit_body in enumerate(implicit_bodies_to_process):
+        body_name = f"implicit_rigid_body_{i+1}"
+        # Create the implicit body's FEBio rigid material
+        mat = feb.material.RigidBody()
+        tag = material_to_feb(mat)
+        # TODO: Support comments in reader
+        # tag.append(ET.Comment("Implicit rigid body"))
+        mat_id = len(Material)
+        tag.attrib['id'] = str(mat_id + 1)
+        tag.attrib['name'] = body_name + "_psuedo-material"
+        Material.append(tag)
+        # Update material registries
+        material_ids_by_material[mat] = mat_id
+        implicit_rigid_material_by_body[body] = mat
+        #
+        # Add the implicit body's rigid interface with the mesh
+        if version == '2.0':
+            # FEBio XML 2.0 puts rigid bodies under §Constraints
+            e_interface = ET.SubElement(e_contact, 'contact',
+                                        type='rigid')
+            for i in implicit_body.interface:
+                # assumes interface is node list
+                ET.SubElement(e_interface, 'node', id=str(i + 1),
+                              rb=str(mat_id + 1))
+        elif version_major == 2 and version_minor >= 5:
+            # FEBio XML 2.0 puts rigid bodies under §Boundary
+            name_base = f"implicit_rigid_body_{body_name}_interface"
+            # assumes interface is node list
+            name = add_autogen_nodeset(model, root, name_base, implicit_body.interface)
+            ET.SubElement(e_boundary, "rigid", rb=str(mat_id + 1),
+                          node_set=name)
 
     # Permanently fixed nodes
     for axis, nodeset in model.fixed['node'].items():
@@ -283,14 +349,29 @@ def xml(model, version='2.5'):
                               node_set=nm)
     # Permanently fixed bodies
     body_bcs = {}
+    # Choose where to put rigid body constraints depending on FEBio XML
+    # version.
+    if version == '2.0':
+        e_bc_body_parent = e_constraints
+    elif version_major == 2 and version_minor >= 5:
+        e_bc_body_parent = e_boundary
+    # Collect rigid body boundary conditionsn in a more convenient
+    # heirarchy
     for axis, bodies in model.fixed['body'].items():
         for body in bodies:
             body_bcs.setdefault(body, set()).add(axis)
+    # Create the tags specifying fixed constraints for the rigid bodies
     for body, axes in body_bcs.items():
-        mat_id = material_ids[body.elements[0].material]
-        # TODO: ensure that body is all one material
-        e_body = ET.SubElement(e_constraints, 'rigid_body',
-                               mat=str(mat_id + 1))
+        e_body = ET.SubElement(e_bc_body_parent, 'rigid_body')
+        # Assign the body's material
+        if isinstance(body, Body):
+            body_material = body.elements[0].material
+            # TODO: ensure that body is all one material
+        elif isinstance(body, ImplicitBody):
+            body_material = implicit_rigid_material_by_body[body]
+        mat_id = material_ids_by_material[body_material]
+        e_body.attrib['mat'] = str(mat_id + 1)
+        # Write tags for each of the fixed degrees of freedom
         for ax in axes:
             ET.SubElement(e_body, 'fixed', bc=febioxml.axis_to_febio[ax])
 
@@ -341,14 +422,9 @@ def xml(model, version='2.5'):
     ET.SubElement(plotfile, 'var', type='displacement')
     ET.SubElement(plotfile, 'var', type='stress')
 
-    e_contact = contact_section(model)
-    root.append(e_contact)
-    # The <Contact> tag must come before the <Step> tag or FEBio will
-    # only apply the specified contact constraints to the last step
-    # (this is an FEBio bug).
-
     # Step section(s)
     cumulative_time = 0.0
+    visited_implicit_bodies = set()
     for i, step in enumerate(model.steps):
         e_step = ET.SubElement(root, 'Step',
                                name='Step{}'.format(i + 1))
@@ -356,7 +432,7 @@ def xml(model, version='2.5'):
             ET.SubElement(e_step, 'Module', type=step['module'])
         # Warn if there's an incompatibility between requested materials
         # and modules.
-        for mat in material_ids:
+        for mat in material_ids_by_material:
             if step['module'] not in febioxml.module_compat_by_mat[type(mat)]:
                 raise ValueError(f"Material `{type(mat)}` is not compatible with Module {step['module']}")
         e_con = ET.SubElement(e_step, 'Control')
@@ -386,7 +462,7 @@ def xml(model, version='2.5'):
         # Boundary conditions
         #
         # FEBio XML spreads the boundary conditions (constraints) out in
-        # difficult-to-organize way.
+        # amongst many tags, in a rather disorganized fashion.
         #
         # For nodal contraints, there is one parent tag per kind + axis
         # + sequence, and one child tag per node + value.  The parent
@@ -422,6 +498,7 @@ def xml(model, version='2.5'):
                 node_memo[kind][ax]['sequence'] = bc['sequence']
                 node_memo[kind][ax].setdefault('nodes', []).append(node_id)
                 node_memo[kind][ax].setdefault('scales', []).append(bc['scale'])
+        # TODO: support kind == 'fixed'.  (Does that make sense for a step?)
         for kind in node_memo:
             for axis in node_memo[kind]:
                 bc = node_memo[kind][axis]
@@ -461,10 +538,23 @@ def xml(model, version='2.5'):
                         ET.SubElement(e_bc, 'relative').text = "0"
                     e_bc.attrib['node_set'] = name
         for body in step['bc']['body']:
-            mat_id = material_ids[body.elements[0].material]
-            e_body = ET.SubElement(e_bc_body_parent, mat=str(mat_id + 1))
-            for axis in ste['bc']['body'][body]:
-                bc = step['bc']['node'][node_id][ax]
+            # Create or find the associated materials
+            if isinstance(body, Body):
+                # If an explicit body, its elements define its
+                # materials.  We assume that the body is homogenous.
+                mat = k.elements[0].material
+                mat_id = material_ids_by_material[mat]
+            elif isinstance(body, ImplicitBody):
+                mat = implicit_rigid_material_by_body[body]
+                mat_id = material_ids_by_material[mat]
+            else:
+                msg = f"body {k} does not have a supported type.  " + \
+                    "Supported body types are Body and ImplicitBody."
+                raise ValueError(msg)
+            # Create the XML tags for the rigid body BC
+            e_body = ET.SubElement(e_bc_body_parent, 'rigid_body', mat=str(mat_id + 1))
+            for axis in step['bc']['body'][body]:
+                bc = step['bc']['body'][body][ax]
                 if bc['sequence'] == 'fixed':
                     kind = 'fixed'
                 else:  # bc['sequence'] is Sequence
