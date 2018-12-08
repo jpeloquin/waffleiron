@@ -341,8 +341,8 @@ def xml(model, version='2.5'):
     for i, step in enumerate(model.steps):
         e_step = ET.SubElement(root, 'Step',
                                name='Step{}'.format(i + 1))
-        ET.SubElement(e_step, 'Module',
-                      type=step['module'])
+        if version == '2.0':
+            ET.SubElement(e_step, 'Module', type=step['module'])
         # Warn if there's an incompatibility between requested materials
         # and modules.
         for mat in material_ids:
