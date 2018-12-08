@@ -154,6 +154,18 @@ def material_to_feb(mat):
     return e
 
 
+def choose_module(materials):
+    """Determine which module should be used to run the model.
+
+    Currently only chooses between solid and biphasic.
+
+    """
+    module = "solid"
+    for m in materials:
+        if isinstance(m, feb.material.PoroelasticSolid):
+            module = "biphasic"
+    return module
+
 def xml(model, version='2.5'):
     """Convert a model to an FEBio XML tree.
 
@@ -162,15 +174,24 @@ def xml(model, version='2.5'):
     on-disk .feb file.
 
     """
-    root = ET.Element('febio_spec', version="{}".format(version))
-    Globals = ET.SubElement(root, 'Globals')
-    Material = ET.SubElement(root, 'Material')
-
     # Enumerate materials.  We do this early because in FEBio XML the
-    # material ids are needed to define the geometry and meshdata
+    # material ids are needed to define the Module, Geometry and MeshData
     # sections.
     material_ids = {k: v for v, k
                     in enumerate(set(e.material for e in model.mesh.elements))}
+
+    root = ET.Element('febio_spec', version="{}".format(version))
+    version_major, version_minor = [int(a) for a in version.split(".")]
+    if version_major == 2 and version_minor >= 5:
+        e_module = ET.SubElement(root, 'Module')
+        # <Module> must exist and be first tag for FEBio XML ≥ 2.5.  We
+        # need to figure out what the module should be, but will do that
+        # later once the materials are enumerated.
+        module = choose_module([m for m in material_ids])
+        e_module.attrib["type"] = module
+
+    Globals = ET.SubElement(root, 'Globals')
+    Material = ET.SubElement(root, 'Material')
 
     parts = febioxml.parts(model)
     Geometry = febioxml.geometry_section(model, parts, material_ids)
