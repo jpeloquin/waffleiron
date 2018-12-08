@@ -274,7 +274,8 @@ class FebReader:
             step = {'control': {}}
             # Module
             e_module = e_step.find('Module')
-            step['module'] = e_module.attrib['type']
+            if e_module:
+                step['module'] = e_module.attrib['type']
             # Control section
             e_control = e_step.find('Control')
             for e in e_control:
