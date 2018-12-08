@@ -274,7 +274,7 @@ class FebReader:
             step = {'control': {}}
             # Module
             e_module = e_step.find('Module')
-            if e_module:
+            if e_module is not None:
                 step['module'] = e_module.attrib['type']
             # Control section
             e_control = e_step.find('Control')
