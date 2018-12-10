@@ -30,8 +30,11 @@ control_tagnames_to_febio = {'time steps': 'time_steps',
                              'opt iter': 'opt_iter'}
 control_tagnames_from_febio = {v: k for k, v in control_tagnames_to_febio.items()}
 
+# TODO: Redesign the compatibility system so that compatibility can be
+# derived from the material's type.
 module_compat_by_mat = {material.PoroelasticSolid: set(['biphasic']),
-                        material.RigidBody: set(['solid', 'biphasic'])}
+                        material.RigidBody: set(['solid', 'biphasic']),
+                        material.LinearOrthotropicElastic: set(['solid', 'biphasic'])}
 
 def read_named_sets(xml_root):
     """Read nodesets, etc., and apply them to a model."""
