@@ -325,7 +325,7 @@ def xml(model, version='2.5'):
                               rb=str(mat_id + 1))
         elif version_major == 2 and version_minor >= 5:
             # FEBio XML 2.0 puts rigid bodies under §Boundary
-            name_base = f"implicit_rigid_body_{body_name}_interface"
+            name_base = f"{body_name}_interface"
             # assumes interface is node list
             name = add_autogen_nodeset(model, root, name_base, implicit_body.interface)
             ET.SubElement(e_boundary, "rigid", rb=str(mat_id + 1),
@@ -561,7 +561,15 @@ def xml(model, version='2.5'):
                     kind = 'variable'
                     seq = bc['sequence']
                     v = bc['scale']
-                e_bc = ET.SubElement(e_body, bc_tag_nm['body'][kind],
+                # Determine which tag name to use for the specified
+                # variable: force or displacement
+                if bc['variable'] == 'displacement':
+                     tagname = bc_tag_nm['body'][kind]
+                elif bc['variable'] == 'force':
+                     tagname = 'force'
+                else:
+                     raise ValueError(f"Variable {bc['variable']} not supported for BCs.")
+                e_bc = ET.SubElement(e_body, tagname,
                                      bc=febioxml.axis_to_febio[axis])
                 if kind == 'variable':
                     e_bc.attrib['lc'] = str(seq_id[seq] + 1)
