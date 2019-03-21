@@ -67,14 +67,14 @@ class ImplicitBody:
 
 class ContactConstraint:
     """A constraint defining contact between two surfaces."""
-    def __init__(self, master, follower, algorithm=None,
+    def __init__(self, leader, follower, algorithm=None,
                  auto_penalty=True,
                  auto_penalty_scale=1,
                  penalty_factor=None,
                  augmented_lagrange=False,
                  passes=1,
                  **kwargs):
-        self.master = master
+        self.leader = leader
         self.follower = follower
         self.algorithm = algorithm
         self.augmented_lagrange = augmented_lagrange

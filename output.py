@@ -594,7 +594,7 @@ def contact_section(model):
         # (two_pass would go here)
         # Write surfaces
         e_master = ET.SubElement(tag_contact, 'surface', type="master")
-        for f in contact.master:
+        for f in contact.leader:
             e_master.append(tag_face(f))
         e_follower = ET.SubElement(tag_contact, 'surface', type="slave")
         for f in contact.follower:
