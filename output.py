@@ -312,7 +312,7 @@ def xml(model, version='2.5'):
         Material.append(tag)
         # Update material registries
         material_ids_by_material[mat] = mat_id
-        implicit_rigid_material_by_body[body] = mat
+        implicit_rigid_material_by_body[implicit_body] = mat
         #
         # Add the implicit body's rigid interface with the mesh
         if version == '2.0':
