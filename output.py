@@ -542,7 +542,7 @@ def xml(model, version='2.5'):
             if isinstance(body, Body):
                 # If an explicit body, its elements define its
                 # materials.  We assume that the body is homogenous.
-                mat = k.elements[0].material
+                mat = body.elements[0].material
                 mat_id = material_ids_by_material[mat]
             elif isinstance(body, ImplicitBody):
                 mat = implicit_rigid_material_by_body[body]
