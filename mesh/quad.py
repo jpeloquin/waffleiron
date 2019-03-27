@@ -80,7 +80,7 @@ def quadrilateral(col1, col2, row1, row2):
 
         # Add interpolated points for this row
         thisrow_pts = [col1[i]]
-        v_c = np.array(col2[i] - col1[i])
+        v_c = np.array(col2[i]) - np.array(col1[i])
         u_c = v_c / np.linalg.norm(v_c)
         for j in range(1, nc - 1):
             v_r = np.array(row2[j] - row1[j])
