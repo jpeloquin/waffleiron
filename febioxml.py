@@ -41,14 +41,22 @@ def read_named_sets(xml_root):
     sets = {'nodes': {},
             'facets': {},
             'elements': {}}
-    set_list = (('nodes', 'NodeSet'),
-                ('facets', 'Surface'),
-                ('elements', 'ElementSet'))
-    for k, tag in set_list:
-        for e_set in xml_root.findall('./Geometry/' + tag):
+    tag_name = {'nodes': 'NodeSet',
+                'facets': 'Surface',
+                'elements': 'ElementSet'}
+    # Handle items that are stored by id
+    for k in ["nodes", "elements"]:
+        for e_set in xml_root.findall('./Geometry/' + tag_name[k]):
             items = set([])
             for e_item in e_set.getchildren():
                 i = int(e_item.attrib['id'])
                 items.update([i])
             sets[k][e_set.attrib['name']] = items
+    # Handle items that are stored as themselves
+    for k in ["facets"]:
+        for tag_set in xml_root.findall('./Geometry/' + tag_name[k]):
+            items = []
+            for tag_item in tag_set.getchildren():
+                items.append(tuple([int(s.strip()) for s in tag_item.text.split(",")]))
+            sets[k][tag_set.attrib["name"]] = items
     return sets
