@@ -73,10 +73,12 @@ class ContactConstraint:
                  penalty_factor=None,
                  augmented_lagrange=False,
                  passes=1,
+                 tension=False,
                  **kwargs):
         self.leader = leader
         self.follower = follower
         self.algorithm = algorithm
+        self.tension = tension
         self.augmented_lagrange = augmented_lagrange
         self.passes = passes
         if auto_penalty:

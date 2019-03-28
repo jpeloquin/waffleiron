@@ -585,6 +585,10 @@ def contact_section(model):
                            if type(constraint) is ContactConstraint]
     for contact in contact_constraints:
         tag_contact = ET.SubElement(tag_branch, 'contact', type=contact.algorithm)
+        # Set compression only or tension–compression
+        if contact.tension and not contact.algorithm == "sliding-elastic":
+            raise ValueError(f"Only sliding–elastic contact is known to support tension–compression contact in FEBio.")
+        ET.SubElement(tag_contact, 'tension').text = "1" if contact.tension else "0"
         # Write penalty-related tags
         ET.SubElement(tag_contact, 'auto_penalty') \
           .text = "1" if contact.penalty['type'] == 'auto' else "0"
