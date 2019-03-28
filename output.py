@@ -162,9 +162,12 @@ def add_autogen_nodeset(model, xml_root, name, nodes):
 
     """
     nm_base = name
+    # Find the first integer not already used as a suffix for the name
     i = 0
-    while name in model.named_sets:
-        name = nm_base + "_" + str(i)
+    while nm_base + "_" + str(i) in model.named_sets['nodes']:
+        i += 1
+    name = nm_base + "_" + str(i)
+    model.named_sets['nodes'][name] = nodes
     model.named_sets['nodes'][name] = nodes
     # Create a tag for each node
     e_geometry = xml_root.find("./Geometry")
