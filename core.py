@@ -2,6 +2,7 @@ from copy import deepcopy
 from math import inf
 from operator import itemgetter
 import sys
+from warnings import warn
 
 import numpy as np
 from scipy.spatial import KDTree
@@ -84,6 +85,8 @@ class ContactConstraint:
         if auto_penalty:
             self.penalty = {'type': 'auto',
                             'factor': auto_penalty_scale}
+            if penalty_factor is not None:
+                warn("A value for `penalty_factor` was provided, but automatic penalty factor calculation was also requested.  The `penalty_factor` value will not be used.  You may want to set `auto_penalty_scale` instead.")
         else:
             assert penalty_factor is not None
             self.penalty = {'type': 'manual',
