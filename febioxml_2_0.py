@@ -3,6 +3,7 @@ from collections import defaultdict
 # System packages
 from lxml import etree as ET
 # Same-package modules
+from .core import ContactConstraint
 from .output import material_to_feb
 from .conditions import Sequence
 from .control import step_duration
@@ -242,6 +243,43 @@ def xml(model):
 
     tree = ET.ElementTree(root)
     return tree
+
+
+def contact_section(model):
+    tag_branch = ET.Element('Contact')
+    contact_constraints = [constraint for constraint in model.constraints
+                           if type(constraint) is ContactConstraint]
+    for contact in contact_constraints:
+        tag_contact = ET.SubElement(tag_branch, 'contact', type=contact.algorithm)
+        # Set compression only or tension–compression
+        if contact.algorithm == "sliding-elastic":
+            ET.SubElement(tag_contact, 'tension').text = str(int(contact.tension))
+        else:
+            if contact.tension:
+                raise ValueError(f"Only the sliding–elastic contact algorithm is known to support tension–compression contact in FEBio.")
+        # Write penalty-related tags
+        ET.SubElement(tag_contact, 'auto_penalty') \
+          .text = "1" if contact.penalty['type'] == 'auto' else "0"
+        ET.SubElement(tag_contact, 'penalty').text = f"{contact.penalty['factor']}"
+        # Write algorithm modification tags
+        ET.SubElement(tag_contact, 'laugon').text = "1" if contact.augmented_lagrange else "0"
+        # (two_pass would go here)
+        # Write surfaces
+        e_master = ET.SubElement(tag_contact, 'surface', type="master")
+        for f in contact.leader:
+            e_master.append(tag_facet(f))
+        e_follower = ET.SubElement(tag_contact, 'surface', type="slave")
+        for f in contact.follower:
+            e_follower.append(tag_facet(f))
+    return tag_branch
+
+
+def tag_facet(facet):
+    nm = {3: "tri3",
+          4: "quad4"}
+    tag = ET.Element(nm[len(facet)])
+    tag.text = ", ".join([f"{i+1}" for i in facet])
+    return tag
 
 
 def split_bc_names(s):
