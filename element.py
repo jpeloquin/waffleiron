@@ -243,7 +243,7 @@ class Element(object):
                           for f in self.face_nodes)
         else:
             faces = self.face_nodes
-        faces = map(feb._canonical_face, faces)
+        faces = [feb._canonical_face(f) for f in faces]
         return faces
 
     def face_normals(self, config='reference'):
