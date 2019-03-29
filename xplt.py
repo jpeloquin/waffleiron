@@ -391,10 +391,6 @@ def unpack_block_data(data, fmt, endian):
             v = struct.unpack(endian + n * 'I', data)
         else:  # float
             v = struct.unpack(endian + n * 'f', data)
-        if len(v) == 1:  # Flatten singleton tuple
-            # TODO: Distinguish b/w nodeset floats (which could, in
-            # principle, be of length one) and singleton floats.
-            v = v[0]
     elif fmt == 'vec3f':
         if len(data) % 12 != 0:
             raise ValueError("Input data cannot be evenly divided into "
@@ -489,8 +485,15 @@ class XpltData:
             for b_var in b_cat['data']:
                 var = {}
                 for b in b_var['data']:
-                    value = b['data']
-                    var[b['name']] = value
+                    # b is a block with keys: "name", "tag", "type" →
+                    # "leaf" or "branch", "address" → int, "size" → int,
+                    # and "data"
+                    var[b['name']] = b['data']
+                # Flatten data that is supposed to have only one value
+                assert len(var["item type"]) == 1
+                var['item type'] = var['item type'][0]
+                assert len(var["item format"]) == 1
+                var['item format'] = var['item format'][0]
                 # Convert coded values
                 var['item type'] = item_type_from_id[var['item type']]
                 var['item format'] = item_format_from_id[var['item format']]
@@ -550,6 +553,8 @@ class XpltData:
                 for b in b_var['data']:
                     var[b['name']] = b['data']
                 # Unpack variable data
+                assert len(var["variable ID"]) == 1
+                var["variable ID"] = var["variable ID"][0]
                 var_id = var['variable ID'] - 1  # to 0-index
                 entry = self.data_dictionary[cat_name][var_id]
                 # FEBio breaks from its documented tag format for
