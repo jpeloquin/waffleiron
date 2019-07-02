@@ -143,23 +143,8 @@ class FebReader:
             # Read material into dictionary
             material = self._read_material(m)
             mat_id = int(m.attrib['id']) - 1  # FEBio counts from 1
-
-            # Convert material to class if possible
-            def convert_mat(d):
-                if d['material'] in feb.material.class_from_name:
-                    cls = feb.material.class_from_name[d['material']]
-                    if d['material'] == 'solid mixture':
-                        constituents = []
-                        for d_child in d['constituents']:
-                            constituents.append(convert_mat(d_child))
-                        return cls(constituents)
-                    else:
-                        return cls(d['properties'])
-                else:
-                    raise NotImplementedError
-
             try:
-                material = convert_mat(material)
+                material = mat_obj_from_elemd(material)
             except NotImplementedError:
                 warnings.warn("Warning: Material type `{}` is not implemented "
                               "for post-processing.  It will be represented "
@@ -322,6 +307,38 @@ class FebReader:
         # Create mesh
         mesh = feb.Mesh(nodes, elements)
         return mesh
+
+
+def mat_obj_from_elemd(d):
+    """Convert material element to material object"""
+    if d["material"] in feb.material.solid_class_from_name:
+        cls = feb.material.solid_class_from_name[d["material"]]
+        if d["material"] == "solid mixture":
+            constituents = []
+            for d_child in d["constituents"]:
+                constituents.append(mat_obj_from_elemd(d_child))
+            return cls(constituents)
+        elif d["material"] == "biphasic":
+            # Instantiate Permeability object
+            p_props = d["properties"]["permeability"]
+            typ = d["properties"]["permeability"]["type"]
+            p_class = feb.material.perm_class_from_name[typ]
+            permeability = p_class.from_feb(**p_props)
+            # Instantiate solid constituent object
+            if len(d["constituents"]) > 1:
+                # TODO: Specify which material in the error message.
+                # This requires retaining material ids in the dict
+                # passed to this function.
+                raise ValueError("""A porelastic solid was encountered with {len(d['constituents'])} solid constituents.  Poroelastic solids must have exactly one solid constituent.""")
+            solid = mat_obj_from_elemd(d["constituents"][0])
+            # Return the Poroelastic Solid object
+            return feb.material.PoroelasticSolid(solid, permeability)
+        elif hasattr(cls, "from_feb") and callable(cls.from_feb):
+            return cls.from_feb(**d["properties"])
+        else:
+            return cls(d["properties"])
+    else:
+        raise ValueError(f"{d['material']} is not supported in the loading of FEBio XML.")
 
 
 class XpltReader:

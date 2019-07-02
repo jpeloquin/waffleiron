@@ -89,20 +89,35 @@ def neo_hookean_to_feb(mat):
     return e
 
 
-def poroelastic_to_feb(mat):
-    """Convert Poroelastic material instance to FEBio XML.
+def iso_const_perm_to_feb(mat):
+    """Convert IsotropicConstantPermeability instance to FEBio XML"""
+    e = ET.Element("permeability", type="perm-const-iso")
+    ET.SubElement(e, "perm").text = str(mat.k)
+    return e
 
-    """
+
+def iso_holmes_mow_perm_to_feb(mat):
+    """Convert IsotropicHolmesMowPermeability instance to FEBio XML"""
+    e = ET.Element("permeability", type="perm-Holmes-Mow")
+    ET.SubElement(e, "perm").text = str(mat.k0)
+    ET.SubElement(e, "M").text = str(mat.M)
+    ET.SubElement(e, "alpha").text = str(mat.α)
+    return e
+
+
+def poroelastic_to_feb(mat):
+    """Convert Poroelastic material instance to FEBio XML"""
     e = ET.Element('material', type='biphasic')
     # Add solid material
-    m = material_to_feb(mat.solid_material)
-    m.tag = 'solid'
-    e.append(m)
+    e_solid = material_to_feb(mat.solid_material)
+    e_solid.tag = 'solid'
+    e.append(e_solid)
     # Add permeability
-    txt_from_kind = {'constant isotropic': 'perm-const-iso'}
-    e_permeability = ET.SubElement(e, 'permeability',
-                                   type=txt_from_kind[mat.kind])
-    ET.SubElement(e_permeability, 'perm').text = str(mat.permeability)
+    typ = feb.material.perm_name_from_class[type(mat.permeability)]
+    f = {feb.material.IsotropicConstantPermeability: iso_const_perm_to_feb,
+         feb.material.IsotropicHolmesMowPermeability: iso_holmes_mow_perm_to_feb}
+    e_permeability = f[type(mat.permeability)](mat.permeability)
+    e.append(e_permeability)
     return e
 
 
@@ -131,6 +146,16 @@ def rigid_body_to_feb(mat):
     return e
 
 
+def donnan_to_feb(mat):
+    """Convert DonnanSwelling material instance to FEBio XML."""
+    e = ET.Element("material", type="Donnan equilibrium")
+    ET.SubElement(e, "phiw0").text = str(mat.phi0_w)
+    ET.SubElement(e, "cF0").text = str(mat.fcd0)
+    ET.SubElement(e, "bosm").text = str(mat.ext_osm)
+    # ET.SubElement(e, "Phi").text = "0"
+    return e
+
+
 def material_to_feb(mat):
     """Convert a material instance to FEBio XML.
 
@@ -145,7 +170,8 @@ def material_to_feb(mat):
              feb.material.LinearOrthotropicElastic: linear_orthotropic_elastic_to_feb,
              feb.material.PoroelasticSolid: poroelastic_to_feb,
              feb.material.SolidMixture: solidmixture_to_feb,
-             feb.material.RigidBody: rigid_body_to_feb}
+             feb.material.RigidBody: rigid_body_to_feb,
+             feb.material.DonnanSwelling: donnan_to_feb}
         try:
             e = f[type(mat)](mat)
         except ValueError:

@@ -24,16 +24,69 @@ def fromlame(y, u):
     return E, v
 
 
+class Permeability:
+    """Parent type for Permeability implementations."""
+
+    def __init__(self):
+        msg = """The Permeability class is meant only to serve as a supertype for
+child classes that implement the necessary functionality.  Only its
+child classes should be instantiated as objects."""
+        raise NotImplementedError(msg)
+
+
+class IsotropicConstantPermeability(Permeability):
+    """Isotropic strain-independent permeability"""
+
+    def __init__(self, k: float):
+        self.k = k
+
+    @classmethod
+    def from_feb(cls, perm: float, **kwargs):
+        return cls(perm)
+
+
+class IsotropicHolmesMowPermeability(Permeability):
+    """Isotropic Holmes-Mow permeability"""
+    def __init__(self, k0: float, M: float, α: float):
+        self.k0 = k0
+        self.M = M
+        self.α = α
+
+    @classmethod
+    def from_feb(cls, perm: float, M: float, alpha: float, **kwargs):
+        return cls(perm, M, alpha)
+
+
 class PoroelasticSolid:
     """Fluid-saturated solid.
 
     Currently only isotropic permeability is allowed.
 
     """
-    def __init__(self, solid, permeability):
+    def __init__(self, solid, permeability: Permeability):
         self.solid_material = solid
-        self.kind = 'constant isotropic'
         self.permeability = permeability
+
+
+class DonnanSwelling:
+    """Swelling pressure of the Donnan equilibrium type."""
+    def __init__(self, phi0_w: float, fcd0: float, ext_osm: float):
+        # Bounds checks
+        if not (0 <= phi0_w <= 1):
+            raise ValueError(f"phi0_w = {phi0_w}; it is required that 0 ≤ phi0_w ≤ 1")
+        if not (fcd0 > 0):
+            raise ValueError(f"fcd0 = {fcd0}; it is required that 0 < fcd0")
+        if not (ext_osm > 0):
+            raise ValueError(f"ext_osm = {ext_osm}; it is required that 0 < ext_osm")
+        # Store values
+        self.phi0_w = phi0_w
+        self.fcd0 = fcd0
+        self.ext_osm = ext_osm
+        # TODO: Figure out what Φ is for and implement it
+
+    @classmethod
+    def from_feb(cls, phiw0: float, cF0: float, bosm: float, **kwargs):
+        return cls(phiw0, cF0, bosm)
 
 
 class SolidMixture:
@@ -405,10 +458,16 @@ class NeoHookean:
         return s
 
 
-class_from_name = {'isotropic elastic': IsotropicElastic,
-                   'Holmes-Mow': HolmesMow,
-                   'fiber-exp-pow': ExponentialFiber,
-                   'neo-Hookean': NeoHookean,
-                   'solid mixture': SolidMixture,
-                   'rigid body': RigidBody}
-name_from_class = {v: k for k, v in class_from_name.items()}
+solid_class_from_name = {'isotropic elastic': IsotropicElastic,
+                         'Holmes-Mow': HolmesMow,
+                         'fiber-exp-pow': ExponentialFiber,
+                         'neo-Hookean': NeoHookean,
+                         'solid mixture': SolidMixture,
+                         'rigid body': RigidBody,
+                         'biphasic': PoroelasticSolid,
+                         'Donnan equilibrium': DonnanSwelling}
+solid_name_from_class = {v: k for k, v in solid_class_from_name.items()}
+
+perm_class_from_name = {"perm-Holmes-Mow": IsotropicHolmesMowPermeability,
+                        "perm-const-iso": IsotropicConstantPermeability}
+perm_name_from_class = {v: k for k, v in perm_class_from_name.items()}
