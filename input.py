@@ -4,16 +4,15 @@ import os
 from lxml import etree as ET
 import struct
 import numpy as np
-import febtools as feb
 import febtools.element
 from febtools.exceptions import UnsupportedFormatError
 from operator import itemgetter
 
-from .core import Body, ImplicitBody
+from .core import Model, Mesh, Body, ImplicitBody
 from . import xplt
 from . import febioxml, febioxml_2_5, febioxml_2_0
 from .conditions import Sequence
-from . import material as materials
+from . import material as material_lib
 from .febioxml import control_tagnames_from_febio, elem_cls_from_feb
 
 def _nstrip(string):
@@ -41,7 +40,7 @@ def load_model(fpath):
     # Attempt to read the FEBio xml file
     fp_feb = base + '.feb'
     try:
-        model = feb.input.FebReader(fp_feb).model()
+        model = FebReader(fp_feb).model()
         feb_ok = True
     except UnsupportedFormatError as err:
         # The .feb file is some unsupported version
@@ -55,7 +54,7 @@ def load_model(fpath):
     fp_xplt = base + '.xplt'
     if os.path.exists(fp_xplt):
         with open(fp_xplt, 'rb') as f:
-            soln = feb.xplt.XpltData(f.read())
+            soln = xplt.XpltData(f.read())
         xplt_ok = True
     else:
         xplt_ok = False
@@ -64,7 +63,7 @@ def load_model(fpath):
         model.apply_solution(soln)
     elif not feb_ok and xplt_ok:
         # Use the xplt file to construct a model
-        model = feb.Model(soln.mesh())
+        model = Model(soln.mesh())
         model.apply_solution(soln)
     elif not feb_ok and not xplt_ok:
         raise ValueError("Neither `{}` nor `{}` could be read.  Check that they exist "
@@ -200,7 +199,7 @@ class FebReader:
         """
         # Create model from mesh
         mesh = self.mesh()
-        model = feb.Model(mesh)
+        model = Model(mesh)
         model.named_sets = febioxml.read_named_sets(self.root)
         # Store materials
         model.materials, model.material_labels = self.materials()
@@ -211,7 +210,7 @@ class FebReader:
         for e_elements in self.root.findall("Geometry/Elements"):
             mat_id = int(e_elements.attrib["mat"]) - 1
             mat = model.materials[mat_id]
-            if isinstance(mat, materials.RigidBody):
+            if isinstance(mat, material_lib.RigidBody):
                 elements = []
                 for e_elem in e_elements:
                     eid = int(e_elem.attrib["id"]) - 1
@@ -360,14 +359,14 @@ class FebReader:
                                  mat=mats[mat_id])
                 elements.append(e)
         # Create mesh
-        mesh = feb.Mesh(nodes, elements)
+        mesh = Mesh(nodes, elements)
         return mesh
 
 
 def mat_obj_from_elemd(d):
     """Convert material element to material object"""
-    if d["material"] in feb.material.solid_class_from_name:
-        cls = feb.material.solid_class_from_name[d["material"]]
+    if d["material"] in material_lib.solid_class_from_name:
+        cls = material_lib.solid_class_from_name[d["material"]]
         if d["material"] == "solid mixture":
             constituents = []
             for d_child in d["constituents"]:
@@ -377,7 +376,7 @@ def mat_obj_from_elemd(d):
             # Instantiate Permeability object
             p_props = d["properties"]["permeability"]
             typ = d["properties"]["permeability"]["type"]
-            p_class = feb.material.perm_class_from_name[typ]
+            p_class = material_lib.perm_class_from_name[typ]
             permeability = p_class.from_feb(**p_props)
             # Instantiate solid constituent object
             if len(d["constituents"]) > 1:
@@ -387,7 +386,7 @@ def mat_obj_from_elemd(d):
                 raise ValueError("""A porelastic solid was encountered with {len(d['constituents'])} solid constituents.  Poroelastic solids must have exactly one solid constituent.""")
             solid = mat_obj_from_elemd(d["constituents"][0])
             # Return the Poroelastic Solid object
-            return feb.material.PoroelasticSolid(solid, permeability)
+            return material_lib.PoroelasticSolid(solid, permeability)
         elif hasattr(cls, "from_feb") and callable(cls.from_feb):
             return cls.from_feb(**d["properties"])
         else:
@@ -497,7 +496,7 @@ class XpltReader:
         finally:
             self.f.close()
         node_list = np.array(node_list)
-        mesh = feb.Mesh(node_list, element_list)
+        mesh = Mesh(node_list, element_list)
         return mesh
 
     def material(self):
