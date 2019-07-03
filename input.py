@@ -9,9 +9,11 @@ import febtools.element
 from febtools.exceptions import UnsupportedFormatError
 from operator import itemgetter
 
+from .core import Body, ImplicitBody
 from . import xplt
 from . import febioxml, febioxml_2_5, febioxml_2_0
 from .conditions import Sequence
+from . import material as materials
 from .febioxml import control_tagnames_from_febio, elem_cls_from_feb
 
 def _nstrip(string):
@@ -199,10 +201,30 @@ class FebReader:
         # Create model from mesh
         mesh = self.mesh()
         model = feb.Model(mesh)
+        model.named_sets = febioxml.read_named_sets(self.root)
         # Store materials
         model.materials, model.material_labels = self.materials()
-        # Named sets
-        model.named_sets = febioxml.read_named_sets(self.root)
+
+        # Read explicit rigid bodies.  Create a Body object for each
+        # rigid body "material" in the XML with explicit geometry.
+        EXPLICIT_BODIES = {}
+        for e_elements in self.root.findall("Geometry/Elements"):
+            mat_id = int(e_elements.attrib["mat"]) - 1
+            mat = model.materials[mat_id]
+            if isinstance(mat, materials.RigidBody):
+                elements = []
+                for e_elem in e_elements:
+                    eid = int(e_elem.attrib["id"]) - 1
+                    elements.append(model.mesh.elements[eid])
+                EXPLICIT_BODIES[mat_id] = Body(elements)
+        # Read implicit rigid bodies.
+        IMPLICIT_BODIES = {}
+        for e_impbod in self.root.findall("Boundary/rigid"):
+            mat_id = int(e_impbod.attrib["rb"]) - 1
+            node_ids = model.named_sets["nodes"][e_impbod.attrib["node_set"]]
+            IMPLICIT_BODIES[mat_id] = ImplicitBody(model.mesh, node_ids,
+                                                   model.materials[mat_id])
+
         # Boundary condition: fixed nodes
         axis_name_conv_from_xml = {'x': 'x1',
                                    'y': 'x2',
@@ -212,10 +234,18 @@ class FebReader:
                                  'x2': 'displacement',
                                  'x3': 'displacement',
                                  'fluid': 'pressure'}
+        dof_name_conv_from_xml = {"x": "x1",
+                                  "y": "x2",
+                                  "z": "x3",
+                                  "Rx": "α1",
+                                  "Ry": "α2",
+                                  "Rz": "α3"}
         # ^ Mapping of axis → constrained variable for <fix> tags in
         # FEBio XML.
 
         # Read fixed boundary conditions. TODO: Support solutes
+        #
+        # Read fixed nodal constraints:
         for e_fix in self.root.findall("Boundary/fix"):
             # Each <fix> tag may specify multiple bc labels.  Split them
             # up and convert each to febtools naming convention.
@@ -248,6 +278,19 @@ class FebReader:
                 if var == "pressure":
                     ax = "pressure"
                 model.fixed['node'][ax].update(node_ids)
+        # Read fixed (rigid) body constraints:
+        for e_fix in self.root.findall("Boundary/rigid_body"):
+            # Get the Body object to which <rigid_body> refers to by
+            # material id.
+            mat_id = int(e_fix.attrib["mat"]) - 1
+            if mat_id in EXPLICIT_BODIES:
+                body = EXPLICIT_BODIES[mat_id]
+            else:
+                # Assume mat_id is refers to an implicit rigid body
+                body = IMPLICIT_BODIES[mat_id]
+            for e_dof in e_fix.findall("fixed"):
+                dof = dof_name_conv_from_xml[e_dof.attrib["bc"]]
+                model.fixed["body"][dof].add(body)
 
         # Load curves (sequences)
         sequences = {}

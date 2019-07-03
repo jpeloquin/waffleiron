@@ -333,6 +333,11 @@ class Mesh:
             e = untouched_elements.pop()
             body_elements = feb.selection.e_grow([e], untouched_elements, inf)
             self.bodies.add(Body(body_elements))
+            # TODO: It's a little odd to have a list of "bodies" each
+            # defined as the maximal set of connected elements when
+            # other bodies that are not maximal sets also exist to
+            # support rigid body constraints, and these (rigid) bodies
+            # aren't in self.bodies.
             untouched_elements = untouched_elements - set(body_elements)
 
     def faces_with_node(self, idx):
