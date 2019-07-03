@@ -24,13 +24,6 @@ def _nstrip(string):
     return string
 
 
-# map FEBio xml boundary condition labels to internal labels
-ft_bc_from_fx = {'x': 'x1',
-                 'y': 'x2',
-                 'z': 'x3',
-                 'p': 'pressure'}
-
-
 def load_model(fpath):
     """Loads a model (feb) and the solution (xplt) if it exists.
 
@@ -211,32 +204,51 @@ class FebReader:
         # Named sets
         model.named_sets = febioxml.read_named_sets(self.root)
         # Boundary condition: fixed nodes
-        internal_label = {'x': 'x1',
-                          'y': 'x2',
-                          'z': 'x3',
-                          'p': 'pressure'}
-        # TODO: Solutes
+        axis_name_conv_from_xml = {'x': 'x1',
+                                   'y': 'x2',
+                                   'z': 'x3',
+                                   'p': 'fluid'}
+        var_from_fix_tag_axis = {'x1': 'displacement',
+                                 'x2': 'displacement',
+                                 'x3': 'displacement',
+                                 'fluid': 'pressure'}
+        # ^ Mapping of axis → constrained variable for <fix> tags in
+        # FEBio XML.
+
+        # Read fixed boundary conditions. TODO: Support solutes
         for e_fix in self.root.findall("Boundary/fix"):
-            # In FEBio XML 2.0, > 1 bc label can be concatenated.  In
-            # FEBio XML 2.5, each label must be separated by a comma.
+            # Each <fix> tag may specify multiple bc labels.  Split them
+            # up and convert each to febtools naming convention.
             if self.feb_version == '2.0':
-                fx_bcs = febioxml_2_0.split_bc_names(e_fix.attrib['bc'])
+                # In FEBio XML 2.0, bc labels are concatenated.
+                fixed = [axis_name_conv_from_xml[bc] for bc in
+                         febioxml_2_0.split_bc_names(e_fix.attrib['bc'])]
             elif self.feb_version == '2.5':
-                fx_bcs = febioxml_2_5.split_bc_names(e_fix.attrib['bc'])
-            # Convert from FEBio XML label to internal label, if
-            # conversion is provided
-            ft_bcs = []
-            for nm in fx_bcs:
-                if nm in ft_bc_from_fx:
-                    ft_bcs.append(ft_bc_from_fx[nm])
-                else:
-                    ft_bcs.append(nm)
-            # Apply the BCs to our model
-            for nm in ft_bcs:
-                node_ids = set()
-                for e_node in e_fix:
-                    node_ids.add(int(e_node.attrib['id']))
-                model.fixed['node'][nm].update(node_ids)
+                # In FEBio XML 2.5, bc labels are comma-delimeted.
+                fixed = [axis_name_conv_from_xml[bc] for bc in
+                         febioxml_2_5.split_bc_names(e_fix.attrib['bc'])]
+            # For each axis, apply the fixed BCs to the model.
+            for ax in fixed:
+                # Get the nodeset that is constrained
+                if self.feb_version == "2.0":
+                    # In FEBio XML 2.0, each node to which the fixed boundary
+                    # condition is applied is listed under the <fix> tag.
+                    node_ids = set()
+                    for e_node in e_fix:
+                        node_ids.add(int(e_node.attrib['id']) - 1)
+                elif self.feb_version == "2.5":
+                    # In FEBio XML 2.5, the node set to which the fixed
+                    # boundary condition is applied is referenced by name.
+                    node_ids = model.named_sets["nodes"][e_fix.attrib["node_set"]]
+                var = var_from_fix_tag_axis[ax]
+                # Hack to deal with febtools' model.fixed dict only
+                # supporting fixed displacement and pressure for nodes.
+                # At the time of this writing the axis / variable split
+                # hasn't been implemented for fixed boundary conditions.
+                if var == "pressure":
+                    ax = "pressure"
+                model.fixed['node'][ax].update(node_ids)
+
         # Load curves (sequences)
         sequences = {}
         for e_lc in self.root.findall('LoadData/loadcurve'):

@@ -175,6 +175,8 @@ class Model:
 
         axis := 'x1', 'x2', 'x3', 'fluid', 'temperature', or 'charge'.
 
+        variable := 'displacement', 'force', 'pressure', or 'flow'
+
         sequence := conditions.Sequence object or 'fixed'
 
         """
