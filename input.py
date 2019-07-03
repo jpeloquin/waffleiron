@@ -197,12 +197,17 @@ class FebReader:
         """Return model.
 
         """
-        # Create model from mesh
-        mesh = self.mesh()
+        # Get the materials dictionary so we can assign materials to
+        # elements when we read the geometry
+        material_dict, material_labels = self.materials()
+        # Create model geoemtry
+        mesh = self.mesh(materials=material_dict)
         model = Model(mesh)
+        # Store the materials and their labels
+        model.materials = material_dict
+        model.material_labels = material_labels
+        # Read and store named sets of geoemtry
         model.named_sets = febioxml.read_named_sets(self.root)
-        # Store materials
-        model.materials, model.material_labels = self.materials()
 
         # Read explicit rigid bodies.  Create a Body object for each
         # rigid body "material" in the XML with explicit geometry.
@@ -337,11 +342,12 @@ class FebReader:
             model.steps.append(step)
         return model
 
-    def mesh(self):
+    def mesh(self, materials=None):
         """Return mesh.
 
         """
-        mats, mat_labels = self.materials()
+        if materials is None:
+            materials, mat_labels = self.materials()
         nodes = [tuple([float(a) for a in b.text.split(",")])
                  for b in self.root.findall("./Geometry/Nodes/*")]
         # Read elements
@@ -356,7 +362,7 @@ class FebReader:
                 ids = [int(a) - 1 for a in elem.text.split(",")]
                 e = cls.from_ids(ids, nodes,
                                  mat_id=mat_id,
-                                 mat=mats[mat_id])
+                                 mat=materials[mat_id])
                 elements.append(e)
         # Create mesh
         mesh = Mesh(nodes, elements)
