@@ -1,5 +1,6 @@
 # Base packages
 from collections import defaultdict
+from datetime import datetime
 from math import degrees
 # System packages
 from lxml import etree as ET
@@ -310,10 +311,11 @@ def xml(model, version='2.5'):
     material_id_from_material = {v: k for k, v in model.materials.items()}
 
     root = ET.Element('febio_spec', version="{}".format(version))
+    msg = f"Exported to FEBio XML by febtools prerelease at {datetime.today().strftime('%Y-%m-%dT%H:%M:%S%z')}"
+    root.append(ET.Comment(msg))
     Globals = ET.SubElement(root, 'Globals')
     Material = ET.SubElement(root, 'Material')
 
-    root = ET.Element('febio_spec', version="{}".format(version))
     version_major, version_minor = [int(a) for a in version.split(".")]
     if version_major == 2 and version_minor >= 5:
         e_module = ET.SubElement(root, 'Module')
