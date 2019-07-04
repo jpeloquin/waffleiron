@@ -152,7 +152,7 @@ def donnan_to_feb(mat):
     ET.SubElement(e, "phiw0").text = str(mat.phi0_w)
     ET.SubElement(e, "cF0").text = str(mat.fcd0)
     ET.SubElement(e, "bosm").text = str(mat.ext_osm)
-    # ET.SubElement(e, "Phi").text = "0"
+    ET.SubElement(e, "Phi").text = str(mat.osm_coef)
     return e
 
 

@@ -70,7 +70,7 @@ class PoroelasticSolid:
 
 class DonnanSwelling:
     """Swelling pressure of the Donnan equilibrium type."""
-    def __init__(self, phi0_w: float, fcd0: float, ext_osm: float):
+    def __init__(self, phi0_w: float, fcd0: float, ext_osm: float, osm_coef: float):
         # Bounds checks
         if not (0 <= phi0_w <= 1):
             raise ValueError(f"phi0_w = {phi0_w}; it is required that 0 ≤ phi0_w ≤ 1")
@@ -82,11 +82,11 @@ class DonnanSwelling:
         self.phi0_w = phi0_w
         self.fcd0 = fcd0
         self.ext_osm = ext_osm
-        # TODO: Figure out what Φ is for and implement it
+        self.osm_coef = osm_coef
 
     @classmethod
-    def from_feb(cls, phiw0: float, cF0: float, bosm: float, **kwargs):
-        return cls(phiw0, cF0, bosm)
+    def from_feb(cls, phiw0, cF0, bosm, osm_coef=1, **kwargs):
+        return cls(phiw0, cF0, bosm, osm_coef)
 
 
 class SolidMixture:
