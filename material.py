@@ -74,9 +74,9 @@ class DonnanSwelling:
         # Bounds checks
         if not (0 <= phi0_w <= 1):
             raise ValueError(f"phi0_w = {phi0_w}; it is required that 0 ≤ phi0_w ≤ 1")
-        if not (fcd0 > 0):
+        if not (fcd0 >= 0):
             raise ValueError(f"fcd0 = {fcd0}; it is required that 0 < fcd0")
-        if not (ext_osm > 0):
+        if not (ext_osm >= 0):
             raise ValueError(f"ext_osm = {ext_osm}; it is required that 0 < ext_osm")
         # Store values
         self.phi0_w = phi0_w
