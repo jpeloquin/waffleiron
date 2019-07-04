@@ -465,8 +465,8 @@ def xml(model, version='2.5'):
         e_bc_body_parent = e_constraints
     elif version_major == 2 and version_minor >= 5:
         e_bc_body_parent = e_boundary
-    # Collect rigid body boundary conditionsn in a more convenient
-    # heirarchy
+    # Collect rigid body boundary conditions in a more convenient
+    # hierarchy
     for axis, bodies in model.fixed['body'].items():
         for body in bodies:
             body_bcs.setdefault(body, set()).add(axis)
