@@ -4,6 +4,8 @@ from numpy.linalg import det
 import math
 from math import log, exp, sin, cos
 import febtools as feb
+# Same-package modules
+from .core import Sequence, ScaledSequence
 
 
 def tolame(E, v):
@@ -24,6 +26,13 @@ def fromlame(y, u):
     return E, v
 
 
+def _is_fixed_property(p):
+    if isinstance(p, Sequence) or isinstance(p, ScaledSequence):
+        return False
+    else:
+        return True
+
+
 class Permeability:
     """Parent type for Permeability implementations."""
 
@@ -37,23 +46,23 @@ child classes should be instantiated as objects."""
 class IsotropicConstantPermeability(Permeability):
     """Isotropic strain-independent permeability"""
 
-    def __init__(self, k: float):
+    def __init__(self, k):
         self.k = k
 
     @classmethod
-    def from_feb(cls, perm: float, **kwargs):
+    def from_feb(cls, perm, **kwargs):
         return cls(perm)
 
 
 class IsotropicHolmesMowPermeability(Permeability):
     """Isotropic Holmes-Mow permeability"""
-    def __init__(self, k0: float, M: float, α: float):
+    def __init__(self, k0, M, α):
         self.k0 = k0
         self.M = M
         self.α = α
 
     @classmethod
-    def from_feb(cls, perm: float, M: float, alpha: float, **kwargs):
+    def from_feb(cls, perm, M, alpha, **kwargs):
         return cls(perm, M, alpha)
 
 
@@ -70,13 +79,13 @@ class PoroelasticSolid:
 
 class DonnanSwelling:
     """Swelling pressure of the Donnan equilibrium type."""
-    def __init__(self, phi0_w: float, fcd0: float, ext_osm: float, osm_coef: float):
+    def __init__(self, phi0_w, fcd0, ext_osm, osm_coef):
         # Bounds checks
-        if not (0 <= phi0_w <= 1):
+        if _is_fixed_property(phi0_w) and not (0 <= phi0_w <= 1):
             raise ValueError(f"phi0_w = {phi0_w}; it is required that 0 ≤ phi0_w ≤ 1")
-        if not (fcd0 >= 0):
+        if _is_fixed_property(fcd0) and not (fcd0 >= 0):
             raise ValueError(f"fcd0 = {fcd0}; it is required that 0 < fcd0")
-        if not (ext_osm >= 0):
+        if _is_fixed_property(ext_osm) and not (ext_osm >= 0):
             raise ValueError(f"ext_osm = {ext_osm}; it is required that 0 < ext_osm")
         # Store values
         self.phi0_w = phi0_w

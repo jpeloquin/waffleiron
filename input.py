@@ -8,10 +8,9 @@ import febtools.element
 from febtools.exceptions import UnsupportedFormatError
 from operator import itemgetter
 
-from .core import Model, Mesh, Body, ImplicitBody
+from .core import Model, Mesh, Body, ImplicitBody, Sequence, ScaledSequence
 from . import xplt
 from . import febioxml, febioxml_2_5, febioxml_2_0
-from .conditions import Sequence
 from . import material as material_lib
 from .febioxml import control_tagnames_from_febio, elem_cls_from_feb
 
@@ -23,6 +22,14 @@ def _nstrip(string):
         if c == '\x00':
             return string[:i]
     return string
+
+
+def _to_number(s):
+    """Convert numeric string to int or float as appropraite."""
+    try:
+        return int(s)
+    except ValueError:
+        return float(s)
 
 
 def load_model(fpath):
@@ -126,6 +133,7 @@ class FebReader:
         if self.feb_version not in ['2.0', '2.5']:
             msg = 'FEBio XML version {} is not supported by febtools'.format(self.feb_version)
             raise UnsupportedFormatError(msg, file, self.feb_version)
+        self._sequences = None
 
     def materials(self):
         """Return dictionary of materials keyed by id.
@@ -153,6 +161,41 @@ class FebReader:
                 mat_labels[mat_id] = str(mat_id)
         return mats, mat_labels
 
+
+    @property
+    def sequences(self):
+        """Return dictionary of sequences (load curves) keyed by ID.
+
+        Sequence IDs are integers starting from 0.
+
+        The first time this method is called for a FebReader object it
+        creates and memoizes a set of Sequence objects.  Subsequent
+        calls return the same Sequence objects.
+
+        """
+        if self._sequences is None:
+            self._sequences = {}
+            for e_lc in self.root.findall('LoadData/loadcurve'):
+                seq_id = int(e_lc.attrib['id']) - 1
+                def parse_pt(text):
+                    x, y = text.split(',')
+                    return float(x), float(y)
+                curve = [parse_pt(a.text) for a in e_lc.getchildren()]
+                # Set extrapolation
+                if 'extend' in e_lc.attrib:
+                    extend = e_lc.attrib['extend']
+                else:
+                    extend = 'extrapolate'  # default
+                # Set interpolation
+                if 'type' in e_lc.attrib:
+                    typ = e_lc.attrib['type']
+                else:
+                    typ = 'linear'  # default
+                # Create and store the Sequence object
+                self._sequences[seq_id] = Sequence(curve, typ=typ, extend=extend)
+        return self._sequences
+
+
     def _read_material(self, tag):
         """Get material properties dictionary from <material>.
 
@@ -176,22 +219,31 @@ class FebReader:
 
     def _read_property(self, tag):
         """Read a material property element."""
-        p = {}
-        p.update(tag.attrib)
-        for child in tag:
-            p_child = self._read_property(child)
-            p[child.tag] = p_child
-        if tag.text is not None:
-            v = tag.text.lstrip().rstrip()
-            if v:
-                v = [float(a) for a in v.split(',')]
-                if len(v) == 1:
-                    v = v[0]
-                if not p:
-                    return v
-                else:
-                    p['value'] = v
-        return p
+        # Check if this is a time-varying or fixed property
+        if "lc" in tag.attrib:
+            # The property is time-varying
+            seq_id = int(tag.attrib["lc"]) - 1
+            sequence = self.sequences[seq_id]
+            scale = _to_number(tag.text)
+            return ScaledSequence(sequence, scale)
+        else:
+            # The property is fixed
+            p = {}
+            p.update(tag.attrib)
+            for child in tag:
+                p_child = self._read_property(child)
+                p[child.tag] = p_child
+            if tag.text is not None:
+                v = tag.text.lstrip().rstrip()
+                if v:
+                    v = [float(a) for a in v.split(',')]
+                    if len(v) == 1:
+                        v = v[0]
+                    if not p:
+                        return v
+                    else:
+                        p['value'] = v
+            return p
 
     def model(self):
         """Return model.
@@ -305,21 +357,8 @@ class FebReader:
                 model.fixed["body"][dof].add(body)
 
         # Load curves (sequences)
-        sequences = {}
-        for e_lc in self.root.findall('LoadData/loadcurve'):
-            def parse_pt(text):
-                x, y = text.split(',')
-                return float(x), float(y)
-            curve = [parse_pt(a.text) for a in e_lc.getchildren()]
-            if 'extend' in e_lc.attrib:
-                extend = e_lc.attrib['extend']
-            else:
-                extend = 'extrapolate'  # default
-            if 'type' in e_lc.attrib:
-                typ = e_lc.attrib['type']
-            else:
-                typ = 'linear'  # default
-            sequences[e_lc.attrib['id']] = Sequence(curve, typ=typ, extend=extend)
+        sequences = self.sequences
+
         # Steps
         model.steps = []
         for e_step in self.root.findall('Step'):
@@ -346,7 +385,7 @@ class FebReader:
             e_dtmax = e_stepper.find('dtmax')
             if 'lc' in e_dtmax.attrib:
                 # dtmax has a must point sequence
-                step['control']['time stepper']['dtmax'] = sequences[e_dtmax.attrib['lc']]
+                step['control']['time stepper']['dtmax'] = self.sequences[int(e_dtmax.attrib['lc']) - 1]
             model.steps.append(step)
         return model
 

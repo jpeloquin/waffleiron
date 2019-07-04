@@ -7,8 +7,7 @@ from math import degrees
 from lxml import etree as ET
 # Within-module packages
 import febtools as feb
-from .core import Body, ImplicitBody, ContactConstraint, NameRegistry
-from .conditions import Sequence
+from .core import Body, ImplicitBody, ContactConstraint, NameRegistry, Sequence, ScaledSequence
 from .control import step_duration
 from . import febioxml_2_5 as febioxml
 from . import febioxml_2_0
@@ -17,62 +16,92 @@ from . import febioxml_2_0
 # Common functionality can be shared between febioxml_*_*.py files via
 # imports.
 
-def exponentialfiber_to_feb(mat):
+
+def _get_or_create_sequence_id(seq, model):
+    """Get or create ID for a sequence."""
+    try:
+        # Try looking up the sequence's ID
+        seq_id = model.named["sequences"].name(seq, "ordinal_id")
+    except KeyError:
+        # The sequence doesn't have an ID; create an ID for it
+        seq_ids = model.named["sequences"].names("ordinal_id")
+        if len(seq_ids) == 0:
+            seq_id = 0
+        else:
+            seq_id = max(seq_ids) + 1
+        model.named["sequences"].add(seq_id, seq, "ordinal_id")
+    return seq_id
+
+
+def _property_to_feb(p, tag, model):
+    """Convert a fixed or variable property to FEBio XML."""
+    e = ET.Element(tag)
+    if isinstance(p, Sequence):
+        seq_id = _get_or_create_sequence_id(p, model)
+        e.attrib["lc"] = str(seq_id + 1)
+        e.text = "1"  # basic Sequences have no scale
+    elif isinstance(p, ScaledSequence):
+        # Time-varying property, scaled
+        seq_id = _get_or_create_sequence_id(p.sequence, model)
+        e.attrib["lc"] = str(seq_id + 1)
+        e.text = str(p.scale)
+    else:
+        # Fixed property
+        e.text = str(p)
+    return e
+
+
+def exponentialfiber_to_feb(mat, model):
     """Convert ExponentialFiber material instance to FEBio XML.
 
     """
     e = ET.Element('material', type='fiber-exp-pow')
-    p = ET.SubElement(e, 'alpha')
-    p.text = str(mat.alpha)
-    p = ET.SubElement(e, 'beta')
-    p.text = str(mat.beta)
-    p = ET.SubElement(e, 'ksi')
-    p.text = str(mat.xi)
-    p = ET.SubElement(e, 'theta')
-    p.text = str(degrees(mat.theta))
-    p = ET.SubElement(e, 'phi')
-    p.text = str(degrees(mat.phi))
+    e.append(_property_to_feb(mat.alpha, "alpha", model))
+    e.append(_property_to_feb(mat.beta, "beta", model))
+    e.append(_property_to_feb(mat.xi, "ksi", model))
+    e.append(_property_to_feb(degrees(mat.theta), "theta", model))
+    e.append(_property_to_feb(degrees(mat.phi), "phi", model))
     return e
 
 
-def holmesmow_to_feb(mat):
+def holmesmow_to_feb(mat, model):
     """Convert HolmesMow material instance to FEBio XML.
 
     """
     e = ET.Element('material', type='Holmes-Mow')
-    E, v = feb.material.fromlame(mat.y, mat.mu)
-    ET.SubElement(e, 'E').text = str(E)
-    ET.SubElement(e, 'v').text = str(v)
-    ET.SubElement(e, 'beta').text = str(mat.beta)
+    E, ν = feb.material.fromlame(mat.y, mat.mu)
+    e.append(_property_to_feb(E, "E", model))
+    e.append(_property_to_feb(ν, "v", model))
+    e.append(_property_to_feb(mat.beta, "beta", model))
     return e
 
 
-def isotropicelastic_to_feb(mat):
+def isotropicelastic_to_feb(mat, model):
     """Convert IsotropicElastic material instance to FEBio XML.
 
     """
     e = ET.Element('material', type='isotropic elastic')
-    E, v = feb.material.fromlame(mat.y, mat.mu)
-    ET.SubElement(e, 'E').text = str(E)
-    ET.SubElement(e, 'v').text = str(v)
+    E, ν = feb.material.fromlame(mat.y, mat.mu)
+    e.append(_property_to_feb(E, "E", model))
+    e.append(_property_to_feb(ν, "v", model))
     return e
 
 
-def linear_orthotropic_elastic_to_feb(mat):
+def linear_orthotropic_elastic_to_feb(mat, model):
     """Convert LinearOrthotropicElastic material instance to FEBio XML.
 
     """
     e = ET.Element('material', type='orthotropic elastic')
     # Material properties
-    ET.SubElement(e, 'E1').text = str(mat.E1)
-    ET.SubElement(e, 'E2').text = str(mat.E2)
-    ET.SubElement(e, 'E3').text = str(mat.E3)
-    ET.SubElement(e, 'G12').text = str(mat.G12)
-    ET.SubElement(e, 'G23').text = str(mat.G23)
-    ET.SubElement(e, 'G31').text = str(mat.G31)
-    ET.SubElement(e, 'v12').text = str(mat.v12)
-    ET.SubElement(e, 'v23').text = str(mat.v23)
-    ET.SubElement(e, 'v31').text = str(mat.v31)
+    e.append(_property_to_feb(mat.E1, "E1", model))
+    e.append(_property_to_feb(mat.E2, "E2", model))
+    e.append(_property_to_feb(mat.E3, "E3", model))
+    e.append(_property_to_feb(mat.G12, "G12", model))
+    e.append(_property_to_feb(mat.G23, "G23", model))
+    e.append(_property_to_feb(mat.G31, "G31", model))
+    e.append(_property_to_feb(mat.v12, "v12", model))
+    e.append(_property_to_feb(mat.v23, "v23", model))
+    e.append(_property_to_feb(mat.v31, "v31", model))
     # Symmetry axes
     axes = ET.SubElement(e, 'mat_axis', type='vector')
     ET.SubElement(axes, 'a').text = ','.join([str(a) for a in mat.x1])
@@ -80,62 +109,62 @@ def linear_orthotropic_elastic_to_feb(mat):
     return e
 
 
-def neo_hookean_to_feb(mat):
+def neo_hookean_to_feb(mat, model):
     """Convert NeoHookean material instance to FEBio XML.
 
     """
     e = ET.Element('material', type='neo-Hookean')
-    E, v = feb.material.fromlame(mat.y, mat.mu)
-    ET.SubElement(e, 'E').text = str(E)
-    ET.SubElement(e, 'v').text = str(v)
+    E, ν = feb.material.fromlame(mat.y, mat.mu)
+    e.append(_property_to_feb(E, "E", model))
+    e.append(_property_to_feb(ν, "v", model))
     return e
 
 
-def iso_const_perm_to_feb(mat):
+def iso_const_perm_to_feb(mat, model):
     """Convert IsotropicConstantPermeability instance to FEBio XML"""
     e = ET.Element("permeability", type="perm-const-iso")
-    ET.SubElement(e, "perm").text = str(mat.k)
+    e.append(_property_to_feb(mat.k, "perm", model))
     return e
 
 
-def iso_holmes_mow_perm_to_feb(mat):
+def iso_holmes_mow_perm_to_feb(mat, model):
     """Convert IsotropicHolmesMowPermeability instance to FEBio XML"""
     e = ET.Element("permeability", type="perm-Holmes-Mow")
-    ET.SubElement(e, "perm").text = str(mat.k0)
-    ET.SubElement(e, "M").text = str(mat.M)
-    ET.SubElement(e, "alpha").text = str(mat.α)
+    e.append(_property_to_feb(mat.k0, "perm", model))
+    e.append(_property_to_feb(mat.M, "M", model))
+    e.append(_property_to_feb(mat.α, "alpha", model))
     return e
 
 
-def poroelastic_to_feb(mat):
+def poroelastic_to_feb(mat, model):
     """Convert Poroelastic material instance to FEBio XML"""
     e = ET.Element('material', type='biphasic')
     # Add solid material
-    e_solid = material_to_feb(mat.solid_material)
+    e_solid = material_to_feb(mat.solid_material, model)
     e_solid.tag = 'solid'
     e.append(e_solid)
     # Add permeability
     typ = feb.material.perm_name_from_class[type(mat.permeability)]
     f = {feb.material.IsotropicConstantPermeability: iso_const_perm_to_feb,
          feb.material.IsotropicHolmesMowPermeability: iso_holmes_mow_perm_to_feb}
-    e_permeability = f[type(mat.permeability)](mat.permeability)
+    e_permeability = f[type(mat.permeability)](mat.permeability, model)
     e.append(e_permeability)
     return e
 
 
-def solidmixture_to_feb(mat):
+def solidmixture_to_feb(mat, model):
     """Convert SolidMixture material instance to FEBio XML.
 
     """
     e = ET.Element('material', type='solid mixture')
     for submat in mat.materials:
-        m = material_to_feb(submat)
+        m = material_to_feb(submat, model)
         m.tag = 'solid'
         e.append(m)
     return e
 
 
-def rigid_body_to_feb(mat):
+def rigid_body_to_feb(mat, model):
     """Convert SolidMixture material instance to FEBio XML.
 
     """
@@ -144,21 +173,21 @@ def rigid_body_to_feb(mat):
         density = 1
     else:
         density = mat.density
-    ET.SubElement(e, 'density').text = str(density)
+    e.append(_property_to_feb(density, "density", model))
     return e
 
 
-def donnan_to_feb(mat):
+def donnan_to_feb(mat, model):
     """Convert DonnanSwelling material instance to FEBio XML."""
     e = ET.Element("material", type="Donnan equilibrium")
-    ET.SubElement(e, "phiw0").text = str(mat.phi0_w)
-    ET.SubElement(e, "cF0").text = str(mat.fcd0)
-    ET.SubElement(e, "bosm").text = str(mat.ext_osm)
-    ET.SubElement(e, "Phi").text = str(mat.osm_coef)
+    e.append(_property_to_feb(mat.phi0_w, "phiw0", model))
+    e.append(_property_to_feb(mat.fcd0, "cF0", model))
+    e.append(_property_to_feb(mat.ext_osm, "bosm", model))
+    e.append(_property_to_feb(mat.osm_coef, "Phi", model))
     return e
 
 
-def material_to_feb(mat):
+def material_to_feb(mat, model):
     """Convert a material instance to FEBio XML.
 
     """
@@ -175,7 +204,7 @@ def material_to_feb(mat):
              feb.material.RigidBody: rigid_body_to_feb,
              feb.material.DonnanSwelling: donnan_to_feb}
         try:
-            e = f[type(mat)](mat)
+            e = f[type(mat)](mat, model)
         except ValueError:
             msg = "{} not implemented for conversion to FEBio XML."
             print(msg.format(mat.__class__))
@@ -355,7 +384,14 @@ def xml(model, version='2.5'):
     ET.SubElement(Constants, 'T').text = '294'
     ET.SubElement(Constants, 'Fc').text = '96485e-9'
 
-    # Assign integer sequence ids.
+    # Assign integer IDs for sequences.  To do this, we have to find the
+    # sequences.  There is no central registry.  Sequences can be used
+    # in boundary conditions, time stepper curves, and any material
+    # parameter.  So finding them all is basically a lost cause.
+    #
+    # TODO: There needs to be a central registry of sequences in a
+    # model.  Or every function that might encounter a sequence needs to
+    # be able to query and update a central sequence registry.
     i = 0
     seq_id = {}
     for step in model.steps:
@@ -385,7 +421,7 @@ def xml(model, version='2.5'):
     # just uses tag order).
     materials = sorted(material_registry.pairs("ordinal_id"))
     for mat_id, mat in materials:
-        tag = material_to_feb(mat)
+        tag = material_to_feb(mat, model)
         try:
             name = material_registry.name(mat)
         except KeyError:
@@ -420,7 +456,7 @@ def xml(model, version='2.5'):
         body_name = f"implicit_rigid_body_{i+1}"
         # Create the implicit body's FEBio rigid material
         mat = feb.material.RigidBody()
-        tag = material_to_feb(mat)
+        tag = material_to_feb(mat, model)
         # TODO: Support comments in reader
         # tag.append(ET.Comment("Implicit rigid body"))
         mat_id = len(Material)

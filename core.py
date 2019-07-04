@@ -525,6 +525,35 @@ def _e_bb(elements):
     return bb
 
 
+class Sequence:
+    """A basic time-varying sequence.
+
+    Defined by control points + interpolation method + extrapolation
+    method.
+
+    """
+    def __init__(self, seq, typ='smooth', extend='extrapolate'):
+        # Input checking
+        assert extend in ['extrapolate', 'constant', 'repeat',
+                          'repeat continuous']
+        assert typ in ['step', 'linear', 'smooth']
+        # Parameters
+        self.points = seq
+        self.typ = typ
+        self.extend = extend
+
+
+class ScaledSequence:
+    """A time-varying sequence proportional to another sequence.
+
+    Defined by a scaling factor + another sequence.
+
+    """
+    def __init__(self, sequence: Sequence, scale: float):
+        self.scale = scale
+        self.sequence = sequence
+
+
 class NameRegistry:
     """Mapping between names and objects.
 

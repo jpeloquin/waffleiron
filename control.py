@@ -9,7 +9,8 @@ import math
 # Third party modules
 import numpy as np
 # Same-package modules
-from .conditions import densify, Sequence
+from .core import Sequence
+from .conditions import densify
 
 
 def auto_control_section(sequence, pts_per_segment=6):

@@ -3,9 +3,8 @@ from collections import defaultdict
 # System packages
 from lxml import etree as ET
 # Same-package modules
-from .core import ContactConstraint
+from .core import ContactConstraint, Sequence
 from .output import material_to_feb
-from .conditions import Sequence
 from .control import step_duration
 from .febioxml import control_tagnames_to_febio, axis_to_febio, module_compat_by_mat
 
@@ -71,7 +70,7 @@ def xml(model):
     materials = [(i, mat) for mat, i in material_ids.items()]
     materials.sort()
     for i, m in materials:
-        tag = material_to_feb(m)
+        tag = material_to_feb(m, model)
         try:
             tag.attrib['name'] = model.named["materials"].name(i, "ordinal_id")
         except KeyError:

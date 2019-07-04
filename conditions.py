@@ -1,6 +1,8 @@
 """Module for adding initial and boundary conditions to models."""
 # Third party modules
 import numpy as np
+# Same-package modules
+from .core import Sequence
 
 
 def densify(curve, n):
@@ -76,18 +78,3 @@ def cyclic_stretch_sequence(targets, rate, n=None, baseline=1.0):
     sequence = Sequence(curve, extend='constant', typ='linear')
 
     return sequence
-
-
-class Sequence:
-    """A time-varying sequence for step control.
-
-    """
-    def __init__(self, seq, typ='smooth', extend='extrapolate'):
-        # Input checking
-        assert extend in ['extrapolate', 'constant', 'repeat',
-                          'repeat continuous']
-        assert typ in ['step', 'linear', 'smooth']
-        # Parameters
-        self.points = seq
-        self.typ = typ
-        self.extend = extend
