@@ -199,22 +199,30 @@ class FebReader:
         """
         # Get the materials dictionary so we can assign materials to
         # elements when we read the geometry
-        material_dict, material_labels = self.materials()
+        materials_by_id, material_labels = self.materials()
         # Create model geoemtry
-        mesh = self.mesh(materials=material_dict)
+        mesh = self.mesh(materials=materials_by_id)
         model = Model(mesh)
-        # Store the materials and their labels
-        model.materials = material_dict
-        model.material_labels = material_labels
+        # Store the materials and their labels, now that the Model
+        # object has been instantiated
+        for ord_id, material in materials_by_id.items():
+            name = material_labels[ord_id]
+            model.named["materials"].add(name, material)
+            model.named["materials"].add(ord_id, material, nametype="ordinal_id")
         # Read and store named sets of geometry
-        model.named_sets = febioxml.read_named_sets(self.root)
+        named_sets = febioxml.read_named_sets(self.root)
+        for entity_type in named_sets:
+            for name in named_sets[entity_type]:
+                # TODO: Create hashable geometry sets that are mutable
+                obj = frozenset(named_sets[entity_type][name])
+                model.named[entity_type].add(name, obj)
 
         # Read explicit rigid bodies.  Create a Body object for each
         # rigid body "material" in the XML with explicit geometry.
         EXPLICIT_BODIES = {}
         for e_elements in self.root.findall("Geometry/Elements"):
             mat_id = int(e_elements.attrib["mat"]) - 1
-            mat = model.materials[mat_id]
+            mat = model.named["materials"].obj(mat_id, nametype="ordinal_id")
             if isinstance(mat, material_lib.RigidBody):
                 elements = []
                 for e_elem in e_elements:
@@ -225,9 +233,9 @@ class FebReader:
         IMPLICIT_BODIES = {}
         for e_impbod in self.root.findall("Boundary/rigid"):
             mat_id = int(e_impbod.attrib["rb"]) - 1
-            node_ids = model.named_sets["nodes"][e_impbod.attrib["node_set"]]
-            IMPLICIT_BODIES[mat_id] = ImplicitBody(model.mesh, node_ids,
-                                                   model.materials[mat_id])
+            mat = model.named["materials"].obj(mat_id, nametype="ordinal_id")
+            node_ids = model.named["node sets"].obj(e_impbod.attrib["node_set"])
+            IMPLICIT_BODIES[mat_id] = ImplicitBody(model.mesh, node_ids, mat)
 
         # Boundary condition: fixed nodes
         axis_name_conv_from_xml = {'x': 'x1',
@@ -273,7 +281,7 @@ class FebReader:
                 elif self.feb_version == "2.5":
                     # In FEBio XML 2.5, the node set to which the fixed
                     # boundary condition is applied is referenced by name.
-                    node_ids = model.named_sets["nodes"][e_fix.attrib["node_set"]]
+                    node_ids = model.named["node sets"].obj(e_fix.attrib["node_set"])
                 var = var_from_fix_tag_axis[ax]
                 # Hack to deal with febtools' model.fixed dict only
                 # supporting fixed displacement and pressure for nodes.

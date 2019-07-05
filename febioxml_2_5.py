@@ -43,7 +43,7 @@ def parts(model):
                           'elements': by_mat_type[mat][typ]})
     return parts
 
-def geometry_section(model, parts, material_ids):
+def geometry_section(model, parts, material_registry):
     """Return XML tree for Geometry section."""
     e_geometry = ET.Element('Geometry')
     # Write <nodes>
@@ -57,7 +57,8 @@ def geometry_section(model, parts, material_ids):
     for part in parts:
         e_elements = ET.SubElement(e_geometry, 'Elements')
         e_elements.attrib['type'] = part['element_type'].feb_name
-        e_elements.attrib['mat'] = str(material_ids[part['material']] + 1)
+        mat_id = material_registry.name(part['material'], "ordinal_id")
+        e_elements.attrib['mat'] = str(mat_id + 1)
         # ^ TODO: Need some way to get material id
         for i, e in part['elements']:
             e_element = ET.SubElement(e_elements, 'elem')

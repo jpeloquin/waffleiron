@@ -73,7 +73,7 @@ def xml(model):
     for i, m in materials:
         tag = material_to_feb(m)
         try:
-            tag.attrib['name'] = model.material_labels[i]
+            tag.attrib['name'] = model.named["materials"].name(i, "ordinal_id")
         except KeyError:
             pass
         tag.attrib['id'] = str(i + 1)

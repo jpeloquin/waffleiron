@@ -1,4 +1,5 @@
-from copy import deepcopy
+from copy import copy, deepcopy
+from collections import defaultdict
 from math import inf
 from operator import itemgetter
 import sys
@@ -104,11 +105,8 @@ class Model:
             raise TypeError("{} is not of type"
                             "febtools.core.Model".format(mesh))
 
-        self.mesh = mesh
-
-        self.materials = {}
-        self.material_labels = {}
-        self.solution = None  # the solution for the model
+        self.mesh = mesh  # The model geometry
+        self.solution = None  # The solution for the model
 
         # If a sequence is assigned to dtmax in this default dictionary,
         # it will be copied when `default_control` is used to initialize a
@@ -134,11 +132,12 @@ class Model:
         # Contact
         self.constraints = []
 
-        # Initialize dictionaries to hold named nodesets, element sets,
-        # and facet sets.
-        self.named_sets = {'nodes': {},
-                           'facets': {},
-                           'elements': {}}
+        # Initialize dictionaries to hold named named entities
+        self.named = {"materials": NameRegistry(),
+                      "node sets": NameRegistry(),
+                      "facet sets": NameRegistry(),
+                      "element sets": NameRegistry(),
+                      "sequences": NameRegistry()}
 
         # initial nodal values
         self.initial_values = {'velocity': [],
@@ -524,3 +523,84 @@ def _e_bb(elements):
                        for e in elements)
     bb = (bb_min, bb_max)
     return bb
+
+
+class NameRegistry:
+    """Mapping between names and objects.
+
+    Provides `name + nametype → object` for all of an object's names and
+    `object → (name + nametype)s`.
+
+    """
+    def __init__(self):
+        self._from_name = defaultdict(dict)
+        self._from_name["canonical"] = {}
+        self._from_object = defaultdict(dict)
+
+    def add(self, name, obj, nametype="canonical"):
+        """Add a name for an object."""
+        # Add the name to the name → object map
+        self._from_name[nametype][name] = obj
+        # Add the name to the object → names map
+        self._from_object[obj][nametype] = name
+
+    def remove_name(self, name, nametype="canonical"):
+        """Remove a name for an object."""
+        obj = self._from_name[nametype][name]
+        # Remove the name from the name → object map
+        del self._from_name[nametype][name]
+        # Remove the name from the object → names map
+        del self._from_object[obj][nametype]
+
+    def remove_object(self, obj):
+        """Remove all names for an object"""
+        names = self._from_object[obj]
+        # Remove all applicable names from the name → object map
+        for nametype in names:
+            del self._from_name[nametype]
+        # Remove all applicable names from the object → names map
+        del self._from_object[obj]
+
+    def name(self, obj, nametype="canonical"):
+        """Return canonical name for object."""
+        return self._from_object[obj][nametype]
+
+    def obj(self, name, nametype="canonical"):
+        """Return object by name (and type of name)."""
+        return self._from_name[nametype][name]
+
+    def nametypes(self):
+        """Return nametypes"""
+        return self._from_name.keys()
+
+    def names(self, nametype="canonical"):
+        """Return all names of nametype in registry.
+
+        This function is analogous to dict.keys().
+
+        """
+        return self._from_name[nametype].keys()
+
+    def objects(self):
+        """Return all named objects.
+
+        This function is analogous to dict.values().
+
+        """
+        return self._from_object.keys()
+
+    def pairs(self, nametype="canonical"):
+        """Return iterable over (name, obj) pairs for nametype.
+
+        This function is analogous to dict.items().
+
+        """
+        return self._from_name[nametype].items()
+
+    def __copy__(self):
+        """Copy dicts but not named objects."""
+        new = type(self)()
+        for nametype in self._from_name:
+            new._from_name[nametype] = copy(self._from_name[nametype])
+        new._from_object = copy(self._from_object)
+        return new

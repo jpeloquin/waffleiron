@@ -38,14 +38,14 @@ module_compat_by_mat = {material.PoroelasticSolid: set(['biphasic']),
 
 def read_named_sets(xml_root):
     """Read nodesets, etc., and apply them to a model."""
-    sets = {'nodes': {},
-            'facets': {},
-            'elements': {}}
-    tag_name = {'nodes': 'NodeSet',
-                'facets': 'Surface',
-                'elements': 'ElementSet'}
+    sets = {'node sets': {},
+            'facet sets': {},
+            'element sets': {}}
+    tag_name = {'node sets': 'NodeSet',
+                'facet sets': 'Surface',
+                'element sets': 'ElementSet'}
     # Handle items that are stored by id
-    for k in ["nodes", "elements"]:
+    for k in ["node sets", "element sets"]:
         for e_set in xml_root.findall('./Geometry/' + tag_name[k]):
             items = set([])
             for e_item in e_set.getchildren():
@@ -53,7 +53,7 @@ def read_named_sets(xml_root):
                 items.update([i])
             sets[k][e_set.attrib['name']] = items
     # Handle items that are stored as themselves
-    for k in ["facets"]:
+    for k in ["facet sets"]:
         for tag_set in xml_root.findall('./Geometry/' + tag_name[k]):
             items = []
             for tag_item in tag_set.getchildren():
