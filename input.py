@@ -206,7 +206,7 @@ class FebReader:
         # Store the materials and their labels
         model.materials = material_dict
         model.material_labels = material_labels
-        # Read and store named sets of geoemtry
+        # Read and store named sets of geometry
         model.named_sets = febioxml.read_named_sets(self.root)
 
         # Read explicit rigid bodies.  Create a Body object for each
