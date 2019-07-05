@@ -479,7 +479,7 @@ def xml(model, version='2.5'):
                 ET.SubElement(e_interface, 'node', id=str(i + 1),
                               rb=str(mat_id + 1))
         elif version_major == 2 and version_minor >= 5:
-            # FEBio XML 2.0 puts rigid bodies under §Boundary
+            # FEBio XML 2.5 puts rigid bodies under §Boundary
             name_base = f"{body_name}_interface"
             # assumes interface is node list
             name = add_autogen_nodeset(model, root, name_base, implicit_body.interface)
