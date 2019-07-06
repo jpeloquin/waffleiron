@@ -330,6 +330,7 @@ class FebReader:
                     node_ids = set()
                     for e_node in e_fix:
                         node_ids.add(int(e_node.attrib['id']) - 1)
+                    node_ids = frozenset(node_ids)
                 elif self.feb_version == "2.5":
                     # In FEBio XML 2.5, the node set to which the fixed
                     # boundary condition is applied is referenced by name.
@@ -342,6 +343,9 @@ class FebReader:
                 if var == "pressure":
                     ax = "pressure"
                 model.fixed['node'][ax].update(node_ids)
+        # Convert sets to frozen sets so they're hashable for NameRegistry
+        for ax in model.fixed["node"]:
+            model.fixed["node"][ax] = frozenset(model.fixed["node"][ax])
         # Read fixed (rigid) body constraints:
         for e_fix in self.root.findall("Boundary/rigid_body"):
             # Get the Body object to which <rigid_body> refers to by

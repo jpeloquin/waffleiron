@@ -63,7 +63,8 @@ class ImplicitBody:
 
         """
         self.mesh = mesh
-        self.interface = set(interface)
+        self.interface = frozenset(interface)
+        # ^ NameRegistry needs this to be hashable
         self.material = material
 
 

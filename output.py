@@ -212,23 +212,12 @@ def material_to_feb(mat, model):
     return e
 
 
-def add_autogen_nodeset(model, xml_root, name, nodes):
-    """Autogenerate and add a named node set to FEBio XML.
-
-    This function is especially useful for autogenerating nodesets for
-    FEBio 2.5 boundary conditions.
-
-    """
-    if type(nodes) is set:
-        # We need `nodes` to be hashable so it can be stored in the
-        # material registry.
-        nodes = frozenset(nodes)
-    name = _autogen_name(model.named["node sets"], name, nodes)
+def add_nodeset(model, xml_root, name, nodes):
+    """Add a named node set to FEBio XML."""
     e_geometry = xml_root.find("./Geometry")
     e_nodeset = ET.SubElement(e_geometry, "NodeSet", name=name)
     for node_id in nodes:
         ET.SubElement(e_nodeset, 'node', id=str(node_id + 1))
-    return name
 
 
 def _autogen_name(registry: NameRegistry, base_name, item):
@@ -469,20 +458,23 @@ def xml(model, version='2.5'):
         material_registry.add(mat_id, mat, nametype="ordinal_id")
         implicit_rigid_material_by_body[implicit_body] = mat
         #
-        # Add the implicit body's rigid interface with the mesh
+        # Add the implicit body's rigid interface with the mesh.
+        # Assumes interface is a node set.
         if version == '2.0':
             # FEBio XML 2.0 puts rigid bodies under §Constraints
             e_interface = ET.SubElement(e_contact, 'contact',
                                         type='rigid')
             for i in implicit_body.interface:
-                # assumes interface is node list
                 ET.SubElement(e_interface, 'node', id=str(i + 1),
                               rb=str(mat_id + 1))
         elif version_major == 2 and version_minor >= 5:
             # FEBio XML 2.5 puts rigid bodies under §Boundary
-            name_base = f"{body_name}_interface"
-            # assumes interface is node list
-            name = add_autogen_nodeset(model, root, name_base, implicit_body.interface)
+            try:
+                name = model.named["node sets"].name(implicit_body.interface)
+            except KeyError:
+                name_base = f"{body_name}_interface"
+                name = _autogen_name(model.named["node sets"], name_base, nodes)
+            add_nodeset(model, root, name, implicit_body.interface)
             ET.SubElement(e_boundary, "rigid", rb=str(mat_id + 1),
                           node_set=name)
 
@@ -497,11 +489,15 @@ def xml(model, version='2.5'):
                     ET.SubElement(e_fixed_nodeset, 'node', id=str(i + 1))
             elif version_major == 2 and version_minor >= 5:
                 # Tag heirarchy: <Boundary><fix bc="x" node_set="set_name">
-                nm_base = f"fixed_{axis}_autogen-nodeset"
-                nm = add_autogen_nodeset(model, root, nm_base, nodeset)
+                try:
+                    name = model.named["node sets"].name(nodeset)
+                except KeyError:
+                    name_base = f"fixed_{axis}_autogen-nodeset"
+                    name = _autogen_name(model.named["node sets"], name_base, nodeset)
+                add_nodeset(model, root, name, nodeset)
                 # Create the tag
                 ET.SubElement(e_boundary, 'fix', bc=febioxml.axis_to_febio[axis],
-                              node_set=nm)
+                              node_set=name)
     # Permanently fixed bodies
     body_bcs = {}
     # Choose where to put rigid body constraints depending on FEBio XML
