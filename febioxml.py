@@ -49,14 +49,15 @@ def read_named_sets(xml_root):
         for e_set in xml_root.findall('./Geometry/' + tag_name[k]):
             items = set([])
             for e_item in e_set.getchildren():
-                i = int(e_item.attrib['id'])
-                items.update([i])
+                item_id = int(e_item.attrib['id']) - 1
+                items.update([item_id])
             sets[k][e_set.attrib['name']] = items
     # Handle items that are stored as themselves
     for k in ["facet sets"]:
         for tag_set in xml_root.findall('./Geometry/' + tag_name[k]):
             items = []
             for tag_item in tag_set.getchildren():
-                items.append(tuple([int(s.strip()) for s in tag_item.text.split(",")]))
+                items.append(tuple([int(s.strip()) - 1
+                                    for s in tag_item.text.split(",")]))
             sets[k][tag_set.attrib["name"]] = items
     return sets
