@@ -18,18 +18,29 @@ from . import febioxml_2_0
 
 
 def _get_or_create_sequence_id(seq, model):
-    """Get or create ID for a sequence."""
-    try:
-        # Try looking up the sequence's ID
-        seq_id = model.named["sequences"].name(seq, "ordinal_id")
-    except KeyError:
-        # The sequence doesn't have an ID; create an ID for it
-        seq_ids = model.named["sequences"].names("ordinal_id")
-        if len(seq_ids) == 0:
-            seq_id = 0
-        else:
+    """Get or create ID for a sequence.
+
+    Getting or creating an ID for a sequence is complicated because
+    sequence IDs must start at 0 and be sequential and contiguous.
+
+    """
+    seq_ids = model.named["sequences"].names("ordinal_id")
+    if len(seq_ids) == 0:
+        # Handle the trivial case of no pre-existing sequences
+        seq_id = 0
+    else:
+        # At least one sequence already exists.  Make sure the ID
+        # constraints have not been violated
+        assert min(seq_ids) == 0
+        assert max(seq_ids) == len(seq_ids) - 1
+        # Check for an existing ID
+        try:
+            seq_id = model.named["sequences"].name(seq, "ordinal_id")
+        except KeyError:
+            # Create an ID because the sequence doesn't have one
+            seq_ids = model.named["sequences"].names("ordinal_id")
             seq_id = max(seq_ids) + 1
-        model.named["sequences"].add(seq_id, seq, "ordinal_id")
+            model.named["sequences"].add(seq_id, seq, "ordinal_id")
     return seq_id
 
 
@@ -221,6 +232,30 @@ def add_nodeset(model, xml_root, name, nodes):
         ET.SubElement(e_nodeset, 'node', id=str(node_id + 1))
 
 
+def add_sequence(xml_root, model, sequence):
+    """Add a sequence (load curve) to a FEBio XML tree.
+
+    So we need to sort them and ensure that the IDs are contiguous.
+
+    xml_root !mutates! := Root object of XML tree.
+
+    sequence := Sequence object.
+
+    sequence_id := Integer ID (0-referenced) to use for the sequence
+    element's "id" attribute.  The ID will be incremented by 1 to
+    account for FEBio XML's use of 1-referenced IDs.
+
+    """
+    seq_id = model.named["sequences"].name(sequence, nametype="ordinal_id")
+    e_loaddata = xml_root.find("./LoadData")
+    e_loadcurve = ET.SubElement(e_loaddata, "loadcurve",
+                                id=str(seq_id + 1),
+                                type=sequence.typ,
+                                extend=sequence.extend)
+    for pt in sequence.points:
+        ET.SubElement(e_loadcurve, "point").text = ", ".join(str(x) for x in pt)
+
+
 def _autogen_name(registry: NameRegistry, base_name, item):
     """Autogenerate a unique name for an item
 
@@ -374,35 +409,6 @@ def xml(model, version='2.5'):
     ET.SubElement(Constants, 'T').text = '294'
     ET.SubElement(Constants, 'Fc').text = '96485e-9'
 
-    # Assign integer IDs for sequences.  To do this, we have to find the
-    # sequences.  There is no central registry.  Sequences can be used
-    # in boundary conditions, time stepper curves, and any material
-    # parameter.  So finding them all is basically a lost cause.
-    #
-    # TODO: There needs to be a central registry of sequences in a
-    # model.  Or every function that might encounter a sequence needs to
-    # be able to query and update a central sequence registry.
-    i = 0
-    seq_id = {}
-    for step in model.steps:
-        # Sequences in nodal displacement boundary conditions
-        for obj in step['bc']:
-            for k in step['bc'][obj]:
-                for ax, v in step['bc'][obj][k].items():
-                    # v['sequence'] is Sequence object or 'fixed'
-                    if type(v['sequence']) is Sequence:
-                        seq = v['sequence']
-                        if seq not in seq_id:
-                            seq_id[seq] = i
-                            i += 1
-        # Sequences in dtmax
-        if 'time stepper' in step['control']:
-            if 'dtmax' in step['control']['time stepper']:
-                dtmax = step['control']['time stepper']['dtmax']
-                if dtmax.__class__ is feb.Sequence:
-                    if dtmax not in seq_id:
-                        seq_id[dtmax] = i
-                        i += 1
 
     # Materials section
     #
@@ -523,14 +529,12 @@ def xml(model, version='2.5'):
             body_material = implicit_rigid_material_by_body[body]
         mat_id = material_registry.name(body_material, nametype="ordinal_id")
         e_body.attrib['mat'] = str(mat_id + 1)
-        # Write tags for each of the fixed degrees of freedom
-        for ax in axes:
+        # Write tags for each of the fixed degrees of freedom.  Use
+        # sorted order to be deterministic & human-friendly.
+        for ax in sorted(axes):
             ET.SubElement(e_body, 'fixed', bc=febioxml.axis_to_febio[ax])
 
-    # LoadData (load curves)
-    # sort sequences by id to get around FEBio bug
-    sequences = [(i, seq) for seq, i in seq_id.items()]
-    sequences.sort()
+    # Adjust sequences used as boundary conditions or in time stepper.
     # Apply offset to load curves so they start at the same time the
     # previous step ends (global time), as required by FEBio.  In
     # `febtools`, each step has its own running time (local time).
@@ -562,12 +566,6 @@ def xml(model, version='2.5'):
         # Tally running time
         duration = step_duration(step)
         cumulative_time += duration
-    # Write adjusted sequences
-    for i, seq in sequences:
-        e_lc = ET.SubElement(e_loaddata, 'loadcurve', id=str(i+1),
-                             type=seq.typ, extend=seq.extend)
-        for pt in seq.points:
-            ET.SubElement(e_lc, 'point').text = ','.join(str(x) for x in pt)
 
     # Output section
     plotfile = ET.SubElement(Output, 'plotfile', type='febio')
@@ -606,7 +604,8 @@ def xml(model, version='2.5'):
         e_dtmax = ET.SubElement(e_ts, 'dtmax')
         if isinstance(dtmax, Sequence):
             # Reference the load curve for dtmax
-            e_dtmax.attrib['lc'] = str(seq_id[dtmax] + 1)
+            seq_id = _get_or_create_sequence_id(dtmax, model)
+            e_dtmax.attrib['lc'] = str(seq_id + 1)
             e_dtmax.text = "1"
         else:
             e_dtmax.text = str(dtmax)
@@ -659,7 +658,8 @@ def xml(model, version='2.5'):
                                      bc=febioxml.axis_to_febio[axis])
                 if version == '2.0':
                     if kind == 'variable':
-                        e_bc.attrib['lc'] =  str(seq_id[bc['sequence']] + 1)
+                        seq_id = _get_or_create_sequence_id(bc['sequence'], model)
+                        e_bc.attrib['lc'] =  str(seq_id + 1)
                     # Write nodes as children of <Step><Boundary><prescribe>
                     for i, sc in zip(bc['nodes'], bc['scales']):
                         ET.SubElement(e_bc, 'node', id=str(i+1)).text = f"{sc:.7e}"
@@ -684,8 +684,9 @@ def xml(model, version='2.5'):
                         # MeshData/NodeData.
                         raise ValueError(msg)
                     if kind == 'variable':
+                        seq_id = _get_or_create_sequence_id(bc['sequence'], model)
                         e_sc = ET.SubElement(e_bc, 'scale',
-                                             lc=str(seq_id[bc['sequence']] + 1))
+                                             lc=str(seq_id + 1))
                         e_sc.text = f"{sc0:.7e}"
                         ET.SubElement(e_bc, 'relative').text = "0"
                     e_bc.attrib['node_set'] = name
@@ -724,8 +725,31 @@ def xml(model, version='2.5'):
                 e_bc = ET.SubElement(e_body, tagname,
                                      bc=febioxml.axis_to_febio[axis])
                 if kind == 'variable':
-                    e_bc.attrib['lc'] = str(seq_id[seq] + 1)
+                    seq_id = _get_or_create_sequence_id(seq, model)
+                    e_bc.attrib['lc'] = str(seq_id + 1)
                     e_bc.text = str(v)
+
+    # Write XML elements for sequences (load curves) that are in the
+    # model's named entity registry.  Re-use any ordinal ID found in the
+    # model's named entity registry.
+    #
+    # Sequences can be referenced in a lot of places, including boundary
+    # conditions, time stepper curves, and any material parameter.
+    # Therefore, instead of try to find them all here, we require that
+    # any sequence be added to the model's named entity registry when an
+    # XML element that references the sequence is added to the XML tree.
+    # Consequently, any sequence not in the named entity registry will
+    # not be in the XML output.
+    #
+    # FEBio ignores the ID attribute; the real ID of a load curve is its
+    # ordinal position in the list of <loadcurve> elements.  So we need
+    # to sort them and ensure that the IDs are contiguous.
+    seq_ids = sorted(model.named["sequences"].names("ordinal_id"))
+    assert min(seq_ids) == 0
+    assert max(seq_ids) == len(seq_ids) - 1
+    for seq_id in seq_ids:
+        seq = model.named["sequences"].obj(seq_id, nametype="ordinal_id")
+        add_sequence(root, model, seq)
 
     tree = ET.ElementTree(root)
     return tree

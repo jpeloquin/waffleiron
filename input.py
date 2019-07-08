@@ -133,7 +133,7 @@ class FebReader:
         if self.feb_version not in ['2.0', '2.5']:
             msg = 'FEBio XML version {} is not supported by febtools'.format(self.feb_version)
             raise UnsupportedFormatError(msg, file, self.feb_version)
-        self._sequences = None
+        self._sequences = None  # memo for sequences()
 
     def materials(self):
         """Return dictionary of materials keyed by id.
@@ -175,8 +175,8 @@ class FebReader:
         """
         if self._sequences is None:
             self._sequences = {}
-            for e_lc in self.root.findall('LoadData/loadcurve'):
-                seq_id = int(e_lc.attrib['id']) - 1
+            for ord_id, e_lc in enumerate(self.root.findall('LoadData/loadcurve')):
+                pseudo_id = int(e_lc.attrib['id'])
                 def parse_pt(text):
                     x, y = text.split(',')
                     return float(x), float(y)
@@ -192,7 +192,7 @@ class FebReader:
                 else:
                     typ = 'linear'  # default
                 # Create and store the Sequence object
-                self._sequences[seq_id] = Sequence(curve, typ=typ, extend=extend)
+                self._sequences[ord_id] = Sequence(curve, typ=typ, extend=extend)
         return self._sequences
 
 
@@ -361,7 +361,8 @@ class FebReader:
                 model.fixed["body"][dof].add(body)
 
         # Load curves (sequences)
-        sequences = self.sequences
+        for seq_id, seq in self.sequences.items():
+            model.named["sequences"].add(seq_id, seq, nametype="ordinal_id")
 
         # Steps
         model.steps = []
