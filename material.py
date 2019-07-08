@@ -94,8 +94,8 @@ class DonnanSwelling:
         self.osm_coef = osm_coef
 
     @classmethod
-    def from_feb(cls, phiw0, cF0, bosm, osm_coef=1, **kwargs):
-        return cls(phiw0, cF0, bosm, osm_coef)
+    def from_feb(cls, phiw0, cF0, bosm, Phi=1, **kwargs):
+        return cls(phiw0, cF0, bosm, Phi)
 
 
 class SolidMixture:
