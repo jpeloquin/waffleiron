@@ -568,7 +568,19 @@ class NameRegistry:
         self._from_object = defaultdict(dict)
 
     def add(self, name, obj, nametype="canonical"):
-        """Add a name for an object."""
+        """Add a name for an object.
+
+        If an object with this name + nametype already exists, that name
+        ↔ object pairing is removed.
+
+        """
+        # Check for existing objects with this name
+        if (obj in self._from_object and
+            nametype in self._from_object[obj]):
+            oldname = self._from_object[obj][nametype]
+            # Remove the name from the name → object map. The object →
+            # names map is overwritten later by assignment.
+            del self._from_name[nametype][oldname]
         # Add the name to the name → object map
         self._from_name[nametype][name] = obj
         # Add the name to the object → names map
