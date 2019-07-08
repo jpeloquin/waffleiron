@@ -17,43 +17,42 @@ from . import febioxml_2_0
 # imports.
 
 
-def _get_or_create_sequence_id(seq, model):
-    """Get or create ID for a sequence.
+def _get_or_create_item_id(registry, item):
+    """Get or create ID for an item.
 
     Getting or creating an ID for a sequence is complicated because
     sequence IDs must start at 0 and be sequential and contiguous.
 
     """
-    seq_ids = model.named["sequences"].names("ordinal_id")
-    if len(seq_ids) == 0:
-        # Handle the trivial case of no pre-existing sequences
-        seq_id = 0
+    item_ids = registry.names("ordinal_id")
+    if len(item_ids) == 0:
+        # Handle the trivial case of no pre-existing itemuences
+        item_id = 0
     else:
-        # At least one sequence already exists.  Make sure the ID
+        # At least one itemuence already exists.  Make sure the ID
         # constraints have not been violated
-        assert min(seq_ids) == 0
-        assert max(seq_ids) == len(seq_ids) - 1
+        assert min(item_ids) == 0
+        assert max(item_ids) == len(item_ids) - 1
         # Check for an existing ID
         try:
-            seq_id = model.named["sequences"].name(seq, "ordinal_id")
+            item_id = registry.name(item, "ordinal_id")
         except KeyError:
-            # Create an ID because the sequence doesn't have one
-            seq_ids = model.named["sequences"].names("ordinal_id")
-            seq_id = max(seq_ids) + 1
-            model.named["sequences"].add(seq_id, seq, "ordinal_id")
-    return seq_id
-
+            # Create an ID because the itemuence doesn't have one
+            item_ids = registry.names("ordinal_id")
+            item_id = max(item_ids) + 1
+            registry.add(item_id, item, "ordinal_id")
+    return item_id
 
 def _property_to_feb(p, tag, model):
     """Convert a fixed or variable property to FEBio XML."""
     e = ET.Element(tag)
     if isinstance(p, Sequence):
-        seq_id = _get_or_create_sequence_id(p, model)
+        seq_id = _get_or_create_item_id(model.named["sequences"], p)
         e.attrib["lc"] = str(seq_id + 1)
         e.text = "1"  # basic Sequences have no scale
     elif isinstance(p, ScaledSequence):
         # Time-varying property, scaled
-        seq_id = _get_or_create_sequence_id(p.sequence, model)
+        seq_id = _get_or_create_item_id(model.named["sequences"], p.sequence)
         e.attrib["lc"] = str(seq_id + 1)
         e.text = str(p.scale)
     else:
@@ -600,7 +599,8 @@ def xml(model, version='2.5'):
         e_dtmax = ET.SubElement(e_ts, 'dtmax')
         if isinstance(dtmax, Sequence):
             # Reference the load curve for dtmax
-            seq_id = _get_or_create_sequence_id(dtmax, model)
+            seq_id = _get_or_create_item_id(model.named["sequences"],
+                                            dtmax)
             e_dtmax.attrib['lc'] = str(seq_id + 1)
             e_dtmax.text = "1"
         else:
@@ -654,7 +654,8 @@ def xml(model, version='2.5'):
                                      bc=febioxml.axis_to_febio[axis])
                 if version == '2.0':
                     if kind == 'variable':
-                        seq_id = _get_or_create_sequence_id(bc['sequence'], model)
+                        seq_id = _get_or_create_item_id(model.named["sequences"],
+                                                        bc['sequence'])
                         e_bc.attrib['lc'] =  str(seq_id + 1)
                     # Write nodes as children of <Step><Boundary><prescribe>
                     for i, sc in zip(bc['nodes'], bc['scales']):
@@ -680,7 +681,8 @@ def xml(model, version='2.5'):
                         # MeshData/NodeData.
                         raise ValueError(msg)
                     if kind == 'variable':
-                        seq_id = _get_or_create_sequence_id(bc['sequence'], model)
+                        seq_id = get_or_create_item_id(model.named["sequences"],
+                                                       bc['sequence'])
                         e_sc = ET.SubElement(e_bc, 'scale',
                                              lc=str(seq_id + 1))
                         e_sc.text = f"{sc0:.7e}"
@@ -721,7 +723,7 @@ def xml(model, version='2.5'):
                 e_bc = ET.SubElement(e_body, tagname,
                                      bc=febioxml.axis_to_febio[axis])
                 if kind == 'variable':
-                    seq_id = _get_or_create_sequence_id(seq, model)
+                    seq_id = _get_or_create_item_id(model.named["sequences"], seq)
                     e_bc.attrib['lc'] = str(seq_id + 1)
                     e_bc.text = str(v)
 
