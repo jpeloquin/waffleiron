@@ -371,8 +371,6 @@ def xml(model, version='2.5'):
     root = ET.Element('febio_spec', version="{}".format(version))
     msg = f"Exported to FEBio XML by febtools prerelease at {datetime.today().strftime('%Y-%m-%dT%H:%M:%S%z')}"
     root.append(ET.Comment(msg))
-    Globals = ET.SubElement(root, 'Globals')
-    Material = ET.SubElement(root, 'Material')
 
     version_major, version_minor = [int(a) for a in version.split(".")]
     if version_major == 2 and version_minor >= 5:
