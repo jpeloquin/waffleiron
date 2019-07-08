@@ -423,8 +423,8 @@ class FebReader:
 
 def mat_obj_from_elemd(d):
     """Convert material element to material object"""
-    if d["material"] in material_lib.solid_class_from_name:
-        cls = material_lib.solid_class_from_name[d["material"]]
+    if d["material"] in febioxml.solid_class_from_name:
+        cls = febioxml.solid_class_from_name[d["material"]]
         if d["material"] == "solid mixture":
             constituents = []
             for d_child in d["constituents"]:
@@ -434,7 +434,7 @@ def mat_obj_from_elemd(d):
             # Instantiate Permeability object
             p_props = d["properties"]["permeability"]
             typ = d["properties"]["permeability"]["type"]
-            p_class = material_lib.perm_class_from_name[typ]
+            p_class = febioxml.perm_class_from_name[typ]
             permeability = p_class.from_feb(**p_props)
             # Instantiate solid constituent object
             if len(d["constituents"]) > 1:

@@ -465,18 +465,3 @@ class NeoHookean:
         Cinv = np.linalg.inv(C)
         s = mu * (np.eye(3) - Cinv) + y * log(J) * Cinv
         return s
-
-
-solid_class_from_name = {'isotropic elastic': IsotropicElastic,
-                         'Holmes-Mow': HolmesMow,
-                         'fiber-exp-pow': ExponentialFiber,
-                         'neo-Hookean': NeoHookean,
-                         'solid mixture': SolidMixture,
-                         'rigid body': RigidBody,
-                         'biphasic': PoroelasticSolid,
-                         'Donnan equilibrium': DonnanSwelling}
-solid_name_from_class = {v: k for k, v in solid_class_from_name.items()}
-
-perm_class_from_name = {"perm-Holmes-Mow": IsotropicHolmesMowPermeability,
-                        "perm-const-iso": IsotropicConstantPermeability}
-perm_name_from_class = {v: k for k, v in perm_class_from_name.items()}

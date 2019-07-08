@@ -14,6 +14,20 @@ elem_cls_from_feb = {'quad4': Quad4,
                      'hex8': Hex8,
                      'penta6': Penta6}
 
+solid_class_from_name = {'isotropic elastic': material.IsotropicElastic,
+                         'Holmes-Mow': material.HolmesMow,
+                         'fiber-exp-pow': material.ExponentialFiber,
+                         'neo-Hookean': material.NeoHookean,
+                         'solid mixture': material.SolidMixture,
+                         'rigid body': material.RigidBody,
+                         'biphasic': material.PoroelasticSolid,
+                         'Donnan equilibrium': material.DonnanSwelling}
+solid_name_from_class = {v: k for k, v in solid_class_from_name.items()}
+
+perm_class_from_name = {"perm-Holmes-Mow": material.IsotropicHolmesMowPermeability,
+                        "perm-const-iso": material.IsotropicConstantPermeability}
+perm_name_from_class = {v: k for k, v in perm_class_from_name.items()}
+
 control_tagnames_to_febio = {'time steps': 'time_steps',
                              'step size': 'step_size',
                              'max refs': 'max_refs',

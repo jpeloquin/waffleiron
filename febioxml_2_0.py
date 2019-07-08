@@ -6,7 +6,7 @@ from lxml import etree as ET
 from .core import ContactConstraint, Sequence
 from .output import material_to_feb
 from .control import step_duration
-from .febioxml import control_tagnames_to_febio, axis_to_febio, module_compat_by_mat
+from .febioxml import *
 
 feb_version = 2.0
 

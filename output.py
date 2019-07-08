@@ -155,7 +155,7 @@ def poroelastic_to_feb(mat, model):
     e_solid.tag = 'solid'
     e.append(e_solid)
     # Add permeability
-    typ = feb.material.perm_name_from_class[type(mat.permeability)]
+    typ = febioxml.perm_name_from_class[type(mat.permeability)]
     f = {feb.material.IsotropicConstantPermeability: iso_const_perm_to_feb,
          feb.material.IsotropicHolmesMowPermeability: iso_holmes_mow_perm_to_feb}
     e_permeability = f[type(mat.permeability)](mat.permeability, model)
