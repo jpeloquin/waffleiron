@@ -143,8 +143,10 @@ class RigidBody:
     """Rigid body.
 
     """
-    def __init__(self, density=1, **props):
-        self.density = density
+    def __init__(self, props={}):
+        self.density = 1
+        if "density" in props:
+            self.density = props["density"]
 
 
 class ExponentialFiber:
