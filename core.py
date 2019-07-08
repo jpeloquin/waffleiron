@@ -584,11 +584,14 @@ class NameRegistry:
 
     def remove_object(self, obj):
         """Remove all names for an object"""
-        names = self._from_object[obj]
-        # Remove all applicable names from the name → object map
+        names = [a for a in self._from_object[obj]]
+        # Remove the object from the name → object maps
         for nametype in names:
-            del self._from_name[nametype]
+            name = self._from_object[obj][nametype]
+            del self._from_name[nametype][name]
         # Remove all applicable names from the object → names map
+        for nametype in names:
+            del self._from_object[obj][nametype]
         del self._from_object[obj]
 
     def name(self, obj, nametype="canonical"):
