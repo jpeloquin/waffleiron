@@ -216,7 +216,8 @@ def add_nodeset(model, xml_root, name, nodes):
     """Add a named node set to FEBio XML."""
     e_geometry = xml_root.find("./Geometry")
     e_nodeset = ET.SubElement(e_geometry, "NodeSet", name=name)
-    for node_id in nodes:
+    # Sort nodes to be user-friendly (humans often read .feb files)
+    for node_id in sorted(nodes):
         ET.SubElement(e_nodeset, 'node', id=str(node_id + 1))
 
 
