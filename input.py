@@ -8,7 +8,7 @@ import febtools.element
 from febtools.exceptions import UnsupportedFormatError
 from operator import itemgetter
 
-from .core import Model, Mesh, Body, ImplicitBody, Sequence, ScaledSequence, NodeSet, FaceSet, ElementSet
+from .core import Model, Mesh, Body, ImplicitBody, Sequence, ScaledSequence, NodeSet, FaceSet, ElementSet, RigidInterface
 from . import xplt
 from . import febioxml, febioxml_2_5, febioxml_2_0
 from . import material as material_lib
@@ -337,7 +337,7 @@ class FebReader:
 
         # Read fixed boundary conditions. TODO: Support solutes
         #
-        # Read fixed nodal constraints:
+        # Read fixed constraints on node sets:
         for e_fix in self.root.findall("Boundary/fix"):
             # Each <fix> tag may specify multiple bc labels.  Split them
             # up and convert each to febtools naming convention.
@@ -372,7 +372,8 @@ class FebReader:
                 model.fixed['node'][ax].update(node_ids)
         for ax in model.fixed["node"]:
             model.fixed["node"][ax] = model.fixed["node"][ax]
-        # Read fixed (rigid) body constraints:
+        #
+        # Read fixed constraints on rigid bodies:
         for e_fix in self.root.findall("Boundary/rigid_body"):
             # Get the Body object to which <rigid_body> refers to by
             # material id.
@@ -385,6 +386,14 @@ class FebReader:
             for e_dof in e_fix.findall("fixed"):
                 dof = dof_name_conv_from_xml[e_dof.attrib["bc"]]
                 model.fixed["body"][dof].add(body)
+        #
+        # Read rigid body ↔ node set rigid interfaces
+        for e_rigid in self.root.findall("Boundary/rigid"):
+            body = model.named["materials"].obj(int(e_rigid.attrib["rb"]) - 1,
+                                                nametype="ordinal_id")
+            node_set = model.named["node sets"].obj(e_rigid.attrib["node_set"])
+            rigid_interface = RigidInterface(body, node_set)
+            model.constraints.append(rigid_interface)
 
         # Load curves (sequences)
         for seq_id, seq in self.sequences.items():

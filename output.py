@@ -7,7 +7,7 @@ from math import degrees
 from lxml import etree as ET
 # Within-module packages
 import febtools as feb
-from .core import Body, ImplicitBody, ContactConstraint, NameRegistry, Sequence, ScaledSequence
+from .core import Body, ImplicitBody, ContactConstraint, NameRegistry, Sequence, ScaledSequence, RigidInterface
 from .control import step_duration
 from . import material as material_lib
 from . import febioxml_2_5 as febioxml
@@ -562,6 +562,19 @@ def xml(model, version='2.5'):
         # sorted order to be deterministic & human-friendly.
         for ax in sorted(axes):
             ET.SubElement(e_body, 'fixed', bc=febioxml.axis_to_febio[ax])
+
+    # Add interfaces.  Currently just rigid interfaces.
+    e_Boundary = root.find("Boundary")
+    for interface in model.constraints:
+        if type(interface) is not RigidInterface:
+            continue
+        rigid_body_id = model.named["materials"].name(interface.rigid_body,
+                                                      nametype="ordinal_id")
+        node_set_name = model.named["node sets"].name(interface.node_set)
+        add_nodeset(model, root, node_set_name, interface.node_set)
+        ET.SubElement(e_Boundary, "rigid",
+                      rb=str(rigid_body_id + 1),
+                      node_set=node_set_name)
 
     # Adjust sequences used as boundary conditions or in time stepper.
     # Apply offset to load curves so they start at the same time the

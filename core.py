@@ -92,6 +92,17 @@ class ImplicitBody:
         self.material = material
 
 
+class RigidInterface:
+    """A rigid constraint between a rigid body and a node set."""
+    # Future enhancement: There is no particular reason that a rigid
+    # interface should be restricted to an explicit rigid body and a
+    # node set.  Two node sets work fine; just create an implicit rigid
+    # body for one of them.
+    def __init__(self, rigid_body, node_set):
+        self.rigid_body = rigid_body
+        self.node_set = node_set
+
+
 class ContactConstraint:
     """A constraint defining contact between two surfaces."""
     def __init__(self, leader, follower, algorithm=None,
@@ -154,6 +165,10 @@ class Model:
 
         # Contact
         self.constraints = []
+        # ^ this might be better split between interactions (two parts
+        # of the model interacting with each other according to some
+        # equality) and true constraints (one part of the model is
+        # constrained by some equality).
 
         # Initialize dictionaries to hold named named entities
         self.named = {"materials": NameRegistry(),
