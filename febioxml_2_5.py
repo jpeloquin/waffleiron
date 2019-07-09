@@ -63,7 +63,7 @@ def geometry_section(model, parts, material_registry):
         for i, e in part['elements']:
             e_element = ET.SubElement(e_elements, 'elem')
             e_element.attrib['id'] = str(i + 1)
-            e_element.text = ','.join(str(i+1) for i in e.ids)
+            e_element.text = ', '.join(str(i+1) for i in e.ids)
     return e_geometry
 
 def vec_to_text(v):
