@@ -642,15 +642,8 @@ def xml(model, version='2.5'):
             str(step['control']['time stepper']['opt iter'])
         # dtmax may have an associated sequence
         dtmax = step['control']['time stepper']['dtmax']
-        e_dtmax = ET.SubElement(e_ts, 'dtmax')
-        if isinstance(dtmax, Sequence):
-            # Reference the load curve for dtmax
-            seq_id = _get_or_create_item_id(model.named["sequences"],
-                                            dtmax)
-            e_dtmax.attrib['lc'] = str(seq_id + 1)
-            e_dtmax.text = "1"
-        else:
-            e_dtmax.text = str(dtmax)
+        e_dtmax = _property_to_feb(dtmax, "dtmax", model)
+        e_ts.append(e_dtmax)
 
         # Boundary conditions
         #
