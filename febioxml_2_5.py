@@ -59,7 +59,6 @@ def geometry_section(model, parts, material_registry):
         e_elements.attrib['type'] = part['element_type'].feb_name
         mat_id = material_registry.name(part['material'], "ordinal_id")
         e_elements.attrib['mat'] = str(mat_id + 1)
-        # ^ TODO: Need some way to get material id
         for i, e in part['elements']:
             e_element = ET.SubElement(e_elements, 'elem')
             e_element.attrib['id'] = str(i + 1)
