@@ -467,9 +467,10 @@ def xml(model, version='2.5'):
                 implicit_bodies_to_process.add(body)
     # Search steps' constraints for rigid bodies
     for step in model.steps:
-        for body in step['bc']['body']:
-            if isinstance(body, ImplicitBody):
-                implicit_bodies_to_process.add(body)
+        if "bc" in step:
+            for body in step['bc']['body']:
+                if isinstance(body, ImplicitBody):
+                    implicit_bodies_to_process.add(body)
     # Create FEBio rigid materials for all implicit rigid bodies and add
     # their rigid interfaces with the mesh.  That the implicit material
     # is rigid is an assumption, but an implicit deformable material in
@@ -573,19 +574,21 @@ def xml(model, version='2.5'):
             dtmax.points = [(cumulative_time + t, v) for t, v in dtmax.points]
         # Gather variable boundary condition / constraint curves
         curves_to_adjust = set([])
-        for i, ax_bc in step['bc']['node'].items():
-            for ax, d in ax_bc.items():
-                if d == 'variable':  # varying ("prescribed") BC
-                    curves_to_adjust.add(d['sequence'])
+        if "bc" in step:
+            for i, ax_bc in step['bc']['node'].items():
+                for ax, d in ax_bc.items():
+                    if d == 'variable':  # varying ("prescribed") BC
+                        curves_to_adjust.add(d['sequence'])
         # Gather the body constraint curves
-        for body, body_constraints in step['bc']['body'].items():
-            for ax, params in body_constraints.items():
-                # params = {'variable': variable <string>,
-                #           'sequence': Sequence object or 'fixed',
-                #           'scale': scale <numeric>
-                if type(params['sequence']) is Sequence:
-                    curves_to_adjust.add(params['sequence'])
-                    # TODO: Add test to exercise this code
+        if "bc" in step:
+            for body, body_constraints in step['bc']['body'].items():
+                for ax, params in body_constraints.items():
+                    # params = {'variable': variable <string>,
+                    #           'sequence': Sequence object or 'fixed',
+                    #           'scale': scale <numeric>
+                    if type(params['sequence']) is Sequence:
+                        curves_to_adjust.add(params['sequence'])
+                        # TODO: Add test to exercise this code
         # Adjust the curves
         for curve in curves_to_adjust:
             curve.points = [(cumulative_time + t, v)
@@ -617,12 +620,14 @@ def xml(model, version='2.5'):
             ET.SubElement(e_step, 'Module', type=step['module'])
         # Warn if there's an incompatibility between requested materials
         # and modules.
-        for mat in material_id_from_material:
-            if step['module'] not in febioxml.module_compat_by_mat[type(mat)]:
+        for mat in material_registry.objects():
+            if ("module" in step) and\
+               (step['module'] not in febioxml.module_compat_by_mat[type(mat)]):
                 raise ValueError(f"Material `{type(mat)}` is not compatible with Module {step['module']}")
         e_con = ET.SubElement(e_step, 'Control')
-        ET.SubElement(e_con, 'analysis',
-                      type=step['control']['analysis type'])
+        if "analysis type" in step["control"]:
+            ET.SubElement(e_con, 'analysis',
+                          type=step['control']['analysis type'])
         for lbl1, lbl2 in febioxml.control_tagnames_to_febio.items():
             if lbl1 in step['control'] and lbl1 != 'time stepper':
                 txt = str(step['control'][lbl1])
@@ -674,17 +679,18 @@ def xml(model, version='2.5'):
         # Collect nodal BCs in a more convenient heirarchy for writing FEBio XML
         node_memo = {}  # node_memo['fixed'|'variable'][axis] =
                         # {'nodes': [], 'scales': []}
-        for node_id in step['bc']['node']:
-            for ax in step['bc']['node'][node_id]:  # axis
-                bc = step['bc']['node'][node_id][ax]
-                if bc['sequence'] == 'fixed':
-                    kind = 'fixed'
-                else:  # bc['sequence'] is Sequence
-                    kind = 'variable'
-                node_memo.setdefault(kind, {}).setdefault(ax, {})['kind'] = kind
-                node_memo[kind][ax]['sequence'] = bc['sequence']
-                node_memo[kind][ax].setdefault('nodes', []).append(node_id)
-                node_memo[kind][ax].setdefault('scales', []).append(bc['scale'])
+        if ("bc" in step) and ("node" in step["bc"]):
+            for node_id in step['bc']['node']:
+                for ax in step['bc']['node'][node_id]:  # axis
+                    bc = step['bc']['node'][node_id][ax]
+                    if bc['sequence'] == 'fixed':
+                        kind = 'fixed'
+                    else:  # bc['sequence'] is Sequence
+                        kind = 'variable'
+                    node_memo.setdefault(kind, {}).setdefault(ax, {})['kind'] = kind
+                    node_memo[kind][ax]['sequence'] = bc['sequence']
+                    node_memo[kind][ax].setdefault('nodes', []).append(node_id)
+                    node_memo[kind][ax].setdefault('scales', []).append(bc['scale'])
         # TODO: support kind == 'fixed'.  (Does that make sense for a step?)
         for kind in node_memo:
             for axis in node_memo[kind]:
@@ -728,44 +734,45 @@ def xml(model, version='2.5'):
                         e_sc.text = f"{sc0:.7e}"
                         ET.SubElement(e_bc, 'relative').text = "0"
                     e_bc.attrib['node_set'] = name
-        for body in step['bc']['body']:
-            # Create or find the associated materials
-            if isinstance(body, Body):
-                # If an explicit body, its elements define its
-                # materials.  We assume that the body is homogenous.
-                mat = body.elements[0].material
-                mat_id = material_id_from_material[mat]
-            elif isinstance(body, ImplicitBody):
-                mat = implicit_rigid_material_by_body[body]
-                mat_id = material_id_from_material[mat]
-            else:
-                msg = f"body {k} does not have a supported type.  " + \
-                    "Supported body types are Body and ImplicitBody."
-                raise ValueError(msg)
-            # Create the XML tags for the rigid body BC
-            e_body = ET.SubElement(e_bc_body_parent, 'rigid_body', mat=str(mat_id + 1))
-            for axis in step['bc']['body'][body]:
-                bc = step['bc']['body'][body][ax]
-                if bc['sequence'] == 'fixed':
-                    kind = 'fixed'
-                else:  # bc['sequence'] is Sequence
-                    kind = 'variable'
-                    seq = bc['sequence']
-                    v = bc['scale']
-                # Determine which tag name to use for the specified
-                # variable: force or displacement
-                if bc['variable'] == 'displacement':
-                     tagname = bc_tag_nm['body'][kind]
-                elif bc['variable'] == 'force':
-                     tagname = 'force'
+        if ("bc" in step) and ("body" in step["bc"]):
+            for body in step['bc']['body']:
+                # Create or find the associated materials
+                if isinstance(body, Body):
+                    # If an explicit body, its elements define its
+                    # materials.  We assume that the body is homogenous.
+                    mat = body.elements[0].material
+                    mat_id = material_registry.name(mat, nametype="ordinal_id")
+                elif isinstance(body, ImplicitBody):
+                    mat = implicit_rigid_material_by_body[body]
+                    mat_id = material_registry.name(mat, nametype="ordinal_id")
                 else:
-                     raise ValueError(f"Variable {bc['variable']} not supported for BCs.")
-                e_bc = ET.SubElement(e_body, tagname,
-                                     bc=febioxml.axis_to_febio[axis])
-                if kind == 'variable':
-                    seq_id = _get_or_create_item_id(model.named["sequences"], seq)
-                    e_bc.attrib['lc'] = str(seq_id + 1)
-                    e_bc.text = str(v)
+                    msg = f"body {k} does not have a supported type.  " + \
+                        "Supported body types are Body and ImplicitBody."
+                    raise ValueError(msg)
+                # Create the XML tags for the rigid body BC
+                e_body = ET.SubElement(e_bc_body_parent, 'rigid_body', mat=str(mat_id + 1))
+                for axis in step['bc']['body'][body]:
+                    bc = step['bc']['body'][body][ax]
+                    if bc['sequence'] == 'fixed':
+                        kind = 'fixed'
+                    else:  # bc['sequence'] is Sequence
+                        kind = 'variable'
+                        seq = bc['sequence']
+                        v = bc['scale']
+                    # Determine which tag name to use for the specified
+                    # variable: force or displacement
+                    if bc['variable'] == 'displacement':
+                         tagname = bc_tag_nm['body'][kind]
+                    elif bc['variable'] == 'force':
+                         tagname = 'force'
+                    else:
+                         raise ValueError(f"Variable {bc['variable']} not supported for BCs.")
+                    e_bc = ET.SubElement(e_body, tagname,
+                                         bc=febioxml.axis_to_febio[axis])
+                    if kind == 'variable':
+                        seq_id = _get_or_create_item_id(model.named["sequences"], seq)
+                        e_bc.attrib['lc'] = str(seq_id + 1)
+                        e_bc.text = str(v)
 
     # Write XML elements for sequences (load curves) that are in the
     # model's named entity registry.  Re-use any ordinal ID found in the
