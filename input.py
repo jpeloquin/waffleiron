@@ -392,6 +392,13 @@ class FebReader:
                 # dtmax has a must point sequence
                 step['control']['time stepper']['dtmax'] = self.sequences[int(e_dtmax.attrib['lc']) - 1]
             model.steps.append(step)
+
+        # Output variables
+        output_variables = []
+        for e_var in self.root.findall("Output/plotfile/var"):
+            output_variables.append(e_var.attrib["type"])
+        model.output["variables"] = output_variables
+
         return model
 
     def mesh(self, materials=None):

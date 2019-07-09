@@ -114,6 +114,8 @@ class Model:
         # control step.  This may not be desirable.
         self.default_control = feb.control.default_control_section()
 
+        self.output = {"variables": None}
+
         fixed_template = {'x1': set(),
                           'x2': set(),
                           'x3': set(),

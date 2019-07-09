@@ -18,6 +18,12 @@ from . import febioxml_2_0
 # imports.
 
 
+def default_febio_config():
+    """Return default FEBio settings"""
+    return {"output variables": ["displacement",
+                                 "stress"]}
+
+
 def _get_or_create_item_id(registry, item):
     """Get or create ID for an item.
 
@@ -590,8 +596,16 @@ def xml(model, version='2.5'):
 
     # Output section
     plotfile = ET.SubElement(Output, 'plotfile', type='febio')
-    ET.SubElement(plotfile, 'var', type='displacement')
-    ET.SubElement(plotfile, 'var', type='stress')
+    if model.output["variables"] is None:
+        output_vars = ["displacement", "stress"]
+        if module == "biphasic":
+            output_vars += ["effective fluid pressure",
+                            "fluid pressure",
+                            "fluid flux"]
+    else:
+        output_vars = model.output["variables"]
+    for var in output_vars:
+        ET.SubElement(plotfile, 'var', type=var)
 
     # Step section(s)
     cumulative_time = 0.0
