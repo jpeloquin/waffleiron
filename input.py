@@ -32,6 +32,13 @@ def _to_number(s):
         return float(s)
 
 
+def _maybe_to_number(s):
+    """Convert string to number if possible, otherwise return string."""
+    try:
+        return _to_number(s)
+    except ValueError:
+        return s
+
 def _read_parameter(e, sequence_dict):
     """Read a parameter from an XML element.
 
@@ -395,8 +402,8 @@ class FebReader:
             e_control = e_step.find('Control')
             for e in e_control:
                 if e.tag in control_tagnames_from_febio:
-                    # TODO: handle types correctly
-                    step['control'][control_tagnames_from_febio[e.tag]] = e.text
+                    step['control'][control_tagnames_from_febio[e.tag]] =\
+                        _maybe_to_number(e.text)
             # Control/time_stepper section
             step['control']['time stepper'] = {}
             e_stepper = e_control.find('time_stepper')
