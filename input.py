@@ -8,7 +8,7 @@ import febtools.element
 from febtools.exceptions import UnsupportedFormatError
 from operator import itemgetter
 
-from .core import Model, Mesh, Body, ImplicitBody, Sequence, ScaledSequence
+from .core import Model, Mesh, Body, ImplicitBody, Sequence, ScaledSequence, NodeSet, FaceSet, ElementSet
 from . import xplt
 from . import febioxml, febioxml_2_5, febioxml_2_0
 from . import material as material_lib
@@ -287,8 +287,7 @@ class FebReader:
         named_sets = febioxml.read_named_sets(self.root)
         for entity_type in named_sets:
             for name in named_sets[entity_type]:
-                # TODO: Create hashable geometry sets that are mutable
-                obj = frozenset(named_sets[entity_type][name])
+                obj = named_sets[entity_type][name]
                 model.named[entity_type].add(name, obj)
 
         # Read explicit rigid bodies.  Create a Body object for each
@@ -349,10 +348,9 @@ class FebReader:
                 if self.feb_version == "2.0":
                     # In FEBio XML 2.0, each node to which the fixed boundary
                     # condition is applied is listed under the <fix> tag.
-                    node_ids = set()
+                    node_ids = NodeSet()
                     for e_node in e_fix:
                         node_ids.add(int(e_node.attrib['id']) - 1)
-                    node_ids = frozenset(node_ids)
                 elif self.feb_version == "2.5":
                     # In FEBio XML 2.5, the node set to which the fixed
                     # boundary condition is applied is referenced by name.
@@ -365,9 +363,8 @@ class FebReader:
                 if var == "pressure":
                     ax = "pressure"
                 model.fixed['node'][ax].update(node_ids)
-        # Convert sets to frozen sets so they're hashable for NameRegistry
         for ax in model.fixed["node"]:
-            model.fixed["node"][ax] = frozenset(model.fixed["node"][ax])
+            model.fixed["node"][ax] = model.fixed["node"][ax]
         # Read fixed (rigid) body constraints:
         for e_fix in self.root.findall("Boundary/rigid_body"):
             # Get the Body object to which <rigid_body> refers to by

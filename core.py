@@ -51,9 +51,33 @@ class Body:
         return nids, xnodes
 
 
+class EntitySet(set):
+    """Hashable set of geometry entities.
+
+    This class is designed to store sets of nodes/faces/elements such
+    that they are both hashable (can be used as dict keys) and
+    comparable.
+
+    """
+    def __hash__(self):
+        return id(self) // 16
+
+
+class NodeSet(EntitySet):
+    """Set of node IDs."""
+
+
+class FaceSet(EntitySet):
+    """Set of face IDs."""
+
+
+class ElementSet(EntitySet):
+    """Set of element IDs."""
+
+
 class ImplicitBody:
     """A geometric body defined by its interface with a mesh."""
-    def __init__(self, mesh, interface, material=None):
+    def __init__(self, mesh, interface: NodeSet, material=None):
         """Constructor for ImplicitBody object.
 
         interface := a collection of node ids
@@ -63,7 +87,7 @@ class ImplicitBody:
 
         """
         self.mesh = mesh
-        self.interface = frozenset(interface)
+        self.interface = interface
         # ^ NameRegistry needs this to be hashable
         self.material = material
 
@@ -116,13 +140,9 @@ class Model:
 
         self.output = {"variables": None}
 
-        fixed_template = {'x1': set(),
-                          'x2': set(),
-                          'x3': set(),
-                          'pressure': set(),
-                          'concentration': set()}
-        self.fixed = {'node': deepcopy(fixed_template),
-                      'body': deepcopy(fixed_template)}
+        axes = ('x1', 'x2', 'x3', 'pressure', 'concentration')
+        self.fixed = {'node': {k: NodeSet() for k in axes},
+                      'body': {k: set() for k in axes}}
         self.fixed['body'].update({'α1': set(),
                                    'α2': set(),
                                    'α3': set()})

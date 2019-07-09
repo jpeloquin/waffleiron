@@ -1,3 +1,4 @@
+from .core import NodeSet, FaceSet, ElementSet
 from .element import Quad4, Tri3, Hex8, Penta6
 from . import material
 
@@ -58,10 +59,14 @@ def read_named_sets(xml_root):
     tag_name = {'node sets': 'NodeSet',
                 'facet sets': 'Surface',
                 'element sets': 'ElementSet'}
+    cls_from_entity_type = {"node sets": NodeSet,
+                            "face sets": FaceSet,
+                            "element sets": ElementSet}
     # Handle items that are stored by id
     for k in ["node sets", "element sets"]:
         for e_set in xml_root.findall('./Geometry/' + tag_name[k]):
-            items = set([])
+            cls = cls_from_entity_type[k]
+            items = cls()
             for e_item in e_set.getchildren():
                 item_id = int(e_item.attrib['id']) - 1
                 items.update([item_id])
@@ -69,7 +74,8 @@ def read_named_sets(xml_root):
     # Handle items that are stored as themselves
     for k in ["facet sets"]:
         for tag_set in xml_root.findall('./Geometry/' + tag_name[k]):
-            items = []
+            cls = cls_from_entity_type[k]
+            items = cls()
             for tag_item in tag_set.getchildren():
                 items.append(tuple([int(s.strip()) - 1
                                     for s in tag_item.text.split(",")]))
