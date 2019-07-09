@@ -508,7 +508,8 @@ def xml(model, version='2.5'):
                 name = model.named["node sets"].name(implicit_body.interface)
             except KeyError:
                 name_base = f"{body_name}_interface"
-                name = _autogen_name(model.named["node sets"], name_base, nodes)
+                nodeset = implicit_body.interface
+                name = _autogen_name(model.named["node sets"], name_base, nodeset)
             add_nodeset(model, root, name, implicit_body.interface)
             ET.SubElement(e_boundary, "rigid", rb=str(mat_id + 1),
                           node_set=name)
