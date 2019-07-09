@@ -32,6 +32,28 @@ def _to_number(s):
         return float(s)
 
 
+def _read_parameter(e, sequence_dict):
+    """Read a parameter from an XML element.
+
+    The parameter may be fixed or variable.  If variable, a Sequence or
+    ScaledSequence will be returned.
+
+    """
+    # Check if this is a time-varying or fixed property
+    if "lc" in e.attrib:
+        # The property is time-varying
+        seq_id = int(e.attrib["lc"]) - 1
+        sequence = sequence_dict[seq_id]
+        if e.text is not None and e.text.strip() != "":
+            scale = _to_number(e.text)
+            return ScaledSequence(sequence, scale)
+        else:
+            return sequence
+    else:
+        # The property is fixed
+        return _to_number(e.text)
+
+
 def load_model(fpath):
     """Loads a model (feb) and the solution (xplt) if it exists.
 
@@ -383,14 +405,8 @@ class FebReader:
             e_stepper = e_control.find('time_stepper')
             for e in e_stepper:
                 if e.tag in control_tagnames_from_febio:
-                    # TODO: handle types correctly
                     k = control_tagnames_from_febio[e.tag]
-                    step['control']['time stepper'][k] = float(e.text)
-            # Handle dtmax; it might have an associated sequence
-            e_dtmax = e_stepper.find('dtmax')
-            if 'lc' in e_dtmax.attrib:
-                # dtmax has a must point sequence
-                step['control']['time stepper']['dtmax'] = self.sequences[int(e_dtmax.attrib['lc']) - 1]
+                    step['control']['time stepper'][k] = _read_parameter(e, self.sequences)
             model.steps.append(step)
 
         # Output variables
