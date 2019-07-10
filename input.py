@@ -369,7 +369,18 @@ class FebReader:
                 # hasn't been implemented for fixed boundary conditions.
                 if var == "pressure":
                     ax = "pressure"
-                model.fixed['node'][ax].update(node_ids)
+                if not model.fixed['node'][ax]:
+                    # If there is no node set assigned to this axis yet,
+                    # simply re-use the node set.  This will preserve
+                    # the node set's name if the model is re-exported.
+                    model.fixed['node'][ax] = node_ids
+                else:
+                    # We are changing the node set, so existing
+                    # references to it may become semantically invalid.
+                    # And we can't remove the node set from the name
+                    # registry because then later elements won't be
+                    # interpretable.  So we must create a new node set.
+                    model.fixed['node'][ax] = NodeSet(model.fixed['node'][ax] | node_ids)
         #
         # Read fixed constraints on rigid bodies:
         for e_fix in self.root.findall("Boundary/rigid_body"):
