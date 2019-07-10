@@ -600,9 +600,9 @@ class NameRegistry:
 
     """
     def __init__(self):
-        self._from_name = defaultdict(dict)
+        self._from_name = {}
         self._from_name["canonical"] = {}
-        self._from_object = defaultdict(dict)
+        self._from_object = {}
 
     def add(self, name, obj, nametype="canonical"):
         """Add a name for an object.
@@ -619,8 +619,12 @@ class NameRegistry:
             # names map is overwritten later by assignment.
             del self._from_name[nametype][oldname]
         # Add the name to the name → object map
+        if nametype not in self._from_name:
+            self._from_name[nametype] = {}
         self._from_name[nametype][name] = obj
         # Add the name to the object → names map
+        if obj not in self._from_object:
+            self._from_object[obj] = {}
         self._from_object[obj][nametype] = name
 
     def remove_name(self, name, nametype="canonical"):
