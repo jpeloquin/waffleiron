@@ -570,7 +570,7 @@ class Sequence:
     method.
 
     """
-    def __init__(self, seq, typ='smooth', extend='extrapolate'):
+    def __init__(self, seq, typ='smooth', extend='constant'):
         # Input checking
         assert extend in ['extrapolate', 'constant', 'repeat',
                           'repeat continuous']

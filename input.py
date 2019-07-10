@@ -214,7 +214,7 @@ class FebReader:
                 if 'extend' in e_lc.attrib:
                     extend = e_lc.attrib['extend']
                 else:
-                    extend = 'extrapolate'  # default
+                    extend = 'constant'  # default
                 # Set interpolation
                 if 'type' in e_lc.attrib:
                     typ = e_lc.attrib['type']
