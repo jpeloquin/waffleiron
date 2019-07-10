@@ -573,8 +573,8 @@ def xml(model, version='2.5'):
     for interface in model.constraints:
         if type(interface) is not RigidInterface:
             continue
-        rigid_body_id = model.named["materials"].name(interface.rigid_body,
-                                                      nametype="ordinal_id")
+        rigid_body_id = material_registry.name(interface.rigid_body,
+                                               nametype="ordinal_id")
         node_set_name = model.named["node sets"].name(interface.node_set)
         add_nodeset(model, root, node_set_name, interface.node_set)
         ET.SubElement(e_Boundary, "rigid",

@@ -290,6 +290,7 @@ class FebReader:
             name = material_labels[ord_id]
             model.named["materials"].add(name, material)
             model.named["materials"].add(ord_id, material, nametype="ordinal_id")
+        materials_used = set(e.material for e in model.mesh.elements)
         # Read and store named sets of geometry
         named_sets = febioxml.read_named_sets(self.root)
         for entity_type in named_sets:
@@ -309,13 +310,28 @@ class FebReader:
                     eid = int(e_elem.attrib["id"]) - 1
                     elements.append(model.mesh.elements[eid])
                 EXPLICIT_BODIES[mat_id] = Body(elements)
-        # Read implicit rigid bodies.
+
+        # Read (1) implicit rigid bodies and (2) rigid body ↔ node set
+        # rigid interfaces.
         IMPLICIT_BODIES = {}
         for e_impbod in self.root.findall("Boundary/rigid"):
+            # <rigid> elements may refer to implicit rigid bodies or to
+            # rigid interfaces.  If the rigid "material" referenced by
+            # the <rigid> element is assigned to elements, the element
+            # represents a rigid interface.  Otherwise it represents an
+            # rigid interface that interfaces with itself; i.e., an
+            # implicit rigid body.
             mat_id = int(e_impbod.attrib["rb"]) - 1
             mat = model.named["materials"].obj(mat_id, nametype="ordinal_id")
-            node_ids = model.named["node sets"].obj(e_impbod.attrib["node_set"])
-            IMPLICIT_BODIES[mat_id] = ImplicitBody(model.mesh, node_ids, mat)
+            node_set = model.named["node sets"].obj(e_impbod.attrib["node_set"])
+            if mat in materials_used:
+                # This <rigid> element represents an explicit rigid body
+                # ↔ node set interface.
+                rigid_interface = RigidInterface(mat, node_set)
+                model.constraints.append(rigid_interface)
+            else:
+                # This <rigid> element represents an implicit rigid body
+                IMPLICIT_BODIES[mat_id] = ImplicitBody(model.mesh, node_set, mat)
 
         # Boundary condition: fixed nodes
         axis_name_conv_from_xml = {'x': 'x1',
@@ -395,14 +411,6 @@ class FebReader:
             for e_dof in e_fix.findall("fixed"):
                 dof = dof_name_conv_from_xml[e_dof.attrib["bc"]]
                 model.fixed["body"][dof].add(body)
-        #
-        # Read rigid body ↔ node set rigid interfaces
-        for e_rigid in self.root.findall("Boundary/rigid"):
-            body = model.named["materials"].obj(int(e_rigid.attrib["rb"]) - 1,
-                                                nametype="ordinal_id")
-            node_set = model.named["node sets"].obj(e_rigid.attrib["node_set"])
-            rigid_interface = RigidInterface(body, node_set)
-            model.constraints.append(rigid_interface)
 
         # Load curves (sequences)
         for seq_id, seq in self.sequences.items():
