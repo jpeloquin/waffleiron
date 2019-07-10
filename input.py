@@ -12,7 +12,7 @@ from .core import Model, Mesh, Body, ImplicitBody, Sequence, ScaledSequence, Nod
 from . import xplt
 from . import febioxml, febioxml_2_5, febioxml_2_0
 from . import material as material_lib
-from .febioxml import control_tagnames_from_febio, elem_cls_from_feb
+from .febioxml import control_tagnames_from_febio, elem_cls_from_feb, normalize_xml
 
 def _nstrip(string):
     """Remove trailing nulls from string.
@@ -154,7 +154,7 @@ class FebReader:
 
         """
         self.file = file
-        self.root = ET.parse(self.file).getroot()
+        self.root = normalize_xml(ET.parse(self.file).getroot())
         self.feb_version = self.root.attrib['version']
         if self.root.tag != "febio_spec":
             raise Exception("Root node is not 'febio_spec': '" +

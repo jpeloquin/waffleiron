@@ -1,3 +1,4 @@
+import lxml.etree as ET
 from .core import NodeSet, FaceSet, ElementSet
 from .element import Quad4, Tri3, Hex8, Penta6
 from . import material
@@ -81,3 +82,33 @@ def read_named_sets(xml_root):
                                     for s in tag_item.text.split(",")]))
             sets[k][tag_set.attrib["name"]] = items
     return sets
+
+
+def normalize_xml(root):
+    """Convert some items in FEBio XML to 'normal' representation.
+
+    FEBio XML allows some items to be specified several ways.  To reduce
+    the complexity of the code that converts FEBio XML to a febtools
+    Model, this function should be used ahead of time to normalize the
+    representation of said items.
+
+    Specific normalizations:
+
+    - When a bare <Control> element exists, wrap it in a <Step> element.
+
+    This function also does some validation.
+
+    """
+    # Validation: Only one of <Control> or <Step> should exist
+    if root.find("Control") is None and root.find("Step") is None:
+        msg = (f"{root.base} has both a <Control> and <Step> section. The FEBio documentation does not specify how these sections are supposed to interact, so normalization is aborted.")
+        raise ValueError(msg)
+    # Normalization: When a bare <Control> element exists, wrap it in a
+    # <Step> element.
+    if root.find("Control") is not None:
+        e_Control = root.find("Control")
+        e_Step = ET.Element("Step")
+        e_Control.getparent().remove(e_Control)
+        root.insert(1, e_Step)
+        e_Step.append(e_Control)
+    return root
