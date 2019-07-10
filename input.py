@@ -370,8 +370,6 @@ class FebReader:
                 if var == "pressure":
                     ax = "pressure"
                 model.fixed['node'][ax].update(node_ids)
-        for ax in model.fixed["node"]:
-            model.fixed["node"][ax] = model.fixed["node"][ax]
         #
         # Read fixed constraints on rigid bodies:
         for e_fix in self.root.findall("Boundary/rigid_body"):
