@@ -173,7 +173,7 @@ class Model:
         # Initialize dictionaries to hold named named entities
         self.named = {"materials": NameRegistry(),
                       "node sets": NameRegistry(),
-                      "facet sets": NameRegistry(),
+                      "face sets": NameRegistry(),
                       "element sets": NameRegistry(),
                       "sequences": NameRegistry()}
 

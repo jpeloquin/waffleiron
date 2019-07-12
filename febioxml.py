@@ -55,10 +55,10 @@ module_compat_by_mat = {material.PoroelasticSolid: set(['biphasic']),
 def read_named_sets(xml_root):
     """Read nodesets, etc., and apply them to a model."""
     sets = {'node sets': {},
-            'facet sets': {},
+            'face sets': {},
             'element sets': {}}
     tag_name = {'node sets': 'NodeSet',
-                'facet sets': 'Surface',
+                'face sets': 'Surface',
                 'element sets': 'ElementSet'}
     cls_from_entity_type = {"node sets": NodeSet,
                             "face sets": FaceSet,
