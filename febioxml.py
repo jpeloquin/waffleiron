@@ -73,7 +73,7 @@ def read_named_sets(xml_root):
                 items.update([item_id])
             sets[k][e_set.attrib['name']] = items
     # Handle items that are stored as themselves
-    for k in ["facet sets"]:
+    for k in ["face sets"]:
         for tag_set in xml_root.findall('./Geometry/' + tag_name[k]):
             cls = cls_from_entity_type[k]
             items = cls()

@@ -329,17 +329,17 @@ def add_contact_section(model, xml_root, named_surface_pairs, named_contacts):
         tag_contact.attrib["name"] =\
             _get_or_create_name(named_contacts,
                           f"contact_-_{contact.algorithm}", contact)
-        # Autogenerate names for the facet sets in the contact
+        # Autogenerate names for the face sets in the contact
         surface_name = {"leader": "",
                         "follower": ""}
-        for k, facet_set in zip(("leader", "follower"), (contact.leader, contact.follower)):
-            nm = _get_or_create_name(model.named_sets["facets"],
+        for k, face_set in zip(("leader", "follower"), (contact.leader, contact.follower)):
+            nm = _get_or_create_name(model.named_sets["faces"],
                                      f"contact_surface_-_{contact.algorithm}",
-                                     facet_set)
+                                     face_set)
             surface_name[k] = nm
             tag_surface = ET.SubElement(tag_geometry, "Surface", name=nm)
-            for facet in facet_set:
-                tag_surface.append(tag_facet(facet))
+            for face in face_set:
+                tag_surface.append(tag_face(face))
         # Autogenerate and add the surface pair
         name_surfpair = _get_or_create_name(named_surface_pairs,
                                             f"contact_surfaces_-_{contact.algorithm}",
@@ -813,11 +813,11 @@ def xml(model, version='2.5'):
     return tree
 
 
-def tag_facet(facet):
+def tag_face(face):
     nm = {3: "tri3",
           4: "quad4"}
-    tag = ET.Element(nm[len(facet)])
-    tag.text = ", ".join([f"{i+1}" for i in facet])
+    tag = ET.Element(nm[len(face)])
+    tag.text = ", ".join([f"{i+1}" for i in face])
     return tag
 
 def write_xml(tree, f):

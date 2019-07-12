@@ -266,18 +266,18 @@ def contact_section(model):
         # Write surfaces
         e_master = ET.SubElement(tag_contact, 'surface', type="master")
         for f in contact.leader:
-            e_master.append(tag_facet(f))
+            e_master.append(tag_face(f))
         e_follower = ET.SubElement(tag_contact, 'surface', type="slave")
         for f in contact.follower:
-            e_follower.append(tag_facet(f))
+            e_follower.append(tag_face(f))
     return tag_branch
 
 
-def tag_facet(facet):
+def tag_face(face):
     nm = {3: "tri3",
           4: "quad4"}
-    tag = ET.Element(nm[len(facet)])
-    tag.text = ", ".join([f"{i+1}" for i in facet])
+    tag = ET.Element(nm[len(face)])
+    tag.text = ", ".join([f"{i+1}" for i in face])
     return tag
 
 
