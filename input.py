@@ -25,7 +25,7 @@ def _nstrip(string):
 
 
 def _to_number(s):
-    """Convert numeric string to int or float as appropraite."""
+    """Convert numeric string to int or float as appropriate."""
     try:
         return int(s)
     except ValueError:
