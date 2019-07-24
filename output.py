@@ -657,9 +657,13 @@ def xml(model, version='2.5'):
     # Step section(s)
     cumulative_time = 0.0
     visited_implicit_bodies = set()
+    tag_insertion_point = root.index(Globals) + 1
     for i, step in enumerate(model.steps):
-        e_step = ET.SubElement(root, 'Step',
-                               name='Step{}'.format(i + 1))
+        e_step = ET.Element('Step', name=f"Step{i+1}")
+        # Insert the <Step> elements right after <Globals>
+        root.insert(tag_insertion_point, e_step)
+        tag_insertion_point += 1
+
         if version == '2.0':
             ET.SubElement(e_step, 'Module', type=step['module'])
         # Warn if there's an incompatibility between requested materials
