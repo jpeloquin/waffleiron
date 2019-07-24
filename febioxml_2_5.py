@@ -103,6 +103,7 @@ def meshdata_section(model):
         # Write local basis if defined
         if e.local_basis is not None:
             e_elem = ET.SubElement(e_edata_mat_axis, "elem", lid=str(i_elemset+1))
+            e_elem.append(ET.Comment(f"Element {i + 1}"))
             i_elemset += 1
             ET.SubElement(e_elem, "a").text = bvec_to_text(e.local_basis[0])
             ET.SubElement(e_elem, "d").text = bvec_to_text(e.local_basis[1])
