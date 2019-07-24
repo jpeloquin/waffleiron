@@ -61,6 +61,10 @@ def _read_parameter(e, sequence_dict):
         return _to_number(e.text)
 
 
+def _vec_from_text(s) -> tuple:
+    return tuple(_to_number(x.strip()) for x in s.split(","))
+
+
 def _orthonormal_basis(a, d):
     """Return basis for two vectors.
 
@@ -325,6 +329,35 @@ class FebReader:
             for name in named_sets[entity_type]:
                 obj = named_sets[entity_type][name]
                 model.named[entity_type].add(name, obj)
+
+        # From <Materials>, read local (spatially varying) material
+        # coordinate systems (MCSs) encoded using local node IDs
+        e_mcs_local = self.root.findall('Material//mat_axis[@type="local"]')
+        if e_mcs_local:
+            # Check if there are multiple <mat_axis type="local">
+            # elements; we can't support more than one unless they are
+            # all equal.
+            v = _vec_from_text(e_mcs_local[0].text)  # tuple
+            equal = (_vec_from_text(e.text) == v
+                     for e in e_mcs_local)
+            if not all(equal):
+                msg = f'{e_mat.base}:{e_mat.sourceline} Multiple <mat_axis type="local"> elements with unequal values are present.  febtools does not support this case.'
+                raise ValueError(msg)
+            # Convert the node ID encoded MCS to an explicit MCS for
+            # each finite element.  We can use just the first MCS
+            # XML element because we have just confirmed they are
+            # all the same.
+            elements_by_mat = {}
+            for element in model.mesh.elements:
+                elements_by_mat.setdefault(element.material, []).append(element)
+            for e_mcs in e_mcs_local:
+                mat_id = int(e_mcs.xpath("ancestor::material")[0].attrib["id"]) - 1
+                mat = materials_by_id[mat_id]
+                nids = [x - 1 for x in _vec_from_text(e_mcs_local[0].text)]
+                for element in elements_by_mat[mat]:
+                    a = element.nodes[nids[1]] - element.nodes[nids[0]]
+                    d = element.nodes[nids[2]] - element.nodes[nids[0]]
+                    element.local_basis = _orthonormal_basis(a, d)
 
         # Read explicit rigid bodies.  Create a Body object for each
         # rigid body "material" in the XML with explicit geometry.

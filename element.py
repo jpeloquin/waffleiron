@@ -62,6 +62,7 @@ class Element(object):
         self.ids = None # indices of nodes in mesh
         self.mesh = None
         self.material = material
+        self.local_basis = None
         self.properties = {'displacement': np.array([(0, 0, 0) for i in nodes])}
         # Nodal coordinates
         self.nodes = np.array(nodes)
