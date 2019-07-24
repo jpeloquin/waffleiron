@@ -61,6 +61,33 @@ def _read_parameter(e, sequence_dict):
         return _to_number(e.text)
 
 
+def _orthonormal_basis(a, d):
+    """Return basis for two vectors.
+
+    The basis is a 3×3 matrix A = [e1, e2, e3] calculated as follows:
+
+    - e1 = Parallel to a.
+
+    - e2 = The component of d perpendicular to a.
+
+    - e3 = Perpendicular to a and d.
+
+    Each basis vector is a unit vector.
+
+    The first index → index of basis vector; second index → index of
+    that vector's components.  Essentially, the basis defines a basis W
+    with respect to U such that v_{W} = A · v_{U}.
+
+    """
+    g = np.cross(a, d)
+    d = np.cross(g, a)
+    a = a / np.linalg.norm(a)
+    d = d / np.linalg.norm(d)
+    g = g / np.linalg.norm(g)
+    basis = np.vstack([a, d, g])
+    return basis
+
+
 def load_model(fpath):
     """Loads a model (feb) and the solution (xplt) if it exists.
 
@@ -170,12 +197,13 @@ class FebReader:
         """
         mats = {}
         mat_labels = {}
+        mat_bases = {}
         for m in self.root.findall('./Material/material'):
             # Read material into dictionary
             material = self._read_material(m)
             mat_id = int(m.attrib['id']) - 1  # FEBio counts from 1
             try:
-                material = mat_obj_from_elemd(material)
+                material = mat_obj_from_elemd(material, mat_bases)
             except NotImplementedError:
                 warnings.warn("Warning: Material type `{}` is not implemented "
                               "for post-processing.  It will be represented "
@@ -188,7 +216,7 @@ class FebReader:
                 mat_labels[mat_id] = m.attrib['name']
             else:
                 mat_labels[mat_id] = str(mat_id)
-        return mats, mat_labels
+        return mats, mat_labels, mat_bases
 
 
     @property
@@ -280,9 +308,9 @@ class FebReader:
         """
         # Get the materials dictionary so we can assign materials to
         # elements when we read the geometry
-        materials_by_id, material_labels = self.materials()
+        materials_by_id, material_labels, material_basis = self.materials()
         # Create model geoemtry
-        mesh = self.mesh(materials=materials_by_id)
+        mesh = self.mesh((materials_by_id, material_labels, material_basis))
         model = Model(mesh)
         # Store the materials and their labels, now that the Model
         # object has been instantiated
@@ -447,12 +475,14 @@ class FebReader:
 
         return model
 
-    def mesh(self, materials=None):
+    def mesh(self, material_info=None):
         """Return mesh.
 
         """
-        if materials is None:
-            materials, mat_labels = self.materials()
+        if material_info is None:
+            materials, mat_labels, mat_bases = self.materials()
+        else:
+            materials, mat_labels, mat_bases = material_info
         nodes = [tuple([float(a) for a in b.text.split(",")])
                  for b in self.root.findall("./Geometry/Nodes/*")]
         # Read elements
@@ -471,18 +501,25 @@ class FebReader:
                 elements.append(e)
         # Create mesh
         mesh = Mesh(nodes, elements)
+        mesh.material_basis = mat_bases
         return mesh
 
 
-def mat_obj_from_elemd(d):
+def mat_obj_from_elemd(d, mat_bases):
     """Convert material element to material object"""
     if d["material"] in febioxml.solid_class_from_name:
         cls = febioxml.solid_class_from_name[d["material"]]
+        if ("mat_axis" in d["properties"] and
+            d["properties"]["mat_axis"]["type"] == "vector"):
+            basis = _orthonormal_basis(d["properties"]["mat_axis"]["a"],
+                                       d["properties"]["mat_axis"]["d"])
+        else:
+            basis = None
         if d["material"] == "solid mixture":
             constituents = []
             for d_child in d["constituents"]:
-                constituents.append(mat_obj_from_elemd(d_child))
-            return cls(constituents)
+                constituents.append(mat_obj_from_elemd(d_child, mat_bases))
+            material = cls(constituents)
         elif d["material"] == "biphasic":
             # Instantiate Permeability object
             p_props = d["properties"]["permeability"]
@@ -495,13 +532,15 @@ def mat_obj_from_elemd(d):
                 # This requires retaining material ids in the dict
                 # passed to this function.
                 raise ValueError("""A porelastic solid was encountered with {len(d['constituents'])} solid constituents.  Poroelastic solids must have exactly one solid constituent.""")
-            solid = mat_obj_from_elemd(d["constituents"][0])
+            solid = mat_obj_from_elemd(d["constituents"][0], mat_bases)
             # Return the Poroelastic Solid object
-            return material_lib.PoroelasticSolid(solid, permeability)
+            material = material_lib.PoroelasticSolid(solid, permeability)
         elif hasattr(cls, "from_feb") and callable(cls.from_feb):
-            return cls.from_feb(**d["properties"])
+            material = cls.from_feb(**d["properties"])
         else:
-            return cls(d["properties"])
+            material = cls(d["properties"])
+        mat_bases[material] = basis
+        return material
     else:
         raise ValueError(f"{d['material']} is not supported in the loading of FEBio XML.")
 
