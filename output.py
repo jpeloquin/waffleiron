@@ -12,6 +12,7 @@ from .control import step_duration
 from . import material as material_lib
 from . import febioxml_2_5 as febioxml
 from . import febioxml_2_0
+from .febioxml import vec_to_text, bvec_to_text
 # ^ The intent here is to eventually be able to switch between FEBio XML
 # formats by exchanging this import statement for a different version.
 # Common functionality can be shared between febioxml_*_*.py files via
@@ -236,6 +237,17 @@ def material_to_feb(mat, model):
             msg = "{} not implemented for conversion to FEBio XML."
             print(msg.format(mat.__class__))
             raise
+    # Add material coordinate system if it is defined for this material.
+    # Any mixture material /should/ call `material_to_feb` (this
+    # function) for each sub-material, so we shouldn't need to handle
+    # material coordinate systems anywhwere else.
+    if (mat in model.mesh.material_basis and
+        model.mesh.material_basis[mat] is not None):
+        basis = model.mesh.material_basis[mat]
+        e_mat_axis = ET.Element("mat_axis", type="vector")
+        ET.SubElement(e_mat_axis, "a").text = febioxml.bvec_to_text(basis[0])
+        ET.SubElement(e_mat_axis, "d").text = febioxml.bvec_to_text(basis[1])
+        e.insert(0, e_mat_axis)
     return e
 
 

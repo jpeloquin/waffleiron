@@ -52,6 +52,15 @@ module_compat_by_mat = {material.PoroelasticSolid: set(['biphasic']),
                         material.RigidBody: set(['solid', 'biphasic']),
                         material.LinearOrthotropicElastic: set(['solid', 'biphasic'])}
 
+
+def vec_to_text(v):
+    return ', '.join(f"{a:.7e}" for a in v)
+
+
+def bvec_to_text(v):
+    return ', '.join(f"{a:.7f}" for a in v)
+
+
 def read_named_sets(xml_root):
     """Read nodesets, etc., and apply them to a model."""
     sets = {'node sets': {},

@@ -65,8 +65,6 @@ def geometry_section(model, parts, material_registry):
             e_element.text = ', '.join(str(i+1) for i in e.ids)
     return e_geometry
 
-def vec_to_text(v):
-    return ', '.join(f"{a:.7e}" for a in v)
 
 def elem_var_fiber_xml(e):
     tag = ET.Element('elem')
@@ -106,10 +104,8 @@ def meshdata_section(model):
         if e.local_basis is not None:
             e_elem = ET.SubElement(e_edata_mat_axis, "elem", lid=str(i_elemset+1))
             i_elemset += 1
-            e_a = ET.SubElement(e_elem, "a")
-            e_a.text = ", ".join((f"{x:.7f}" for x in e.local_basis[0]))
-            e_d = ET.SubElement(e_elem, "d")
-            e_d.text = ", ".join((f"{x:.7f}" for x in e.local_basis[1]))
+            ET.SubElement(e_elem, "a").text = bvec_to_text(e.local_basis[0])
+            ET.SubElement(e_elem, "d").text = bvec_to_text(e.local_basis[1])
             ET.SubElement(e_elemset, "elem", id=str(i+1))
     if len(e_edata_mat_axis) != 0:
         e_meshdata.append(e_edata_mat_axis)
