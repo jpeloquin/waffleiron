@@ -809,6 +809,11 @@ def xml(model, version='2.5'):
         seq = model.named["sequences"].obj(seq_id, nametype="ordinal_id")
         add_sequence(root, model, seq)
 
+    # Write MeshData
+    e_MeshData, e_ElementSet = febioxml.meshdata_section(model)
+    root.insert(root.index(Geometry) + 1, e_MeshData)
+    Geometry.append(e_ElementSet)
+
     tree = ET.ElementTree(root)
     return tree
 

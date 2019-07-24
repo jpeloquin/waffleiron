@@ -78,12 +78,6 @@ def elem_var_fiber_xml(e):
 def elem_var_thickness_xml(e):
     raise NotImplementedError
 
-def elem_var_mataxis_xml(e):
-    tag = ET.Element('elem')
-    for nm, v in zip(['a', 'd'], e.properties['mat_axis']):
-        ET.SubElement(tag, nm).text = vec_to_text(v)
-    return tag
-
 def elem_var_vonmises_xml(e):
     raise NotImplementedError
 
@@ -94,38 +88,32 @@ element_var_feb = {'v_fiber': {'name': 'fiber',
                                'fn': elem_var_fiber_xml},
                    'thickness': {'name': 'shell thickness',
                                  'fn': elem_var_thickness_xml},
-                   'mat_axis': {'name': 'mat_axis',
-                                'fn': elem_var_mataxis_xml},
                    'von Mises': {'name': 'MRVonMisesParameters',
                                  'fn': elem_var_vonmises_xml},
                    'prestretch': {'name': 'pre_stretch',
                                   'fn': elem_var_prestretch_xml}}
 
-def meshdata_section(model, parts):
+def meshdata_section(model):
     """Return XML tree for MeshData section."""
     e_meshdata = ET.Element('MeshData')
-    # Element data
-    for part in parts:
-        # Gather a list of elements for each variable
-        e_by_var = {}
-        for i, e in part['elements']:
-            for p in e.properties:
-                e_by_var.setdefault(p, [])
-                e_by_var[p].append((i, e))
-        # Write the element properties for each element in this part to XML.
-        for var in e_by_var:
-            # Only add optional tags if they contain data.  Otherwise
-            # FEBio dies and incorrectly blames the following line in
-            # the XML file.
-            if len(e_by_var) != 0:
-                e_elementdata = ET.SubElement(e_meshdata, 'ElementData',
-                                              var=element_var_feb[var]['name'],
-                                              elem_set=part['label'])
-                for i, e in e_by_var[var]:
-                    e_val = element_var_feb[var]['fn'](e)
-                    e_val.attrib['lid'] = str(i + 1)
-                    e_elementdata.append(e_val)
-    return e_meshdata
+    e_edata_mat_axis = ET.Element("ElementData", var="mat_axis",
+                                  elem_set="autogen-mat_axis")
+    e_elemset = ET.Element("ElementSet", name="autogen-mat_axis")
+    i_elemset = 0
+    # ^ index into the extra element set we're forced to construct
+    for i, e in enumerate(model.mesh.elements):
+        # Write local basis if defined
+        if e.local_basis is not None:
+            e_elem = ET.SubElement(e_edata_mat_axis, "elem", lid=str(i_elemset+1))
+            i_elemset += 1
+            e_a = ET.SubElement(e_elem, "a")
+            e_a.text = ", ".join((f"{x:.7f}" for x in e.local_basis[0]))
+            e_d = ET.SubElement(e_elem, "d")
+            e_d.text = ", ".join((f"{x:.7f}" for x in e.local_basis[1]))
+            ET.SubElement(e_elemset, "elem", id=str(i+1))
+    if len(e_edata_mat_axis) != 0:
+        e_meshdata.append(e_edata_mat_axis)
+    return e_meshdata, e_elemset
 
 
 def split_bc_names(s):
