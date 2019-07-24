@@ -12,7 +12,7 @@ from .core import Model, Mesh, Body, ImplicitBody, Sequence, ScaledSequence, Nod
 from . import xplt
 from . import febioxml, febioxml_2_5, febioxml_2_0
 from . import material as material_lib
-from .febioxml import control_tagnames_from_febio, elem_cls_from_feb, normalize_xml
+from .febioxml import control_tagnames_from_febio, control_values_from_febio, elem_cls_from_feb, normalize_xml
 
 def _nstrip(string):
     """Remove trailing nulls from string.
@@ -488,9 +488,12 @@ class FebReader:
             # Control section
             e_control = e_step.find('Control')
             for e in e_control:
-                if e.tag in control_tagnames_from_febio:
-                    step['control'][control_tagnames_from_febio[e.tag]] =\
-                        _maybe_to_number(e.text)
+                nm = control_tagnames_from_febio[e.tag]
+                if nm in control_values_from_febio:
+                    val = control_values_from_febio[nm][e.text]
+                else:
+                    val = _maybe_to_number(e.text)
+                step['control'][nm] = val
             # Control/time_stepper section
             step['control']['time stepper'] = {}
             e_stepper = e_control.find('time_stepper')

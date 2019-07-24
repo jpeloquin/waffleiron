@@ -43,21 +43,27 @@ def auto_control_section(sequence, pts_per_segment=6):
     return control
 
 
-def default_control_section():
+def default_control_section(analysis_type='static'):
     default = {'time steps': 10,
                'step size': 0.1,
-               'max refs': 15,
-               'max ups': 10,
                'dtol': 0.001,
                'etol': 0.01,
                'rtol': 0,
                'lstol': 0.9,
+               'min residual': 1e-20,
                'time stepper': {'dtmin': 0.01,
                                 'dtmax': 0.1,
                                 'max retries': 5,
                                 'opt iter': 10},
-               'analysis type': 'static',
+               'method': 'BFGS', # alt: 'quasi-Newton'
+               'reform each time step': True,
+               'reform on diverge': True,
+               'max refs': 15,
+               'max ups': 10,
                'plot level': 'PLOT_MAJOR_ITRS'}
+    if analysis_type == 'biphasic':
+        default.update({'ptol': 0.01,
+                        'symmetric biphasic': True})
     return default
 
 

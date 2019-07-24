@@ -12,7 +12,7 @@ from .control import step_duration
 from . import material as material_lib
 from . import febioxml_2_5 as febioxml
 from . import febioxml_2_0
-from .febioxml import vec_to_text, bvec_to_text
+from .febioxml import vec_to_text, bvec_to_text, control_tagnames_to_febio, control_values_to_febio
 # ^ The intent here is to eventually be able to switch between FEBio XML
 # formats by exchanging this import statement for a different version.
 # Common functionality can be shared between febioxml_*_*.py files via
@@ -376,6 +376,18 @@ def add_contact_section(model, xml_root, named_surface_pairs, named_contacts):
     return tag_contact_section
 
 
+def control_parameter_to_feb(parameter, value):
+    """Return FEBio XML element for a control parameter."""
+    nm_feb = control_tagnames_to_febio[parameter]
+    if parameter in control_values_to_febio:
+        val_feb = control_values_to_febio[parameter][value]
+    else:
+        val_feb = str(value)
+    e = ET.Element(nm_feb)
+    e.text = val_feb
+    return e
+
+
 def xml(model, version='2.5'):
     """Convert a model to an FEBio XML tree.
 
@@ -420,13 +432,14 @@ def xml(model, version='2.5'):
     root.append(ET.Comment(msg))
 
     version_major, version_minor = [int(a) for a in version.split(".")]
+
+    # Set solver module (analysis type)
+    module = choose_module([m for m in model.named["materials"].objects()])
     if version_major == 2 and version_minor >= 5:
+        # In FEBio XML ≥ 2.5, <Module> must exist and be first tag
         e_module = ET.SubElement(root, 'Module')
-        # <Module> must exist and be first tag for FEBio XML ≥ 2.5.  We
-        # need to figure out what the module should be, but will do that
-        # later once the materials are enumerated.
-        module = choose_module([m for m in model.named["materials"].objects()])
         e_module.attrib["type"] = module
+    # FEBio XML 2.0 sets <analysis_type> in <Control>
 
     Globals = ET.SubElement(root, 'Globals')
     Material = ET.SubElement(root, 'Material')
@@ -656,13 +669,16 @@ def xml(model, version='2.5'):
                (step['module'] not in febioxml.module_compat_by_mat[type(mat)]):
                 raise ValueError(f"Material `{type(mat)}` is not compatible with Module {step['module']}")
         e_con = ET.SubElement(e_step, 'Control')
-        if "analysis type" in step["control"]:
-            ET.SubElement(e_con, 'analysis',
-                          type=step['control']['analysis type'])
-        for lbl1, lbl2 in febioxml.control_tagnames_to_febio.items():
-            if lbl1 in step['control'] and lbl1 != 'time stepper':
-                txt = str(step['control'][lbl1])
-                ET.SubElement(e_con, lbl2).text = txt
+        if version == '2.0':
+            ET.SubElement(e_con, 'analysis', type=module)
+        # Write all the single-element Control parameters (i.e,
+        # everything but <time_stepper>
+        for parameter in step['control']:
+            if parameter == "time stepper":
+                continue
+            e_param = control_parameter_to_feb(parameter, step['control'][parameter])
+            e_con.append(e_param)
+        # Write <time_stepper> and all its children
         e_ts = ET.SubElement(e_con, 'time_stepper')
         ET.SubElement(e_ts, 'dtmin').text = \
             str(step['control']['time stepper']['dtmin'])

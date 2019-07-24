@@ -30,6 +30,7 @@ perm_class_from_name = {"perm-Holmes-Mow": material.IsotropicHolmesMowPermeabili
                         "perm-const-iso": material.IsotropicConstantPermeability}
 perm_name_from_class = {v: k for k, v in perm_class_from_name.items()}
 
+
 control_tagnames_to_febio = {'time steps': 'time_steps',
                              'step size': 'step_size',
                              'max refs': 'max_refs',
@@ -38,13 +39,27 @@ control_tagnames_to_febio = {'time steps': 'time_steps',
                              'etol': 'etol',
                              'rtol': 'rtol',
                              'lstol': 'lstol',
+                             'ptol': 'ptol',
+                             # ^ for biphasic analysis
                              'plot level': 'plot_level',
                              'time stepper': 'time_stepper',
                              'max retries': 'max_retries',
                              'dtmax': 'dtmax',
                              'dtmin': 'dtmin',
-                             'opt iter': 'opt_iter'}
+                             'opt iter': 'opt_iter',
+                             'min residual': 'min_residual',
+                             'update method': 'qnmethod',
+                             'symmetric biphasic': 'symmetric_biphasic',
+                             # ^ for biphsaic analysis
+                             'reform each time step': 'reform_each_time_step',
+                             # ^ for fluid analysis
+                             'reform on diverge': 'diverge_reform'}
 control_tagnames_from_febio = {v: k for k, v in control_tagnames_to_febio.items()}
+control_values_to_febio = {'update method': {"quasi-Newton": "1",
+                                             "BFGS": "0"}}
+control_values_from_febio = {k: {v_xml: v_us for v_us, v_xml in conv.items()}
+                             for k, conv in control_values_to_febio.items()}
+
 
 # TODO: Redesign the compatibility system so that compatibility can be
 # derived from the material's type.
