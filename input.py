@@ -535,6 +535,29 @@ class FebReader:
         # Create mesh
         mesh = Mesh(nodes, elements)
         mesh.material_basis = mat_bases
+        #
+        # Read <MeshData> (partial support; just for ElementData with
+        # var="mat_axis")
+        for e_edata in self.root.findall("MeshData/ElementData[@var='mat_axis']"):
+            # Get the name of the referenced element set
+            try:
+                nm_eset = e_edata.attrib["elem_set"]
+            except KeyError:
+                raise ValueError(f"{e_edata.base}:{e_edata.sourceline} <ElementData> is missing its required 'elem_set' attribute.")
+            # Get the referenced element set
+            e_eset = self.root.find(f"Geometry/ElementSet[@name='{nm_eset}']")
+            if e_eset is None:
+                raise ValueError(f"{e_edata.base}:{e_edata.sourceline} <ElementData> references an element set named '{nm_eset}', which is not defined.")
+            eset_elements = tuple(e_eset.iterchildren())
+            for e_elem in e_edata:
+                a = _vec_from_text(e_elem.find("a").text)
+                d = _vec_from_text(e_elem.find("d").text)
+                basis = _orthonormal_basis(a, d)
+                leid = int(e_elem.attrib["lid"]) - 1
+                eid = int(eset_elements[leid].attrib["id"]) - 1
+                # Who thought this much indirection in a data file
+                # format was a good idea?
+                mesh.elements[eid].local_basis = basis
         return mesh
 
 
