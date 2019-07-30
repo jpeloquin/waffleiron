@@ -11,10 +11,10 @@ import febtools
 class MeshSolutionTest(unittest.TestCase):
     """Tests `MeshSolution.f`
 
-    This test also depends on `readlog` and `Xpltreader` functioning
-    correctly.  Results from an FEBio simulation are read from the
-    text log and the binary file.  F tensors are computed for each
-    element based on the binary file data and compared to those
+    This test also depends on `textdata_list` and `Xpltreader`
+    functioning correctly.  Results from an FEBio simulation are read
+    from the text log and the binary file.  F tensors are computed for
+    each element based on the binary file data and compared to those
     recorded in the text log.
 
     """
@@ -24,8 +24,8 @@ class MeshSolutionTest(unittest.TestCase):
         reader = febtools.input.FebReader(os.path.join('test', 'fixtures', 'complex_loading.feb'))
         self.model = reader.model()
         self.model.apply_solution(self.soln)
-        self.elemdata = febtools.input.readlog(os.path.join('test', 'fixtures', 'complex_loading_elem_data.txt'))
-        self.nodedata = febtools.input.readlog(os.path.join('test', 'fixtures', 'complex_loading_node_data.txt'))
+        self.elemdata = febtools.input.textdata_list(os.path.join('test', 'fixtures', 'complex_loading_elem_data.txt'), delim=",")
+        self.nodedata = febtools.input.textdata_list(os.path.join('test', 'fixtures', 'complex_loading_node_data.txt'), delim=",")
 
     def cmp_f(self, row, col, key):
         """Helper function for comparing f tensors.
@@ -39,7 +39,7 @@ class MeshSolutionTest(unittest.TestCase):
             # +/-1
             if not np.isnan(self.elemdata[-1]['s1'][i]):
                 f = e.f((0, 0, 0))
-                npt.assert_approx_equal(f[row, col], 
+                npt.assert_approx_equal(f[row, col],
                                         self.elemdata[-1][key][i],
                                         significant=5)
 

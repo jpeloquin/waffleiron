@@ -140,42 +140,47 @@ def load_model(fpath):
     return model
 
 
-def readlog(fpath):
+def textdata_list(fpath, delim=" "):
     """Reads FEBio logfile as a list of the steps' data.
 
-    The function returns a list of dictionaries, one per solution
-    step.  The keys are the variable names (e.g. x, sxy, J,
-    etc.). Each dictionary value is a list of variable values over all
-    the nodes.  The indexing of this list is the same as in the
-    original file.
+    The function returns a list of dictionaries, one per solution step.
+    The keys are the variable names (e.g. x, sxy, J, etc.). Each
+    dictionary value is a list of variable values over all the nodes.
+    The indexing of this list is the same as in the original file.
 
     This function can be used for both node and element data.
 
     """
-    f = open(fpath, 'rU')
-    try:
-        allsteps = []
+    with open(fpath, 'r') as f:
+        steps = []
+        # Find column names
+        colnames = None
+        for l in f:
+            if l.startswith("*Data  = "):
+                colnames = l.lstrip("*Data  = ").rstrip().split(";")
+            elif not l.startswith("*"):
+                break
+        if colnames is None:
+            raise ValueError(f"Could not find '*Data' row in {f.name}")
+        # Read the data
+        f.seek(0)
         stepdata = None
-        for line in f:
-            if line[0:5] == '*Data':
-                keys = line[8:].strip().split(';')
+        for l in f:
+            if l.startswith('*'):
                 if stepdata is not None:
-                    allsteps.append(stepdata)
-                stepdata = {}
-            elif line[0] != '*':
-                linedata = []
-                for i, s in enumerate(line.strip().split(',')[1:]):
+                    steps.append(stepdata)
+                stepdata = None
+            else:
+                if stepdata is None:
+                    stepdata = {}
+                for k, s in zip(colnames, l.strip().split(delim)[1:]):
                     try:
                         v = float(s)
                     except ValueError as e:
                         v = float('nan')
-                    linedata.append(v)
-                for k, v in zip(keys, linedata):
                     stepdata.setdefault(k, []).append(v)
-        allsteps += [stepdata]  # append last step
-    finally:
-        f.close()
-    return allsteps
+        steps.append(stepdata)  # add the last step
+    return steps
 
 
 def textdata_table(fpath, delim=" "):

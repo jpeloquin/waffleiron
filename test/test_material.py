@@ -7,7 +7,7 @@ import numpy.testing as npt
 import febtools as feb
 import os
 from febtools.material import *
-from febtools.input import FebReader, readlog
+from febtools.input import FebReader, textdata_list
 
 
 class ExponentialFiberTest(unittest.TestCase):
@@ -68,8 +68,9 @@ class IsotropicElasticTest(unittest.TestCase):
 
     """
     def setUp(self):
-        elemdata = readlog('test/fixtures/'
-                              'isotropic_elastic_elem_data.txt')
+        elemdata = textdata_list('test/fixtures/'
+                                 'isotropic_elastic_elem_data.txt',
+                                 delim=",")
         febreader = FebReader(open('test/fixtures/'
                                    'isotropic_elastic.feb'))
         mats, mat_labels, mat_bases = febreader.materials()

@@ -412,7 +412,7 @@ class Quad4ElementTest(unittest.TestCase):
 class ElementMethodsTestHex8(unittest.TestCase):
 
     def setUp(self):
-        self.elemdata = feb.input.readlog(os.path.join('test', 'fixtures', 'complex_loading_elem_data.txt'))
+        self.elemdata = feb.input.textdata_list(os.path.join('test', 'fixtures', 'complex_loading_elem_data.txt'), delim=",")
         self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'complex_loading.xplt'))
         reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'complex_loading.feb'))
         self.model = reader.model()
@@ -449,7 +449,7 @@ class FTestTri3(unittest.TestCase):
         reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'square_tri3.feb'))
         self.model = reader.model()
         self.model.apply_solution(self.soln)
-        self.elemdata = feb.input.readlog(os.path.join('test', 'fixtures', 'square_tri3_elem_data.txt'))
+        self.elemdata = feb.input.textdata_list(os.path.join('test', 'fixtures', 'square_tri3_elem_data.txt'), delim=",")
 
     def test_f(self):
         istep = -1
@@ -469,8 +469,9 @@ class FTestQuad4(unittest.TestCase):
     def setUp(self):
         self.soln = feb.MeshSolution('test/fixtures/'
                                      'square_quad4.xplt')
-        self.elemdata = feb.readlog('test/fixtures/'
-                                    'square_quad4_elem_data.txt')
+        self.elemdata = feb.textdata_list('test/fixtures/'
+                                          'square_quad4_elem_data.txt',
+                                          delim=",")
     def test_f(self):
         istep = -1
         u = self.soln.reader.step_data(istep)['displacement']
