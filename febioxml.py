@@ -53,7 +53,8 @@ control_tagnames_to_febio = {'time steps': 'time_steps',
                              # ^ for biphsaic analysis
                              'reform each time step': 'reform_each_time_step',
                              # ^ for fluid analysis
-                             'reform on diverge': 'diverge_reform'}
+                             'reform on diverge': 'diverge_reform',
+                             'analysis type': 'analysis'}
 control_tagnames_from_febio = {v: k for k, v in control_tagnames_to_febio.items()}
 control_values_to_febio = {'update method': {"quasi-Newton": "1",
                                              "BFGS": "0"}}

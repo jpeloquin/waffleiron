@@ -489,7 +489,9 @@ class FebReader:
             e_control = e_step.find('Control')
             for e in e_control:
                 nm = control_tagnames_from_febio[e.tag]
-                if nm in control_values_from_febio:
+                if nm == "analysis type":
+                    val = e.attrib['type']
+                elif nm in control_values_from_febio:
                     val = control_values_from_febio[nm][e.text]
                 else:
                     val = _maybe_to_number(e.text)
