@@ -4,6 +4,8 @@ import os
 from lxml import etree as ET
 import struct
 import numpy as np
+import pandas as pd
+
 import febtools.element
 from febtools.exceptions import UnsupportedFormatError
 from operator import itemgetter
@@ -174,6 +176,38 @@ def readlog(fpath):
     finally:
         f.close()
     return allsteps
+
+
+def textdata_table(fpath, delim=" "):
+    """Return a pandas DataFrame from a text data file."""
+    with open(fpath, 'r') as f:
+        # Find column names
+        colnames = None
+        for l in f:
+            if l.startswith("*Data  = "):
+                colnames = l.lstrip("*Data  = ").rstrip().split(";")
+            elif not l.startswith("*"):
+                break
+        if colnames is None:
+            raise ValueError(f"Could not find '*Data' row in {f.name}")
+        f.seek(0)
+        # Read the data
+        rows = []
+        for l in f:
+            if l.startswith("*"):
+                if l.startswith("*Step"):
+                    step = l.lstrip("*Step  = ").rstrip()
+                elif l.startswith("*Time"):
+                    t = l.lstrip("*Time  = ").rstrip()
+            else:  # numeric data line
+                row = [step, t] + l.split(delim)
+                # row[0] = int(row[0])
+                rows.append(row)
+    tab = pd.DataFrame(rows, dtype=float)
+    tab.columns = ["Step", "Time", "Item"] + colnames
+    tab["Step"] = tab["Step"].astype(int)
+    tab["Item"] = tab["Item"].astype(int)
+    return tab
 
 
 class FebReader:
