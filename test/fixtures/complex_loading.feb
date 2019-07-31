@@ -260,6 +260,10 @@
 			<var type="displacement"/>
 			<var type="stress"/>
 		</plotfile>
+    <logfile>
+      <element_data file="complex_loading_elem_data.txt" delim="," data="x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J"></element_data>
+      <node_data file="complex_loading_node_data.txt" delim="," data="x;y;z;ux;uy;uz"></node_data>
+    </logfile>
 	</Output>
 	<Step name="Step01">
 		<Module type="solid"/>
