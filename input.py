@@ -852,9 +852,16 @@ class XpltReader:
                         struct.unpack(self.endian + 'I', data)[0]])
                 elif label == 'item name':
                     name.append(data[:data.find(b'\x00')].decode())
+                elif label == 'item array size':
+                    # Do nothing.  This tag was added around FEBio 2.7
+                    # to FEBio's `DICTIONARY_ITEM` class.  It's not
+                    # clear what it does, but it's apparently 0 for
+                    # everything but arrays.  (So why is it defined at
+                    # all for not-arrays?)
+                    pass
                 else:
-                    raise Exception('%s block not expected as '
-                                    'child of dict_item.' % (label,))
+                    msg = f"`{label}` block not expected as a child of `dict_item`."
+                    raise Exception(msg)
         return zip(typ, fmt, name)
 
     def _unpack_variable_data(self, s, typ):
