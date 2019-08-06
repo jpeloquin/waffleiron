@@ -92,6 +92,17 @@ def exponentialfiber_to_feb(mat, model):
     return e
 
 
+def power_linear_fiber_to_feb(mat, model):
+    """Convert PowerLinearFiber material instance to FEBio XML."""
+    e = ET.Element('material', type='fiber-pow-linear')
+    e.append(_property_to_feb(mat.E, "E", model))
+    e.append(_property_to_feb(mat.β, "beta", model))
+    e.append(_property_to_feb(mat.λ0, "lam0", model))
+    e.append(_property_to_feb(degrees(mat.azimuth), "theta", model))
+    e.append(_property_to_feb(degrees(mat.zenith), "phi", model))
+    return e
+
+
 def holmesmow_to_feb(mat, model):
     """Convert HolmesMow material instance to FEBio XML.
 
@@ -201,7 +212,9 @@ def multigeneration_to_feb(mat, model):
         e_generation.attrib["id"] = str(i)
         i += 1
         ET.SubElement(e_generation, "start_time").text = str(t)
-        e_generation.append(material_to_feb(submat, model))
+        e_submat = material_to_feb(submat, model)
+        e_submat.tag = "solid"
+        e_generation.append(e_submat)
     return e
 
 def rigid_body_to_feb(mat, model):
@@ -235,6 +248,7 @@ def material_to_feb(mat, model):
         e = ET.Element('material', type='unknown')
     else:
         f = {feb.material.ExponentialFiber: exponentialfiber_to_feb,
+             feb.material.PowerLinearFiber: power_linear_fiber_to_feb,
              feb.material.HolmesMow: holmesmow_to_feb,
              feb.material.IsotropicElastic: isotropicelastic_to_feb,
              feb.material.NeoHookean: neo_hookean_to_feb,

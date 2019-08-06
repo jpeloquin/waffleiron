@@ -1,8 +1,7 @@
 import numpy as np
 from numpy import dot, trace, eye, outer
 from numpy.linalg import det
-import math
-from math import log, exp, sin, cos
+from math import log, exp, sin, cos, radians, pi
 import febtools as feb
 # Same-package modules
 from .core import Sequence, ScaledSequence
@@ -178,9 +177,9 @@ class ExponentialFiber:
         self.alpha = props['alpha']
         self.beta = props['beta']
         self.xi = props['ksi']
-        self.theta = math.radians(props['theta'])
+        self.theta = radians(props['theta'])
         # ^ azimuth; 0° := +x, 90° := +y
-        self.phi = math.radians(props['phi'])
+        self.phi = radians(props['phi'])
         # ^ zenith; 0° := +z, 90° := x-y plane
 
     def w(self, F):
@@ -256,6 +255,28 @@ class ExponentialFiber:
         s = det(F) * dot(np.linalg.inv(F),
                          dot(t, np.linalg.inv(F).T))
         return s
+
+
+class PowerLinearFiber:
+    """Fiber with piecewise power-law (toe) and linear regions.
+
+    Same as "fiber-pow-lin" in FEBio XML.
+
+    """
+    def __init__(self, E, β, λ0, azimuth=0, zenith=pi/2):
+        self.E = E  # fiber modulus in linear region
+        self.β = β  # power law exponent in power law region
+        self.λ0 = λ0  # stretch ratio at which power law region
+                      # transitions to linear region
+        self.azimuth = azimuth
+        self.zenith = zenith
+        # TODO: Harmonize representation of fiber angle between
+        # ExponentialFiber and PowerLinearFiber.  Use `azimuth` and
+        # `zenith` everywhere.
+
+    @classmethod
+    def from_feb(cls, E, beta, lam0, theta, phi):
+        return cls(E, beta, lam0, azimuth=radians(theta), zenith=radians(phi))
 
 
 class HolmesMow:
