@@ -192,6 +192,18 @@ def solidmixture_to_feb(mat, model):
     return e
 
 
+def multigeneration_to_feb(mat, model):
+    """Convert Multigeneration material instance to FEBio XML."""
+    e = ET.Element("material", type="multigeneration")
+    i = 1
+    for t, submat in zip(mat.generation_times, mat.materials):
+        e_generation = ET.SubElement(e, "generation")
+        e_generation.attrib["id"] = str(i)
+        i += 1
+        ET.SubElement(e_generation, "start_time").text = str(t)
+        e_generation.append(material_to_feb(submat, model))
+    return e
+
 def rigid_body_to_feb(mat, model):
     """Convert SolidMixture material instance to FEBio XML.
 
@@ -230,7 +242,8 @@ def material_to_feb(mat, model):
              feb.material.PoroelasticSolid: poroelastic_to_feb,
              feb.material.SolidMixture: solidmixture_to_feb,
              feb.material.RigidBody: rigid_body_to_feb,
-             feb.material.DonnanSwelling: donnan_to_feb}
+             feb.material.DonnanSwelling: donnan_to_feb,
+             feb.material.Multigeneration: multigeneration_to_feb}
         try:
             e = f[type(mat)](mat, model)
         except ValueError:

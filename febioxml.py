@@ -23,7 +23,8 @@ solid_class_from_name = {'isotropic elastic': material.IsotropicElastic,
                          'solid mixture': material.SolidMixture,
                          'rigid body': material.RigidBody,
                          'biphasic': material.PoroelasticSolid,
-                         'Donnan equilibrium': material.DonnanSwelling}
+                         'Donnan equilibrium': material.DonnanSwelling,
+                         'multigeneration': material.Multigeneration}
 solid_name_from_class = {v: k for k, v in solid_class_from_name.items()}
 
 perm_class_from_name = {"perm-Holmes-Mow": material.IsotropicHolmesMowPermeability,

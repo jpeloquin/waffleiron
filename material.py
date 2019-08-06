@@ -98,6 +98,21 @@ class DonnanSwelling:
         return cls(phiw0, cF0, bosm, Phi)
 
 
+class Multigeneration:
+    """Mixture of materials created at and referenced to a given time."""
+    def __init__(self, generations):
+        """Return Multigeneration object.
+
+        generations := a list of tuples (start_time <float>, material
+        <Material>), each tuple defining a material created at and
+        referenced to `start_time`.
+
+        """
+        t, materials = zip(*generations)
+        self.generation_times = t
+        self.materials = materials
+
+
 class SolidMixture:
     """Mixture of solids with no interdependencies or residual stress.
 

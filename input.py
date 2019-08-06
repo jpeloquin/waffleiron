@@ -310,6 +310,11 @@ class FebReader:
             if child.tag in ['material', 'solid']:
                 # Child element is a material
                 constituents.append(self._read_material(child))
+            if child.tag == "generation":
+                t0 = _to_number(child.find("start_time").text)
+                m["properties"].setdefault("start times", []).append(t0)
+                e_mat = child.find("solid")
+                constituents.append(self._read_material(e_mat))
             else:
                 # Child element is a property
                 m['properties'][child.tag] = self._read_property(child)
@@ -635,6 +640,15 @@ def mat_obj_from_elemd(d, mat_bases):
             solid = mat_obj_from_elemd(d["constituents"][0], mat_bases)
             # Return the Poroelastic Solid object
             material = material_lib.PoroelasticSolid(solid, permeability)
+        elif d["material"] == "multigeneration":
+            # Constructing materials for the list of generations works
+            # just like a solid mixture
+            constituents = []
+            for d_child in d["constituents"]:
+                constituents.append(mat_obj_from_elemd(d_child, mat_bases))
+            generations = ((t, mat) for t, mat in
+                           zip(d["properties"]["start times"], constituents))
+            material = cls(generations)
         elif hasattr(cls, "from_feb") and callable(cls.from_feb):
             material = cls.from_feb(**d["properties"])
         else:
