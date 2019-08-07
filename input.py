@@ -405,7 +405,7 @@ class FebReader:
 
         # Read explicit rigid bodies.  Create a Body object for each
         # rigid body "material" in the XML with explicit geometry.
-        EXPLICIT_BODIES = {}
+        explicit_bodies = {}
         for e_elements in self.root.findall("Geometry/Elements"):
             mat_id = int(e_elements.attrib["mat"]) - 1
             mat = model.named["materials"].obj(mat_id, nametype="ordinal_id")
@@ -414,11 +414,11 @@ class FebReader:
                 for e_elem in e_elements:
                     eid = int(e_elem.attrib["id"]) - 1
                     elements.append(model.mesh.elements[eid])
-                EXPLICIT_BODIES[mat_id] = Body(elements)
+                explicit_bodies[mat_id] = Body(elements)
 
         # Read (1) implicit rigid bodies and (2) rigid body ↔ node set
         # rigid interfaces.
-        IMPLICIT_BODIES = {}
+        implicit_bodies = {}
         for e_impbod in self.root.findall("Boundary/rigid"):
             # <rigid> elements may refer to implicit rigid bodies or to
             # rigid interfaces.  If the rigid "material" referenced by
@@ -436,7 +436,7 @@ class FebReader:
                 model.constraints.append(rigid_interface)
             else:
                 # This <rigid> element represents an implicit rigid body
-                IMPLICIT_BODIES[mat_id] = ImplicitBody(model.mesh, node_set, mat)
+                implicit_bodies[mat_id] = ImplicitBody(model.mesh, node_set, mat)
 
         # Boundary condition: fixed nodes
         axis_name_conv_from_xml = {'x': 'x1',
@@ -508,11 +508,11 @@ class FebReader:
             # Get the Body object to which <rigid_body> refers to by
             # material id.
             mat_id = int(e_fix.attrib["mat"]) - 1
-            if mat_id in EXPLICIT_BODIES:
-                body = EXPLICIT_BODIES[mat_id]
+            if mat_id in explicit_bodies:
+                body = explicit_bodies[mat_id]
             else:
                 # Assume mat_id is refers to an implicit rigid body
-                body = IMPLICIT_BODIES[mat_id]
+                body = implicit_bodies[mat_id]
             for e_dof in e_fix.findall("fixed"):
                 dof = dof_name_conv_from_xml[e_dof.attrib["bc"]]
                 model.fixed["body"][dof].add(body)
