@@ -443,16 +443,24 @@ class FebReader:
                                    'y': 'x2',
                                    'z': 'x3',
                                    'p': 'fluid'}
-        var_from_fix_tag_axis = {'x1': 'displacement',
-                                 'x2': 'displacement',
-                                 'x3': 'displacement',
-                                 'fluid': 'pressure'}
-        dof_name_conv_from_xml = {"x": "x1",
-                                  "y": "x2",
-                                  "z": "x3",
-                                  "Rx": "α1",
-                                  "Ry": "α2",
-                                  "Rz": "α3"}
+        # Map "bc" attribute value from <prescribe>, <prescribed>,
+        # <fix>, or <fixed> element to a variable name.
+        var_from_xml_bc = {'x1': 'displacement',
+                           'x2': 'displacement',
+                           'x3': 'displacement',
+                           'Rx': 'rotation',
+                           'Ry': 'rotation',
+                           'Rz': 'rotation',
+                           'fluid': 'pressure'}
+        # Map "bc" attribute value from <prescribe>, <prescribed>,
+        # <fix>, or <fixed> element to a degree of freedom.
+        dof_name_from_xml_bc = {"x": "x1",
+                                "y": "x2",
+                                "z": "x3",
+                                "Rx": "α1",
+                                "Ry": "α2",
+                                "Rz": "α3",
+                                "p": "fluid"}
         # ^ Mapping of axis → constrained variable for <fix> tags in
         # FEBio XML.
 
@@ -464,11 +472,11 @@ class FebReader:
             # up and convert each to febtools naming convention.
             if self.feb_version == '2.0':
                 # In FEBio XML 2.0, bc labels are concatenated.
-                fixed = [axis_name_conv_from_xml[bc] for bc in
+                fixed = [dof_name_from_xml_bc[bc] for bc in
                          febioxml_2_0.split_bc_names(e_fix.attrib['bc'])]
             elif self.feb_version == '2.5':
                 # In FEBio XML 2.5, bc labels are comma-delimeted.
-                fixed = [axis_name_conv_from_xml[bc] for bc in
+                fixed = [dof_name_from_xml_bc[bc] for bc in
                          febioxml_2_5.split_bc_names(e_fix.attrib['bc'])]
             # For each axis, apply the fixed BCs to the model.
             for ax in fixed:
@@ -483,7 +491,7 @@ class FebReader:
                     # In FEBio XML 2.5, the node set to which the fixed
                     # boundary condition is applied is referenced by name.
                     node_ids = model.named["node sets"].obj(e_fix.attrib["node_set"])
-                var = var_from_fix_tag_axis[ax]
+                var = var_from_xml_bc[ax]
                 # Hack to deal with febtools' model.fixed dict only
                 # supporting fixed displacement and pressure for nodes.
                 # At the time of this writing the axis / variable split
@@ -503,19 +511,29 @@ class FebReader:
                     # interpretable.  So we must create a new node set.
                     model.fixed['node'][ax] = NodeSet(model.fixed['node'][ax] | node_ids)
         #
-        # Read fixed constraints on rigid bodies:
-        for e_fix in self.root.findall("Boundary/rigid_body"):
+        # Read constraints on rigid bodies.  Each <rigid_body> element
+        # defines constraints for one rigid body, identified by its
+        # material ID.  Constraints may be fixed or time-varying.
+        for e_rb in self.root.findall("Boundary/rigid_body"):
             # Get the Body object to which <rigid_body> refers to by
             # material id.
-            mat_id = int(e_fix.attrib["mat"]) - 1
+            body = None  # clear leftover state
+            mat_id = int(e_rb.attrib["mat"]) - 1
             if mat_id in explicit_bodies:
                 body = explicit_bodies[mat_id]
             else:
                 # Assume mat_id is refers to an implicit rigid body
                 body = implicit_bodies[mat_id]
-            for e_dof in e_fix.findall("fixed"):
-                dof = dof_name_conv_from_xml[e_dof.attrib["bc"]]
+            # Read the constraints for the body found in the first half
+            # of this loop.
+            for e_dof in e_rb.findall("fixed"):
+                dof = dof_name_from_xml_bc[e_dof.attrib["bc"]]
                 model.fixed["body"][dof].add(body)
+            for e_dof in e_rb.findall("prescribed"):
+                dof = dof_name_from_xml_bc[e_dof.attrib["bc"]]
+                var = var_from_xml_bc[e_dof.attrib["bc"]]
+                seq = _read_parameter(e_dof, self.sequences)
+                model.apply_body_bc(body, dof, var, seq, step_id=None)
 
         # Load curves (sequences)
         for seq_id, seq in self.sequences.items():

@@ -11,6 +11,12 @@ axis_to_febio = {'x1': 'x',
                  'α3': 'Rz',
                  'pressure': 'p'}
 
+TAG_FROM_BC = {'node': {'variable': 'prescribe',
+                        'fixed': 'fix'},
+               'body': {'variable': 'prescribed',
+                        'fixed': 'fixed'}}
+
+
 elem_cls_from_feb = {'quad4': Quad4,
                      'tri3': Tri3,
                      'hex8': Hex8,

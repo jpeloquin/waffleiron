@@ -19,9 +19,9 @@ _default_tol = 10*np.finfo(float).eps
 sys.setrecursionlimit(10000)
 
 
-def _validate_axis(axis, rigid=False):
+def _validate_axis(axis, body=False):
     allowed_axes = ['x1', 'x2', 'x3', 'fluid', 'temperature', 'charge']
-    if rigid:
+    if body:
        allowed_axes += ['α1', 'α2', 'α3']
     if not axis in allowed_axes:
         msg = f"{axis} is not a supported axis type.  The supported axis types are " +\
@@ -157,11 +157,17 @@ class Model:
         self.fixed['body'].update({'α1': set(),
                                    'α2': set(),
                                    'α3': set()})
+        axes = ('x1', 'x2', 'x3', 'pressure', 'concentration')
         # Note: for multiphasic problems, concentration is a list of
         # sets
         #
         # TODO: Make the specification of fixed-for-all-time BCs have
         # the same format as for BCs in steps.
+
+        # Global "boundary conditions" that apply to all steps.  Same
+        # format as self.steps[i]["bc"]
+        self.varying = {'node': {},
+                        'body': {}}
 
         # Contact
         self.constraints = []
@@ -227,6 +233,7 @@ class Model:
             bc_node[axis] = {'variable': variable,
                              'sequence': sequence,
                              'scale': scale}
+        # TODO: Support global nodal BCs.
 
 
     def apply_body_bc(self, body, axis, variable, sequence, scale=1,
@@ -244,14 +251,26 @@ class Model:
 
         body := Body or ImplicitBody object
 
+        step_id := int or None.  The step ID to which to apply the body
+        constraint.  If None, the body constraint will be applied to
+        model.constraints, which is sort of an initial or universal
+        step.
+
         """
-        _validate_axis(axis)
+        _validate_axis(axis, body=True)
         if sequence == 'fixed':
             scale = None
-        bc = self.steps[step_id]['bc']['body'].setdefault(body, {})
+        if step_id is None:
+            # Setting global BC
+            bc_dict = self.varying["body"]
+        else:
+            # Setting step-local BC
+            bc_dict = self.steps[step_id]["bc"]["body"]
+        bc = bc_dict.setdefault(body, {})
         bc[axis] = {'variable': variable,
                     'sequence': sequence,
                     'scale': scale}
+        # TODO: Remove scale; just used ScaledSequence for that case
 
 
     def apply_solution(self, solution, t=None, step=None):

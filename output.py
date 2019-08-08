@@ -12,7 +12,7 @@ from .control import step_duration
 from . import material as material_lib
 from . import febioxml_2_5 as febioxml
 from . import febioxml_2_0
-from .febioxml import vec_to_text, bvec_to_text, control_tagnames_to_febio, control_values_to_febio
+from .febioxml import vec_to_text, bvec_to_text, control_tagnames_to_febio, control_values_to_febio, TAG_FROM_BC
 # ^ The intent here is to eventually be able to switch between FEBio XML
 # formats by exchanging this import statement for a different version.
 # Common functionality can be shared between febioxml_*_*.py files via
@@ -28,8 +28,8 @@ def default_febio_config():
 def _get_or_create_item_id(registry, item):
     """Get or create ID for an item.
 
-    Getting or creating an ID for a sequence is complicated because
-    sequence IDs must start at 0 and be sequential and contiguous.
+    Getting or creating an ID for an item is complicated because item
+    IDs must start at 0 and be sequential and contiguous.
 
     """
     item_ids = registry.names("ordinal_id")
@@ -52,6 +52,13 @@ def _get_or_create_item_id(registry, item):
     return item_id
 
 
+def _get_or_create_seq_id(registry, sequence):
+    """Get or create ID for a sequence."""
+    if type(sequence) is ScaledSequence:
+        sequence = sequence.sequence
+    return _get_or_create_item_id(registry, sequence)
+
+
 def _fixup_ordinal_ids(registry):
     """Regenerate ordinal IDs to satisfy invariants"""
     items = [item for i, item in sorted(registry.pairs("ordinal_id"))]
@@ -60,6 +67,7 @@ def _fixup_ordinal_ids(registry):
     assert min(registry.names("ordinal_id")) == 0
     assert max(registry.names("ordinal_id")) ==\
         len(registry.names("ordinal_id")) - 1
+
 
 def _property_to_feb(p, tag, model):
     """Convert a fixed or variable property to FEBio XML."""
@@ -415,6 +423,53 @@ def control_parameter_to_feb(parameter, value):
     return e
 
 
+def body_constraints_to_feb(body, constraints, material_registry,
+                            implicit_rb_mat, sequence_registry):
+    """Return <rigid_body> element for a body's constraints dictionary.
+
+    These <rigid_body> elements are used as children of a <Boundary>
+    element to specify (in FEBio terms) rigid body boundary conditions.
+
+    """
+    # Create or find the associated materials
+    if isinstance(body, Body):
+        # If an explicit body, its elements define its
+        # materials.  We assume that the body is homogenous.
+        mat = body.elements[0].material
+        mat_id = material_registry.name(mat, nametype="ordinal_id")
+    elif isinstance(body, ImplicitBody):
+        mat = implicit_rb_mat[body]
+        mat_id = material_registry.name(mat, nametype="ordinal_id")
+    else:
+        msg = f"body {k} does not have a supported type.  " + \
+            "Supported body types are Body and ImplicitBody."
+        raise ValueError(msg)
+    # Create the XML tags for the rigid body BC
+    e_body = ET.Element('rigid_body', mat=str(mat_id + 1))
+    for axis, bc in constraints.items():
+        if bc['sequence'] == 'fixed':
+            kind = 'fixed'
+        else:  # bc['sequence'] is Sequence
+            kind = 'variable'
+            seq = bc['sequence']
+            v = bc['scale']
+        # Determine which tag name to use for the specified
+        # variable: force or displacement
+        if bc['variable'] in ["displacement", "rotation"]:
+             tagname = TAG_FROM_BC['body'][kind]
+        elif bc['variable'] == 'force':
+             tagname = 'force'
+        else:
+             raise ValueError(f"Variable {bc['variable']} not supported for BCs.")
+        e_bc = ET.SubElement(e_body, tagname,
+                             bc=febioxml.axis_to_febio[axis])
+        if kind == 'variable':
+            seq_id = _get_or_create_seq_id(sequence_registry, seq)
+            e_bc.attrib['lc'] = str(seq_id + 1)
+            e_bc.text = str(v)
+    return e_body
+
+
 def xml(model, version='2.5'):
     """Convert a model to an FEBio XML tree.
 
@@ -573,7 +628,21 @@ def xml(model, version='2.5'):
             ET.SubElement(e_boundary, "rigid", rb=str(mat_id + 1),
                           node_set=name)
 
-    # Permanently fixed nodes
+    # Write global <Boundary> element
+    #
+    # Write interfaces.  Currently just rigid interfaces.
+    for interface in model.constraints:
+        if type(interface) is not RigidInterface:
+            continue
+        rigid_body_id = material_registry.name(interface.rigid_body,
+                                               nametype="ordinal_id")
+        node_set_name = model.named["node sets"].name(interface.node_set)
+        add_nodeset(model, root, node_set_name, interface.node_set)
+        ET.SubElement(e_Boundary, "rigid",
+                      rb=str(rigid_body_id + 1),
+                      node_set=node_set_name)
+    #
+    # Write fixed nodal constraints to global <Boundary>
     for axis, nodeset in model.fixed['node'].items():
         if nodeset:
             if version == '2.0':
@@ -591,7 +660,8 @@ def xml(model, version='2.5'):
                 # Create the tag
                 ET.SubElement(e_boundary, 'fix', bc=febioxml.axis_to_febio[axis],
                               node_set=name)
-    # Permanently fixed bodies
+    #
+    # Write fixed body constraints to global <Boundary>
     body_bcs = {}
     # Choose where to put rigid body constraints depending on FEBio XML
     # version.
@@ -619,19 +689,26 @@ def xml(model, version='2.5'):
         # sorted order to be deterministic & human-friendly.
         for ax in sorted(axes):
             ET.SubElement(e_body, 'fixed', bc=febioxml.axis_to_febio[ax])
-
-    # Add interfaces.  Currently just rigid interfaces.
-    e_Boundary = root.find("Boundary")
-    for interface in model.constraints:
-        if type(interface) is not RigidInterface:
-            continue
-        rigid_body_id = material_registry.name(interface.rigid_body,
-                                               nametype="ordinal_id")
-        node_set_name = model.named["node sets"].name(interface.node_set)
-        add_nodeset(model, root, node_set_name, interface.node_set)
-        ET.SubElement(e_Boundary, "rigid",
-                      rb=str(rigid_body_id + 1),
-                      node_set=node_set_name)
+    #
+    # TODO: Write time-varying nodal constraints to global <Boundary>
+    #
+    # Write time-varying rigid body constraints to global <Boundary>
+    if version == '2.0':
+        e_bc_body_parent = e_constraints
+    elif version_major == 2 and version_minor >= 5:
+        e_bc_body_parent = e_boundary
+    for body, constraints in model.varying["body"].items():
+        e_rb_new = body_constraints_to_feb(body, constraints,
+                                               material_registry,
+                                               implicit_rigid_material_by_body,
+                                               model.named["sequences"])
+        mat_id = e_rb_new.attrib["mat"]
+        e_rb_existing = e_bc_body_parent.find(f'rigid_body[@mat="{mat_id}"]')
+        if e_rb_existing is None:
+            e_bc_body_parent.append(e_rb_new)
+        else:
+            for e in e_rb_new:
+                e_rb_existing.append(e)
 
     # Adjust sequences used as boundary conditions or in time stepper.
     # Apply offset to load curves so they start at the same time the
@@ -729,15 +806,11 @@ def xml(model, version='2.5'):
         #
         # For body constraints, there is one parent tag per body, and
         # one child tag per kind + axis + sequence + value.  The parent
-        # tag may be named 'prescribed' or 'fixed'.  (So much for
-        # consistency.)
+        # tag may be named 'prescribed' or 'fixed'.  (Note the different
+        # tense compared to nodal constraints—so much for consistency.)
         #
         # FEBio does seem to handle empty tags appropriately, which
         # helps.
-        bc_tag_nm = {'node': {'variable': 'prescribe',
-                              'fixed': 'fix'},
-                     'body': {'variable': 'prescribed',
-                              'fixed': 'fixed'}}
         e_bc_nodal_parent = ET.SubElement(e_step, 'Boundary')
         if version == '2.0':
             e_bc_body_parent = ET.SubElement(e_step, 'Constraints')
@@ -763,12 +836,12 @@ def xml(model, version='2.5'):
             for axis in node_memo[kind]:
                 bc = node_memo[kind][axis]
                 e_bc = ET.SubElement(e_bc_nodal_parent,
-                                     bc_tag_nm['node'][kind],  # 'fix' | 'prescribe'
+                                     TAG_FROM_BC['node'][kind],  # 'fix' | 'prescribe'
                                      bc=febioxml.axis_to_febio[axis])
                 if version == '2.0':
                     if kind == 'variable':
-                        seq_id = _get_or_create_item_id(model.named["sequences"],
-                                                        bc['sequence'])
+                        seq_id = _get_or_create_seq_id(model.named["sequences"],
+                                                       bc['sequence'])
                         e_bc.attrib['lc'] =  str(seq_id + 1)
                     # Write nodes as children of <Step><Boundary><prescribe>
                     for i, sc in zip(bc['nodes'], bc['scales']):
@@ -795,7 +868,7 @@ def xml(model, version='2.5'):
                         # MeshData/NodeData.
                         raise ValueError(msg)
                     if kind == 'variable':
-                        seq_id = get_or_create_item_id(model.named["sequences"],
+                        seq_id = _get_or_create_seq_id(model.named["sequences"],
                                                        bc['sequence'])
                         e_sc = ET.SubElement(e_bc, 'scale',
                                              lc=str(seq_id + 1))
@@ -803,44 +876,13 @@ def xml(model, version='2.5'):
                         ET.SubElement(e_bc, 'relative').text = "0"
                     e_bc.attrib['node_set'] = name
         if ("bc" in step) and ("body" in step["bc"]):
-            for body in step['bc']['body']:
-                # Create or find the associated materials
-                if isinstance(body, Body):
-                    # If an explicit body, its elements define its
-                    # materials.  We assume that the body is homogenous.
-                    mat = body.elements[0].material
-                    mat_id = material_registry.name(mat, nametype="ordinal_id")
-                elif isinstance(body, ImplicitBody):
-                    mat = implicit_rigid_material_by_body[body]
-                    mat_id = material_registry.name(mat, nametype="ordinal_id")
-                else:
-                    msg = f"body {k} does not have a supported type.  " + \
-                        "Supported body types are Body and ImplicitBody."
-                    raise ValueError(msg)
-                # Create the XML tags for the rigid body BC
-                e_body = ET.SubElement(e_bc_body_parent, 'rigid_body', mat=str(mat_id + 1))
-                for axis in step['bc']['body'][body]:
-                    bc = step['bc']['body'][body][ax]
-                    if bc['sequence'] == 'fixed':
-                        kind = 'fixed'
-                    else:  # bc['sequence'] is Sequence
-                        kind = 'variable'
-                        seq = bc['sequence']
-                        v = bc['scale']
-                    # Determine which tag name to use for the specified
-                    # variable: force or displacement
-                    if bc['variable'] == 'displacement':
-                         tagname = bc_tag_nm['body'][kind]
-                    elif bc['variable'] == 'force':
-                         tagname = 'force'
-                    else:
-                         raise ValueError(f"Variable {bc['variable']} not supported for BCs.")
-                    e_bc = ET.SubElement(e_body, tagname,
-                                         bc=febioxml.axis_to_febio[axis])
-                    if kind == 'variable':
-                        seq_id = _get_or_create_item_id(model.named["sequences"], seq)
-                        e_bc.attrib['lc'] = str(seq_id + 1)
-                        e_bc.text = str(v)
+            for body, constraints in step["bc"]["body"].items():
+                e_rigid_body = body_constraints_to_feb(body,
+                                                       constraints,
+                                                       material_registry,
+                                                       implicit_rigid_material_by_body,
+                                                       model.named["sequences"])
+                e_bc_body_parent.append(e_rigid_body)
 
     # Write XML elements for sequences (load curves) that are in the
     # model's named entity registry.  Re-use any ordinal ID found in the
