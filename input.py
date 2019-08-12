@@ -445,13 +445,13 @@ class FebReader:
                                    'p': 'fluid'}
         # Map "bc" attribute value from <prescribe>, <prescribed>,
         # <fix>, or <fixed> element to a variable name.
-        var_from_xml_bc = {'x1': 'displacement',
-                           'x2': 'displacement',
-                           'x3': 'displacement',
+        var_from_xml_bc = {'x': 'displacement',
+                           'y': 'displacement',
+                           'z': 'displacement',
                            'Rx': 'rotation',
                            'Ry': 'rotation',
                            'Rz': 'rotation',
-                           'fluid': 'pressure'}
+                           'pressure': 'fluid'}
         # Map "bc" attribute value from <prescribe>, <prescribed>,
         # <fix>, or <fixed> element to a degree of freedom.
         dof_name_from_xml_bc = {"x": "x1",
