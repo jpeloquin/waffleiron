@@ -225,6 +225,9 @@ class FebReader:
         """
         self.file = file
         self.root = normalize_xml(ET.parse(self.file).getroot())
+        # Remove comments so iteration over child elements doesn't get
+        # tripped up
+        ET.strip_tags(self.root, ET.Comment)
         self.feb_version = self.root.attrib['version']
         if self.root.tag != "febio_spec":
             raise Exception("Root node is not 'febio_spec': '" +
