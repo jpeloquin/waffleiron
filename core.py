@@ -316,8 +316,10 @@ class Mesh:
 
         """
         # Nodes
+        if np.array(nodes).size == 0:
+            self.nodes = nodes
         # if nodes are 2D, add z = 0
-        if len(nodes[0]) == 2:
+        elif len(nodes[0]) == 2:
             self.nodes = [(x, y, 0.0) for (x, y) in nodes]
         else:
             self.nodes = nodes
@@ -374,7 +376,8 @@ class Mesh:
 
         """
         # Create KDTree for fast node lookup
-        self.nodetree = KDTree(self.nodes)
+        if self.nodes:
+            self.nodetree = KDTree(self.nodes)
 
         # Create list of parent elements by node
         elem_with_node = [[] for i in range(len(self.nodes))]
