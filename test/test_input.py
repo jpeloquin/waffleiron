@@ -1,12 +1,13 @@
 # Run these tests with nose
-
 import unittest
 import os
+from pathlib import Path
+import subprocess
 import numpy.testing as npt
 import numpy as np
 from nose.tools import with_setup
 
-import febtools
+import febtools as feb
 
 class MeshSolutionTest(unittest.TestCase):
     """Tests `MeshSolution.f`
@@ -20,12 +21,12 @@ class MeshSolutionTest(unittest.TestCase):
     """
 
     def setUp(self):
-        self.soln = febtools.input.XpltReader(os.path.join('test', 'fixtures', 'complex_loading.xplt'))
-        reader = febtools.input.FebReader(os.path.join('test', 'fixtures', 'complex_loading.feb'))
+        self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'complex_loading.xplt'))
+        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'complex_loading.feb'))
         self.model = reader.model()
         self.model.apply_solution(self.soln)
-        self.elemdata = febtools.input.textdata_list(os.path.join('test', 'fixtures', 'complex_loading_elem_data.txt'), delim=",")
-        self.nodedata = febtools.input.textdata_list(os.path.join('test', 'fixtures', 'complex_loading_node_data.txt'), delim=",")
+        self.elemdata = feb.input.textdata_list(os.path.join('test', 'fixtures', 'complex_loading_elem_data.txt'), delim=",")
+        self.nodedata = feb.input.textdata_list(os.path.join('test', 'fixtures', 'complex_loading_node_data.txt'), delim=",")
 
     def cmp_f(self, row, col, key):
         """Helper function for comparing f tensors.
@@ -69,3 +70,21 @@ class MeshSolutionTest(unittest.TestCase):
 
     def test_fzy(self):
         self.cmp_f(2, 1, 'Fzy')
+
+
+class FebFixedBCs(unittest.TestCase):
+    """Test read of FEBio XML file with fixed boundary conditions.
+
+    """
+    path = Path("test") / "fixtures" / "cube_hex8_n=1_all_BCs_fixed.feb"
+
+    def setUp(self):
+        subprocess.run(["febio", "-silent", "-i", str(self.path)])
+
+    def test_read(self):
+        model = feb.load_model(str(self.path))
+
+    def tearDown(self):
+        # Delete FEBio-generated output
+        (self.path.parent / f"{self.path.stem}.log").unlink()
+        (self.path.parent / f"{self.path.stem}.xplt").unlink()

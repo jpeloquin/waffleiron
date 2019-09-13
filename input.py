@@ -469,20 +469,22 @@ class FebReader:
 
         # Read fixed boundary conditions. TODO: Support solutes
         #
+        # Here, no prefix on an axis / BC name means it's named as in
+        # febtools.  An `xml` prefix means it's named as in FEBio XML.
+        #
         # Read fixed constraints on node sets:
         for e_fix in self.root.findall("Boundary/fix"):
             # Each <fix> tag may specify multiple bc labels.  Split them
             # up and convert each to febtools naming convention.
             if self.feb_version == '2.0':
                 # In FEBio XML 2.0, bc labels are concatenated.
-                fixed = [dof_name_from_xml_bc[bc] for bc in
-                         febioxml_2_0.split_bc_names(e_fix.attrib['bc'])]
+                fixed = febioxml_2_0.split_bc_names(e_fix.attrib['bc'])
             elif self.feb_version == '2.5':
                 # In FEBio XML 2.5, bc labels are comma-delimeted.
-                fixed = [dof_name_from_xml_bc[bc] for bc in
-                         febioxml_2_5.split_bc_names(e_fix.attrib['bc'])]
+                fixed = febioxml_2_5.split_bc_names(e_fix.attrib['bc'])
             # For each axis, apply the fixed BCs to the model.
-            for ax in fixed:
+            for xml_ax in fixed:
+                ax = dof_name_from_xml_bc[xml_ax]
                 # Get the nodeset that is constrained
                 if self.feb_version == "2.0":
                     # In FEBio XML 2.0, each node to which the fixed boundary
@@ -494,7 +496,7 @@ class FebReader:
                     # In FEBio XML 2.5, the node set to which the fixed
                     # boundary condition is applied is referenced by name.
                     node_ids = model.named["node sets"].obj(e_fix.attrib["node_set"])
-                var = var_from_xml_bc[ax]
+                var = var_from_xml_bc[xml_ax]
                 # Hack to deal with febtools' model.fixed dict only
                 # supporting fixed displacement and pressure for nodes.
                 # At the time of this writing the axis / variable split
