@@ -152,7 +152,8 @@ tags_table = {
     17056001: {'name': 'nodeset header',  # 0x01044101
                'leaf': False},
     17056256: {'name': 'node list',  # 0x01044200
-               'leaf': False},
+               'leaf': True,
+               'format': 'int'},
     # Root/Geometry/Nodesets/Nodeset Header tags
     17056002: {'name': 'nodeset ID',  # 0x01044102
                'leaf': True,
