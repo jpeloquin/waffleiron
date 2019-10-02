@@ -2,6 +2,7 @@
 from math import inf
 import struct
 import sys
+from warnings import warn
 
 # Third-party public packages
 import numpy as np
@@ -285,12 +286,18 @@ def parse_blocks(data, offset=0, store_data=True, max_depth=inf, endian='<'):
 
     # Traverse the data, looking for blocks
     while i < len(data):
+        if i + 8 > len(data):
+            warn("A branch node's block contains data that does not unpack into a valid child node.  This data will be skipped.")
+            break
         # Get block id
         b_id = data[i:i+4]
         # Get block size
         b_size = data[i+4:i+8]
         i_size = struct.unpack(endian + 'I', b_size)[0]
         # Get this block's data/children
+        if i + i_size > len(data):
+            warn("A branch node's block contains data that does not unpack into a valid child node.  This data will be skipped.")
+            break
         child = data[i+8:i+8+i_size]
         # Convert ID from bytes to nicer form
         i_id = struct.unpack(endian + 'I', b_id)[0]
