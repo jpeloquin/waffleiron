@@ -72,11 +72,43 @@ class MeshSolutionTest(unittest.TestCase):
         self.cmp_f(2, 1, 'Fzy')
 
 
-class FebFixedBCs(unittest.TestCase):
+class FebSolidFixedBCs(unittest.TestCase):
     """Test read of FEBio XML file with fixed boundary conditions.
 
     """
-    path = Path("test") / "fixtures" / "cube_hex8_n=1_all_BCs_fixed.feb"
+    path = Path("test") / "fixtures" / "cube_hex8_n=1_solid_all_BCs_fixed.feb"
+
+    def setUp(self):
+        subprocess.run(["febio", "-silent", "-i", str(self.path)])
+
+    def test_load_model(self):
+        model = feb.load_model(str(self.path))
+
+    def test_read_mesh_from_xplt(self):
+        pth_xplt = self.path.parent / f"{self.path.stem}.xplt"
+        with open(str(pth_xplt), 'rb') as f:
+            xplt = feb.xplt.XpltData(f.read())
+        # xplt = feb.input.XpltReader(str(pth_xplt))
+        mesh = xplt.mesh()
+        # Check node values
+        assert(len(mesh.nodes) == 8)
+        assert(np.array(mesh.nodes).shape[1] == 3)
+        npt.assert_almost_equal(mesh.nodes[3], [-0.5, 0.5, 0.0])
+        # Check element values
+        assert(len(mesh.elements) == 1)
+        npt.assert_equal(mesh.elements[0].nodes, mesh.nodes)
+
+    def tearDown(self):
+        # Delete FEBio-generated output
+        (self.path.parent / f"{self.path.stem}.log").unlink()
+        (self.path.parent / f"{self.path.stem}.xplt").unlink()
+
+
+class FebBiphasicFixedBCs(unittest.TestCase):
+    """Test read of FEBio XML file with fixed boundary conditions.
+
+    """
+    path = Path("test") / "fixtures" / "cube_hex8_n=1_biphasic_all_BCs_fixed.feb"
 
     def setUp(self):
         subprocess.run(["febio", "-silent", "-i", str(self.path)])

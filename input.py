@@ -454,7 +454,7 @@ class FebReader:
                            'Rx': 'rotation',
                            'Ry': 'rotation',
                            'Rz': 'rotation',
-                           'pressure': 'fluid'}
+                           'p': 'pressure'}
         # Map "bc" attribute value from <prescribe>, <prescribed>,
         # <fix>, or <fixed> element to a degree of freedom.
         dof_name_from_xml_bc = {"x": "x1",
@@ -485,6 +485,16 @@ class FebReader:
             # For each axis, apply the fixed BCs to the model.
             for xml_ax in fixed:
                 ax = dof_name_from_xml_bc[xml_ax]
+                #^ `ax` is 'x', 'y', 'z', 'Rx', etc.
+                var = var_from_xml_bc[xml_ax]
+                #^ `var` is 'displacement', 'rotation', 'fluid', etc.
+                if var == "pressure":
+                    # This is a hack to deal with febtools' model.fixed
+                    # dict only supporting fixed displacement and
+                    # pressure for nodes.  At the time of this writing
+                    # the axis / variable split hasn't been implemented
+                    # for fixed boundary conditions.
+                    ax = "pressure"
                 # Get the nodeset that is constrained
                 if self.feb_version == "2.0":
                     # In FEBio XML 2.0, each node to which the fixed boundary
@@ -496,13 +506,6 @@ class FebReader:
                     # In FEBio XML 2.5, the node set to which the fixed
                     # boundary condition is applied is referenced by name.
                     node_ids = model.named["node sets"].obj(e_fix.attrib["node_set"])
-                var = var_from_xml_bc[xml_ax]
-                # Hack to deal with febtools' model.fixed dict only
-                # supporting fixed displacement and pressure for nodes.
-                # At the time of this writing the axis / variable split
-                # hasn't been implemented for fixed boundary conditions.
-                if var == "pressure":
-                    ax = "pressure"
                 if not model.fixed['node'][ax]:
                     # If there is no node set assigned to this axis yet,
                     # simply re-use the node set.  This will preserve
