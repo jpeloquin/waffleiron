@@ -152,6 +152,8 @@ class Model:
         self.output = {"variables": None}
 
         self.environment = {"temperature": 294}  # K
+        self.constants = {"R": 8.31446261815324,  # J/mol·K
+                          "F": 96485.33212}  # C/mol
 
         axes = ('x1', 'x2', 'x3', 'pressure', 'concentration')
         self.fixed = {'node': {k: NodeSet() for k in axes},

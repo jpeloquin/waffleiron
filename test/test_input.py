@@ -144,3 +144,17 @@ class EnvironmentConstants(unittest.TestCase):
     def test_temperature_constant(self):
         model = feb.load_model(self.path)
         assert(model.environment["temperature"] == 300)
+
+
+class UniversalConstants(unittest.TestCase):
+    """Test read of universal constants."""
+
+    path = "test/fixtures/isotropic_elastic.feb"
+
+    def test_idal_gas_constant(self):
+        model = feb.load_model(self.path)
+        assert(model.constants["R"] == 8.314e-6)
+
+    def test_Faraday_constant(self):
+        model = feb.load_model(self.path)
+        assert(model.constants["F"] == 96485e-9)

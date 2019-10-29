@@ -3,8 +3,8 @@
 	<Globals>
 		<Constants>
 			<T>300</T>
-			<R>0</R>
-			<Fc>0</Fc>
+			<R>8.314e-6</R>
+			<Fc>96485e-9</Fc>
 		</Constants>
 	</Globals>
 	<Material>

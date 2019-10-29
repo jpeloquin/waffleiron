@@ -41,6 +41,17 @@ def _maybe_to_number(s):
     except ValueError:
         return s
 
+
+def _find_unique_tag(root, path):
+    """Find and return a tag or an error if > 1 of same."""
+    tags = root.findall(path)
+    if len(tags) == 1:
+        return tags[0]
+    elif len(e_temperature) > 1:
+        # File has multiple temperature values
+        raise ValueError(f"Multiple `{path}` tags in file `{os.path.abspath(root.base)}`")
+
+
 def _read_parameter(e, sequence_dict):
     """Read a parameter from an XML element.
 
@@ -365,13 +376,17 @@ class FebReader:
         model = Model(mesh)
 
         # Read Environment Constants
-        e_temperature = self.root.findall("Globals/Constants/T")
-        if len(e_temperature) == 1:
-            # Temperature is defined; store it
-            model.environment["temperature"] = _to_number(e_temperature[0].text)
-        elif len(e_temperature) > 1:
-            # File has multiple temperature values
-            raise ValueError(f"Multiple `Globals/Constants/T` tags in file `{os.path.abspath(self.root.base)}`")
+        model.environment = {}
+        e_temperature = _find_unique_tag(self.root, "Globals/Constants/T")
+        model.environment["temperature"] = _to_number(e_temperature.text)
+
+        # Read Universal Constants.  These will eventually be superseded
+        # by units support.
+        model.constants = {}
+        e_R = _find_unique_tag(self.root, "Globals/Constants/R")
+        model.constants["R"] = _to_number(e_R.text)
+        e_Fc = _find_unique_tag(self.root, "Globals/Constants/Fc")
+        model.constants["F"] = _to_number(e_Fc.text)
 
         # Store the materials and their labels, now that the Model
         # object has been instantiated
