@@ -34,10 +34,10 @@ def _get_or_create_item_id(registry, item):
     """
     item_ids = registry.names("ordinal_id")
     if len(item_ids) == 0:
-        # Handle the trivial case of no pre-existing itemuences
+        # Handle the trivial case of no pre-existing items
         item_id = 0
     else:
-        # At least one itemuence already exists.  Make sure the ID
+        # At least one item already exists.  Make sure the ID
         # constraints have not been violated
         assert min(item_ids) == 0
         assert max(item_ids) == len(item_ids) - 1
@@ -45,7 +45,7 @@ def _get_or_create_item_id(registry, item):
         try:
             item_id = registry.name(item, "ordinal_id")
         except KeyError:
-            # Create an ID because the itemuence doesn't have one
+            # Create an ID because the item doesn't have one
             item_ids = registry.names("ordinal_id")
             item_id = max(item_ids) + 1
             registry.add(item_id, item, "ordinal_id")
