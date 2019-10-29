@@ -36,6 +36,8 @@ def _get_or_create_item_id(registry, item):
     if len(item_ids) == 0:
         # Handle the trivial case of no pre-existing items
         item_id = 0
+        # Create the ID
+        registry.add(item_id, item, "ordinal_id")
     else:
         # At least one item already exists.  Make sure the ID
         # constraints have not been violated
@@ -61,12 +63,17 @@ def _get_or_create_seq_id(registry, sequence):
 
 def _fixup_ordinal_ids(registry):
     """Regenerate ordinal IDs to satisfy invariants"""
+    # # If no ordinal IDs, nothing to fix
+    # if not "ordinal_id" in registry.nametypes():
+    #     return
+    # If ordinal IDs exist, make sure each is unique
     items = [item for i, item in sorted(registry.pairs("ordinal_id"))]
     for i, item in enumerate(items):
         registry.add(i, item, nametype="ordinal_id")
-    assert min(registry.names("ordinal_id")) == 0
-    assert max(registry.names("ordinal_id")) ==\
-        len(registry.names("ordinal_id")) - 1
+    if len(registry.names("ordinal_id")) > 0:
+        assert min(registry.names("ordinal_id")) == 0
+        assert max(registry.names("ordinal_id")) ==\
+            len(registry.names("ordinal_id")) - 1
 
 
 def _property_to_feb(p, tag, model):
@@ -900,8 +907,9 @@ def xml(model, version='2.5'):
     # ordinal position in the list of <loadcurve> elements.  So we need
     # to sort them and ensure that the IDs are contiguous.
     seq_ids = sorted(model.named["sequences"].names("ordinal_id"))
-    assert min(seq_ids) == 0
-    assert max(seq_ids) == len(seq_ids) - 1
+    if len(seq_ids) > 0:
+        assert min(seq_ids) == 0
+        assert max(seq_ids) == len(seq_ids) - 1
     for seq_id in seq_ids:
         seq = model.named["sequences"].obj(seq_id, nametype="ordinal_id")
         add_sequence(root, model, seq)

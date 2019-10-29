@@ -689,7 +689,7 @@ class NameRegistry:
         This function is analogous to dict.keys().
 
         """
-        return self._from_name[nametype].keys()
+        return self._from_name.setdefault(nametype, {}).keys()
 
     def objects(self):
         """Return all named objects.
@@ -705,7 +705,7 @@ class NameRegistry:
         This function is analogous to dict.items().
 
         """
-        return self._from_name[nametype].items()
+        return self._from_name.setdefault(nametype, {}).items()
 
     def __copy__(self):
         """Copy dicts but not named objects."""
