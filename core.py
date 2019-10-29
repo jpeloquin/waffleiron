@@ -151,6 +151,8 @@ class Model:
 
         self.output = {"variables": None}
 
+        self.environment = {"temperature": 294}  # K
+
         axes = ('x1', 'x2', 'x3', 'pressure', 'concentration')
         self.fixed = {'node': {k: NodeSet() for k in axes},
                       'body': {k: set() for k in axes}}

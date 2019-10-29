@@ -2,7 +2,7 @@
 <febio_spec version="2.0">
 	<Globals>
 		<Constants>
-			<T>0</T>
+			<T>300</T>
 			<R>0</R>
 			<Fc>0</Fc>
 		</Constants>

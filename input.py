@@ -363,6 +363,16 @@ class FebReader:
         # Create model geoemtry
         mesh = self.mesh((materials_by_id, material_labels, material_basis))
         model = Model(mesh)
+
+        # Read Environment Constants
+        e_temperature = self.root.findall("Globals/Constants/T")
+        if len(e_temperature) == 1:
+            # Temperature is defined; store it
+            model.environment["temperature"] = _to_number(e_temperature[0].text)
+        elif len(e_temperature) > 1:
+            # File has multiple temperature values
+            raise ValueError(f"Multiple `Globals/Constants/T` tags in file `{os.path.abspath(self.root.base)}`")
+
         # Store the materials and their labels, now that the Model
         # object has been instantiated
         for ord_id, material in materials_by_id.items():

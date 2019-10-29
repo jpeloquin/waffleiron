@@ -134,3 +134,13 @@ class FebBiphasicFixedBCs(unittest.TestCase):
         # Delete FEBio-generated output
         (self.path.parent / f"{self.path.stem}.log").unlink()
         (self.path.parent / f"{self.path.stem}.xplt").unlink()
+
+
+class EnvironmentConstants(unittest.TestCase):
+    """Test read of environmental constants."""
+
+    path = "test/fixtures/isotropic_elastic.feb"
+
+    def test_temperature_constant(self):
+        model = feb.load_model(self.path)
+        assert(model.environment["temperature"] == 300)
