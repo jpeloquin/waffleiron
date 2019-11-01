@@ -105,6 +105,14 @@ def _orthonormal_basis(a, d):
     return basis
 
 
+def read_febio_xml(pth):
+    """Return lxml tree for FEBio XML file."""
+    parser = ET.XMLParser(remove_blank_text=True)
+    with open(pth, "rb") as f:
+        tree = ET.parse(f, parser)
+    return tree
+
+
 def load_model(fpath):
     """Loads a model (feb) and the solution (xplt) if it exists.
 
