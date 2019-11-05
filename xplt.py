@@ -487,36 +487,41 @@ def parse_xplt_data(data, **kwargs):
     return parse_tree
 
 
-def pprint_blocks(blocks, indent=0):
+def pprint_blocks(f, blocks, indent=0):
+    """Pretty-print parsed XPLT blocks.
+
+    `f` must support a `write` method.
+
+    """
     s_indent = " " * (indent + 2)  # For second and following lines
     for i, block in enumerate(blocks):
         if i == 0:  # First block
             # Write opening braces
-            sys.stdout.write(" " * indent + "[{")
+            f.write(" " * indent + "[{")
         else:
             # Write the new block's indent & brace
-            sys.stdout.write(" " * (indent + 1) + "{")
-        sys.stdout.write("'name': '{}'".format(block['name']))
+            f.write(" " * (indent + 1) + "{")
+        f.write("'name': '{}'".format(block['name']))
         for k in ['tag', 'type', 'address', 'size']:
-            sys.stdout.write(",\n" + s_indent + "'{}': '{}'".format(k, block[k]))
+            f.write(",\n" + s_indent + "'{}': '{}'".format(k, block[k]))
 
         # Write block data/children
         if 'data' in block:
             if block['type'] == 'branch':
-                sys.stdout.write(",\n" + s_indent + "'children':\n")
-                pprint_blocks(block['data'], indent=indent+2)
+                f.write(",\n" + s_indent + "'children':\n")
+                pprint_blocks(f, block['data'], indent=indent+2)
             else:  # Leaf or unknown
-                sys.stdout.write(",\n" + s_indent + "'data': {}".format(block['data']))
+                f.write(",\n" + s_indent + "'data': {}".format(block['data']))
 
         if i < len(blocks) - 1:  # Before last block
             # Close the braces for the current block and write a
             # continuation comma
-            print("},")
+            f.write("},\n")
         else:  # Last block
             # Close the braces for the current block
-            print("}")
+            f.write("}\n")
             # Close the braces for the list of blocks
-            sys.stdout.write(" " * indent + "]")
+            f.write(" " * indent + "]")
 
 
 def unpack_block_data(data, fmt, endian):
