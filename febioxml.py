@@ -111,8 +111,8 @@ def read_named_sets(xml_root):
             cls = cls_from_entity_type[k]
             items = cls()
             for tag_item in tag_set.getchildren():
-                items.append(tuple([int(s.strip()) - 1
-                                    for s in tag_item.text.split(",")]))
+                items.append(_canonical_face([int(s.strip()) - 1
+                                              for s in tag_item.text.split(",")]))
             sets[k][tag_set.attrib["name"]] = items
     return sets
 
