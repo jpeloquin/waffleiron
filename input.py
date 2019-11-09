@@ -203,7 +203,24 @@ def textdata_list(fpath, delim=" "):
 
 
 def textdata_table(fpath, delim=" "):
-    """Return a pandas DataFrame from a text data file."""
+    """Return a pandas DataFrame from a text data file.
+
+    The returned table has 3 columns for metadata: "Step", "Time", and
+    "Item".  "Step" refers to time step index, with 1 being the first
+    time step taken by the solver (FEBio doesn't write the reference
+    state to its text data files).  "Time" is the solution time at the
+    time step.  "Item" is the item IDs of the nodes, elements, rigid
+    bodies, or rigid connectors whose data is recorded in the text data
+    file.
+
+    There is also one column for each variable in the text data file.
+
+    The function corrects FEBio's quirk of restarting the time step
+    count at the start of each analysis step (corresponding to the
+    <Step> element in FEBio XML), such that the returned step values
+    increase sequentially with time.
+
+    """
     with open(fpath, 'r') as f:
         # Find column names
         colnames = None
@@ -231,6 +248,13 @@ def textdata_table(fpath, delim=" "):
     tab.columns = ["Step", "Time", "Item"] + colnames
     tab["Step"] = tab["Step"].astype(int)
     tab["Item"] = tab["Item"].astype(int)
+    # Force step IDs to increase sequentially with elapsed time
+    tab = tab.sort_values("Time")
+    idxs = np.where(tab["Step"].diff() < 0)[0]
+    values = tab["Step"].values
+    for idx in idxs:
+        values[idx:] += values[idx-1]
+    tab["Step"] = values
     return tab
 
 
