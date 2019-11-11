@@ -561,23 +561,6 @@ def unpack_block_data(data, fmt, endian):
     return v
 
 
-class XpltBlocks:
-    """Xplt parse structure with accessor methods.
-
-    """
-    def __init__(self, blocks):
-        self.blocks = blocks
-
-    def __repr__(self):
-        return repr(self.blocks)
-
-    def get_all(self, pth):
-
-        for key in keys:
-            matches = [b['data'] for b in self.blocks if b['name'] == key]
-        return XpltBlocks(matches)
-
-
 def get_bdata_by_name(blocks, pth):
     """Return a list of the contents of all blocks matching a path.
 
