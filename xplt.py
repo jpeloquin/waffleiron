@@ -577,6 +577,7 @@ class XpltBlocks:
             matches = [b['data'] for b in self.blocks if b['name'] == key]
         return XpltBlocks(matches)
 
+
 def get_bdata_by_name(blocks, pth):
     """Return a list of the contents of all blocks matching a path.
 
