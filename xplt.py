@@ -582,7 +582,7 @@ def get_bdata_by_name(blocks, pth):
     """Return a list of the contents of all blocks matching a path.
 
     """
-    if type(blocks) is not  list:
+    if type(blocks) is not list:
         blocks = [blocks]
     names = pth.split('/')
     while len(names) != 0:
