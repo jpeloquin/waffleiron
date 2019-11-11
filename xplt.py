@@ -642,12 +642,6 @@ class XpltData:
                 # dictionary.
                 self.data_dictionary.setdefault(b_cat['name'], []).append(var)
 
-    def material_names(self):
-        """Return dict of material IDs → names.
-
-        """
-        pass
-
     def mesh(self):
         # Get list of nodes as spatial coordinates.  According to the
         # FEBio binary database spec, there is only one `node coords`
