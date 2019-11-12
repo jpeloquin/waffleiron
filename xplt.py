@@ -455,7 +455,7 @@ def parse_blocks(data, offset=0, store_data=True, max_depth=inf, endian='<'):
             if 'format' in tag_metadata:
                 fmt = tag_metadata['format']
                 if store_data:
-                    block['data'] = unpack_block_data(child, fmt, endian)
+                    block['data'] = unpack_block(child, block["tag"], endian)
             else:
                 if store_data:
                     block['data'] = child
@@ -524,7 +524,7 @@ def pprint_blocks(f, blocks, indent=0):
             f.write(" " * indent + "]")
 
 
-def unpack_block_data(data, fmt, endian):
+def unpack_data(data, fmt, endian):
     if fmt in ['int', 'float']:  # Numeric cases
         n = int(len(data) / 4)
         if fmt == 'int':
@@ -561,11 +561,22 @@ def unpack_block_data(data, fmt, endian):
     return v
 
 
+def unpack_block(data, tag, endian):
+    """Unpack a block's data given its tag ID."""
+    if isinstance(tag, str) and tag.startswith("0x"):
+        tag = int(tag, 16)
+    fmt = tags_table[tag]["format"]
+    value = unpack_data(data, fmt, endian)
+    if tags_table[tag].setdefault("singleton", False):
+        value = value[0]
+    return value
+
+
 def get_bdata_by_name(blocks, pth):
     """Return a list of the contents of all blocks matching a path.
 
     """
-    if type(blocks) is not list:
+    if not isinstance(blocks, list):
         blocks = [blocks]
     names = pth.split('/')
     while len(names) != 0:
@@ -700,9 +711,9 @@ class XpltData:
                     region_id, n = struct.unpack(self.endian + 'II',
                                                  var['data'][i:i+8])
                     i += 8
-                    values += unpack_block_data(var['data'][i:i+n],
-                                                fmt=entry['item type'],
-                                                endian=self.endian)
+                    values += unpack_data(var['data'][i:i+n],
+                                          fmt=entry['item type'],
+                                          endian=self.endian)
                     i += n
                 data.setdefault(cat_name, {})[entry['item name']] = values
 
