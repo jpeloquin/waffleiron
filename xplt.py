@@ -9,6 +9,7 @@ import numpy as np
 
 # Same-package modules
 from . import element, Mesh
+from .core import _canonical_face
 
 # Specification metadata for each (documented) tag.
 #
@@ -134,9 +135,10 @@ tags_table = {
     17052160: {'name': 'facet list',  # 0x01043200
                'leaf': False},
     # Root/Geometry/Surfaces/Surface/Surface Header tags
-    17051906: {'name': 'surface_id',  # 0x01043102
+    17051906: {'name': 'surface ID',  # 0x01043102
                'leaf': True,
-               'format': 'int'},
+               'format': 'int',
+               "singleton": True},
     17051907: {'name': 'facets',  # 0x01043103
                'leaf': True,
                'format': 'int'},
@@ -647,7 +649,7 @@ def find_first(blocks, pth):
     return find_all(blocks, pth)[0]
 
 
-def domains(header_blocks):
+def domains(header_children):
     """Return a dictionary of mesh domains.
 
     Domain IDs are 1-indexed, both in the plotfile and in the returned
@@ -655,7 +657,7 @@ def domains(header_blocks):
 
     """
     domain_dict = {}
-    b_domains = find_all(header_blocks, "geometry/domains/domain")
+    b_domains = find_all(header_children, "geometry/domains/domain")
     for i, b_domain in enumerate(b_domains):
         elem_type_id = find_one(b_domain, "domain/domain_header/element_type")["data"]
         elem_type = element_type_from_id[elem_type_id]
@@ -670,6 +672,31 @@ def domains(header_blocks):
                           "material ID": material_id,
                           "element IDs": element_ids}
     return domain_dict
+
+
+def surfaces(header_children):
+    """Return a dictionary of mesh surfaces.
+
+    Surface IDs are 1-indexed, both in the plotfile and in the returned
+    dictionary.
+
+    Each facet is represented as its canonical tuple of (zero-indexed)
+    node IDs.  That is, the tuple is rotated such that the lowest ID is
+    first.
+
+    """
+    surface_dict = {}
+    b_surfaces = find_all(header_children, "geometry/surfaces/surface")
+    for b_surface in b_surfaces:
+        surface_name = find_one(b_surface["data"], "surface header/surface name")["data"]
+        surface_id = find_one(b_surface["data"], "surface header/surface ID")["data"]
+        facets = [_canonical_face(t[2:2+t[1]]) for t in
+                  get_bdata_by_name(b_surface, "surface/facet list/facet")]
+        # ^ the element IDs are 1-indexed in the plotfile even though
+        # the node IDs (which we're discarding) are 0-indexed.
+        surface_dict[surface_id] = {"name": surface_name,
+                                    "facets": facets}
+    return surface_dict
 
 
 class XpltData:
