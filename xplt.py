@@ -594,6 +594,53 @@ def get_bdata_by_name(blocks, pth):
     return matches
 
 
+def find_all(blocks, pth):
+    """Return all blocks that match the given path."""
+    if not isinstance(blocks, list):
+        blocks = [blocks]
+    names = pth.split("/")
+    while len(names) != 0:
+        matches = []
+        for b in blocks:
+            if b['name'] == names[0]:
+                if b['type'] == 'branch':
+                    matches.append(b)
+                elif b['type'] == 'leaf' and len(names) == 1:
+                    # Leaf blocks can only match the end of the given
+                    # name path.
+                    matches.append(b)
+        # Descend one level
+        if len(names) > 1:
+            blocks = []
+            for b in matches:
+                blocks += b["data"]
+        names = names[1:]
+    return matches
+
+
+def find_one(blocks, pth):
+    """Return the block that matches the given path.
+
+    `find_one` is used to signal intent that only one match should
+    exist.  If zero or more than one match is found, an exception is
+    raised.  It is particularly useful when accessing child blocks that
+    store attributes of a parent block.
+
+    """
+    matches = find_all(blocks, pth)
+    if len(matches) > 1:
+        raise ValueError(f"More than one block matches {pth}")
+    elif len(matches) == 0:
+        raise ValueError(f"No block matches {pth}")
+    else:
+        return matches[0]
+
+
+def find_first(blocks, pth):
+    """Return first block matching the given path."""
+    return find_all(blocks, pth)[0]
+
+
 class XpltData:
     """In-memory storage and reading of xplt file data.
 
