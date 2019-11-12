@@ -57,7 +57,7 @@ tags_table = {
                'leaf': False},
     16920576: {'name': 'node variables',  # 0x01023000
                'leaf': False},
-    16924672: {'name': 'element variables',  # 0x01024000
+    16924672: {'name': 'domain variables',  # 0x01024000
                'leaf': False},
     16928768: {'name': 'surface variables',  # 0x01025000
                'leaf': False},
@@ -66,10 +66,12 @@ tags_table = {
     # Dictionary item tags
     16908290: {'name': 'item type',  # 0x01020002,
                'leaf': True,
-               'format': 'int'},
+               'format': 'int',
+               "singleton": True},
     16908291: {'name': 'item format',  # 0x01020003
                'leaf': True,
-               'format': 'int'},
+               'format': 'int',
+               "singleton": True},
     16908292: {'name': 'item name',  # 0x01020004
                'leaf': True,
                'format': 'str'},
@@ -184,7 +186,7 @@ tags_table = {
                'leaf': False},
     33686272: {'name': 'node data',  # 0x02020300
                'leaf': False},
-    33686528: {'name': 'element data',  # 0x02020400
+    33686528: {'name': 'domain data',  # 0x02020400
                'leaf': False},
     33686784: {'name': 'surface data',  # 0x02020500
                'leaf': False},
@@ -194,7 +196,8 @@ tags_table = {
     # State/State Data/*/State Variable tags
     33685506: {'name': 'variable ID',  # 0x02020002
                'leaf': True,
-               'format': 'int'},
+               'format': 'int',
+               "singleton": True},
     33685507: {'name': 'data',  # 0x02020003
                'leaf': True,
                'format': 'variable'}
@@ -225,6 +228,30 @@ item_format_from_id = {  # Refer to FE_enum.h:326
     2: 'mult',
     3: 'region'
 }
+
+
+# First key is data type (node, surface, or domain); second key is item
+# format (node, item, mult, or region).
+entity_type_from_data_type = {"node": {"node": {"entity": "node",
+                                                "selectors": tuple()},
+                                       "item": {"entity": "node",
+                                                "selectors": tuple()}},
+                              "surface": {"node": {"entity": "node",
+                                                   "selectors": tuple()},
+                                          "item": {"entity": "face",
+                                                   "selectors": ("surface")},
+                                          "mult": {"entity": "node",
+                                                   "selectors": ("face", "surface")},
+                                          "region": {"entity": "surface",
+                                                     "selectors": tuple()}},
+                              "domain": {"node": {"entity": "node",
+                                                  "selectors": ("domain")},
+                                         "item": {"entity": "element",
+                                                  "selectors": ("domain")},
+                                         "mult": {"entity": "node",
+                                                  "selectors": ("element", "domain")},
+                                         "region": {"entity": "domain",
+                                                    "selectors": tuple()}}}
 
 
 dict_section_with_var = {
@@ -699,6 +726,22 @@ def surfaces(header_children):
     return surface_dict
 
 
+def variables(header_children):
+    """Return a dictionary of variable metadata."""
+    variable_dict = {}
+    for region_type in ("node", "surface", "domain"):
+        b_variables = find_all(header_children, f"dictionary/{region_type} variables/dictionary item")
+        for b_variable in b_variables:
+            layout = item_format_from_id[find_one(b_variable["data"],
+                                                  "item format")["data"]]
+            var_name = find_one(b_variable["data"], "item name")["data"]
+            var_type = item_type_from_id[find_one(b_variable["data"], "item type")["data"]]
+            var_format = entity_type_from_data_type[region_type][layout]
+            variable_dict.setdefault(var_name, {})["type"] = var_type
+            variable_dict[var_name].update(var_format)
+    return variable_dict
+
+
 class XpltData:
     """In-memory storage and reading of xplt file data.
 
@@ -729,11 +772,6 @@ class XpltData:
                     # "leaf" or "branch", "address" → int, "size" → int,
                     # and "data"
                     var[b['name']] = b['data']
-                # Flatten data that is supposed to have only one value
-                assert len(var["item type"]) == 1
-                var['item type'] = var['item type'][0]
-                assert len(var["item format"]) == 1
-                var['item format'] = var['item format'][0]
                 # Convert coded values
                 var['item type'] = item_type_from_id[var['item type']]
                 var['item format'] = item_format_from_id[var['item format']]
@@ -792,8 +830,6 @@ class XpltData:
                 for b in b_var['data']:
                     var[b['name']] = b['data']
                 # Unpack variable data
-                assert len(var["variable ID"]) == 1
-                var["variable ID"] = var["variable ID"][0]
                 var_id = var['variable ID'] - 1  # to 0-index
                 entry = self.data_dictionary[cat_name][var_id]
                 # FEBio breaks from its documented tag format for

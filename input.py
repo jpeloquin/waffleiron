@@ -898,7 +898,7 @@ class XpltReader:
         var['global variables'] = self._rdict('global')
         var['material variables'] = self._rdict('material')
         var['node variables'] = self._rdict('node')
-        var['element variables'] = self._rdict('element')
+        var['domain variables'] = self._rdict('domain')
         var['surface variables'] = self._rdict('surface')
 
         data = {}
@@ -919,6 +919,8 @@ class XpltReader:
                         s = self.f.read(sz)
                         data.setdefault(k, {})[name] = \
                             self._unpack_variable_data(s, typ)
+        data['element variables'] = data['domain variables']
+        # ^ for backwards compatibility
         return data
 
     def _rdict(self, name):
