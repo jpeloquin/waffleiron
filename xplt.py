@@ -107,12 +107,14 @@ tags_table = {
     17048064: {'name': 'element_list',  # 0x01042200
                'leaf': False},
     # Root/Geometry/Domains/Domain/Domain Header tags
-    17047810: {'name': 'elem_type',  # 0x01042102
+    17047810: {'name': 'element_type',  # 0x01042102
                'leaf': True,
-               'format': 'int'},
+               'format': 'int',
+               "singleton": True},
     17047811: {'name': 'material ID',  # 0x01042103
                'leaf': True,
-               'format': 'int'},
+               'format': 'int',
+               "singleton": True},
     16982276: {'name': 'elements',  # 0x01032104
                'leaf': True,
                'format': 'int'},
@@ -202,7 +204,11 @@ element_type_from_id = {
     2: 'tet4',
     3: element.Quad4,
     4: element.Tri3,
-    5: 'truss2'
+    5: 'truss2',
+    6: "hex20",
+    7: "tet10",
+    8: "tet15",
+    9: "hex27"
 }
 
 item_type_from_id = {
@@ -639,6 +645,31 @@ def find_one(blocks, pth):
 def find_first(blocks, pth):
     """Return first block matching the given path."""
     return find_all(blocks, pth)[0]
+
+
+def domains(header_blocks):
+    """Return a dictionary of mesh domains.
+
+    Domain IDs are 1-indexed, both in the plotfile and in the returned
+    dictionary.
+
+    """
+    domain_dict = {}
+    b_domains = find_all(header_blocks, "geometry/domains/domain")
+    for i, b_domain in enumerate(b_domains):
+        elem_type_id = find_one(b_domain, "domain/domain_header/element_type")["data"]
+        elem_type = element_type_from_id[elem_type_id]
+        material_id = find_one(b_domain, "domain/domain_header/material ID")["data"]
+        domain_name = find_one(b_domain, "domain/domain_header/domain name")["data"]
+        element_ids = [t[0] for t in
+                       get_bdata_by_name(b_domain, "domain/element_list/element")]
+        # ^ the element IDs are 1-indexed in the plotfile even though
+        # the node IDs (which we're discarding) are 0-indexed.
+        domain_dict[i] = {"name": domain_name,
+                          "element type": elem_type,
+                          "material ID": material_id,
+                          "element IDs": element_ids}
+    return domain_dict
 
 
 class XpltData:
