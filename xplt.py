@@ -686,6 +686,7 @@ def domains(header_children):
     domain_dict = {}
     b_domains = find_all(header_children, "geometry/domains/domain")
     for i, b_domain in enumerate(b_domains):
+        domain_id = i + 1
         elem_type_id = find_one(b_domain, "domain/domain_header/element_type")["data"]
         elem_type = element_type_from_id[elem_type_id]
         material_id = find_one(b_domain, "domain/domain_header/material ID")["data"]
@@ -694,10 +695,10 @@ def domains(header_children):
                        get_bdata_by_name(b_domain, "domain/element_list/element")]
         # ^ the element IDs are 1-indexed in the plotfile even though
         # the node IDs (which we're discarding) are 0-indexed.
-        domain_dict[i] = {"name": domain_name,
-                          "element type": elem_type,
-                          "material ID": material_id,
-                          "element IDs": element_ids}
+        domain_dict[domain_id] = {"name": domain_name,
+                                  "element type": elem_type,
+                                  "material ID": material_id,
+                                  "element IDs": element_ids}
     return domain_dict
 
 
