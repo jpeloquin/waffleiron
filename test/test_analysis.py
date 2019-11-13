@@ -194,7 +194,10 @@ class CenterCrackQuad4(unittest.TestCase):
     def setUp(self):
         reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic_quad4.feb'))
         self.model = reader.model()
-        self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic_quad4.xplt'))
+        with open(os.path.join('test', 'fixtures',
+                               'center_crack_uniax_isotropic_elastic_quad4.xplt'),
+                  "rb") as f:
+            self.soln = feb.xplt.XpltData(f.read())
         self.model.apply_solution(self.soln)
 
         material = self.model.mesh.elements[0].material
@@ -219,9 +222,9 @@ class CenterCrackQuad4(unittest.TestCase):
             """Convert Cauchy stress in each element to 1st P-K.
 
             """
-            data = self.soln.step_data()
+            data = self.soln.step_data(-1)
             for i in element_ids:
-                t = data['element variables']['stress'][i]
+                t = data['domain variables']['stress'][i]
                 e = self.model.mesh.elements[i]
                 f = e.f((0,0))
                 fdet = np.linalg.det(f)

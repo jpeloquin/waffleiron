@@ -20,7 +20,8 @@ class ExponentialFiberTest(unittest.TestCase):
     def setUp(self):
         febreader = feb.input.FebReader(os.path.join('test', 'fixtures', 'mixture_hm_exp.feb'))
         model = febreader.model()
-        soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'mixture_hm_exp.xplt'))
+        with open(os.path.join('test', 'fixtures', 'mixture_hm_exp.xplt'), "rb") as f:
+            soln = feb.xplt.XpltData(f.read())
         model.apply_solution(soln)
         self.model = model
         self.soln = soln
@@ -45,8 +46,8 @@ class ExponentialFiberTest(unittest.TestCase):
         """
         F = self.model.mesh.elements[0].f((0, 0, 0))
         t_try = self.model.mesh.elements[0].material.tstress(F)
-        data = self.soln.step_data(step=-1)
-        t_true = data['element variables']['stress'][0]
+        data = self.soln.step_data(-1)
+        t_true = data['domain variables']['stress'][0]
         npt.assert_allclose(t_try, t_true, rtol=1e-5, atol=1e-5)
 
     def sstress_test(self):
@@ -59,7 +60,7 @@ class ExponentialFiberTest(unittest.TestCase):
         s_try = elem.material.sstress(f)
         t_try = (1.0 / np.linalg.det(f)) \
                 * np.dot(f, np.dot(s_try, f.T))
-        t_true = self.soln.step_data()['element variables']['stress'][0]
+        t_true = self.soln.step_data(-1)['domain variables']['stress'][0]
         npt.assert_allclose(t_try, t_true, rtol=1e-5, atol=1e-5)
 
 
@@ -159,7 +160,7 @@ class IsotropicElasticTest(unittest.TestCase):
         F = self.F
         t_try = self.mat.tstress(F)
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
-        
+
 
 class HolmesMowTest(unittest.TestCase):
     """Tests Holmes Mow material definition.
@@ -167,7 +168,8 @@ class HolmesMowTest(unittest.TestCase):
     """
 
     def setUp(self):
-        self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'holmes_mow.xplt'))
+        with open(os.path.join('test', 'fixtures', 'holmes_mow.xplt'), "rb") as f:
+            self.soln = feb.xplt.XpltData(f.read())
         febreader = FebReader(open(os.path.join('test', 'fixtures', 'holmes_mow.feb')))
         self.model = febreader.model()
         self.model.apply_solution(self.soln)
@@ -176,7 +178,7 @@ class HolmesMowTest(unittest.TestCase):
         e = self.model.mesh.elements[0]
         F = e.f((0, 0, 0))
         t_try = e.material.tstress(F)
-        t_true = self.soln.step_data()['element variables']['stress'][0]
+        t_true = self.soln.step_data(-1)['domain variables']['stress'][0]
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
 
     def sstress_test(self):
@@ -189,7 +191,7 @@ class HolmesMowTest(unittest.TestCase):
         s_try = elem.material.sstress(f)
         t_try = (1.0 / np.linalg.det(f)) \
                 * np.dot(f, np.dot(s_try, f.T))
-        t_true = self.soln.step_data()['element variables']['stress'][0]
+        t_true = self.soln.step_data(-1)['domain variables']['stress'][0]
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
 
 
@@ -199,6 +201,8 @@ class NeoHookeanTest(unittest.TestCase):
     """
 
     def setUp(self):
+        # This test deliberately still uses XpltReader so at least one
+        # test will still exercise it.
         self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'neo_hookean.xplt'))
         febreader = FebReader(open(os.path.join('test', 'fixtures', 'neo_hookean.feb')))
         self.model = febreader.model()
