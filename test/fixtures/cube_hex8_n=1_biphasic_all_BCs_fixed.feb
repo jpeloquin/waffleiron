@@ -27,6 +27,7 @@
 		<Constants>
 			<T>298</T>
 			<R>8.315e-06</R>
+      <Fc>96485e-9</Fc>
 		</Constants>
 	</Globals>
 	<Material>
