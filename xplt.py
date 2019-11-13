@@ -801,9 +801,9 @@ class XpltData:
             i_elements = [r[1:] for r in i_elements]
             # Get material.  Note that the febio binary database
             # uses 1-indexing for element IDs.
-            i_mat = get_bdata_by_name(b['data'], 'domain_header/material ID')[0][0] - 1
+            i_mat = find_one(b['data'], 'domain_header/material ID')["data"] - 1
             # Get element type
-            ecode = get_bdata_by_name(b['data'], 'domain_header/elem_type')[0][0]
+            ecode = find_one(b['data'], 'domain_header/element_type')["data"]
             etype = element_type_from_id[ecode]
             # Create list of element objects
             elements += [etype.from_ids(i_element, x_nodes, mat_id=i_mat)
