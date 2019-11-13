@@ -178,7 +178,8 @@ tags_table = {
     # State/State Header tags
     33619970: {'name': 'time',  # 0x02010002
                'leaf': True,
-               'format': 'float'},
+               'format': 'float',
+               "singleton": True},
     # State/State Data tags
     33685760: {'name': 'global data',  # 0x02020100
                'leaf': False},
@@ -233,25 +234,35 @@ item_format_from_id = {  # Refer to FE_enum.h:326
 # First key is data type (node, surface, or domain); second key is item
 # format (node, item, mult, or region).
 entity_type_from_data_type = {"node": {"node": {"entity": "node",
-                                                "selectors": tuple()},
+                                                "region selector": None,
+                                                "parent selector": None},
                                        "item": {"entity": "node",
-                                                "selectors": tuple()}},
+                                                "region selector": None,
+                                                "parent selector": None}},
                               "surface": {"node": {"entity": "node",
-                                                   "selectors": tuple()},
+                                                   "region selector": True,
+                                                   "parent selector": None},
                                           "item": {"entity": "face",
-                                                   "selectors": ("surface")},
+                                                   "region selector": True,
+                                                   "parent selector": None},
                                           "mult": {"entity": "node",
-                                                   "selectors": ("face", "surface")},
+                                                   "region selector": True,
+                                                   "parent selector": "face"},
                                           "region": {"entity": "surface",
-                                                     "selectors": tuple()}},
+                                                     "region selector": None,
+                                                     "parent selector": None}},
                               "domain": {"node": {"entity": "node",
-                                                  "selectors": ("domain")},
+                                                  "region selector": True,
+                                                  "parent selector": None},
                                          "item": {"entity": "element",
-                                                  "selectors": ("domain")},
+                                                  "region selector": True,
+                                                  "parent selector": None},
                                          "mult": {"entity": "node",
-                                                  "selectors": ("element", "domain")},
+                                                  "region selector": True,
+                                                  "parent selector": "element"},
                                          "region": {"entity": "domain",
-                                                    "selectors": tuple()}}}
+                                                    "region selector": None,
+                                                    "parent selector": None}}}
 
 
 dict_section_with_var = {
@@ -379,6 +390,11 @@ dict_section_with_var = {
     "vector gap": "element variables",
     "velocity": "node variables",
     "volume fraction": "element variables"}
+
+
+_PARSE_ERROR_GENERIC = "  One of the following is true: (1) the input data is not valid plotfile data, (2) the file format specification has changed, or (3) there is a bug in febtools."
+
+_LOOKUP_ERROR_GENERIC = "  Note that nodes and element IDs are 0-indexed, but surface and domain IDs are read from the plotfile verbatim.  FEBio seems to always use 1-indexed surface and domain IDs."
 
 
 def parse_endianness(data):
@@ -596,6 +612,39 @@ def unpack_data(data, fmt, endian):
     return v
 
 
+def _iter_step_data(step_blocks, var, var_mdata, endian):
+    """Return a iterator over step and region yielding unpacked data."""
+    region_tag = f"{var_mdata['region type']} data"
+    var_idx = var_mdata["index"]
+    for b_step in step_blocks:
+        time = find_one(b_step["data"], "state header/time")["data"]
+        b_variable = find_all(b_step["data"],
+                              f"state data/{region_tag}/state variable")[var_idx]
+        local_idx = find_one(b_variable["data"], "variable ID")["data"]
+        assert(var_idx + 1 == local_idx)
+        raw = find_one(b_variable["data"], "data")["data"]
+        for region, values in _iter_state_data(raw, var_mdata["type"], endian):
+            yield time, region, values
+
+
+def _iter_state_data(data, type_, endian):
+    """Return an iterator of region yielding unpacked data.
+
+    Iterate over binary data in the (id, size, values)+ format as used
+    in `state_data/*/state_variable/data` blocks.
+
+    Yields (region_id, values) for each region in the data.
+
+    """
+    i = 0
+    while i < len(data):
+        region_id, n = struct.unpack(endian + 'II', data[i:i+8])
+        i += 8
+        values = unpack_data(data[i:i+n], type_, endian)
+        i += n
+        yield region_id, values
+
+
 def unpack_block(data, tag, endian):
     """Unpack a block's data given its tag ID."""
     if isinstance(tag, str) and tag.startswith("0x"):
@@ -680,7 +729,10 @@ def domains(header_children):
     """Return a dictionary of mesh domains.
 
     Domain IDs are 1-indexed, both in the plotfile and in the returned
-    dictionary.
+    dictionary.  They should only ever be used as keys.
+
+    Element IDs are 0-indexed because they are sometimes used as
+    sequences indices.
 
     """
     domain_dict = {}
@@ -691,7 +743,7 @@ def domains(header_children):
         elem_type = element_type_from_id[elem_type_id]
         material_id = find_one(b_domain, "domain/domain_header/material ID")["data"]
         domain_name = find_one(b_domain, "domain/domain_header/domain name")["data"]
-        element_ids = [t[0] for t in
+        element_ids = [t[0] - 1 for t in
                        get_bdata_by_name(b_domain, "domain/element_list/element")]
         # ^ the element IDs are 1-indexed in the plotfile even though
         # the node IDs (which we're discarding) are 0-indexed.
@@ -732,7 +784,7 @@ def variables(header_children):
     variable_dict = {}
     for region_type in ("node", "surface", "domain"):
         b_variables = find_all(header_children, f"dictionary/{region_type} variables/dictionary item")
-        for b_variable in b_variables:
+        for i, b_variable in enumerate(b_variables):
             layout = item_format_from_id[find_one(b_variable["data"],
                                                   "item format")["data"]]
             var_name = find_one(b_variable["data"], "item name")["data"]
@@ -740,7 +792,52 @@ def variables(header_children):
             var_format = entity_type_from_data_type[region_type][layout]
             variable_dict.setdefault(var_name, {})["type"] = var_type
             variable_dict[var_name].update(var_format)
+            variable_dict[var_name]["region type"] = region_type
+            variable_dict[var_name]["index"] = i
+            variable_dict[var_name]["layout"] = layout
     return variable_dict
+
+
+def _raw_variables(header_children):
+    """Return a dictionary of raw variable metadata.
+
+    Keys are "{region_type} variables" (where region_type is node,
+    surface, or domain).
+
+    Values are lists of dictionaries with keys "item type", "item
+    format", "item array size", and "item name", with values
+    corresponding to the FEBio plotfile tags of the same name.
+
+    This function is intended for figuring out what's going on inside a
+    plotfile, not for use in scientific analysis.  In production, use
+    `variables()` instead.
+
+    """
+    b_data_dictionary = get_bdata_by_name(header_children, 'dictionary')
+    data_dictionary = {}
+    for b_cat in b_data_dictionary:
+        for b_var in b_cat['data']:
+            var = {}
+            for b in b_var['data']:
+                # b is a block with keys: "name", "tag", "type" →
+                # "leaf" or "branch", "address" → int, "size" → int,
+                # and "data"
+                var[b['name']] = b['data']
+            # Convert coded values
+            var['item type'] = item_type_from_id[var['item type']]
+            var['item format'] = item_format_from_id[var['item format']]
+            # Append variable entry to its category in the main data
+            # dictionary.
+            data_dictionary.setdefault(b_cat['name'], []).append(var)
+    return data_dictionary
+
+
+def _get_nodes_for_face(face, mesh):
+    return face
+
+
+def _get_nodes_for_elem_ID(elem_id, mesh):
+    return mesh.elements[elem_id].ids
 
 
 class XpltData:
@@ -755,6 +852,51 @@ class XpltData:
         blocks = parse_xplt_data(data, store_data=True)
         # Store header data
         self.header_blocks = blocks[0]['data']
+        self.regions = {"surface": surfaces(self.header_blocks),
+                        "domain": domains(self.header_blocks)}
+
+        # Compute map: entity → index in region
+        self._regional_idx = {}
+        # ^ first key is region ID, second key is data layout, third key
+        # is entity ID / canonical representation
+        #
+        mesh = self.mesh()
+        node_id_getter = {"surface": _get_nodes_for_face,
+                          "domain": _get_nodes_for_elem_ID}
+        for region_type, id_field in zip(("surface", "domain"),
+                                         ("facets", "element IDs")):
+            for region_id, region_mdata in self.regions[region_type].items():
+                self._regional_idx.setdefault(region_type, {})
+                self._regional_idx[region_type].setdefault(region_id, {})
+                self._regional_idx[region_type][region_id].setdefault("item", {})
+                self._regional_idx[region_type][region_id].setdefault("mult", {})
+                self._regional_idx[region_type][region_id].setdefault("node", {})
+                i_mult = 0  # Next available regional index for "mult" layout
+                i_node = 0  # Next available regional index for "node" layout
+                traversed_nodes = set()
+                for idx_item, entity in enumerate(region_mdata[id_field]):
+                    # "item" data layout: one value per face / element
+                    d_item = self._regional_idx[region_type][region_id]["item"]
+                    d_item[entity] = idx_item
+                    # "mult" data layout: one value per node per item.
+                    # The map's values are a list of (entity ID,
+                    # regional index) tuples.
+                    d_mult = self._regional_idx[region_type][region_id]["mult"]
+                    f = node_id_getter[region_type]
+                    node_ids = f(entity, mesh)
+                    idx_mult = (i_mult + i for i in range(len(node_ids)))
+                    i_mult += len(node_ids)
+                    for idx, node_id in zip(idx_mult, node_ids):
+                        d_mult.setdefault(node_id, [])
+                        d_mult[node_id].append((entity, idx))
+                    # "node" data layout: one value per node, byzantine ordering.
+                    for node_id in node_ids:
+                        if node_id in traversed_nodes:
+                            continue
+                        self._regional_idx[region_type][region_id]["node"][node_id] = i_node
+                        i_node += 1
+                    traversed_nodes.update(node_ids)
+
         # Store step data
         self.step_blocks = blocks[1:]
         # Step times
@@ -762,23 +904,10 @@ class XpltData:
         for b in self.step_blocks:
             t = get_bdata_by_name(b['data'], 'state header/time')[0]
             self.step_times.append(t)
+        # Metadata for variables
+        self.variables = variables(self.header_blocks)
         # Step data dictionary
-        b_data_dictionary = get_bdata_by_name(self.header_blocks, 'dictionary')
-        self.data_dictionary = {}
-        for b_cat in b_data_dictionary:
-            for b_var in b_cat['data']:
-                var = {}
-                for b in b_var['data']:
-                    # b is a block with keys: "name", "tag", "type" →
-                    # "leaf" or "branch", "address" → int, "size" → int,
-                    # and "data"
-                    var[b['name']] = b['data']
-                # Convert coded values
-                var['item type'] = item_type_from_id[var['item type']]
-                var['item format'] = item_format_from_id[var['item format']]
-                # Append variable entry to its category in the main data
-                # dictionary.
-                self.data_dictionary.setdefault(b_cat['name'], []).append(var)
+
 
     def mesh(self):
         # Get list of nodes as spatial coordinates.  According to the
@@ -811,6 +940,69 @@ class XpltData:
         mesh = Mesh(x_nodes, elements)
         return mesh
 
+
+    def value(self, var, step, entity_id, region_id=None, parent_id=None):
+        """Return a single value for a variable & selectors.
+
+        `entity_id` is a node ID (0-indexed), a canonical face tuple
+        (containing 0-indexed node IDs), or an element ID (0-indexed).
+
+        `region_id` is a plotfile-specific surface or domain ID.  It is
+        used verbatim, which means it is 1-indexed.
+
+        `parent_id` is either a canonical face tuple (using 0-indexed node
+        IDs) or a 0-indexed element ID.
+
+        """
+        var_mdata = self.variables[var]
+        iterator = _iter_step_data((self.step_blocks[step],), var,
+                                   self.variables[var], self.endian)
+        # Make sure required selectors are present
+        if var_mdata["region selector"] and region_id is None:
+            raise ValueError(f"The variable '{var}' requires a `region_id` parameter ({var_mdata['region type']} ID) to disambiguate between {var_mdata['region type']}s.")
+        if var_mdata["parent selector"] is not None and parent_id is None:
+            raise ValueError(f"The variable '{var}' requires a `parent_id` parameter ({var_mdata['parent selector']} ID) to disambiguate between {var_mdata['parent selector']}s.")
+        # Handle node variable case, which works differently than the
+        # regional variables
+        if var_mdata["region type"] == "node":
+            idx = entity_id
+            region_data = [d for d in iterator]
+            time, c_region_id, values = region_data[0]
+            if not c_region_id == 0:
+                raise ValueError(f"A region ID of {c_region_id} was encounted for variable {var}.  The FEBio plotfile spec states that node variables have region ID = 0, indicating the implicit region of all nodes." + _PARSE_ERROR_GENERIC)
+            if len(region_data) > 1:
+                raise ValueError(f"Node data with multiple regions was encountered for variable {var}.  Multiple regions are not expected for node data." + _PARSE_ERROR_GENERIC)
+            return values[idx]
+        # Handle region variable case
+        if var_mdata["layout"] == "region":
+            return next(d[2][0] for d in iterator if d[1] == entity_id)
+        # Handle remaining regional (surface or domain) variable cases
+        regional_idx = self._regional_idx[var_mdata["region type"]]\
+            [region_id][var_mdata["layout"]]
+        try:
+            idx = regional_idx[entity_id]
+        except KeyError as err:
+            raise type(err)(f"{var_mdata['entity']} {entity_id} was not found in {var_mdata['region type']} {region_id}." + _LOOKUP_ERROR_GENERIC) from err
+        if var_mdata["layout"] == "node":
+            idx = regional_idx[entity_id]
+            return next(d[2][idx] for d in iterator
+                        if d[1] == region_id)
+        elif var_mdata["layout"] == "item":
+            idx = regional_idx[entity_id]
+            return next(d[2][idx] for d in iterator
+                        if d[1] == region_id)
+        elif var_mdata["layout"] == "mult":
+            try:
+                idx = next(d[1] for d in idx
+                           if d[0] == parent_id)
+            except StopIteration as err:
+                raise ValueError(f"No {var} value for {var_mdata['entity']} {entity_id} was found for {var_mdata['parent selector']} {parent_id} in {var_mdata['region type']} {region_id}." + _LOOKUP_ERROR_GENERIC) from err
+            return next(d[2][idx] for d in iterator
+                        if d[1] == region_id)
+        else:
+            raise ValueError(f"Variable {var} has a data layout type of '{var_mdata['layout']}', which is not recognized." + _PARSE_ERROR_GENERIC)
+
+
     def step_data(self, idx):
         """Retrieve data for a specific solution step.
 
@@ -832,7 +1024,7 @@ class XpltData:
                     var[b['name']] = b['data']
                 # Unpack variable data
                 var_id = var['variable ID'] - 1  # to 0-index
-                entry = self.data_dictionary[cat_name][var_id]
+                entry = _raw_variables(self.header_blocks)[cat_name][var_id]
                 # FEBio breaks from its documented tag format for
                 # variable_data tags.  The data payload consists of, for
                 # each region, a region ID (int; 4 bytes), the size of
