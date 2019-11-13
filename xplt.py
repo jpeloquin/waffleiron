@@ -742,7 +742,12 @@ def domains(header_children):
         elem_type_id = find_one(b_domain, "domain/domain_header/element_type")["data"]
         elem_type = element_type_from_id[elem_type_id]
         material_id = find_one(b_domain, "domain/domain_header/material ID")["data"]
-        domain_name = find_one(b_domain, "domain/domain_header/domain name")["data"]
+        domain_name = find_all(b_domain, "domain/domain_header/domain name")
+        if len(domain_name) == 0:
+            # Some older plotfiles don't store domain names
+            domain_name == ""
+        else:
+            domain_name = domain_name[0]["data"]
         element_ids = [t[0] - 1 for t in
                        get_bdata_by_name(b_domain, "domain/element_list/element")]
         # ^ the element IDs are 1-indexed in the plotfile even though
