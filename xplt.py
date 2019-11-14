@@ -851,7 +851,7 @@ class XpltData:
             if len(region_data) > 1:
                 raise ValueError(f"Node data with multiple regions was encountered for variable {var}.  Multiple regions are not expected for node data." + _PARSE_ERROR_GENERIC)
             return values[idx]
-        # Handle region variable case
+        # Handle region layout case: no selection other than region ID
         if var_mdata["layout"] == "region":
             return next(d[2][0] for d in iterator if d[1] == entity_id)
         # Handle remaining regional (surface or domain) variable cases
