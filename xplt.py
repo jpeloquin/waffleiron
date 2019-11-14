@@ -449,6 +449,7 @@ def pprint_blocks(f, blocks, indent=0):
 
 
 def unpack_data(data, fmt, endian):
+    dtype = np.dtype('float32')
     if fmt in ['int', 'float']:  # Numeric cases
         n = int(len(data) / 4)
         if fmt == 'int':
