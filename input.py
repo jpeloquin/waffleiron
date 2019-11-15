@@ -947,7 +947,7 @@ class XpltReader:
                     typ.append(xplt.item_type_from_id[
                         struct.unpack(self.endian + 'I', data)[0]])
                 elif label == 'item format':
-                    fmt.append(xplt.item_format_from_id[
+                    fmt.append(xplt.value_layout_from_id[
                         struct.unpack(self.endian + 'I', data)[0]])
                 elif label == 'item name':
                     name.append(data[:data.find(b'\x00')].decode())
