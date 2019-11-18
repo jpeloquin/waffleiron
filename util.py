@@ -1,3 +1,5 @@
+from math import inf
+from warnings import warn
 import numpy as np
 
 from .core import Sequence
@@ -86,3 +88,42 @@ def apply_uniax_stretch(model, stretches, axis='x1'):
                         typ="step")
     model.steps[0]['control']['plot level'] = 'PLOT_MUST_POINTS'
     model.steps[0]['control']['time stepper']['dtmax'] = seq_must
+
+
+def find_closest_timestep(target, times, steps, rtol=0.01, atol=1e-6):
+    """Return step index closest to given time."""
+    # TODO: Convert from pandas-based calculations to numpy-based
+    # calculations
+    times = np.array(times)
+    if len(steps) != len(times):
+        raise ValueError("len(steps) ≠ len(times).  All steps must have a corresponding time value and vice versa.")
+    idx = np.argmin(np.abs(times - target))
+    step = steps[idx]
+    time = times[idx]
+    # Raise a warning if the specified value is not close to a step.  In
+    # the future this function may support interpolation or other fixes.
+    t_error = time - target
+    if t_error == 0:
+        t_relerror = 0
+    elif idx == 0 and t_error < 0:
+        # The selection specifies a time point before the first given step
+        t_interval = (times[idx + 1] - times[idx])
+        t_relerror = t_error / t_interval
+    elif step == steps[-1] and t_error > 0:
+        # The selection specifies a time point after the
+        # last time step.  It might only be a little
+        # after, within acceptable tolerance when
+        # working with floating point values, so we do
+        # not raise an error until further checks.
+        t_interval = (times[idx] - times[idx-1])
+        t_relerror = t_error / t_interval
+    else:
+        t_interval = abs(times[idx] -
+                        times[idx + int(np.sign(t_error))])
+        t_relerror = t_error / t_interval
+    # Check error tolerance
+    if abs(t_error) > atol:
+        raise ValueError(f"Time step selection absolute error > atol; target time — selected time = {t_error}; atol = {atol}.")
+    if abs(t_relerror) > abs(rtol):
+        raise ValueError(f"Time step selection relative error > rtol; target time — selected time = {t_error}; step interval = {t_interval}; relative error = {t_relerror}; rtol = {rtol}.")
+    return step
