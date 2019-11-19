@@ -1022,8 +1022,8 @@ class XpltData:
             raise ValueError(f"Variable {var} has a data layout type of '{var_mdata['layout']}', which is not recognized." + _PARSE_ERROR_GENERIC)
 
 
-    def values(self, var, steps=(0, inf), entity_id=None, region_id=None,
-               parent_id=None):
+    def values(self, var, entity_id, region_id=None,
+               parent_id=None, step_bounds=(0, inf)):
         """Return time series values for a variable & selected entity."""
         vmd = self.variables[var]  # variable metadata dictionary
         #
@@ -1042,8 +1042,8 @@ class XpltData:
         columns = {"step": [],
                    "time": [],
                    var: []}
-        step_idxs = range(max((0, steps[0])),
-                          min((len(self.step_blocks), inf)))
+        step_idxs = range(max((0, step_bounds[0])),
+                          min((len(self.step_blocks), step_bounds[1])))
         for step_idx in step_idxs:
             raw = _get_var_sdata(self.step_blocks[step_idx], vmd)
             value = unpack_data(raw[vidx:vidx + VALUE_SZ_B[vmd["type"]]],
