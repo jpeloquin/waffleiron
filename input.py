@@ -1,5 +1,6 @@
 import warnings
 import os
+import pathlib
 
 from lxml import etree as ET
 import struct
@@ -105,11 +106,20 @@ def _orthonormal_basis(a, d):
     return basis
 
 
-def read_febio_xml(pth):
-    """Return lxml tree for FEBio XML file."""
+def read_febio_xml(f):
+    """Return lxml tree for FEBio XML file path or IO object."""
     parser = ET.XMLParser(remove_blank_text=True)
-    with open(pth, "rb") as f:
+    try:
+        f = open(f, "rb")
+    except TypeError:
+        # Assume pth is already an IO object; caller may have some reason to
+        # hold it open, or just never wrote the file to disk.
         tree = ET.parse(f, parser)
+    else:
+        try:
+            tree = ET.parse(f, parser)
+        finally:
+            f.close()
     return tree
 
 
