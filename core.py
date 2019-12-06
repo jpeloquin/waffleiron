@@ -286,13 +286,16 @@ class Model:
         self.solution = solution
         # apply node data
         if t is None and step is None:  # use last timestep
-            data = solution.step_data(-1)
+            step = -1
         elif t is not None and step is None:
-            data = solution.step_data(time=t)
-        elif t is None and step is not None:
-            data = solution.step_data(step=step)
-        else:
+            if isinstance(solution, feb.input.XpltReader):
+                step_ids = [a for a in range(len(solution.times))]
+            else:
+                step_ids = [a for a in range(len(solution.step_times))]
+            step = feb.util.find_closest_timestep(t, solution.step_times, step_ids)
+        elif t is not None and step is not None:
             raise ValueError("Provide either `t` or `step`, not both.")
+        data = solution.step_data(step)
         properties = data['node variables']
         for k, v in properties.items():
             self.apply_nodal_properties(k, v)
