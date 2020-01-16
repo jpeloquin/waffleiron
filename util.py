@@ -90,9 +90,12 @@ def apply_uniax_stretch(model, stretches, axis='x1'):
     model.steps[0]['control']['time stepper']['dtmax'] = seq_must
 
 
-def find_closest_timestep(target, times, steps, rtol=0.01, atol=1e-6):
+def find_closest_timestep(target, times, steps, rtol=0.01, atol="auto"):
     """Return step index closest to given time."""
     times = np.array(times)
+    if atol == "auto":
+        atol = max(np.nextafter(target, 0),
+                   np.nextafter(target, target**2))
     if len(steps) != len(times):
         raise ValueError("len(steps) ≠ len(times).  All steps must have a corresponding time value and vice versa.")
     idx = np.argmin(np.abs(times - target))
