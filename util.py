@@ -92,8 +92,6 @@ def apply_uniax_stretch(model, stretches, axis='x1'):
 
 def find_closest_timestep(target, times, steps, rtol=0.01, atol=1e-6):
     """Return step index closest to given time."""
-    # TODO: Convert from pandas-based calculations to numpy-based
-    # calculations
     times = np.array(times)
     if len(steps) != len(times):
         raise ValueError("len(steps) ≠ len(times).  All steps must have a corresponding time value and vice versa.")
