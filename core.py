@@ -383,7 +383,10 @@ class Mesh:
 
         """
         # Create KDTree for fast node lookup
-        if self.nodes:
+        ## A mesh might have an empty node and element list.  Commit
+        ## 25146ae specifically made prepare() tolerate empty meshes, so
+        ## presumably someone needs empty meshes.
+        if (self.nodes is not None) and (len(self.nodes) > 0):
             self.nodetree = KDTree(self.nodes)
 
         # Create list of parent elements by node
