@@ -589,10 +589,10 @@ def _e_bb(elements):
     """Create bounding box array from element list.
 
     """
-    bb_max = np.vstack(np.max(e.nodes, axis=0)
-                       for e in elements)
-    bb_min = np.vstack(np.min(e.nodes, axis=0)
-                       for e in elements)
+    bb_max = np.vstack([np.max(e.nodes, axis=0)
+                        for e in elements])
+    bb_min = np.vstack([np.min(e.nodes, axis=0)
+                        for e in elements])
     bb = (bb_min, bb_max)
     return bb
 
