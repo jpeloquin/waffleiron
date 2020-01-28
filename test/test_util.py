@@ -26,7 +26,8 @@ class FindClosestTimestep(TestCase):
 
     def test_in_middle_atol_bad(self):
         with self.assertRaisesRegex(ValueError, "absolute error > atol"):
-            assert(find_closest_timestep(0.52, self.times, self.steps) == 1)
+            assert(find_closest_timestep(0.52, self.times, self.steps,
+                                         rtol=inf) == 1)
 
     def test_in_middle_rtol_bad(self):
         with self.assertRaisesRegex(ValueError, "relative error > rtol"):
