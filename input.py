@@ -793,6 +793,11 @@ class XpltReader:
         else:
             from_fobj(self, f)
 
+
+    def __del__(self):
+        self.f.close()
+
+
     def mesh(self):
         """Reads node and element lists.
 
