@@ -25,7 +25,7 @@ def elem_obj(element, nodes, eid=None):
     return etype(element, nodes)
 
 
-class Element(object):
+class Element:
     """Data and metadata for an element.
 
     Attributes
