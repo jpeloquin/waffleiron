@@ -22,7 +22,7 @@ def elem_obj(element, nodes, eid=None):
     else:
         s = "{} node element not recognized".format(n)
         raise Exception(s)
-    return etype(element, nodes, elem_id=eid)
+    return etype(element, nodes)
 
 
 class Element(object):
