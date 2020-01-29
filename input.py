@@ -11,7 +11,8 @@ import febtools.element
 from febtools.exceptions import UnsupportedFormatError
 from operator import itemgetter
 
-from .core import Model, Mesh, Body, ImplicitBody, Sequence, ScaledSequence, NodeSet, FaceSet, ElementSet, RigidInterface
+from .model import Model, Mesh
+from .core import Body, ImplicitBody, Sequence, ScaledSequence, NodeSet, FaceSet, ElementSet, RigidInterface
 from . import xplt
 from . import febioxml, febioxml_2_5, febioxml_2_0
 from . import material as material_lib

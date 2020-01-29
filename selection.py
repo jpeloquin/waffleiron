@@ -8,7 +8,7 @@ from copy import copy
 import numpy as np
 
 import febtools as feb
-from febtools import _canonical_face
+from .core import _canonical_face
 from febtools.geometry import inter_face_angle, face_normal
 
 default_tol = 10*np.finfo(float).eps

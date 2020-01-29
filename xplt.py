@@ -8,8 +8,9 @@ from warnings import warn
 import numpy as np
 
 # Same-package modules
-from . import element, Mesh
 from .core import _canonical_face
+from .model import Mesh
+from . import element
 
 # Specification metadata for each (documented) tag.
 #
@@ -845,6 +846,7 @@ class XpltData:
 
 
     def mesh(self):
+        """Return Mesh object from xplt data"""
         # Get list of nodes as spatial coordinates.  According to the
         # FEBio binary database spec, there is only one `node coords`
         # section.

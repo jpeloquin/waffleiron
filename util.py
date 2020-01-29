@@ -2,7 +2,7 @@ from math import inf
 from warnings import warn
 import numpy as np
 
-from febtools import Sequence
+from .core import Sequence
 
 
 def mesh_from_elems(elems):
