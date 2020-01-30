@@ -918,7 +918,8 @@ def xml(model, version='2.5'):
     # Write MeshData
     e_MeshData, e_ElementSet = febioxml.meshdata_section(model)
     root.insert(root.index(Geometry) + 1, e_MeshData)
-    Geometry.append(e_ElementSet)
+    if len(e_ElementSet) != 0:
+        Geometry.append(e_ElementSet)
 
     tree = ET.ElementTree(root)
     return tree
