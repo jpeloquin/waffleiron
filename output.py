@@ -777,8 +777,9 @@ def xml(model, version='2.5'):
         # and modules.
         for mat in material_registry.objects():
             if ("module" in step) and\
-               (step['module'] not in febioxml.module_compat_by_mat[type(mat)]):
-                raise ValueError(f"Material `{type(mat)}` is not compatible with Module {step['module']}")
+               ((not type(mat) in febioxml.module_compat_by_mat) or\
+                (step['module'] not in febioxml.module_compat_by_mat[type(mat)])):
+                raise ValueError(f"Material `{type(mat)}` is not listed as compatible with Module {step['module']}")
         e_con = ET.SubElement(e_step, 'Control')
         if version == '2.0':
             ET.SubElement(e_con, 'analysis', type=module)
