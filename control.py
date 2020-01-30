@@ -55,7 +55,7 @@ def default_control_section(analysis_type='static'):
                                 'dtmax': 0.1,
                                 'max retries': 5,
                                 'opt iter': 10},
-               'method': 'BFGS', # alt: 'quasi-Newton'
+               'update method': 'BFGS', # alt: 'quasi-Newton'
                'reform each time step': True,
                'reform on diverge': True,
                'max refs': 15,
