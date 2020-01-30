@@ -208,7 +208,7 @@ class Mesh:
         """Create mesh from nodes and element objects.
 
         nodes := list of (x, y, z) points
-        elements := list of nodal indices for each element
+        elements := list of Element objects that index into `nodes`
 
         """
         # Nodes
