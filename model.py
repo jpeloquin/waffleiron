@@ -88,7 +88,7 @@ class Model:
 
         """
         if control is None:
-            control = feb.control.default_control_section()
+            control = default_control_section()
         step = {'module': module,
                 'control': control,
                 'bc': {'node': {},
