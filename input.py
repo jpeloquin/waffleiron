@@ -11,6 +11,7 @@ import febtools.element
 from febtools.exceptions import UnsupportedFormatError
 from operator import itemgetter
 
+from .math import orthonormal_basis
 from .model import Model, Mesh
 from .core import Body, ImplicitBody, Sequence, ScaledSequence, NodeSet, FaceSet, ElementSet, RigidInterface
 from . import xplt
@@ -78,33 +79,6 @@ def _read_parameter(e, sequence_dict):
 
 def _vec_from_text(s) -> tuple:
     return tuple(_to_number(x.strip()) for x in s.split(","))
-
-
-def _orthonormal_basis(a, d):
-    """Return basis for two vectors.
-
-    The basis is a 3×3 matrix A = [e1, e2, e3] calculated as follows:
-
-    - e1 = Parallel to a.
-
-    - e2 = The component of d perpendicular to a.
-
-    - e3 = Perpendicular to a and d.
-
-    Each basis vector is a unit vector.
-
-    The first index → index of basis vector; second index → index of
-    that vector's components.  Essentially, the basis defines a basis W
-    with respect to U such that v_{W} = A · v_{U}.
-
-    """
-    g = np.cross(a, d)
-    d = np.cross(g, a)
-    a = a / np.linalg.norm(a)
-    d = d / np.linalg.norm(d)
-    g = g / np.linalg.norm(g)
-    basis = np.vstack([a, d, g])
-    return basis
 
 
 def read_febio_xml(f):
@@ -468,11 +442,9 @@ class FebReader:
             for e_mcs in e_mcs_local:
                 mat_id = int(e_mcs.xpath("ancestor::material")[0].attrib["id"]) - 1
                 mat = materials_by_id[mat_id]
-                nids = [x - 1 for x in _vec_from_text(e_mcs_local[0].text)]
-                for element in elements_by_mat[mat]:
-                    a = element.nodes[nids[1]] - element.nodes[nids[0]]
-                    d = element.nodes[nids[2]] - element.nodes[nids[0]]
-                    element.local_basis = _orthonormal_basis(a, d)
+                ids = _vec_from_text(e_mcs_local[0].text)  # 1-indexed
+                for e in elements_by_mat[mat]:
+                    element.local_basis = basis_mat_axis_local(e, ids)
 
         # Read explicit rigid bodies.  Create a Body object for each
         # rigid body "material" in the XML with explicit geometry.
@@ -695,7 +667,7 @@ class FebReader:
             for e_elem in e_edata:
                 a = _vec_from_text(e_elem.find("a").text)
                 d = _vec_from_text(e_elem.find("d").text)
-                basis = _orthonormal_basis(a, d)
+                basis = orthonormal_basis(a, d)
                 leid = int(e_elem.attrib["lid"]) - 1
                 eid = int(eset_elements[leid].attrib["id"]) - 1
                 # Who thought this much indirection in a data file
@@ -710,8 +682,8 @@ def mat_obj_from_elemd(d, mat_bases):
         cls = febioxml.solid_class_from_name[d["material"]]
         if ("mat_axis" in d["properties"] and
             d["properties"]["mat_axis"]["type"] == "vector"):
-            basis = _orthonormal_basis(d["properties"]["mat_axis"]["a"],
-                                       d["properties"]["mat_axis"]["d"])
+            basis = orthonormal_basis(d["properties"]["mat_axis"]["a"],
+                                      d["properties"]["mat_axis"]["d"])
         else:
             basis = None
         if d["material"] == "solid mixture":

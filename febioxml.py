@@ -1,7 +1,8 @@
 import lxml.etree as ET
 from .core import NodeSet, FaceSet, ElementSet
-from .element import Quad4, Tri3, Hex8, Penta6
+from .element import Quad4, Tri3, Hex8, Penta6, Element
 from . import material
+from .math import orthonormal_basis
 
 axis_to_febio = {'x1': 'x',
                  'x2': 'y',
@@ -118,6 +119,26 @@ def read_named_sets(xml_root):
     return sets
 
 
+def basis_mat_axis_local(element: Element,
+                         local_ids=(1, 2, 4)):
+    """Return element basis for FEBio XML <mat_axis type="local"> values.
+
+    element is an Element object.
+
+    mat_axis_local is a tuple of 3 element-local node IDs (1-indexed).
+    The default value is (1, 2, 4) to match FEBio.  FEBio /treats/ (0,
+    0, 0) as equal to (1, 2, 4), so this function does the same.
+
+    """
+    # FEBio special-case
+    if local_ids == (0, 0, 0):
+        local_ids = (1, 2, 4)
+    a = element.nodes[local_ids[1] - 1] - element.nodes[local_ids[0] - 1]
+    d = element.nodes[local_ids[2] - 1] - element.nodes[local_ids[0] - 1]
+    basis = orthonormal_basis(a, d)
+    return basis
+
+
 def normalize_xml(root):
     """Convert some items in FEBio XML to 'normal' representation.
 
@@ -129,6 +150,9 @@ def normalize_xml(root):
     Specific normalizations:
 
     - When a bare <Control> element exists, wrap it in a <Step> element.
+
+    - [TODO] Convert <mat_axis type="local">0,0,0</mat_axis> to the
+      default value of 1,2,4.
 
     This function also does some validation.
 
