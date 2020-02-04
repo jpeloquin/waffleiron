@@ -2,7 +2,7 @@
 # Third party modules
 import numpy as np
 # Same-package modules
-from .core import Sequence
+from .core import Sequence, NodeSet
 
 
 def densify(curve, n):
@@ -78,3 +78,19 @@ def cyclic_stretch_sequence(targets, rate, n=None, baseline=1.0):
     sequence = Sequence(curve, extend='constant', typ='linear')
 
     return sequence
+
+
+def prescribe_deformation(model, node_ids, F, sequence, **kwargs):
+    """Prescribe nodal displacements to match given F tensor."""
+    # Need list of node IDs with stable order; we might have been given
+    # a set
+    id_list = np.array([i for i in node_ids])
+    x_old = model.mesh.nodes[id_list]
+    x_new = (F @ x_old.T).T
+    u = x_new - x_old
+    for i, node_id in enumerate(id_list):
+        for iax, ax in enumerate(("x1", "x2", "x3")):
+            model.apply_nodal_bc(NodeSet([node_id]), ax, "displacement",
+                                 sequence=sequence,
+                                 scales={node_id: u[i, iax]},
+                                 **kwargs)

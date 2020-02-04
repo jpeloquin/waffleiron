@@ -895,7 +895,7 @@ def xml(model, version='2.5'):
                             e_NodeData.attrib["name"] = name_nodedata
                             e_NodeData.attrib["node_set"] = name
                             for node_id, scale in bc:
-                                ET.SubElement(e_NodeData, "node", lid=str(node_id)).\
+                                ET.SubElement(e_NodeData, "node", lid=str(node_id + 1)).\
                                     text = float_to_text(scale)
                             # Reference the node-specific boundary
                             # condition scaling factors
