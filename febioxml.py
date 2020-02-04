@@ -84,7 +84,11 @@ def vec_to_text(v):
 
 
 def bvec_to_text(v):
-    return ', '.join(f"{a:.7f}" for a in v)
+    return ', '.join(float_to_text(a) for a in v)
+
+
+def float_to_text(a):
+    return f"{a:.7f}"
 
 
 def read_named_sets(xml_root):

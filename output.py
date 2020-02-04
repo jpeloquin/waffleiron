@@ -12,7 +12,7 @@ from .control import step_duration
 from . import material as material_lib
 from . import febioxml_2_5 as febioxml
 from . import febioxml_2_0
-from .febioxml import vec_to_text, bvec_to_text, control_tagnames_to_febio, control_values_to_febio, TAG_FROM_BC
+from .febioxml import float_to_text, vec_to_text, bvec_to_text, control_tagnames_to_febio, control_values_to_febio, TAG_FROM_BC
 # ^ The intent here is to eventually be able to switch between FEBio XML
 # formats by exchanging this import statement for a different version.
 # Common functionality can be shared between febioxml_*_*.py files via
@@ -765,12 +765,23 @@ def xml(model, version='2.5'):
     for var in output_vars:
         ET.SubElement(plotfile, 'var', type=var)
 
+
+    # Write MeshData.  Have to do this before handling boundary
+    # conditions because some boundary conditions have part of their
+    # values stored in MeshData.  Why are loading conditions stored
+    # in the Geometry section?  ¯\_(ツ)_/¯
+    e_MeshData, e_ElementSet = febioxml.meshdata_section(model)
+    root.insert(root.index(Geometry) + 1, e_MeshData)
+    if len(e_ElementSet) != 0:
+        Geometry.append(e_ElementSet)
+
+
     # Step section(s)
     cumulative_time = 0.0
     visited_implicit_bodies = set()
-    for i, step in enumerate(model.steps):
+    for istep, step in enumerate(model.steps):
         e_step = ET.SubElement(root, 'Step',
-                               name='Step{}'.format(i + 1))
+                               name='Step{}'.format(istep + 1))
         if version == '2.0':
             ET.SubElement(e_step, 'Module', type=step['module'])
         # Warn if there's an incompatibility between requested materials
@@ -824,9 +835,15 @@ def xml(model, version='2.5'):
             e_bc_body_parent = ET.SubElement(e_step, 'Constraints')
         elif version_major == 2 and version_minor >= 5:
             e_bc_body_parent = e_bc_nodal_parent
-        # Collect nodal BCs in a more convenient heirarchy for writing FEBio XML
-        node_memo = {}  # node_memo['fixed'|'variable'][axis] =
-                        # {'nodes': [], 'scales': []}
+        # Collect nodal BCs in a more convenient heirarchy for writing
+        # FEBio XML.  FEBio XML only supports nodal boundary conditions
+        # if the node list shares the same boundary condition kind
+        # ("fixed" or "variable"), axis, and sequence, so we sort the
+        # nodal boundary conditions into one collection for each
+        # distinct combination of these attributes.  The resulting
+        # dictionary looks like:
+        # node_memo['fixed'|'variable'][axis][sequence] = (node_ids, scales)
+        node_memo = defaultdict(dict)
         if ("bc" in step) and ("node" in step["bc"]):
             for node_id in step['bc']['node']:
                 for ax in step['bc']['node'][node_id]:  # axis
@@ -835,60 +852,57 @@ def xml(model, version='2.5'):
                         kind = 'fixed'
                     else:  # bc['sequence'] is Sequence
                         kind = 'variable'
-                    node_memo.setdefault(kind, {}).setdefault(ax, {})['kind'] = kind
-                    node_memo[kind][ax]['sequence'] = bc['sequence']
-                    node_memo[kind][ax].setdefault('nodes', []).append(node_id)
-                    node_memo[kind][ax].setdefault('scales', {})[node_id] = bc['scale']
-        # We need to make sure the node ID sets are hashable so they can
-        # be assigned names.
-        for kind in node_memo:
-            for ax in node_memo[kind]:
-                node_memo[kind][ax]["nodes"] = NodeSet(node_memo[kind][ax]["nodes"])
+                    node_memo[kind].\
+                        setdefault(ax, {}).\
+                        setdefault(bc["sequence"], []).\
+                        append((node_id, bc['scale']))
         # TODO: support kind == 'fixed'.  (Does that make sense for a step?)
         for kind in node_memo:
             for axis in node_memo[kind]:
-                bc = node_memo[kind][axis]
-                e_bc = ET.SubElement(e_bc_nodal_parent,
-                                     TAG_FROM_BC['node'][kind],  # 'fix' | 'prescribe'
-                                     bc=febioxml.axis_to_febio[axis])
-                if version == '2.0':
+                for sequence in node_memo[kind][axis]:
+                    bc = node_memo[kind][axis][sequence]
+                    e_bc = ET.SubElement(e_bc_nodal_parent,
+                                         TAG_FROM_BC['node'][kind],  # 'fix' | 'prescribe'
+                                         bc=febioxml.axis_to_febio[axis])
                     if kind == 'variable':
                         seq_id = _get_or_create_seq_id(model.named["sequences"],
-                                                       bc['sequence'])
-                        e_bc.attrib['lc'] =  str(seq_id + 1)
-                    # Write nodes as children of <Step><Boundary><prescribe>
-                    for i, sc in zip(bc['nodes'], bc['scales']):
-                        ET.SubElement(e_bc, 'node', id=str(i+1)).text = f"{sc:.7e}"
-                elif version_major == 2 and version_minor >= 5:
-                    # Use <Step><Boundary><prescribe node_set="set_name">
-                    #
-                    # Test if the node-specific scaling factors are all
-                    # equal; if they are not, the BC cannot be
-                    # represented as a single node set in FEBio XML 2.5.
-                    sc0 = bc["scales"][next(a for a in bc["nodes"])]
-                    if all([sc == sc0 for i, sc in bc['scales'].items()]):
-                        # All scaling factors are equal
-                        nm_base = f"step{i+1}_{kind}_{axis}_autogen-nodeset"
-                        name = _get_or_create_name(model.named["node sets"],
-                                                   nm_base,
-                                                   bc['nodes'])
-                    else:
-                        msg = (f"A nodal boundary condition was defined with "
-                               "non-equal node-specific scaling factors and FEBio XML "
-                               "{version} was requested, but FEBio XML {version} can "
-                               "only support a single scaling factor for the entire "
-                               "node set.")
-                        # TODO: Add support for node-specific BCs using
-                        # MeshData/NodeData.
-                        raise ValueError(msg)
-                    if kind == 'variable':
-                        seq_id = _get_or_create_seq_id(model.named["sequences"],
-                                                       bc['sequence'])
-                        e_sc = ET.SubElement(e_bc, 'scale',
-                                             lc=str(seq_id + 1))
-                        e_sc.text = f"{sc0:.7e}"
-                        ET.SubElement(e_bc, 'relative').text = "0"
-                    e_bc.attrib['node_set'] = name
+                                                       sequence)
+                        nm_sequence = model.named["sequences"]
+                        if version == '2.0':
+                            e_bc.attrib['lc'] =  str(seq_id + 1)
+                            # Write nodes as children of <Step><Boundary><prescribe>
+                            for i, sc in bc:
+                                ET.SubElement(e_bc, 'node', id=str(i+1)).text =\
+                                    float_to_text(sc)
+                        elif version_major == 2 and version_minor >= 5:
+                            # Use <Step><Boundary><prescribe node_set="set_name">
+                            e_sc = ET.SubElement(e_bc, 'scale',
+                                                 lc=str(seq_id + 1))
+                            e_sc.text = "1.0"
+                            nm_base = "nodal_bc_" \
+                                f"step{istep+1}_{kind}_{axis}_seq{seq_id}_autogen"
+                            node_set = NodeSet([i for i, sc in bc])
+                            # ^ Need to make a NodeSet so it's hashable
+                            # and can thus receive a name
+                            name = _get_or_create_name(model.named["node sets"],
+                                                       nm_base, node_set)
+                            e_bc.attrib['node_set'] = name
+                            # Write the node-specific boundary condition
+                            # scaling factors in Geometry/MeshData/NodeData.
+                            e_NodeData = ET.SubElement(e_MeshData, "NodeData")
+                            name_nodedata = "nodal_bc_" \
+                                f"step{istep+1}_{axis}_seq{seq_id}_autogen"
+                            e_NodeData.attrib["name"] = name_nodedata
+                            e_NodeData.attrib["node_set"] = name
+                            for node_id, scale in bc:
+                                ET.SubElement(e_NodeData, "node", lid=str(node_id)).\
+                                    text = float_to_text(scale)
+                            # Reference the node-specific boundary
+                            # condition scaling factors
+                            ET.SubElement(e_bc, "value", node_data=name_nodedata)
+                            # Other attributes
+                            ET.SubElement(e_bc, 'relative').text = "0"
+
         if ("bc" in step) and ("body" in step["bc"]):
             for body, constraints in step["bc"]["body"].items():
                 e_rigid_body = body_constraints_to_feb(body,
@@ -921,17 +935,11 @@ def xml(model, version='2.5'):
         seq = model.named["sequences"].obj(seq_id, nametype="ordinal_id")
         add_sequence(root, model, seq)
 
-
-    # Write MeshData
-    e_MeshData, e_ElementSet = febioxml.meshdata_section(model)
-    root.insert(root.index(Geometry) + 1, e_MeshData)
-    if len(e_ElementSet) != 0:
-        Geometry.append(e_ElementSet)
     # Write any named node sets that were not already written.
     # TODO: Handle element and face sets too
     for nm, node_set in model.named["node sets"].pairs():
         e_nodeset = root.find(f"Geometry/NodeSet[@name='{nm}']")
-        if e_set is None:
+        if e_nodeset is None:
             add_nodeset(root, nm, node_set)
 
     tree = ET.ElementTree(root)
