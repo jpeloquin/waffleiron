@@ -7,7 +7,7 @@ from math import degrees
 from lxml import etree as ET
 # Within-module packages
 import febtools as feb
-from .core import Body, ImplicitBody, ContactConstraint, NameRegistry, Sequence, ScaledSequence, RigidInterface
+from .core import Body, ImplicitBody, ContactConstraint, NameRegistry, NodeSet, Sequence, ScaledSequence, RigidInterface
 from .control import step_duration
 from . import material as material_lib
 from . import febioxml_2_5 as febioxml
@@ -293,7 +293,7 @@ def material_to_feb(mat, model):
     return e
 
 
-def add_nodeset(model, xml_root, name, nodes):
+def add_nodeset(xml_root, name, nodes):
     """Add a named node set to FEBio XML."""
     e_geometry = xml_root.find("./Geometry")
     for existing in xml_root.xpath(f"Geometry/NodeSet[@name='{name}']"):
@@ -631,7 +631,7 @@ def xml(model, version='2.5'):
                 nodeset = implicit_body.interface
                 name = _get_or_create_name(model.named["node sets"],
                                            name_base, nodeset)
-            add_nodeset(model, root, name, implicit_body.interface)
+            add_nodeset(root, name, implicit_body.interface)
             ET.SubElement(e_boundary, "rigid", rb=str(mat_id + 1),
                           node_set=name)
 
@@ -644,7 +644,7 @@ def xml(model, version='2.5'):
         rigid_body_id = material_registry.name(interface.rigid_body,
                                                nametype="ordinal_id")
         node_set_name = model.named["node sets"].name(interface.node_set)
-        add_nodeset(model, root, node_set_name, interface.node_set)
+        add_nodeset(root, node_set_name, interface.node_set)
         ET.SubElement(e_Boundary, "rigid",
                       rb=str(rigid_body_id + 1),
                       node_set=node_set_name)
@@ -663,7 +663,7 @@ def xml(model, version='2.5'):
                 name_base = f"fixed_{axis}_autogen-nodeset"
                 name = _get_or_create_name(model.named["node sets"],
                                            name_base, nodeset)
-                add_nodeset(model, root, name, nodeset)
+                add_nodeset(root, name, nodeset)
                 # Create the tag
                 ET.SubElement(e_boundary, 'fix', bc=febioxml.axis_to_febio[axis],
                               node_set=name)
@@ -838,7 +838,12 @@ def xml(model, version='2.5'):
                     node_memo.setdefault(kind, {}).setdefault(ax, {})['kind'] = kind
                     node_memo[kind][ax]['sequence'] = bc['sequence']
                     node_memo[kind][ax].setdefault('nodes', []).append(node_id)
-                    node_memo[kind][ax].setdefault('scales', []).append(bc['scale'])
+                    node_memo[kind][ax].setdefault('scales', {})[node_id] = bc['scale']
+        # We need to make sure the node ID sets are hashable so they can
+        # be assigned names.
+        for kind in node_memo:
+            for ax in node_memo[kind]:
+                node_memo[kind][ax]["nodes"] = NodeSet(node_memo[kind][ax]["nodes"])
         # TODO: support kind == 'fixed'.  (Does that make sense for a step?)
         for kind in node_memo:
             for axis in node_memo[kind]:
@@ -860,12 +865,13 @@ def xml(model, version='2.5'):
                     # Test if the node-specific scaling factors are all
                     # equal; if they are not, the BC cannot be
                     # represented as a single node set in FEBio XML 2.5.
-                    sc0 = bc['scales'][0]
-                    if all([sc == sc0 for sc in bc['scales']]):
+                    sc0 = bc["scales"][next(a for a in bc["nodes"])]
+                    if all([sc == sc0 for i, sc in bc['scales'].items()]):
                         # All scaling factors are equal
                         nm_base = f"step{i+1}_{kind}_{axis}_autogen-nodeset"
                         name = _get_or_create_name(model.named["node sets"],
-                                                   nm_base, bc['nodes'])
+                                                   nm_base,
+                                                   bc['nodes'])
                     else:
                         msg = (f"A nodal boundary condition was defined with "
                                "non-equal node-specific scaling factors and FEBio XML "
@@ -915,11 +921,18 @@ def xml(model, version='2.5'):
         seq = model.named["sequences"].obj(seq_id, nametype="ordinal_id")
         add_sequence(root, model, seq)
 
+
     # Write MeshData
     e_MeshData, e_ElementSet = febioxml.meshdata_section(model)
     root.insert(root.index(Geometry) + 1, e_MeshData)
     if len(e_ElementSet) != 0:
         Geometry.append(e_ElementSet)
+    # Write any named node sets that were not already written.
+    # TODO: Handle element and face sets too
+    for nm, node_set in model.named["node sets"].pairs():
+        e_nodeset = root.find(f"Geometry/NodeSet[@name='{nm}']")
+        if e_set is None:
+            add_nodeset(root, nm, node_set)
 
     tree = ET.ElementTree(root)
     return tree

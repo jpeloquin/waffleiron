@@ -9,7 +9,7 @@ from scipy.spatial import KDTree
 from scipy.spatial.distance import cdist
 # Intra-package imports
 from .control import default_control_section
-from .core import _default_tol, Body, NodeSet, NameRegistry
+from .core import _default_tol, Body, NodeSet, NameRegistry, _validate_axis
 from .selection import e_grow
 from . import util
 
@@ -105,23 +105,29 @@ class Model:
         model to FEBio, it will automatically leak the boundary
         condition to all subsequent steps.)
 
+        node_ids := collection of integer node IDs
+
         axis := 'x1', 'x2', 'x3', 'fluid', 'temperature', or 'charge'.
 
         variable := 'displacement', 'force', 'pressure', or 'flow'
 
         sequence := conditions.Sequence object or 'fixed'
 
+        scales := dict of integer node ID → scale.  If None, scale will
+        be set to 1 for all nodes.
+
         """
+        default_scale = 1
         _validate_axis(axis)
         if sequence == 'fixed':
             scales = [None]*len(node_ids)
         elif scales is None:  # variable BC
-            scales = [1]*len(node_ids)
-        for i, scale in zip(node_ids, scales):
+            scales = {i: default_scale for i in node_ids}
+        for i in node_ids:
             bc_node = self.steps[step_id]['bc']['node'].setdefault(i, {})
             bc_node[axis] = {'variable': variable,
                              'sequence': sequence,
-                             'scale': scale}
+                             'scale': scales[i]}
         # TODO: Support global nodal BCs.
 
 
