@@ -12,13 +12,16 @@ from febtools.input import FebReader
 from febtools.material import fromlame, tolame
 from febtools.analysis import *
 from febtools import material
+from febtools.test.fixtures import gen_model_center_crack_Hex8
 
-from fixtures import Hex8IsotropicCenterCrack
-
-class CenterCrackHex8(Hex8IsotropicCenterCrack):
+class CenterCrackHex8(unittest.TestCase):
     """Center cracked isotropic elastic plate in 3d.
 
     """
+    def setUp(self):
+        self.model, attrib = gen_model_center_crack_Hex8()
+        for k in attrib:
+            setattr(self, k, attrib[k])
 
     def _griffith(self):
         """Calculate Griffith strain energy.

@@ -5,8 +5,7 @@ import unittest
 import os
 
 import febtools as feb
-
-import fixtures
+from febtools.test.fixtures import gen_model_center_crack_Hex8
 
 fp_out = os.path.join("test", "test_output")
 if not os.path.exists(fp_out):
@@ -48,10 +47,14 @@ class ScalarFieldTest(unittest.TestCase):
         plt.savefig(fp)
 
 
-class JDomainPlotTest(fixtures.Hex8IsotropicCenterCrack):
+class JDomainPlotTest(unittest.TestCase):
     """Test functions for visualizing J integral domain.
 
     """
+    def setUp(self):
+        self.model, attrib = gen_model_center_crack_Hex8()
+        self.crack_line = attrib["crack_line"]
+
     def test_plot_q(self):
         """Test 3D quiver plot of q vectors.
 
