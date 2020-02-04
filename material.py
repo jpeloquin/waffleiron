@@ -421,7 +421,10 @@ class LinearOrthotropicElastic:
     """Linear orthotropic elastic material definition.
 
     """
-    def __init__(self, props, axes):
+    def __init__(self, props,
+                 axes=((1, 0, 0),
+                       (0, 1, 0),
+                       (0, 0, 1))):
         # Define material properties
         self.E1 = props['E1']
         self.E2 = props['E2']
