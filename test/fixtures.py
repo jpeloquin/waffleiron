@@ -60,7 +60,7 @@ def gen_model_center_crack_Hex8():
     return model, attrib
 
 
-def gen_model_single_spiky_Hex8():
+def gen_model_single_spiky_Hex8(material=None):
     """Return a model consisting of a single spiky Hex8 element.
 
     None of the edges of the Hex8 element are parallel to each other.
@@ -93,5 +93,6 @@ def gen_model_single_spiky_Hex8():
                np.sin(radians(-11))]
     nodes = np.vstack([x1, x2, x3, x4, x5, x6, x7, x8])
     element = feb.element.Hex8.from_ids([i for i in range(8)], nodes)
+    element.material = material
     model = feb.Model(feb.Mesh(nodes, [element]))
     return model
