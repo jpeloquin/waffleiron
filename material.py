@@ -440,6 +440,12 @@ class LinearOrthotropicElastic:
         self.x2 = axes[1]
         self.x3 = axes[2]
 
+    @classmethod
+    def from_feb(cls, E1, E2, E3, G12, G23, G31, v12, v23, v31):
+        return cls({"E1": E1, "E2": E2, "E3": E3, "G12": G12, "G23":
+                    G23, "G31": G31, "ν12": v12, "ν23": v23, "ν31":
+                    v31})
+
 
 class NeoHookean:
     """Neo-Hookean compressible hyperelastic material.
