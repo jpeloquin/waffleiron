@@ -17,7 +17,7 @@ from febtools.test.fixtures import gen_model_single_spiky_Hex8
 DIR_THIS = Path(__file__).parent
 
 
-def test_pipeline_prescibe_deformation_singleHex8():
+def test_pipeline_prescribe_deformation_singleHex8():
     """Test conditions.prescribe_deformation()
 
     Test the following in the case of a displacement applied to all
@@ -57,7 +57,7 @@ def test_pipeline_prescibe_deformation_singleHex8():
                                          sequence)
 
     # Test 2: Can the resulting model be converted to FEBio XML?
-    fnm_stem = "prescibe_deformation_singleHex8"
+    fnm_stem = "prescribe_deformation_singleHex8"
     fnm_textdata = f"{fnm_stem}_-_element_data.txt"
     tree = feb.output.xml(model)
     e_Output = tree.find("Output")
