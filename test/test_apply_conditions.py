@@ -1,0 +1,86 @@
+# Python built-ins
+from pathlib import Path
+from unittest import TestCase
+# Public modules
+import numpy as np
+import numpy.testing as npt
+# febtools' local modules
+import febtools as feb
+from febtools.control import auto_control_section
+from febtools.element import Hex8
+from febtools.febioxml import basis_mat_axis_local
+from febtools.model import Model, Mesh
+from febtools.material import IsotropicElastic
+from febtools.test.fixtures import gen_model_single_spiky_Hex8
+
+
+DIR_THIS = Path(__file__).parent
+
+
+def test_pipeline_prescibe_deformation_singleHex8():
+    """Test conditions.prescribe_deformation()
+
+    Test the following in the case of a displacement applied to all
+    nodes in a single Hex8 element:
+
+    - prescribe_deformation completes without error
+
+    - the resulting model can be converted to FEBio XML
+
+    - the resulting FEBio XML file can be solved by FEBio
+
+    - the FEBio solution can be read by febtools
+
+    - the F tensor returned by FEBio is the same as that which was input
+
+    This is an integration test, not a unit test.  It is written as a
+    single function because it tests the entire pipeline.
+
+    """
+    # Setup
+    model = gen_model_single_spiky_Hex8()
+    material = IsotropicElastic({"E": 10, "v": 0})
+    for e in model.mesh.elements:
+        e.material = material
+    sequence = feb.Sequence(((0, 0), (1, 1)),
+                            extend="extrapolate", typ="linear")
+    model.add_step(control=auto_control_section(sequence, pts_per_segment=1))
+
+    # Test 1: Does prescribe_deformation complete without error?
+    F = np.array([[1.34, 0.18, -0.11],
+                  [-0.20, 1.14, 0.17],
+                  [-0.11, 0.20, 0.93]])
+    node_set = feb.NodeSet([i for i in range(len(model.mesh.nodes))])
+    feb.conditions.prescribe_deformation(model,
+                                         node_set,
+                                         F,
+                                         sequence)
+
+    # Test 2: Can the resulting model be converted to FEBio XML?
+    fnm_stem = "prescibe_deformation_singleHex8"
+    fnm_textdata = f"{fnm_stem}_-_element_data.txt"
+    tree = feb.output.xml(model)
+    e_Output = tree.find("Output")
+    e_logfile = e_Output.makeelement("logfile")
+    e_elementdata = e_logfile.makeelement("element_data",
+                                          file=fnm_textdata,
+                                          data="Fxx;Fyy;Fzz;Fxy;Fyz;Fxz;Fyx;Fzy;Fzx",
+                                          format="%i %g %g %g %g %g %g %g %g %g")
+    e_logfile.append(e_elementdata)
+    e_Output.append(e_logfile)
+    pth = DIR_THIS / "output" / f"{fnm_stem}.feb"
+    with open(pth, "wb") as f:
+        feb.output.write_xml(tree, f)
+
+    # Test 3: Can FEBio use the resulting FEBio XML file?
+    feb.febio.run_febio(pth)
+
+    # Test 4: Can the FEBio solution be read by febtools?
+    solved = feb.load_model(pth)
+
+    # Test 5: Is the F tensor returned by FEBio the one that we expect?
+    F_febio = feb.input.textdata_list(DIR_THIS / "output" / fnm_textdata)[-1]
+    F_febio = np.array([[F_febio["Fxx"][0], F_febio["Fxy"][0], F_febio["Fxz"][0]],
+                        [F_febio["Fyx"][0], F_febio["Fyy"][0], F_febio["Fyz"][0]],
+                        [F_febio["Fzx"][0], F_febio["Fzy"][0], F_febio["Fzz"][0]]])
+    npt.assert_array_almost_equal_nulp(F_febio, F)

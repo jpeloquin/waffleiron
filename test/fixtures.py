@@ -1,6 +1,9 @@
+# Python built-ins
+from math import radians
 import os
+# Public packages
 import numpy as np
-
+# febtools' local modules
 import febtools as feb
 from febtools.material import fromlame
 
@@ -55,3 +58,40 @@ def gen_model_center_crack_Hex8():
               "crack_faces": crack_faces}
 
     return model, attrib
+
+
+def gen_model_single_spiky_Hex8():
+    """Return a model consisting of a single spiky Hex8 element.
+
+    None of the edges of the Hex8 element are parallel to each other.
+    The element is intended to be used as a fixture in tests of
+    element-local basis vectors or issues related to spatial variation
+    in shape function interpolation within the element.
+
+    Material: Isotropic linear elastic.
+
+    Boundary conditions: None.
+
+    """
+    # Create an irregularly shaped element in which no two edges are
+    # parallel.
+    x1 = np.array([0, 0, 0])
+    x2 = [np.cos(radians(17))*np.cos(radians(6)),
+          np.sin(radians(17))*np.cos(radians(6)),
+          np.sin(radians(6))]
+    x3 = np.array([0.8348, 0.9758, 0.3460])
+    x4 = np.array([0.0794, 0.9076, 0.1564])
+    x5 = x1 + np.array([0.638*np.cos(radians(26))*np.sin(radians(1)),
+                        0.638*np.sin(radians(26))*np.sin(radians(1)),
+                        np.cos(radians(1))])
+    x6 = x5 + np.array([0.71*np.cos(radians(-24))*np.cos(radians(-7)),
+                        0.71*np.sin(radians(-24))*np.cos(radians(-7)),
+                        np.sin(radians(-7))])
+    x7 = [1, 1, 1]
+    x8 = x5 + [np.sin(radians(9))*np.cos(radians(-11)),
+               np.cos(radians(9))*np.cos(radians(-11)),
+               np.sin(radians(-11))]
+    nodes = np.vstack([x1, x2, x3, x4, x5, x6, x7, x8])
+    element = feb.element.Hex8.from_ids([i for i in range(8)], nodes)
+    model = feb.Model(feb.Mesh(nodes, [element]))
+    return model
