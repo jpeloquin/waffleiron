@@ -1,6 +1,6 @@
 import warnings
 import os
-import pathlib
+from pathlib import Path
 
 from lxml import etree as ET
 import struct
@@ -106,14 +106,11 @@ def load_model(fpath):
     - Geometry: nodes and elements
 
     """
-    if (fpath[-4:].lower() == '.feb' or fpath[-5:].lower() == '.xplt'):
-        base, ext = os.path.splitext(fpath)
-    else:
-        base = fpath
+    if isinstance(fpath, str):
+        fpath = Path(fpath)
     # Attempt to read the FEBio xml file
-    fp_feb = base + '.feb'
     try:
-        model = FebReader(fp_feb).model()
+        model = FebReader(str(fpath.with_suffix(".feb"))).model()
         feb_ok = True
     except UnsupportedFormatError as err:
         # The .feb file is some unsupported version
@@ -124,7 +121,7 @@ def load_model(fpath):
         warnings.warn(msg)
         feb_ok = False
     # Attempt to read the xplt file, if it exists
-    fp_xplt = base + '.xplt'
+    fp_xplt = fpath.with_suffix(".xplt")
     if os.path.exists(fp_xplt):
         with open(fp_xplt, 'rb') as f:
             soln = xplt.XpltData(f.read())
@@ -248,7 +245,7 @@ class FebReader:
 
     """
     def __init__(self, file):
-        """Read a file object as an FEBio xml file.
+        """Read a file path as an FEBio xml file.
 
         """
         self.file = file
