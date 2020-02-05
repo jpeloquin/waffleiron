@@ -441,7 +441,7 @@ class FebReader:
                 mat = materials_by_id[mat_id]
                 ids = _vec_from_text(e_mcs_local[0].text)  # 1-indexed
                 for e in elements_by_mat[mat]:
-                    element.local_basis = basis_mat_axis_local(e, ids)
+                    element.local_basis = febioxml.basis_mat_axis_local(e, ids)
 
         # Read explicit rigid bodies.  Create a Body object for each
         # rigid body "material" in the XML with explicit geometry.
