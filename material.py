@@ -7,7 +7,7 @@ import febtools as feb
 from .core import Sequence, ScaledSequence
 
 
-def tolame(E, v):
+def to_Lamé(E, v):
     """Convert Young's modulus & Poisson ratio to Lamé parameters.
 
     """
@@ -16,7 +16,7 @@ def tolame(E, v):
     return y, mu
 
 
-def fromlame(y, u):
+def from_Lamé(y, u):
     """Convert Lamé parameters to modulus & Poisson's ratio.
 
     """
@@ -291,7 +291,7 @@ class HolmesMow:
 
     def __init__(self, props):
         if 'E' in props and 'v' in props:
-            y, mu = feb.material.tolame(props['E'], props['v'])
+            y, mu = feb.material.to_Lamé(props['E'], props['v'])
         elif 'lambda' in props and 'mu' in props:
             y = props['lambda']
             mu = props['lambda']
@@ -362,7 +362,7 @@ class IsotropicElastic:
     """
     def __init__(self, props):
         if 'E' in props and 'v' in props:
-            y, mu = feb.material.tolame(props['E'], props['v'])
+            y, mu = feb.material.to_Lamé(props['E'], props['v'])
         elif 'lambda' in props and 'mu' in props:
             y = props['lambda']
             mu = props['mu']
@@ -462,7 +462,7 @@ class NeoHookean:
 
     def __init__(self, props):
         if 'E' in props and 'v' in props:
-            y, mu = feb.material.tolame(props['E'], props['v'])
+            y, mu = feb.material.to_Lamé(props['E'], props['v'])
         elif 'lambda' in props and 'mu' in props:
             y = props['lambda']
             mu = props['lambda']

@@ -5,7 +5,7 @@ import os
 import numpy as np
 # febtools' local modules
 import febtools as feb
-from febtools.material import fromlame
+from febtools.material import from_Lamé
 
 
 def gen_model_center_crack_Hex8():
@@ -24,7 +24,7 @@ def gen_model_center_crack_Hex8():
     material = model.mesh.elements[0].material
     γ = material.y
     μ = material.mu
-    E, ν = fromlame(γ, μ)
+    E, ν = from_Lamé(γ, μ)
 
     crack_line = ((-0.001, 0.0, 0.0),
                        ( 0.001, 0.0, 0.0))

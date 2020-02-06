@@ -123,7 +123,7 @@ def holmesmow_to_feb(mat, model):
 
     """
     e = ET.Element('material', type='Holmes-Mow')
-    E, ν = feb.material.fromlame(mat.y, mat.mu)
+    E, ν = feb.material.from_Lamé(mat.y, mat.mu)
     e.append(_property_to_feb(E, "E", model))
     e.append(_property_to_feb(ν, "v", model))
     e.append(_property_to_feb(mat.beta, "beta", model))
@@ -135,7 +135,7 @@ def isotropicelastic_to_feb(mat, model):
 
     """
     e = ET.Element('material', type='isotropic elastic')
-    E, ν = feb.material.fromlame(mat.y, mat.mu)
+    E, ν = feb.material.from_Lamé(mat.y, mat.mu)
     e.append(_property_to_feb(E, "E", model))
     e.append(_property_to_feb(ν, "v", model))
     return e
@@ -168,7 +168,7 @@ def neo_hookean_to_feb(mat, model):
 
     """
     e = ET.Element('material', type='neo-Hookean')
-    E, ν = feb.material.fromlame(mat.y, mat.mu)
+    E, ν = feb.material.from_Lamé(mat.y, mat.mu)
     e.append(_property_to_feb(E, "E", model))
     e.append(_property_to_feb(ν, "v", model))
     return e

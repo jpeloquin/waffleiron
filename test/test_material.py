@@ -95,7 +95,7 @@ class IsotropicElasticTest(unittest.TestCase):
         """
         youngmod = 1e6
         nu = 0.4
-        y, mu = tolame(youngmod, nu)
+        y, mu = to_Lamé(youngmod, nu)
         matlprops = {'lambda': y,
                      'mu': mu}
         mat1 = IsotropicElastic(matlprops)

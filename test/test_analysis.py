@@ -9,7 +9,7 @@ import numpy as np
 
 import febtools as feb
 from febtools.input import FebReader
-from febtools.material import fromlame, tolame
+from febtools.material import from_Lamé, to_Lamé
 from febtools.analysis import *
 from febtools import material
 from febtools.test.fixtures import gen_model_center_crack_Hex8
@@ -206,7 +206,7 @@ class CenterCrackQuad4(unittest.TestCase):
         material = self.model.mesh.elements[0].material
         y = material.y
         mu = material.mu
-        E, nu = fromlame(y, mu)
+        E, nu = from_Lamé(y, mu)
         self.E = E
         self.nu = nu
 
