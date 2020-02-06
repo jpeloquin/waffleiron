@@ -20,7 +20,7 @@ from febtools.test.fixtures import gen_model_single_spiky_Hex8
 DIR_THIS = Path(__file__).parent
 
 
-class Calc_MatAxisLocal_Hex8(TestCase):
+class Unit_MatAxisLocal_Hex8(TestCase):
     """Test <mat_axis type="local"> → basis for a Hex8 element"""
 
     def setUp(self):
