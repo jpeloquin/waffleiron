@@ -11,7 +11,7 @@ from febtools.input import FebReader, textdata_list
 
 
 class ExponentialFiberTest(unittest.TestCase):
-    """Tests exponential fiber material definition.
+    """Test exponential fiber material definition
 
     Since this material is unstable, it must be tested in a mixture.
     The test, therefore, is not truly independent.
@@ -65,9 +65,7 @@ class ExponentialFiberTest(unittest.TestCase):
 
 
 class IsotropicElasticTest(unittest.TestCase):
-    """Tests isotropic elastic material definition.
-
-    """
+    """Test isotropic elastic material definition"""
     def setUp(self):
         elemdata = textdata_list('test/fixtures/'
                                  'isotropic_elastic_elem_data.txt',
@@ -143,9 +141,7 @@ class IsotropicElasticTest(unittest.TestCase):
         npt.assert_allclose(s_try, s_true, rtol=1e-3, atol=1.0)
 
     def tstress_test(self):
-        """Compare calculated stress with that from FEBio's logfile.
-
-        """
+        """Compare calculated stress with that from FEBio's logfile"""
         # someday, the material properties will be read from the .feb
         # file
         tx = self.elemdata[-1]['sx'][0]
@@ -163,9 +159,7 @@ class IsotropicElasticTest(unittest.TestCase):
 
 
 class HolmesMowTest(unittest.TestCase):
-    """Tests Holmes Mow material definition.
-
-    """
+    """Test Holmes Mow material definition"""
 
     def setUp(self):
         with open(os.path.join('test', 'fixtures', 'holmes_mow.xplt'), "rb") as f:
@@ -196,9 +190,7 @@ class HolmesMowTest(unittest.TestCase):
 
 
 class NeoHookeanTest(unittest.TestCase):
-    """Tests Holmes Mow material definition.
-
-    """
+    """Test Holmes–Mow material definition"""
 
     def setUp(self):
         # This test deliberately still uses XpltReader so at least one
