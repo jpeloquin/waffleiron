@@ -87,10 +87,10 @@ def _property_to_feb(p, tag, model):
         # Time-varying property, scaled
         seq_id = _get_or_create_item_id(model.named["sequences"], p.sequence)
         e.attrib["lc"] = str(seq_id + 1)
-        e.text = str(p.scale)
+        e.text = float_to_text(p.scale)
     else:
         # Fixed property
-        e.text = str(p)
+        e.text = float_to_text(p)
     return e
 
 
