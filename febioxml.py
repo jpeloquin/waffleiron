@@ -77,7 +77,11 @@ control_values_from_febio = {k: {v_xml: v_us for v_us, v_xml in conv.items()}
 module_compat_by_mat = {material.PoroelasticSolid: set(['biphasic']),
                         material.RigidBody: set(['solid', 'biphasic']),
                         material.LinearOrthotropicElastic: set(['solid', 'biphasic']),
-                        material.IsotropicElastic: set(['solid', 'biphasic'])}
+                        material.IsotropicElastic: set(['solid', 'biphasic']),
+                        material.SolidMixture: set(['solid', 'biphasic']),
+                        material.PowerLinearFiber: set(['solid', 'biphasic']),
+                        material.ExponentialFiber: set(['solid', 'biphasic']),
+                        material.HolmesMow: set(['solid', 'biphasic'])}
 
 
 def vec_to_text(v):
