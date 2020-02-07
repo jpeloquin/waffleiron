@@ -2,14 +2,16 @@
 from collections import defaultdict
 from copy import copy, deepcopy
 from datetime import datetime
-from math import degrees
-# System packages
+# Public packages
+import numpy as np
+from scipy.spatial.transform import Rotation
 from lxml import etree as ET
 # Within-module packages
 import febtools as feb
 from .core import Body, ImplicitBody, ContactConstraint, NameRegistry, NodeSet, Sequence, ScaledSequence, RigidInterface
 from .control import step_duration
 from . import material as material_lib
+from .math import sph_from_vec
 from . import febioxml_2_5 as febioxml
 from . import febioxml_2_0
 from .febioxml import float_to_text, vec_to_text, bvec_to_text, control_tagnames_to_febio, control_values_to_febio, TAG_FROM_BC
@@ -102,8 +104,10 @@ def exponentialfiber_to_feb(mat, model):
     e.append(_property_to_feb(mat.alpha, "alpha", model))
     e.append(_property_to_feb(mat.beta, "beta", model))
     e.append(_property_to_feb(mat.xi, "ksi", model))
-    e.append(_property_to_feb(degrees(mat.theta), "theta", model))
-    e.append(_property_to_feb(degrees(mat.phi), "phi", model))
+    θ, φ = sph_from_vec(mat.orientation)
+    e_fiber = ET.SubElement(e, "fiber", type="angles")
+    e_fiber.append(_property_to_feb(θ, "theta", model))
+    e_fiber.append(_property_to_feb(φ, "phi", model))
     return e
 
 
@@ -158,8 +162,8 @@ def linear_orthotropic_elastic_to_feb(mat, model):
     e.append(_property_to_feb(mat.v31, "v31", model))
     # Symmetry axes
     axes = ET.SubElement(e, 'mat_axis', type='vector')
-    ET.SubElement(axes, 'a').text = ','.join([str(a) for a in mat.x1])
-    ET.SubElement(axes, 'd').text = ','.join([str(a) for a in mat.x2])
+    ET.SubElement(axes, 'a').text = vec_to_text(mat.orientation[0])
+    ET.SubElement(axes, 'd').text = vec_to_text(mat.orientation[1])
     return e
 
 
@@ -283,13 +287,19 @@ def material_to_feb(mat, model):
     # Any mixture material /should/ call `material_to_feb` (this
     # function) for each sub-material, so we shouldn't need to handle
     # material coordinate systems anywhwere else.
-    if (mat in model.mesh.material_basis and
-        model.mesh.material_basis[mat] is not None):
-        basis = model.mesh.material_basis[mat]
-        e_mat_axis = ET.Element("mat_axis", type="vector")
-        ET.SubElement(e_mat_axis, "a").text = febioxml.bvec_to_text(basis[0])
-        ET.SubElement(e_mat_axis, "d").text = febioxml.bvec_to_text(basis[1])
-        e.insert(0, e_mat_axis)
+    if hasattr(mat, "orientation"):
+        if np.array(mat.orientation).ndim == 2:
+            # material axes orientation
+            e_mat_axis = ET.Element("mat_axis", type="vector")
+            ET.SubElement(e_mat_axis, "a").text = febioxml.bvec_to_text(mat.orientation[0])
+            ET.SubElement(e_mat_axis, "d").text = febioxml.bvec_to_text(mat.orientation[1])
+            e.insert(0, e_mat_axis)
+        elif np.array(mat.orientation).ndim == 1:
+            # vector orientation
+            e_vector = ET.Element("fiber", type="vector")
+            e_vector.text = bvec_to_text(mat.orientation)
+        else:
+            raise ValueError(f"Rank {orientation.ndim} material orientation not supported.  Provided orientation was {orientation}.")
     return e
 
 

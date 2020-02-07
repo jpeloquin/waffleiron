@@ -7,6 +7,13 @@ import febtools as feb
 from .core import Sequence, ScaledSequence
 
 
+_DEFAULT_ORIENT_RANK1 = np.array([1, 0, 0])
+
+_DEFAULT_ORIENT_RANK2 = (np.array([1, 0, 0]),
+                         np.array([0, 1, 0]),
+                         np.array([0, 0, 1]))
+
+
 def to_Lamé(E, v):
     """Convert Young's modulus & Poisson ratio to Lamé parameters.
 
@@ -35,7 +42,7 @@ def _is_fixed_property(p):
 class Permeability:
     """Parent type for Permeability implementations."""
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         msg = """The Permeability class is meant only to serve as a supertype for
 child classes that implement the necessary functionality.  Only its
 child classes should be instantiated as objects."""
@@ -45,7 +52,7 @@ child classes should be instantiated as objects."""
 class IsotropicConstantPermeability(Permeability):
     """Isotropic strain-independent permeability"""
 
-    def __init__(self, k):
+    def __init__(self, k, **kwargs):
         self.k = k
 
     @classmethod
@@ -55,7 +62,7 @@ class IsotropicConstantPermeability(Permeability):
 
 class IsotropicHolmesMowPermeability(Permeability):
     """Isotropic Holmes-Mow permeability"""
-    def __init__(self, k0, M, α):
+    def __init__(self, k0, M, α, **kwargs):
         self.k0 = k0
         self.M = M
         self.α = α
@@ -71,14 +78,14 @@ class PoroelasticSolid:
     Currently only isotropic permeability is allowed.
 
     """
-    def __init__(self, solid, permeability: Permeability):
+    def __init__(self, solid, permeability: Permeability, **kwargs):
         self.solid_material = solid
         self.permeability = permeability
 
 
 class DonnanSwelling:
     """Swelling pressure of the Donnan equilibrium type."""
-    def __init__(self, phi0_w, fcd0, ext_osm, osm_coef):
+    def __init__(self, phi0_w, fcd0, ext_osm, osm_coef, **kwargs):
         # Bounds checks
         if _is_fixed_property(phi0_w) and not (0 <= phi0_w <= 1):
             raise ValueError(f"phi0_w = {phi0_w}; it is required that 0 ≤ phi0_w ≤ 1")
@@ -99,7 +106,7 @@ class DonnanSwelling:
 
 class Multigeneration:
     """Mixture of materials created at and referenced to a given time."""
-    def __init__(self, generations):
+    def __init__(self, generations, **kwargs):
         """Return Multigeneration object.
 
         generations := a list of tuples (start_time <float>, material
@@ -120,7 +127,7 @@ class SolidMixture:
 
     """
 
-    def __init__(self, solids):
+    def __init__(self, solids, **kwargs):
         """Mixture of solids.
 
         Parameters
@@ -157,7 +164,7 @@ class RigidBody:
     """Rigid body.
 
     """
-    def __init__(self, props={}):
+    def __init__(self, props={}, **kwargs):
         self.density = 1
         if "density" in props:
             self.density = props["density"]
@@ -173,21 +180,17 @@ class ExponentialFiber:
     FEBio users manual 2.0, page 104.
 
     """
-    def __init__(self, props):
+    dimension = 1  # dimension of material
+    symmetry = 0  # dimensions that are reduced by symmetry
+
+    def __init__(self, props, orientation=_DEFAULT_ORIENT_RANK1, **kwargs):
         self.alpha = props['alpha']
         self.beta = props['beta']
         self.xi = props['ksi']
-        self.theta = radians(props['theta'])
-        # ^ azimuth; 0° := +x, 90° := +y
-        self.phi = radians(props['phi'])
-        # ^ zenith; 0° := +z, 90° := x-y plane
+        self.orientation = orientation
 
     def w(self, F):
-        """Strain energy density.
-
-        Input angles in degrees.
-
-        """
+        """Return strain energy density."""
         F = np.array(F)
 
         # deviatoric components
@@ -196,9 +199,7 @@ class ExponentialFiber:
         # Cdev = dot(Fdev.T, Fdev)
         C = dot(F.T, F)
         # fiber unit vector
-        N = np.array([sin(self.phi) * cos(self.theta),
-                      sin(self.phi) * sin(self.theta),
-                      cos(self.phi)])
+        N = self.orientation
         # square of fiber stretch
         In = dot(N, dot(C, N))
         a = self.alpha
@@ -207,10 +208,12 @@ class ExponentialFiber:
         w = xi / (a * b) * (exp(a * (In - 1.0)**b) - 1.0)
         return w
 
-    def tstress(self, F):
-        """Cauchy stress tensor.
+    def stress(self, F):
+        """Return scalar fiber stress."""
+        raise NotImplementedError
 
-        """
+    def tstress(self, F):
+        """Return Cauchy stress tensor aligned to local axes."""
         F = np.array(F)
 
         def H(x):
@@ -224,9 +227,7 @@ class ExponentialFiber:
         J = det(F)
         C = dot(F.T, F)
         # fiber unit vector
-        N = np.array([sin(self.phi) * cos(self.theta),
-                      sin(self.phi) * sin(self.theta),
-                      cos(self.phi)])
+        N = self.orientation
         # Square of fiber stretch
         In = dot(N, dot(C, N))
         yf = In**0.5  # fiber stretch
@@ -240,17 +241,13 @@ class ExponentialFiber:
         return t
 
     def pstress(self, F):
-        """1st Piola-Kirchoff stress.
-
-        """
+        """Return 1st Piola–Kirchoff stress tensor in local axes."""
         t = self.tstress(F)
         p = det(F) * dot(t, np.linalg.inv(F).T)
         return p
 
     def sstress(self, F):
-        """2nd Piola-Kirchoff stress.
-
-        """
+        """Return 2nd Piola-Kirchoff stress tensor in local axes."""
         t = self.tstress(F)
         s = det(F) * dot(np.linalg.inv(F),
                          dot(t, np.linalg.inv(F).T))
@@ -263,7 +260,7 @@ class PowerLinearFiber:
     Same as "fiber-pow-lin" in FEBio XML.
 
     """
-    def __init__(self, E, β, λ0, azimuth=0, zenith=pi/2):
+    def __init__(self, E, β, λ0, azimuth=0, zenith=pi/2, **kwargs):
         self.E = E  # fiber modulus in linear region
         self.β = β  # power law exponent in power law region
         self.λ0 = λ0  # stretch ratio at which power law region
@@ -275,7 +272,7 @@ class PowerLinearFiber:
         # `zenith` everywhere.
 
     @classmethod
-    def from_feb(cls, E, beta, lam0, theta, phi):
+    def from_feb(cls, E, beta, lam0, theta, phi, **kwargs):
         return cls(E, beta, lam0, azimuth=radians(theta), zenith=radians(phi))
 
 
@@ -289,7 +286,7 @@ class HolmesMow:
     y = 0
     mu = 0
 
-    def __init__(self, props):
+    def __init__(self, props, **kwargs):
         if 'E' in props and 'v' in props:
             y, mu = feb.material.to_Lamé(props['E'], props['v'])
         elif 'lambda' in props and 'mu' in props:
@@ -360,7 +357,7 @@ class IsotropicElastic:
     """Isotropic elastic material definition.
 
     """
-    def __init__(self, props):
+    def __init__(self, props, **kwargs):
         if 'E' in props and 'v' in props:
             y, mu = feb.material.to_Lamé(props['E'], props['v'])
         elif 'lambda' in props and 'mu' in props:
@@ -422,9 +419,8 @@ class LinearOrthotropicElastic:
 
     """
     def __init__(self, props,
-                 axes=((1, 0, 0),
-                       (0, 1, 0),
-                       (0, 0, 1))):
+                 orientation=_DEFAULT_ORIENT_RANK2,
+                 **kwargs):
         # Define material properties
         self.E1 = props['E1']
         self.E2 = props['E2']
@@ -436,12 +432,10 @@ class LinearOrthotropicElastic:
         self.v23 = props['ν23']
         self.v31 = props['ν31']
         # Define basis vectors
-        self.x1 = axes[0]
-        self.x2 = axes[1]
-        self.x3 = axes[2]
+        self.orientation = orientation
 
     @classmethod
-    def from_feb(cls, E1, E2, E3, G12, G23, G31, v12, v23, v31):
+    def from_feb(cls, E1, E2, E3, G12, G23, G31, v12, v23, v31, **kwargs):
         return cls({"E1": E1, "E2": E2, "E3": E3, "G12": G12, "G23":
                     G23, "G31": G31, "ν12": v12, "ν23": v23, "ν31":
                     v31})
@@ -457,10 +451,7 @@ class NeoHookean:
     linear elasticity for small strains and small rotations.
 
     """
-    y = None
-    mu = None
-
-    def __init__(self, props):
+    def __init__(self, props, **kwargs):
         if 'E' in props and 'v' in props:
             y, mu = feb.material.to_Lamé(props['E'], props['v'])
         elif 'lambda' in props and 'mu' in props:

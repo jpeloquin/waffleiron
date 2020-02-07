@@ -33,10 +33,8 @@ class ExponentialFiberTest(unittest.TestCase):
                       [-0.3, 0.0, 1.5]])
         matlprops = {'alpha': 65,
                      'beta': 2,
-                     'ksi': 0.296,
-                     'theta': 90,
-                     'phi': 90}
-        expfib = ExponentialFiber(matlprops)
+                     'ksi': 0.296}
+        expfib = ExponentialFiber(matlprops, orientation=np.array([0, 1, 0]))
         w = expfib.w(F)
         assert w > 0
 
@@ -72,7 +70,7 @@ class IsotropicElasticTest(unittest.TestCase):
                                  delim=",")
         febreader = FebReader(open('test/fixtures/'
                                    'isotropic_elastic.feb'))
-        mats, mat_labels, mat_bases = febreader.materials()
+        mats, mat_labels = febreader.materials()
         self.mat = mats[0]
         Fxx = elemdata[-1]['Fxx'][0]
         Fyy = elemdata[-1]['Fyy'][0]

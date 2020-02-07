@@ -11,7 +11,7 @@ import febtools.element
 from febtools.exceptions import UnsupportedFormatError
 from operator import itemgetter
 
-from .math import orthonormal_basis
+from .math import orthonormal_basis, vec_from_sph
 from .model import Model, Mesh
 from .core import Body, ImplicitBody, Sequence, ScaledSequence, NodeSet, FaceSet, ElementSet, RigidInterface
 from . import xplt
@@ -268,13 +268,12 @@ class FebReader:
         """
         mats = {}
         mat_labels = {}
-        mat_bases = {}
         for m in self.root.findall('./Material/material'):
             # Read material into dictionary
             material = self._read_material(m)
             mat_id = int(m.attrib['id']) - 1  # FEBio counts from 1
             try:
-                material = mat_obj_from_elemd(material, mat_bases)
+                material = mat_obj_from_elemd(material)
             except NotImplementedError:
                 warnings.warn("Warning: Material type `{}` is not implemented "
                               "for post-processing.  It will be represented "
@@ -287,7 +286,7 @@ class FebReader:
                 mat_labels[mat_id] = m.attrib['name']
             else:
                 mat_labels[mat_id] = str(mat_id)
-        return mats, mat_labels, mat_bases
+        return mats, mat_labels
 
 
     @property
@@ -330,6 +329,10 @@ class FebReader:
         tag := the XML <material> element.
 
         """
+        # TODO: This is a bad way of reading materials.  FEBio XML
+        # doesn't have a lot of regularity and this conversion of a
+        # material's XML tree to a dictionary is an extra step that just
+        # gets in the way.
         m = {}
         m['material'] = tag.attrib['type']
         m['properties'] = {}
@@ -344,7 +347,7 @@ class FebReader:
                 e_mat = child.find("solid")
                 constituents.append(self._read_material(e_mat))
             else:
-                # Child element is a property
+                # Child element is a property (note: this isn't always true)
                 m['properties'][child.tag] = self._read_property(child)
         if constituents:
             m['constituents'] = constituents
@@ -384,9 +387,9 @@ class FebReader:
         """
         # Get the materials dictionary so we can assign materials to
         # elements when we read the geometry
-        materials_by_id, material_labels, material_basis = self.materials()
+        materials_by_id, material_labels = self.materials()
         # Create model geoemtry
-        mesh = self.mesh((materials_by_id, material_labels, material_basis))
+        mesh = self.mesh((materials_by_id, material_labels))
         model = Model(mesh)
 
         # Read Environment Constants
@@ -625,9 +628,9 @@ class FebReader:
 
         """
         if material_info is None:
-            materials, mat_labels, mat_bases = self.materials()
+            materials, mat_labels = self.materials()
         else:
-            materials, mat_labels, mat_bases = material_info
+            materials, mat_labels = material_info
         nodes = [tuple([float(a) for a in b.text.split(",")])
                  for b in self.root.findall("./Geometry/Nodes/*")]
         # Read elements
@@ -646,7 +649,6 @@ class FebReader:
                 elements.append(e)
         # Create mesh
         mesh = Mesh(nodes, elements)
-        mesh.material_basis = mat_bases
         #
         # Read <MeshData> (partial support; just for ElementData with
         # var="mat_axis")
@@ -673,21 +675,59 @@ class FebReader:
         return mesh
 
 
-def mat_obj_from_elemd(d, mat_bases):
+def mat_obj_from_elemd(d):
     """Convert material element to material object"""
     if d["material"] in febioxml.solid_class_from_name:
-        cls = febioxml.solid_class_from_name[d["material"]]
-        if ("mat_axis" in d["properties"] and
-            d["properties"]["mat_axis"]["type"] == "vector"):
-            basis = orthonormal_basis(d["properties"]["mat_axis"]["a"],
-                                      d["properties"]["mat_axis"]["d"])
+        ## Read material orientation
+        if "mat_axis" in d["properties"]:
+            type_ = d["properties"]["mat_axis"]["type"]
+            if type_ == "vector":
+                orientation = orthonormal_basis(d["properties"]["mat_axis"]["a"],
+                                                d["properties"]["mat_axis"]["d"])
+            # <mat_axis type="local"> is converted to element-local
+            # orientation in Model's initializer; no need to handle it
+            # here.
+        elif "fiber" in d["properties"]:
+            if d["properties"]["fiber"]["type"] == "angles":
+                θ = d["properties"]["fiber"]["theta"]  # azimuth
+                φ = d["properties"]["fiber"]["phi"]  # zenith angle
+                orientation = vec_from_sph(θ, φ)
+            else:
+                raise NotImplementedError
         else:
-            basis = None
+            orientation = None
+        # Handle materials with orientation as material properties
+        if "theta" in d["properties"] and "phi" in d["properties"]:
+            θ = d["properties"]["theta"]  # azimuth
+            φ = d["properties"]["phi"]  # zenith angle
+            matprop_orientation = vec_from_sph(θ, φ)
+            if orientation is None:
+                orientation = matprop_orientation
+            else:
+                # Have to combine orientations
+                if np.rank(orientation) == 2:
+                    orientation = orientation @ matprop_orientation
+                else:
+                    # `orientation` is just a vector.  Interpret it as
+                    # indicating a transformation from [1, 0, 0] to its
+                    # value.
+                    raise NotImplementedError
+
+        ## Create material object
+        cls = febioxml.solid_class_from_name[d["material"]]
         if d["material"] == "solid mixture":
             constituents = []
             for d_child in d["constituents"]:
-                constituents.append(mat_obj_from_elemd(d_child, mat_bases))
-            material = cls(constituents)
+                constituents.append(mat_obj_from_elemd(d_child))
+            if orientation is not None:
+                # TODO: come up with better way of doing this than
+                # repeating this `orientation is not None` check for
+                # every material instantiation.  Maybe make all
+                # materials take **kwargs so we can always pass
+                # orientation, even if the material doesn't use it?
+                material = cls(constituents, orientation=orientation)
+            else:
+                material = cls(constituents)
         elif d["material"] == "biphasic":
             # Instantiate Permeability object
             p_props = d["properties"]["permeability"]
@@ -700,23 +740,35 @@ def mat_obj_from_elemd(d, mat_bases):
                 # This requires retaining material ids in the dict
                 # passed to this function.
                 raise ValueError("""A porelastic solid was encountered with {len(d['constituents'])} solid constituents.  Poroelastic solids must have exactly one solid constituent.""")
-            solid = mat_obj_from_elemd(d["constituents"][0], mat_bases)
+            solid = mat_obj_from_elemd(d["constituents"][0])
             # Return the Poroelastic Solid object
-            material = material_lib.PoroelasticSolid(solid, permeability)
+            if orientation is not None:
+                material = material_lib.PoroelasticSolid(solid, permeability,
+                                                         orientation=orientation)
+            else:
+                material = material_lib.PoroelasticSolid(solid, permeability)
         elif d["material"] == "multigeneration":
             # Constructing materials for the list of generations works
             # just like a solid mixture
             constituents = []
             for d_child in d["constituents"]:
-                constituents.append(mat_obj_from_elemd(d_child, mat_bases))
+                constituents.append(mat_obj_from_elemd(d_child))
             generations = ((t, mat) for t, mat in
                            zip(d["properties"]["start times"], constituents))
-            material = cls(generations)
+            if orientation is not None:
+                material = cls(generations, orientation=orientation)
+            else:
+                material = cls(generations)
         elif hasattr(cls, "from_feb") and callable(cls.from_feb):
-            material = cls.from_feb(**d["properties"])
+            if orientation is not None:
+                material = cls.from_feb(**d["properties"], orientation=orientation)
+            else:
+                material = cls.from_feb(**d["properties"])
         else:
-            material = cls(d["properties"])
-        mat_bases[material] = basis
+            if orientation is not None:
+                material = cls(d["properties"], orientation=orientation)
+            else:
+                material = cls(d["properties"])
         return material
     else:
         raise ValueError(f"{d['material']} is not supported in the loading of FEBio XML.")

@@ -238,8 +238,6 @@ class Mesh:
         self.elements = elements
         # Bodies
         self.bodies = set()
-        # Material coordinate systems
-        self.material_basis = {}
 
         # Precompute derived properties
         self.prepare()
