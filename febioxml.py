@@ -93,7 +93,7 @@ def bvec_to_text(v):
 
 
 def float_to_text(a):
-    return f"{a:.7f}"
+    return f"{a:.7g}"
 
 
 def read_named_sets(xml_root):
