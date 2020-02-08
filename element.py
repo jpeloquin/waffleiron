@@ -194,6 +194,11 @@ class Element:
 
         return out.squeeze()
 
+    def f_avg(self):
+        """Return F tensor averaged across integration points."""
+        return np.mean([self.f(self.gloc[i]) for i in range(len(self.gloc))],
+                       axis=0)
+
     def f(self, r):
         """Calculate F tensor (convenience function).
 
