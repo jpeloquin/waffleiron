@@ -79,25 +79,22 @@ def _fixture_FEBio_fiberDirectionLocal_Hex8_fiber():
 def test_FEBio_fiberDirectionLocal_Hex8_fiber():
     """End-to-end test of <fiber type="vector">"""
     # Test 1: Read
-    pth = DIR_FIXTURES / \
+    pth_in = DIR_FIXTURES / \
         (f"{Path(__file__).with_suffix('').name}." +\
          "fiberDirectionLocal_Hex8_fiber.feb")
-    model = feb.load_model(pth)
-    #
-    # TODO: Implement reading prescribed nodal displacements from FEBio
-    # XML so tests 2 and 3 can be run.
+    model = feb.load_model(pth_in)
     #
     # Test 2: Write
-    # pth = DIR_THIS / "output" / \
-    #     (f"{Path(__file__).with_suffix('').name}." +\
-    #      "fiberDirectionLocal_Hex8_fiber.feb")
-    # with open(pth, "wb") as f:
-    #     feb.output.write_feb(model, f)
+    pth_out = DIR_THIS / "output" / \
+        (f"{Path(__file__).with_suffix('').name}." +\
+         "fiberDirectionLocal_Hex8_fiber.feb")
+    with open(pth_out, "wb") as f:
+        feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    run_febio(pth)
+    run_febio(pth_out)
     #
     # Test 4: Is the output as expected?
-    model = feb.load_model(pth)
+    model = feb.load_model(pth_out)
     e = model.mesh.elements[0]
     ##
     ## Test 4.1: Do we see the correct applied displacements?  A test

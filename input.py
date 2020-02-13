@@ -17,7 +17,7 @@ from .core import Body, ImplicitBody, Sequence, ScaledSequence, NodeSet, FaceSet
 from . import xplt
 from . import febioxml, febioxml_2_5, febioxml_2_0
 from . import material as material_lib
-from .febioxml import control_tagnames_from_febio, control_values_from_febio, elem_cls_from_feb, normalize_xml
+from .febioxml import control_tagnames_from_febio, control_values_from_febio, elem_cls_from_feb, normalize_xml, _to_number, _maybe_to_number, _find_unique_tag
 
 def _nstrip(string):
     """Remove trailing nulls from string.
@@ -27,32 +27,6 @@ def _nstrip(string):
         if c == '\x00':
             return string[:i]
     return string
-
-
-def _to_number(s):
-    """Convert numeric string to int or float as appropriate."""
-    try:
-        return int(s)
-    except ValueError:
-        return float(s)
-
-
-def _maybe_to_number(s):
-    """Convert string to number if possible, otherwise return string."""
-    try:
-        return _to_number(s)
-    except ValueError:
-        return s
-
-
-def _find_unique_tag(root, path):
-    """Find and return a tag or an error if > 1 of same."""
-    tags = root.findall(path)
-    if len(tags) == 1:
-        return tags[0]
-    elif len(e_temperature) > 1:
-        # File has multiple temperature values
-        raise ValueError(f"Multiple `{path}` tags in file `{os.path.abspath(root.base)}`")
 
 
 def _read_parameter(e, sequence_dict):
@@ -590,12 +564,15 @@ class FebReader:
         # Steps
         model.steps = []
         for e_step in self.root.findall('Step'):
-            step = {'control': {}}
             # Module
             e_module = e_step.find('Module')
             if e_module is not None:
-                step['module'] = e_module.attrib['type']
+                module = e_module.text
+            else:
+                module = "solid"  # TODO: Pick default based on
+                                  # materials
             # Control section
+            control = {}
             e_control = e_step.find('Control')
             for e in e_control:
                 nm = control_tagnames_from_febio[e.tag]
@@ -605,15 +582,31 @@ class FebReader:
                     val = control_values_from_febio[nm][e.text]
                 else:
                     val = _maybe_to_number(e.text)
-                step['control'][nm] = val
+                control[nm] = val
             # Control/time_stepper section
-            step['control']['time stepper'] = {}
+            control['time stepper'] = {}
             e_stepper = e_control.find('time_stepper')
             for e in e_stepper:
                 if e.tag in control_tagnames_from_febio:
                     k = control_tagnames_from_febio[e.tag]
-                    step['control']['time stepper'][k] = _read_parameter(e, self.sequences)
-            model.steps.append(step)
+                    control['time stepper'][k] = _read_parameter(e, self.sequences)
+            # Add the step.  Use the method to get correct defaults;
+            # e.g, correct keys for missing boundary conditions.
+            model.add_step(module=module, control=control)
+
+        # Read prescribed nodal conditions.
+        #
+        # Has to go after steps are created; otherwise there are no
+        # steps to which to attach the applied conditions.
+        if self.feb_version == "2.5":
+            for condition in febioxml_2_5.iter_node_conditions(self.root):
+                nodes = model.named["node sets"].obj(condition["node set name"])
+                seq = model.named["sequences"].obj(condition["sequence ID"],
+                                                   nametype="ordinal_id")
+                model.apply_nodal_bc(nodes, condition["axis"],
+                                     condition["variable"], seq,
+                                     scales=condition["nodal values"],
+                                     step_id=condition["step ID"])
 
         # Output variables
         output_variables = []
