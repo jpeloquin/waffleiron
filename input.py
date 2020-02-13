@@ -369,15 +369,18 @@ class FebReader:
         # Read Environment Constants
         model.environment = {}
         e_temperature = _find_unique_tag(self.root, "Globals/Constants/T")
-        model.environment["temperature"] = _to_number(e_temperature.text)
+        if e_temperature is not None:
+            model.environment["temperature"] = _to_number(e_temperature.text)
 
         # Read Universal Constants.  These will eventually be superseded
         # by units support.
         model.constants = {}
         e_R = _find_unique_tag(self.root, "Globals/Constants/R")
-        model.constants["R"] = _to_number(e_R.text)
+        if e_R is not None:
+            model.constants["R"] = _to_number(e_R.text)
         e_Fc = _find_unique_tag(self.root, "Globals/Constants/Fc")
-        model.constants["F"] = _to_number(e_Fc.text)
+        if e_Fc is not None:
+            model.constants["F"] = _to_number(e_Fc.text)
 
         # Store the materials and their labels, now that the Model
         # object has been instantiated
