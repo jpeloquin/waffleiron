@@ -244,6 +244,8 @@ def normalize_xml(root):
 
     - When a bare <Control> element exists, wrap it in a <Step> element.
 
+    - When a bare <Boundary> element exists, wrap it in a <Step> element.
+
     - [TODO] Convert <mat_axis type="local">0,0,0</mat_axis> to the
       default value of 1,2,4.
 
@@ -254,12 +256,37 @@ def normalize_xml(root):
     if root.find("Control") is None and root.find("Step") is None:
         msg = (f"{root.base} has both a <Control> and <Step> section. The FEBio documentation does not specify how these sections are supposed to interact, so normalization is aborted.")
         raise ValueError(msg)
+    #
     # Normalization: When a bare <Control> element exists, wrap it in a
     # <Step> element.
     if root.find("Control") is not None:
         e_Control = root.find("Control")
+        # From validation above, we know that no <Step> element exists,
+        # so we need to create one.
         e_Step = ET.Element("Step")
         e_Control.getparent().remove(e_Control)
         root.insert(1, e_Step)
         e_Step.append(e_Control)
+    #
+    # Normalization: When a bare <Boundary> element exists, wrap any
+    # <Boundary>/<prescribe> elements in the first <Step> element.
+    e_rBoundary = root.find("Boundary")
+    if e_rBoundary is not None:
+        e_Step = root.find("Step")
+        if e_Step is None:
+            e_Step = ET.Element("Step")
+            root.insert(1, e_Step)
+        es_prescribe = e_rBoundary.findall("prescribe")
+        # Do we need to create a Step/Boundary element?
+        e_sBoundary = e_Step.find("Boundary")
+        if len(es_prescribe) != 0 and e_sBoundary is None:
+            e_sBoundary = ET.SubElement(e_Step, "Boundary")
+        # Move the <prescribe> elements
+        for e_prescribe in es_prescribe:
+            e_rBoundary.remove(e_prescribe)
+            e_sBoundary.append(e_prescribe)
+        # Delete the <Boundary> element if it is now empty
+        e_rBoundary = root.find("Boundary")
+        if len(e_rBoundary) == 0:
+            root.remove(e_rBoundary)
     return root

@@ -18,6 +18,35 @@ from febtools.test.fixtures import gen_model_single_spiky_Hex8
 
 
 DIR_THIS = Path(__file__).parent
+DIR_OUTPUT = DIR_THIS / "output"
+DIR_FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def test_FEBio_normalizeXML_bare_Boundary():
+    """End-to-end test of Boundary/prescribe normalization."""
+    pth_in = DIR_FIXTURES / \
+        (f"{Path(__file__).with_suffix('').name}." +\
+         "normalizeXML_bare_Boundary.feb")
+    tree = feb.input.read_febio_xml(pth_in)
+    normalized_root = feb.febioxml.normalize_xml(tree.getroot())
+    normalized_tree = normalized_root.getroottree()
+    pth_out = DIR_OUTPUT / \
+        (f"{Path(__file__).with_suffix('').name}." +\
+         "normalizeXML_bare_Boundary.feb")
+    with open(pth_out, "wb") as f:
+        feb.output.write_xml(normalized_tree, f)
+    # Test 1: Can FEBio still read the normalized file?
+    feb.febio.run_febio(pth_out)
+    # Test 2: Did the right displacements get applied?
+    model = feb.load_model(pth_out)
+    ## Test 2.1: Did node 0 stay fixed?
+    expected_Δx_node0 = (0, 0, 0)
+    Δx_node0 = model.solution.value("displacement", step=1, entity_id=0)
+    npt.assert_array_almost_equal_nulp(Δx_node0, expected_Δx_node0, nulp=1)
+    ## Test 2.2: Did node 6 move the applied displacement?
+    expected_Δx_node6 = (0.5, 0, 0)
+    Δx_node6 = model.solution.value("displacement", step=1, entity_id=6)
+    npt.assert_allclose(Δx_node6, expected_Δx_node6, atol=1e-15)
 
 
 class Unit_MatAxisLocal_Hex8(TestCase):

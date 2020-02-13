@@ -1,3 +1,5 @@
 *.log
+test/fixtures/test_febioxml.normalizeXML_bare_Boundary.xplt
 test/fixtures/test_material_axes.fiberDirectionLocal_Hex8_fiber.xplt
 test/fixtures/test_material_axes.fiberDirectionLocal_Hex8_fiber_-_element_data.txt
+test/output/
