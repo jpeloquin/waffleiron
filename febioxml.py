@@ -118,7 +118,7 @@ def _find_unique_tag(root, path):
     tags = root.findall(path)
     if len(tags) == 1:
         return tags[0]
-    elif len(e_temperature) > 1:
+    elif len(tags) > 1:
         # File has multiple temperature values
         raise ValueError(f"Multiple `{path}` tags in file `{os.path.abspath(root.base)}`")
 
