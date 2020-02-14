@@ -260,20 +260,56 @@ class PowerLinearFiber:
     Same as "fiber-pow-lin" in FEBio XML.
 
     """
-    def __init__(self, E, β, λ0, azimuth=0, zenith=pi/2, **kwargs):
+    def __init__(self, E, β, λ0, orientation=_DEFAULT_ORIENT_RANK1, **kwargs):
         self.E = E  # fiber modulus in linear region
         self.β = β  # power law exponent in power law region
         self.λ0 = λ0  # stretch ratio at which power law region
                       # transitions to linear region
-        self.azimuth = azimuth
-        self.zenith = zenith
-        # TODO: Harmonize representation of fiber angle between
-        # ExponentialFiber and PowerLinearFiber.  Use `azimuth` and
-        # `zenith` everywhere.
+        self.orientation = orientation
 
     @classmethod
-    def from_feb(cls, E, beta, lam0, theta, phi, **kwargs):
-        return cls(E, beta, lam0, azimuth=radians(theta), zenith=radians(phi))
+    def from_feb(cls, E, beta, lam0, **kwargs):
+        return cls(E, beta, lam0, **kwargs)
+
+    def w(self, F):
+        """Return strain energy density"""
+        raise NotImplementedError
+
+    def tstress(self, F):
+        """Return Cauchy stress tensor aligned to local axes."""
+        # Properties
+        I0 = self.λ0**2.0
+        N = self.orientation
+        β = self.β
+        E = self.E
+        # ξ = E / (2 * (β - 1)) * (I0 - 1)**(2 - β)
+        # ^ from FEBio manual; does not match FEBio code
+        ξ = E / 4 / (β - 1) * I0**(-1.5) * (I0 - 1)**(2 - β)
+        # b = E / 2 * ( (I0 - 1)/(2*(β - 1)) + I0 )
+        # ^ from FEBio manual; does not match FEBio code
+        b = E/2/np.sqrt(I0) + ξ * (I0 - 1)**(β - 1)
+        ψ0 = ξ/(2*β) * (I0 - 1)**β
+        # Deformation
+        C = F.T @ F
+        I_N = N @ C @ N
+        n = F @ N / np.sqrt(I_N)
+        J = det(F)
+        # Stress
+        if I_N <= 1:
+            return np.zeros((3,3))
+        elif I_N <= I0:
+            # return 1 / J * ξ/2 * (I_N - 1)**(β - 1) * 2 * F @ F @ np.outer(N,N)
+            return 2 / J * I_N * ξ * (I_N - 1)**(β - 1) * np.outer(n, n)
+        else:
+            return 1 / J * (b - E / 2 / np.sqrt(I_N)) * 2 * F @ F @ np.outer(N,N)
+
+    def pstress(self, F):
+        """Return 1st Piola–Kirchoff stress tensor aligned to local axes."""
+        raise NotImplementedError
+
+    def sstress(self, F):
+        """Return 2nd Piola–Kirchoff stress tensor aligned to local axes."""
+        raise NotImplementedError
 
 
 class HolmesMow:
