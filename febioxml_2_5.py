@@ -146,6 +146,9 @@ def iter_node_conditions(root):
                     # One value for all nodes; redundant with "scale"
                     val_scale = _to_number(e_value.text)
                     info["scale"] = seq_scale * val_scale
+            e_relative = e_prescribe.find("relative")
+            if e_relative is not None and e_relative.text == "1":
+                raise ValueError("Relative prescribed nodal displacements are not yet supported.")
             info["step ID"] = step_id
             yield info
 
