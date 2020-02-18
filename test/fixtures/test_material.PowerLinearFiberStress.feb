@@ -3,7 +3,7 @@
   <Module type="solid"/>
   <Material>
     <material type="solid mixture" id="1">
-      <solid type="fiber-pow-linear">
+      <solid type="fiber-power-linear">
         <!-- Make this fiber family slack; test λn < 1, in x. -->
         <E>52</E>
         <beta>2.5</beta>
@@ -13,7 +13,7 @@
           <phi>90</phi>
         </fiber>
       </solid>
-      <solid type="fiber-pow-linear">
+      <solid type="fiber-power-linear">
         <!-- Put this fiber family in toe region; test 1 < λn < λ0, in y. -->
         <E>52</E>
         <beta>2.5</beta>
@@ -23,7 +23,7 @@
           <phi>90</phi>
         </fiber>
       </solid>
-      <solid type="fiber-pow-linear">
+      <solid type="fiber-power-linear">
         <!-- Put this fiber family in linear region; test λ0 < λn, in z -->
         <E>52</E>
         <beta>2.5</beta>
