@@ -67,52 +67,52 @@ class ExponentialFiberTest(unittest.TestCase):
         npt.assert_allclose(t_try, t_true, rtol=1e-5, atol=1e-5)
 
 
-class PowerLinearFiberStress(unittest.TestCase):
+class Unit_CauchyStressInstrinsicAxes_PowerLinearFiber(unittest.TestCase):
     """Test piecewise power law – linear fibers.
 
-    """
-    @classmethod
-    def setUpClass(self):
-        pth = DIR_FIXTURES / \
-            "test_material.PowerLinearFiberStress.feb"
-        feb.febio.run_febio(pth)
-        self.model = feb.load_model(pth)
+    Relevant fixture for "ground truth" values:
+    test_material.PowerLinearFiberStress.feb
 
+    """
     def tstress_slack_test(self):
-        element = self.model.mesh.elements[0]
-        # Test 1: Check for compressive resistance
+        """Check for lack of compressive resistance"""
+        material = PowerLinearFiber(52, 2.5, 1.07)
         F = np.array([[0.95, 0.  , 0.  ],
                       [0.  , 1.05, 0.  ],
                       [0.  , 0.  , 1.12]])
         # febio_stress = self.model.solution.value("stress", -1, 0, 1)
         expected = np.zeros((3,3))
-        actual = element.material.materials[0].tstress(F)
+        actual = material.tstress(F)
         npt.assert_array_equal(expected, actual)
-        # Test 2: Check for zero stress at zero strain
+
+    def tstress_origin_test(self):
+        """Check for zero stress at zero strain"""
+        material = PowerLinearFiber(52, 2.5, 1.07)
         F = np.array([[1.0 , 0.  , 0.  ],
                       [0.  , 1.05, 0.  ],
                       [0.  , 0.  , 1.12]])
         expected = np.zeros((3,3))
-        actual = element.material.materials[0].tstress(F)
+        actual = material.tstress(F)
         npt.assert_array_equal(expected, actual)
 
     def tstress_toe_test(self):
-        element = self.model.mesh.elements[0]
+        material = PowerLinearFiber(52, 2.5, 1.07,
+                                    orientation=(0, 1, 0))
         F = np.array([[0.95, 0.  , 0.  ],
                       [0.  , 1.05, 0.  ],
                       [0.  , 0.  , 1.12]])
-        actual = element.material.materials[1].tstress(F)
+        actual = material.tstress(F)
         expected = np.array([[0, 0, 0],
                              [0, 1.20373, 0],
                              [0, 0, 0]])
         npt.assert_array_almost_equal(expected, actual, 5)
 
     def tstress_lin_test(self):
-        element = self.model.mesh.elements[0]
+        material = PowerLinearFiber(52, 2.5, 1.07, orientation=(0, 0, 1))
         F = np.array([[0.95, 0.  , 0.  ],
                       [0.  , 1.05, 0.  ],
                       [0.  , 0.  , 1.12]])
-        actual = element.material.materials[2].tstress(F)
+        actual = material.tstress(F)
         expected = np.array([[0, 0, 0],
                              [0, 0, 0],
                              [0, 0, 4.73799]])
