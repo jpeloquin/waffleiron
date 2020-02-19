@@ -246,13 +246,7 @@ class FebReader:
             # Read material into dictionary
             material = self._read_material(m)
             mat_id = int(m.attrib['id']) - 1  # FEBio counts from 1
-            try:
-                material = mat_obj_from_elemd(material)
-            except NotImplementedError:
-                warnings.warn("Warning: Material type `{}` is not implemented "
-                              "for post-processing.  It will be represented "
-                              "as a dictionary of properties."
-                              "".format(m.attrib['type']))
+            material = mat_obj_from_elemd(material)
 
             # Store material in index
             mats[mat_id] = material
