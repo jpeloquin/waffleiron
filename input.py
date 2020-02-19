@@ -699,7 +699,7 @@ def mat_obj_from_elemd(d):
                 orientation = matprop_orientation
             else:
                 # Have to combine orientations
-                if np.rank(orientation) == 2:
+                if np.array(orientation).ndim == 2:
                     orientation = orientation @ matprop_orientation
                 else:
                     # `orientation` is just a vector.  Interpret it as
