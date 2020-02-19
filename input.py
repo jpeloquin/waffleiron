@@ -673,6 +673,10 @@ class FebReader:
 
 def mat_obj_from_elemd(d):
     """Convert material element to material object"""
+    # Set default values for common properties
+    orientation = None
+    # TODO: Handle conflicting orientations; e.g., both <mat_axis> and
+    # <fiber>.  FEBio stacks these.
     if d["material"] in febioxml.solid_class_from_name:
         ## Read material orientation
         if "mat_axis" in d["properties"]:
@@ -684,15 +688,15 @@ def mat_obj_from_elemd(d):
             # orientation in Model's initializer; no need to handle it
             # here.
         elif "fiber" in d["properties"]:
+            # Currently we only support <fiber type="angles">.  Other
+            # types: local, vector, spherical, cylindrical.
             if d["properties"]["fiber"]["type"] == "angles":
                 θ = d["properties"]["fiber"]["theta"]  # azimuth
                 φ = d["properties"]["fiber"]["phi"]  # zenith angle
                 orientation = vec_from_sph(θ, φ)
             else:
                 raise NotImplementedError
-        else:
-            orientation = None
-        # Handle materials with orientation as material properties
+        # Handle materials with orientation as material properties.
         if "theta" in d["properties"] and "phi" in d["properties"]:
             θ = d["properties"]["theta"]  # azimuth
             φ = d["properties"]["phi"]  # zenith angle
@@ -720,7 +724,9 @@ def mat_obj_from_elemd(d):
                 # repeating this `orientation is not None` check for
                 # every material instantiation.  Maybe make all
                 # materials take **kwargs so we can always pass
-                # orientation, even if the material doesn't use it?
+                # orientation, even if the material doesn't use it?  But
+                # even in that case, we can't pass orientation=None to a
+                # material that does expect a vector orientation…
                 material = cls(constituents, orientation=orientation)
             else:
                 material = cls(constituents)
