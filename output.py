@@ -1,6 +1,7 @@
 # Base packages
 from collections import defaultdict
 from copy import copy, deepcopy
+from math import degrees
 from datetime import datetime
 # Public packages
 import numpy as np
@@ -96,18 +97,14 @@ def _property_to_feb(p, tag, model):
     return e
 
 
-def exponentialfiber_to_feb(mat, model):
+def exponential_fiber_to_feb(mat, model):
     """Convert ExponentialFiber material instance to FEBio XML.
 
     """
     e = ET.Element('material', type='fiber-exp-pow')
-    e.append(_property_to_feb(mat.alpha, "alpha", model))
-    e.append(_property_to_feb(mat.beta, "beta", model))
-    e.append(_property_to_feb(mat.xi, "ksi", model))
-    θ, φ = sph_from_vec(mat.orientation)
-    e_fiber = ET.SubElement(e, "fiber", type="angles")
-    e_fiber.append(_property_to_feb(θ, "theta", model))
-    e_fiber.append(_property_to_feb(φ, "phi", model))
+    e.append(_property_to_feb(mat.α, "alpha", model))
+    e.append(_property_to_feb(mat.β, "beta", model))
+    e.append(_property_to_feb(mat.ξ, "ksi", model))
     return e
 
 
@@ -117,8 +114,6 @@ def power_linear_fiber_to_feb(mat, model):
     e.append(_property_to_feb(mat.E, "E", model))
     e.append(_property_to_feb(mat.β, "beta", model))
     e.append(_property_to_feb(mat.λ0, "lam0", model))
-    e.append(_property_to_feb(degrees(mat.azimuth), "theta", model))
-    e.append(_property_to_feb(degrees(mat.zenith), "phi", model))
     return e
 
 
@@ -263,10 +258,15 @@ def material_to_feb(mat, model):
     """Convert a material instance to FEBio XML.
 
     """
+    if isinstance(mat, feb.material.OrientedMaterial):
+        orientation = mat.orientation
+        mat = mat.material
+    else:
+        orientation = None
     if mat is None:
         e = ET.Element('material', type='unknown')
     else:
-        f = {feb.material.ExponentialFiber: exponentialfiber_to_feb,
+        f = {feb.material.ExponentialFiber: exponential_fiber_to_feb,
              feb.material.PowerLinearFiber: power_linear_fiber_to_feb,
              feb.material.HolmesMow: holmesmow_to_feb,
              feb.material.IsotropicElastic: isotropicelastic_to_feb,
@@ -281,23 +281,24 @@ def material_to_feb(mat, model):
             e = f[type(mat)](mat, model)
         except ValueError:
             msg = "{} not implemented for conversion to FEBio XML."
-            print(msg.format(mat.__class__))
             raise
     # Add material coordinate system if it is defined for this material.
     # Any mixture material /should/ call `material_to_feb` (this
     # function) for each sub-material, so we shouldn't need to handle
     # material coordinate systems anywhwere else.
-    if hasattr(mat, "orientation"):
-        if np.array(mat.orientation).ndim == 2:
+    if orientation is not None:
+        if np.array(orientation).ndim == 2:
             # material axes orientation
             e_mat_axis = ET.Element("mat_axis", type="vector")
-            ET.SubElement(e_mat_axis, "a").text = febioxml.bvec_to_text(mat.orientation[0])
-            ET.SubElement(e_mat_axis, "d").text = febioxml.bvec_to_text(mat.orientation[1])
+            ET.SubElement(e_mat_axis, "a").text = febioxml.bvec_to_text(mat.orientation[:,0])
+            ET.SubElement(e_mat_axis, "d").text = febioxml.bvec_to_text(mat.orientation[:,1])
             e.insert(0, e_mat_axis)
-        elif np.array(mat.orientation).ndim == 1:
+            e.append(e_mat_axis)
+        elif np.array(orientation).ndim == 1:
             # vector orientation
             e_vector = ET.Element("fiber", type="vector")
-            e_vector.text = bvec_to_text(mat.orientation)
+            e_vector.text = bvec_to_text(orientation)
+            e.append(e_vector)
         else:
             raise ValueError(f"Rank {orientation.ndim} material orientation not supported.  Provided orientation was {orientation}.")
     return e

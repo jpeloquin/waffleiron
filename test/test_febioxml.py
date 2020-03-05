@@ -82,9 +82,9 @@ class Unit_MatAxisLocal_Hex8(TestCase):
         # checked exactly; the others can only be checked roughly—an
         # exact check would just be a re-implementation of the function
         # under test.
-        npt.assert_allclose(basis[0], e1)
-        assert basis[1] @ (self.nodes[3] - self.nodes[0]) > 0.71
-        assert basis[2] @ (self.nodes[5] - self.nodes[0]) > 0.71
+        npt.assert_allclose(basis[:,0], e1)
+        assert basis[:,1] @ (self.nodes[3] - self.nodes[0]) > 0.71
+        assert basis[:,2] @ (self.nodes[5] - self.nodes[0]) > 0.71
         # Demonstrate that the basis is orthonormal
         npt.assert_allclose(np.array(basis) @ np.array(basis).T, np.eye(3),
                             atol=np.finfo(np.array(basis).dtype).resolution)
@@ -103,9 +103,9 @@ class Unit_MatAxisLocal_Hex8(TestCase):
         # be checked exactly.  The other two can only be checked
         # roughly, as an exact check would just be a re-implementation
         # of the function under test.
-        npt.assert_allclose(basis[0], e1)
-        assert basis[1] @ (self.nodes[4] - self.nodes[0]) > 0.71
-        assert basis[2] @ (self.nodes[0] - self.nodes[3]) > 0.71
+        npt.assert_allclose(basis[:,0], e1)
+        assert basis[:,1] @ (self.nodes[4] - self.nodes[0]) > 0.71
+        assert basis[:,2] @ (self.nodes[0] - self.nodes[3]) > 0.71
         # Demonstrate that the basis is orthonormal
         npt.assert_allclose(np.array(basis) @ np.array(basis).T, np.eye(3),
                             atol=np.finfo(np.array(basis).dtype).resolution)
@@ -118,9 +118,9 @@ class Unit_MatAxisLocal_Hex8(TestCase):
         # checked exactly.  The other two can only be checked roughly,
         # as an exact check would just be a re-implementation of the
         # function under test.
-        npt.assert_allclose(basis[0], e1)
-        assert basis[1] @ [0, 0, -1] > 0.71
-        assert basis[2] @ [1, 0, 0] > 0.71
+        npt.assert_allclose(basis[:,0], e1)
+        assert basis[:,1] @ [0, 0, -1] > 0.71
+        assert basis[:,2] @ [1, 0, 0] > 0.71
         # Demonstrate that the basis is orthonormal
         npt.assert_allclose(np.array(basis) @ np.array(basis).T, np.eye(3),
                             atol=np.finfo(np.array(basis).dtype).resolution)
@@ -191,9 +191,9 @@ class FEBio_MatAxisLocal_Hex8(TestCase):
             "FEBio_MatAxisLocal_Hex8_globalb.feb"
         tree = feb.output.xml(localb_model)
         e_a = tree.find("Material/material/mat_axis/a")
-        e_a.text = ", ".join([str(a) for a in basis[0]])
+        e_a.text = ", ".join([str(a) for a in basis[:,0]])
         e_d = tree.find("Material/material/mat_axis/d")
-        e_d.text = ", ".join([str(a) for a in basis[1]])
+        e_d.text = ", ".join([str(a) for a in basis[:,1]])
         with open(self.pth_globalb_model, "wb") as f:
             write_xml(tree, f)
         feb.febio.run_febio(self.pth_globalb_model)

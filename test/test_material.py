@@ -33,20 +33,15 @@ class ExponentialFiberTest(unittest.TestCase):
 
     def w_test(self):
         # This is a very weak test; just a sanity check.
-        F = np.array([[1.1, 0.1, 0.0],
-                      [0.2, 0.9, 0.0],
-                      [-0.3, 0.0, 1.5]])
         matlprops = {'alpha': 65,
                      'beta': 2,
                      'ksi': 0.296}
-        expfib = ExponentialFiber(matlprops, orientation=np.array([0, 1, 0]))
-        w = expfib.w(F)
+        expfib = ExponentialFiber(matlprops)
+        w = expfib.w(1.1)
         assert w > 0
 
     def tstress_test(self):
-        """Check Cauchy stress against FEBio.
-
-        """
+        """Check Cauchy stress against FEBio."""
         F = self.model.mesh.elements[0].f((0, 0, 0))
         t_try = self.model.mesh.elements[0].material.tstress(F)
         data = self.soln.step_data(-1)
@@ -67,7 +62,7 @@ class ExponentialFiberTest(unittest.TestCase):
         npt.assert_allclose(t_try, t_true, rtol=1e-5, atol=1e-5)
 
 
-class Unit_CauchyStressInstrinsicAxes_PowerLinearFiber(unittest.TestCase):
+class Unit_CauchyStress_PowerLinearFiber3D(unittest.TestCase):
     """Test piecewise power law – linear fibers.
 
     Relevant fixture for "ground truth" values:
@@ -76,7 +71,7 @@ class Unit_CauchyStressInstrinsicAxes_PowerLinearFiber(unittest.TestCase):
     """
     def tstress_slack_test(self):
         """Check for lack of compressive resistance"""
-        material = PowerLinearFiber(52, 2.5, 1.07)
+        material = PowerLinearFiber3D(52, 2.5, 1.07)
         F = np.array([[0.95, 0.  , 0.  ],
                       [0.  , 1.05, 0.  ],
                       [0.  , 0.  , 1.12]])
@@ -87,7 +82,7 @@ class Unit_CauchyStressInstrinsicAxes_PowerLinearFiber(unittest.TestCase):
 
     def tstress_origin_test(self):
         """Check for zero stress at zero strain"""
-        material = PowerLinearFiber(52, 2.5, 1.07)
+        material = PowerLinearFiber3D(52, 2.5, 1.07)
         F = np.array([[1.0 , 0.  , 0.  ],
                       [0.  , 1.05, 0.  ],
                       [0.  , 0.  , 1.12]])
@@ -96,7 +91,7 @@ class Unit_CauchyStressInstrinsicAxes_PowerLinearFiber(unittest.TestCase):
         npt.assert_array_equal(expected, actual)
 
     def tstress_toe_test(self):
-        material = PowerLinearFiber(52, 2.5, 1.07,
+        material = PowerLinearFiber3D(52, 2.5, 1.07,
                                     orientation=(0, 1, 0))
         F = np.array([[0.95, 0.  , 0.  ],
                       [0.  , 1.05, 0.  ],
@@ -108,7 +103,7 @@ class Unit_CauchyStressInstrinsicAxes_PowerLinearFiber(unittest.TestCase):
         npt.assert_array_almost_equal(expected, actual, 5)
 
     def tstress_lin_test(self):
-        material = PowerLinearFiber(52, 2.5, 1.07, orientation=(0, 0, 1))
+        material = PowerLinearFiber3D(52, 2.5, 1.07, orientation=(0, 0, 1))
         F = np.array([[0.95, 0.  , 0.  ],
                       [0.  , 1.05, 0.  ],
                       [0.  , 0.  , 1.12]])

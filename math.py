@@ -25,7 +25,7 @@ def orthonormal_basis(a, d):
     a = a / np.linalg.norm(a)
     d = d / np.linalg.norm(d)
     g = g / np.linalg.norm(g)
-    return (a, d, g)
+    return np.vstack((a, d, g)).T
 
 
 def sph_from_vec(vec):

@@ -671,103 +671,90 @@ def mat_obj_from_elemd(d):
     orientation = None
     # TODO: Handle conflicting orientations; e.g., both <mat_axis> and
     # <fiber>.  FEBio stacks these.
-    if d["material"] in febioxml.solid_class_from_name:
-        ## Read material orientation
-        if "mat_axis" in d["properties"]:
-            type_ = d["properties"]["mat_axis"]["type"]
-            if type_ == "vector":
-                orientation = orthonormal_basis(d["properties"]["mat_axis"]["a"],
-                                                d["properties"]["mat_axis"]["d"])
-            # <mat_axis type="local"> is converted to element-local
-            # orientation in Model's initializer; no need to handle it
-            # here.
-        elif "fiber" in d["properties"]:
-            # Currently we only support <fiber type="angles">.  Other
-            # types: local, vector, spherical, cylindrical.
-            if d["properties"]["fiber"]["type"] == "angles":
-                θ = d["properties"]["fiber"]["theta"]  # azimuth
-                φ = d["properties"]["fiber"]["phi"]  # zenith angle
-                orientation = vec_from_sph(θ, φ)
-            else:
-                raise NotImplementedError
-        # Handle materials with orientation as material properties.
-        if "theta" in d["properties"] and "phi" in d["properties"]:
-            θ = d["properties"]["theta"]  # azimuth
-            φ = d["properties"]["phi"]  # zenith angle
-            matprop_orientation = vec_from_sph(θ, φ)
-            if orientation is None:
-                orientation = matprop_orientation
-            else:
-                # Have to combine orientations
-                if np.array(orientation).ndim == 2:
-                    orientation = orientation @ matprop_orientation
-                else:
-                    # `orientation` is just a vector.  Interpret it as
-                    # indicating a transformation from [1, 0, 0] to its
-                    # value.
-                    raise NotImplementedError
-
-        ## Create material object
-        cls = febioxml.solid_class_from_name[d["material"]]
-        if d["material"] == "solid mixture":
-            constituents = []
-            for d_child in d["constituents"]:
-                constituents.append(mat_obj_from_elemd(d_child))
-            if orientation is not None:
-                # TODO: come up with better way of doing this than
-                # repeating this `orientation is not None` check for
-                # every material instantiation.  Maybe make all
-                # materials take **kwargs so we can always pass
-                # orientation, even if the material doesn't use it?  But
-                # even in that case, we can't pass orientation=None to a
-                # material that does expect a vector orientation…
-                material = cls(constituents, orientation=orientation)
-            else:
-                material = cls(constituents)
-        elif d["material"] == "biphasic":
-            # Instantiate Permeability object
-            p_props = d["properties"]["permeability"]
-            typ = d["properties"]["permeability"]["type"]
-            p_class = febioxml.perm_class_from_name[typ]
-            permeability = p_class.from_feb(**p_props)
-            # Instantiate solid constituent object
-            if len(d["constituents"]) > 1:
-                # TODO: Specify which material in the error message.
-                # This requires retaining material ids in the dict
-                # passed to this function.
-                raise ValueError("""A porelastic solid was encountered with {len(d['constituents'])} solid constituents.  Poroelastic solids must have exactly one solid constituent.""")
-            solid = mat_obj_from_elemd(d["constituents"][0])
-            # Return the Poroelastic Solid object
-            if orientation is not None:
-                material = material_lib.PoroelasticSolid(solid, permeability,
-                                                         orientation=orientation)
-            else:
-                material = material_lib.PoroelasticSolid(solid, permeability)
-        elif d["material"] == "multigeneration":
-            # Constructing materials for the list of generations works
-            # just like a solid mixture
-            constituents = []
-            for d_child in d["constituents"]:
-                constituents.append(mat_obj_from_elemd(d_child))
-            generations = ((t, mat) for t, mat in
-                           zip(d["properties"]["start times"], constituents))
-            if orientation is not None:
-                material = cls(generations, orientation=orientation)
-            else:
-                material = cls(generations)
-        elif hasattr(cls, "from_feb") and callable(cls.from_feb):
-            if orientation is not None:
-                material = cls.from_feb(**d["properties"], orientation=orientation)
-            else:
-                material = cls.from_feb(**d["properties"])
-        else:
-            if orientation is not None:
-                material = cls(d["properties"], orientation=orientation)
-            else:
-                material = cls(d["properties"])
-        return material
-    else:
+    # Do we even support reading this material?
+    if not d["material"] in febioxml.solid_class_from_name:
         raise ValueError(f"{d['material']} is not supported in the loading of FEBio XML.")
+
+    # Read material orientation
+    #
+    # Read material orientation in the form of <mat_axis> or <fiber>
+    if "mat_axis" in d["properties"]:
+        type_ = d["properties"]["mat_axis"]["type"]
+        if type_ == "vector":
+            orientation = orthonormal_basis(d["properties"]["mat_axis"]["a"],
+                                            d["properties"]["mat_axis"]["d"])
+        # <mat_axis type="local"> is converted to element-local
+        # orientation in Model's initializer; no need to handle it
+        # here.
+    elif "fiber" in d["properties"]:
+        # Currently we only support <fiber type="angles">.  Other
+        # types: local, vector, spherical, cylindrical.
+        if d["properties"]["fiber"]["type"] == "angles":
+            θ = d["properties"]["fiber"]["theta"]  # azimuth
+            φ = d["properties"]["fiber"]["phi"]  # zenith angle
+            orientation = vec_from_sph(θ, φ)
+        elif d["properties"]["fiber"]["type"] == "vector":
+            orientation = np.array(d["properties"]["fiber"]["value"])
+        else:
+            raise NotImplementedError
+    # Read material orientation in the form of material property-like
+    # XML elements.
+    if "theta" in d["properties"] and "phi" in d["properties"]:
+        θ = d["properties"]["theta"]  # azimuth
+        φ = d["properties"]["phi"]  # zenith angle
+        matprop_orientation = vec_from_sph(θ, φ)
+        if orientation is None:
+            orientation = matprop_orientation
+        else:
+            # Have to combine orientations
+            if np.array(orientation).ndim == 2:
+                orientation = orientation @ matprop_orientation
+            else:
+                # `orientation` is just a vector.  Interpret it as
+                # indicating a transformation from [1, 0, 0] to its
+                # value.
+                raise NotImplementedError
+
+    ## Create material object
+    cls = febioxml.solid_class_from_name[d["material"]]
+    if d["material"] == "solid mixture":
+        constituents = []
+        for d_child in d["constituents"]:
+            child_material = mat_obj_from_elemd(d_child)
+            constituents.append(child_material)
+        material = cls(constituents)
+    elif d["material"] == "biphasic":
+        # Instantiate Permeability object
+        p_props = d["properties"]["permeability"]
+        typ = d["properties"]["permeability"]["type"]
+        p_class = febioxml.perm_class_from_name[typ]
+        permeability = p_class.from_feb(**p_props)
+        # Instantiate solid constituent object
+        if len(d["constituents"]) > 1:
+            # TODO: Specify which material in the error message.
+            # This requires retaining material ids in the dict
+            # passed to this function.
+            raise ValueError("""A porelastic solid was encountered with {len(d['constituents'])} solid constituents.  Poroelastic solids must have exactly one solid constituent.""")
+        solid = mat_obj_from_elemd(d["constituents"][0])
+        # Return the Poroelastic Solid object
+        material = material_lib.PoroelasticSolid(solid, permeability)
+    elif d["material"] == "multigeneration":
+        # Constructing materials for the list of generations works
+        # just like a solid mixture
+        constituents = []
+        for d_child in d["constituents"]:
+            constituents.append(mat_obj_from_elemd(d_child))
+        generations = ((t, mat) for t, mat in
+                       zip(d["properties"]["start times"], constituents))
+        material = cls(generations)
+    elif hasattr(cls, "from_feb") and callable(cls.from_feb):
+        material = cls.from_feb(**d["properties"])
+    else:
+        material = cls(d["properties"])
+    # Apply total (sub)material orientation
+    if orientation is not None:
+        material = material_lib.OrientedMaterial(material, orientation)
+    return material
 
 
 class XpltReader:

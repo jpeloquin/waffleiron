@@ -16,7 +16,7 @@ from febtools.test.fixtures import gen_model_single_spiky_Hex8
 
 DIR_THIS = Path(__file__).parent
 DIR_FIXTURES = Path(__file__).parent / "fixtures"
-
+RTOL_STRESS = 5e-6
 
 def _fixture_FEBio_fiberDirectionLocal_Hex8_fiber():
     """Create fixture for FEBio_fiberDirectionLocal_Hex8_fiber test
@@ -76,18 +76,18 @@ def _fixture_FEBio_fiberDirectionLocal_Hex8_fiber():
     run_febio(pth)
 
 
-def test_FEBio_fiberDirectionLocal_Hex8_fiber():
-    """End-to-end test of <fiber type="vector">"""
+def test_FEBio_SOHomFibAng_Hex8_fiber():
+    """E2E test of submaterial orientation, <fiber type="angles">"""
     # Test 1: Read
     pth_in = DIR_FIXTURES / \
         (f"{Path(__file__).with_suffix('').name}." +\
-         "fiberDirectionLocal_Hex8_fiber.feb")
+         "SOHomFibAng_Hex8_fiber.feb")
     model = feb.load_model(pth_in)
     #
     # Test 2: Write
     pth_out = DIR_THIS / "output" / \
         (f"{Path(__file__).with_suffix('').name}." +\
-         "fiberDirectionLocal_Hex8_fiber.feb")
+         "SOHomFibAng_Hex8_fiber.feb")
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
@@ -116,4 +116,4 @@ def test_FEBio_fiberDirectionLocal_Hex8_fiber():
     # FEBio_cauchy_stress = model.solution.value('stress', -1, 0, 1)
     cauchy_stress_gpt = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
     npt.assert_allclose(FEBio_cauchy_stress, cauchy_stress_gpt,
-                        rtol=2e-6)
+                        rtol=RTOL_STRESS)

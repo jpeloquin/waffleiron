@@ -32,11 +32,66 @@ def from_Lamé(y, u):
     return E, v
 
 
+def unit_step(x):
+    """Unit step function."""
+    if x > 0.0:
+        return 1.0
+    else:
+        return 0.0
+
+
 def _is_fixed_property(p):
     if isinstance(p, Sequence) or isinstance(p, ScaledSequence):
         return False
     else:
         return True
+
+
+class OrientedMaterial:
+    """A material with an orientation matrix.
+
+    TODO: Needs unit tests.
+
+    """
+    def __init__(self, material, Q=np.eye(3)):
+        self.material = material
+        self.orientation = Q
+
+    def w(self, F):
+        return self.material.w(F)
+
+    def tstress(self, F):
+        Q = self.orientation
+        J = np.linalg.det(F)
+        if Q.ndim == 1:
+            # 1D material ("fiber")
+            λ = np.linalg.norm(F @ Q)  # np.sqrt(Q @ F.T @ F @ Q.T)
+            N = Q
+            σ_loc_PK2 = self.material.stress(λ) * np.outer(N, N)
+            σ_loc = 1/J * F @ σ_loc_PK2 @ F.T
+        elif Q.ndim == 2:
+            # 3D material ("solid")
+            raise NotImplementedError  # Needs test case
+            σ_mat = self.material.tstress(Q.T @ F)  # stress in material basis
+            σ_loc = Q @ σ_mat @ Q.T  # stress in own local basis
+        return σ_loc
+
+    def pstress(self, F):
+        Q = self.orientation
+        return Q @ self.material.pstress(Q.T @ F)  # TODO: Check
+
+    def sstress(self, F):
+        Q = self.orientation
+        if Q.ndim == 1:
+            # 1D material ("fiber")
+            N = Q
+            λ = np.linalg.norm(F @ Q)
+            s_loc = self.material.stress(λ) * np.outer(N, N)
+        elif Q.ndim == 2:
+            raise NotImplementedError  # Needs test case
+            # 3D material ("solid")
+            s_loc = Q @ self.material.sstress(Q.T @ F) @ Q.T  # TODO: Check
+        return s_loc
 
 
 class Permeability:
@@ -171,18 +226,65 @@ class RigidBody:
 
 
 class ExponentialFiber:
+    """1D fiber with exponential power law.
+
+    Coupled formulation ("fiber-exp-pow" in FEBio").
+
+    References
+    ----------
+    FEBio users manual 2.9, page 144.
+
+    """
+
+    def __init__(self, props):
+        self.α = props['alpha']
+        self.β = props['beta']
+        self.ξ = props['ksi']
+
+    def w(self, λ):
+        """Return pseudo-strain energy density."""
+        # TODO: Unit test
+        α = self.α
+        β = self.β
+        ξ = self.ξ
+        Ψ = ξ / (α * β) * (exp(α * (λ**2 - 1)**β) - 1)
+        return Ψ
+
+    def stress(self, λ):
+        """Return material stress scalar."""
+        α = self.α
+        β = self.β
+        ξ = self.ξ
+        dΨ_dλsq = ξ * (λ**2 - 1)**(β - 1) * exp(α * (λ**2 - 1)**β)
+        # Use dΨ_dλsq instead of dΨ_dλ because this is the equivalent of
+        # dΨ/dC.
+        σ = 2 * dΨ_dλsq * unit_step(λ - 1)
+        return σ
+
+    def sstress(self, λ):
+        """Synonym for material stress.
+
+        Makes some use cases easier by providing a consistent name with
+        3D materials.
+
+        """
+        return self.stress(λ)
+
+
+class ExponentialFiber3D:
     """Fiber with exponential power law.
 
-    This is the coupled formulation ("fiber-exp-pow" in FEBio").
+    Coupled formulation ("fiber-exp-pow" in FEBio").
+
+    This is the deprecated 3D implementation that mixes material
+    orientation with the fiber's constitutive law.  Prefer
+    ExponentialFiber, which does not mix concerns in this manner.
 
     References
     ----------
     FEBio users manual 2.0, page 104.
 
     """
-    dimension = 1  # dimension of material
-    symmetry = 0  # dimensions that are reduced by symmetry
-
     def __init__(self, props, orientation=_DEFAULT_ORIENT_RANK1, **kwargs):
         self.alpha = props['alpha']
         self.beta = props['beta']
@@ -208,21 +310,9 @@ class ExponentialFiber:
         w = xi / (a * b) * (exp(a * (In - 1.0)**b) - 1.0)
         return w
 
-    def stress(self, F):
-        """Return scalar fiber stress."""
-        raise NotImplementedError
-
     def tstress(self, F):
         """Return Cauchy stress tensor aligned to local axes."""
         F = np.array(F)
-
-        def H(x):
-            """Unit step function."""
-            if x > 0.0:
-                return 1.0
-            else:
-                return 0.0
-
         # Components
         J = det(F)
         C = dot(F.T, F)
@@ -237,7 +327,7 @@ class ExponentialFiber:
         b = self.beta
         xi = self.xi
         dPsi_dIn = xi * (In - 1.0)**(b - 1.0) * exp(a * (In - 1.0)**b)
-        t = (2 / J) * H(In - 1.0) * In * dPsi_dIn * outer(n, n)
+        t = (2 / J) * unit_step(In - 1.0) * In * dPsi_dIn * outer(n, n)
         return t
 
     def pstress(self, F):
@@ -255,9 +345,69 @@ class ExponentialFiber:
 
 
 class PowerLinearFiber:
+    """1D fiber with power–linear law.
+
+    Equivalent to "fiber-pow-lin" or "fiber-power-lin" in FEBio, treated
+    as a 1D material.
+
+    References
+    ----------
+    FEBio users manual 2.9, page 173 (not page 146; the manual shows the
+    wrong equations for the "fiber-pow-lin" entry).
+
+    """
+
+    def __init__(self, E, β, λ0):
+        self.E = E  # fiber modulus in linear region
+        self.β = β  # power law exponent in power law region
+        self.λ0 = λ0  # stretch ratio at which power law region
+                      # transitions to linear region
+
+    @classmethod
+    def from_feb(cls, E, beta, lam0, **kwargs):
+        return cls(E, beta, lam0)
+
+    def w(self, λ):
+        """Return pseudo-strain energy density."""
+        raise NotImplementedError
+
+    def stress(self, λ):
+        """Return material stress scalar."""
+        α = self.α
+        β = self.β
+        ξ = self.ξ
+        dΨ_dλsq = ξ * (λ**2 - 1)**(β - 1) * exp(α * (λ**2 - 1)**β)
+        # Use dΨ_dλsq instead of dΨ_dλ because this is the equivalent of
+        # dΨ/dC.
+        σ = 2 * dΨ_dλsq * unit_step(λ - 1)
+        # Stress
+        if I_N <= 1:
+            σ = np.zeros((3,3))
+        elif I_N <= I0:
+            # return 1 / J * ξ/2 * (I_N - 1)**(β - 1) * 2 * F @ F @ np.outer(N,N)
+            σ = 2 / J * I_N * ξ * (I_N - 1)**(β - 1)
+        else:
+            σ = 2 / J * I_N * (b - E / 2 / np.sqrt(I_N))
+        return σ
+
+    def sstress(self, λ):
+        """Synonym for material stress.
+
+        Makes some use cases easier by providing a consistent name with
+        3D materials.
+
+        """
+        return self.stress(λ)
+
+
+class PowerLinearFiber3D:
     """Fiber with piecewise power-law (toe) and linear regions.
 
-    Same as "fiber-pow-lin" in FEBio XML.
+    Coupled formulation ("fiber-pow-lin" or "fiber-power-lin" in FEBio).
+
+    This is the deprecated 3D implementation that mixes material
+    orientation with the fiber's constitutive law.  Prefer
+    ExponentialFiber, which does not mix concerns in this manner.
 
     """
     def __init__(self, E, β, λ0, orientation=_DEFAULT_ORIENT_RANK1, **kwargs):
@@ -267,10 +417,6 @@ class PowerLinearFiber:
                       # transitions to linear region
         self.orientation = orientation
 
-    @classmethod
-    def from_feb(cls, E, beta, lam0, **kwargs):
-        return cls(E, beta, lam0, **kwargs)
-
     def w(self, F):
         """Return strain energy density"""
         raise NotImplementedError
@@ -279,9 +425,9 @@ class PowerLinearFiber:
         """Return Cauchy stress tensor aligned to local axes."""
         # Properties
         I0 = self.λ0**2.0
-        N = self.orientation
         β = self.β
         E = self.E
+        N = self.orientation
         # ξ = E / (2 * (β - 1)) * (I0 - 1)**(2 - β)
         # ^ from FEBio manual; does not match FEBio code
         ξ = E / 4 / (β - 1) * I0**(-1.5) * (I0 - 1)**(2 - β)
@@ -296,12 +442,13 @@ class PowerLinearFiber:
         J = det(F)
         # Stress
         if I_N <= 1:
-            return np.zeros((3,3))
+            σ = np.zeros((3,3))
         elif I_N <= I0:
             # return 1 / J * ξ/2 * (I_N - 1)**(β - 1) * 2 * F @ F @ np.outer(N,N)
-            return 2 / J * I_N * ξ * (I_N - 1)**(β - 1) * np.outer(n, n)
+            σ = 2 / J * I_N * ξ * (I_N - 1)**(β - 1) * np.outer(n, n)
         else:
-            return 1 / J * (b - E / 2 / np.sqrt(I_N)) * 2 * F @ F @ np.outer(N,N)
+            σ = 2 / J * I_N * (b - E / 2 / np.sqrt(I_N)) * np.outer(n,n)
+        return σ
 
     def pstress(self, F):
         """Return 1st Piola–Kirchoff stress tensor aligned to local axes."""
