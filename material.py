@@ -373,21 +373,21 @@ class PowerLinearFiber:
 
     def stress(self, λ):
         """Return material stress scalar."""
-        α = self.α
+        λ0 = self.λ0
         β = self.β
-        ξ = self.ξ
-        dΨ_dλsq = ξ * (λ**2 - 1)**(β - 1) * exp(α * (λ**2 - 1)**β)
-        # Use dΨ_dλsq instead of dΨ_dλ because this is the equivalent of
-        # dΨ/dC.
-        σ = 2 * dΨ_dλsq * unit_step(λ - 1)
+        E = self.E
+        ξ = E / 2 / (β - 1) * λ0**(-3) * (λ0**2 - 1)**(2 - β)
+        b = E/2/(λ0**3) * ((λ0**2 - 1)/(2*(β - 1)) + λ0**2)
         # Stress
-        if I_N <= 1:
-            σ = np.zeros((3,3))
-        elif I_N <= I0:
-            # return 1 / J * ξ/2 * (I_N - 1)**(β - 1) * 2 * F @ F @ np.outer(N,N)
-            σ = 2 / J * I_N * ξ * (I_N - 1)**(β - 1)
+        λsq = λ**2
+        if λ <= 1:
+            σ = 0
+        elif λ <= λ0:
+            dΨ_dλsq = ξ / 2 * (λsq - 1)**(β - 1)
+            σ = 2 * dΨ_dλsq  # equiv to 2 dΨ/dC; PK2
         else:
-            σ = 2 / J * I_N * (b - E / 2 / np.sqrt(I_N))
+            dΨ_dλsq = b - E / 2 / λ
+            σ = 2 * dΨ_dλsq  # equiv to 2 dΨ/dC; PK2
         return σ
 
     def sstress(self, λ):
@@ -428,11 +428,7 @@ class PowerLinearFiber3D:
         β = self.β
         E = self.E
         N = self.orientation
-        # ξ = E / (2 * (β - 1)) * (I0 - 1)**(2 - β)
-        # ^ from FEBio manual; does not match FEBio code
         ξ = E / 4 / (β - 1) * I0**(-1.5) * (I0 - 1)**(2 - β)
-        # b = E / 2 * ( (I0 - 1)/(2*(β - 1)) + I0 )
-        # ^ from FEBio manual; does not match FEBio code
         b = E/2/np.sqrt(I0) + ξ * (I0 - 1)**(β - 1)
         ψ0 = ξ/(2*β) * (I0 - 1)**β
         # Deformation

@@ -62,6 +62,43 @@ class ExponentialFiberTest(unittest.TestCase):
         npt.assert_allclose(t_try, t_true, rtol=1e-5, atol=1e-5)
 
 
+class Unit_CauchyStress_PowerLinearFiber(unittest.TestCase):
+    """Test piecewise power law – linear fibers.
+
+    "True" values taken from PowerLinearFiber3D calculations.
+
+    """
+    def tstress_slack_test(self):
+        """Check for lack of compressive resistance"""
+        material = PowerLinearFiber(52, 2.5, 1.07)
+        λ = 0.95
+        expected = 0
+        actual = material.stress(λ)
+        assert(expected == actual)
+
+    def tstress_origin_test(self):
+        """Check for zero stress at zero strain"""
+        material = PowerLinearFiber(52, 2.5, 1.07)
+        λ = 0.95
+        expected = 0
+        actual = material.stress(λ)
+        assert(expected == actual)
+
+    def tstress_toe_test(self):
+        material = PowerLinearFiber(52, 2.5, 1.07)
+        λ = 1.05
+        actual = material.stress(λ)
+        expected = 1.21977973
+        npt.assert_almost_equal(actual, expected, 5)
+
+    def tstress_lin_test(self):
+        material = PowerLinearFiber(52, 2.5, 1.07)
+        λ = 1.12
+        actual = material.stress(λ)
+        expected = 4.21977234
+        npt.assert_almost_equal(actual, expected, 5)
+
+
 class Unit_CauchyStress_PowerLinearFiber3D(unittest.TestCase):
     """Test piecewise power law – linear fibers.
 
