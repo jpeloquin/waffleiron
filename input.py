@@ -621,8 +621,8 @@ class FebReader:
             materials, mat_labels = self.materials()
         else:
             materials, mat_labels = material_info
-        nodes = [tuple([float(a) for a in b.text.split(",")])
-                 for b in self.root.findall("./Geometry/Nodes/*")]
+        nodes = np.array([[float(a) for a in b.text.split(",")]
+                          for b in self.root.findall("./Geometry/Nodes/*")])
         # Read elements
         elements = []  # nodal index format
         for elset in self.root.findall("./Geometry/Elements"):
