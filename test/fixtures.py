@@ -8,6 +8,10 @@ import febtools as feb
 from febtools.material import from_Lamé
 
 
+RTOL_F = 5e-7
+RTOL_STRESS = 5e-6
+
+
 def gen_model_center_crack_Hex8():
     """A 10 mm × 20 mm rectangle with a center 2 mm crack.
 

@@ -140,8 +140,8 @@ def isotropicelastic_to_feb(mat, model):
     return e
 
 
-def linear_orthotropic_elastic_to_feb(mat, model):
-    """Convert LinearOrthotropicElastic material instance to FEBio XML.
+def orthotropic_elastic_to_feb(mat, model):
+    """Convert OrthotropicElastic material instance to FEBio XML.
 
     """
     e = ET.Element('material', type='orthotropic elastic')
@@ -155,10 +155,6 @@ def linear_orthotropic_elastic_to_feb(mat, model):
     e.append(_property_to_feb(mat.v12, "v12", model))
     e.append(_property_to_feb(mat.v23, "v23", model))
     e.append(_property_to_feb(mat.v31, "v31", model))
-    # Symmetry axes
-    axes = ET.SubElement(e, 'mat_axis', type='vector')
-    ET.SubElement(axes, 'a').text = vec_to_text(mat.orientation[0])
-    ET.SubElement(axes, 'd').text = vec_to_text(mat.orientation[1])
     return e
 
 
@@ -271,7 +267,7 @@ def material_to_feb(mat, model):
              feb.material.HolmesMow: holmesmow_to_feb,
              feb.material.IsotropicElastic: isotropicelastic_to_feb,
              feb.material.NeoHookean: neo_hookean_to_feb,
-             feb.material.LinearOrthotropicElastic: linear_orthotropic_elastic_to_feb,
+             feb.material.OrthotropicElastic: orthotropic_elastic_to_feb,
              feb.material.PoroelasticSolid: poroelastic_to_feb,
              feb.material.SolidMixture: solidmixture_to_feb,
              feb.material.RigidBody: rigid_body_to_feb,

@@ -12,7 +12,7 @@ from febtools.control import auto_control_section
 from febtools.febioxml import basis_mat_axis_local
 from febtools.element import Hex8
 from febtools.model import Model, Mesh
-from febtools.material import IsotropicElastic, LinearOrthotropicElastic
+from febtools.material import IsotropicElastic, OrthotropicElastic
 from febtools.output import write_feb, write_xml
 from febtools.test.fixtures import gen_model_single_spiky_Hex8
 
@@ -145,7 +145,7 @@ class FEBio_MatAxisLocal_Hex8(TestCase):
 
     """
     def setUp(self):
-        material = LinearOrthotropicElastic(\
+        material = OrthotropicElastic(\
             {"E1": 23,
              "E2": 81,
              "E3": 50,
@@ -170,8 +170,10 @@ class FEBio_MatAxisLocal_Hex8(TestCase):
         self.pth_localb_model = DIR_THIS / "output" /\
             "FEBio_MatAxisLocal_Hex8_localb.feb"
         tree = feb.output.xml(localb_model)
-        e_mat_axis = tree.find("Material/material/mat_axis")
-        e_mat_axis.clear()
+        # add <mat_axis type="local">
+        e_mat = tree.find("Material/material")
+        e_mat_axis = e_mat.makeelement("mat_axis")
+        e_mat.append(e_mat_axis)
         e_mat_axis.attrib["type"] = "local"
         e_mat_axis.text = ", ".join([str(a) for a in basis_code])
         with open(self.pth_localb_model, "wb") as f:
@@ -190,8 +192,16 @@ class FEBio_MatAxisLocal_Hex8(TestCase):
         self.pth_globalb_model = DIR_THIS / "output" /\
             "FEBio_MatAxisLocal_Hex8_globalb.feb"
         tree = feb.output.xml(localb_model)
-        e_a = tree.find("Material/material/mat_axis/a")
+        # add <mat_axis type="vector">
+        e_mat = tree.find("Material/material")
+        e_mat_axis = e_mat.makeelement("mat_axis")
+        e_mat_axis.attrib["type"] = "vector"
+        e_mat.append(e_mat_axis)
+        e_a = e_mat_axis.makeelement("a")
+        e_mat_axis.append(e_a)
         e_a.text = ", ".join([str(a) for a in basis[:,0]])
+        e_d = e_mat_axis.makeelement("d")
+        e_mat_axis.append(e_d)
         e_d = tree.find("Material/material/mat_axis/d")
         e_d.text = ", ".join([str(a) for a in basis[:,1]])
         with open(self.pth_globalb_model, "wb") as f:

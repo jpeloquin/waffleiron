@@ -1,0 +1,175 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<febio_spec version="2.5">
+  <!--Exported to FEBio XML by febtools prerelease at 2020-03-09T20:55:55-->
+  <Module type="solid"/>
+  <Globals>
+    <Constants>
+      <R>8.314462</R>
+      <T>297</T>
+      <Fc>96485.3329</Fc>
+    </Constants>
+  </Globals>
+  <Material>
+    <material type="orthotropic elastic" id="1">
+      <E1>12.2</E1>
+      <E2>17.2</E2>
+      <E3>14.3</E3>
+      <G12>9.9</G12>
+      <G23>7.1</G23>
+      <G31>11.5</G31>
+      <v12>0.2</v12>
+      <v23>-0.1</v23>
+      <v31>0.3</v31>
+    </material>
+  </Material>
+  <Geometry>
+    <Nodes>
+      <node id="1">-5.0000000e-01, -5.0000000e-01, 0.0000000e+00</node>
+      <node id="2">5.0000000e-01, -5.0000000e-01, 0.0000000e+00</node>
+      <node id="3">5.0000000e-01, 5.0000000e-01, 0.0000000e+00</node>
+      <node id="4">-5.0000000e-01, 5.0000000e-01, 0.0000000e+00</node>
+      <node id="5">-5.0000000e-01, -5.0000000e-01, 1.0000000e+00</node>
+      <node id="6">5.0000000e-01, -5.0000000e-01, 1.0000000e+00</node>
+      <node id="7">5.0000000e-01, 5.0000000e-01, 1.0000000e+00</node>
+      <node id="8">-5.0000000e-01, 5.0000000e-01, 1.0000000e+00</node>
+    </Nodes>
+    <Elements type="hex8" mat="1">
+      <elem id="1">1, 2, 3, 4, 5, 6, 7, 8</elem>
+    </Elements>
+    <NodeSet name="−x_face">
+      <node id="1"/>
+      <node id="4"/>
+      <node id="5"/>
+      <node id="8"/>
+    </NodeSet>
+    <NodeSet name="−y_face">
+      <node id="1"/>
+      <node id="2"/>
+      <node id="3"/>
+      <node id="4"/>
+    </NodeSet>
+    <NodeSet name="−z_face">
+      <node id="3"/>
+      <node id="4"/>
+      <node id="7"/>
+      <node id="8"/>
+    </NodeSet>
+    <NodeSet name="AllNodes">
+      <node id="1"/>
+      <node id="2"/>
+      <node id="3"/>
+      <node id="4"/>
+      <node id="5"/>
+      <node id="6"/>
+      <node id="7"/>
+      <node id="8"/>
+    </NodeSet>
+    <NodeSet name="+x_face">
+      <node id="2"/>
+      <node id="3"/>
+      <node id="6"/>
+      <node id="7"/>
+    </NodeSet>
+    <NodeSet name="+y_face">
+      <node id="5"/>
+      <node id="6"/>
+      <node id="7"/>
+      <node id="8"/>
+    </NodeSet>
+    <NodeSet name="+z_face">
+      <node id="1"/>
+      <node id="2"/>
+      <node id="5"/>
+      <node id="6"/>
+    </NodeSet>
+  </Geometry>
+  <MeshData>
+    <NodeData name="nodal_bc_step2_x1_seq3_autogen" node_set="AllNodes">
+      <node lid="1">-0.065</node>
+      <node lid="2">0.045</node>
+      <node lid="3">0.065</node>
+      <node lid="4">-0.045</node>
+      <node lid="5">-0.015</node>
+      <node lid="6">0.095</node>
+      <node lid="7">0.115</node>
+      <node lid="8">0.005</node>
+    </NodeData>
+    <NodeData name="nodal_bc_step2_x2_seq3_autogen" node_set="AllNodes">
+      <node lid="1">0.09</node>
+      <node lid="2">-0.01</node>
+      <node lid="3">-0.09</node>
+      <node lid="4">0.01</node>
+      <node lid="5">0.16</node>
+      <node lid="6">0.06</node>
+      <node lid="7">-0.02</node>
+      <node lid="8">0.08</node>
+    </NodeData>
+    <NodeData name="nodal_bc_step2_x3_seq3_autogen" node_set="AllNodes">
+      <node lid="1">-0.07</node>
+      <node lid="2">-0.13</node>
+      <node lid="3">0.07</node>
+      <node lid="4">0.13</node>
+      <node lid="5">0</node>
+      <node lid="6">-0.06</node>
+      <node lid="7">0.14</node>
+      <node lid="8">0.2</node>
+    </NodeData>
+  </MeshData>
+  <LoadData>
+    <loadcurve extend="extrapolate" id="1" type="step">
+      <point>0.0, 1.0</point>
+      <point>1.0, 1.0</point>
+    </loadcurve>
+    <loadcurve extend="constant" id="2" type="linear">
+      <point>0.0, 0.0</point>
+      <point>1.0, 1.0</point>
+    </loadcurve>
+  </LoadData>
+  <Output>
+    <plotfile type="febio">
+      <var type="displacement"/>
+      <var type="Lagrange strain"/>
+      <var type="stress"/>
+    </plotfile>
+  </Output>
+  <Step name="Step1">
+    <Control>
+      <time_steps>1</time_steps>
+      <step_size>1.0</step_size>
+      <dtol>0.001</dtol>
+      <etol>0.01</etol>
+      <rtol>0</rtol>
+      <lstol>0.9</lstol>
+      <min_residual>1e-20</min_residual>
+      <qnmethod>0</qnmethod>
+      <reform_each_time_step>True</reform_each_time_step>
+      <diverge_reform>True</diverge_reform>
+      <max_refs>15</max_refs>
+      <max_ups>10</max_ups>
+      <plot_level>PLOT_MUST_POINTS</plot_level>
+      <time_stepper>
+        <dtmin>0.1</dtmin>
+        <max_retries>5</max_retries>
+        <opt_iter>10</opt_iter>
+        <dtmax lc="1">1</dtmax>
+      </time_stepper>
+    </Control>
+    <Boundary>
+      <prescribe bc="x" node_set="AllNodes">
+        <scale lc="2">1.0</scale>
+        <value node_data="nodal_bc_step2_x1_seq3_autogen"/>
+        <relative>0</relative>
+      </prescribe>
+      <prescribe bc="y" node_set="AllNodes">
+        <scale lc="2">1.0</scale>
+        <value node_data="nodal_bc_step2_x2_seq3_autogen"/>
+        <relative>0</relative>
+      </prescribe>
+      <prescribe bc="z" node_set="AllNodes">
+        <scale lc="2">1.0</scale>
+        <value node_data="nodal_bc_step2_x3_seq3_autogen"/>
+        <relative>0</relative>
+      </prescribe>
+    </Boundary>
+  </Step>
+</febio_spec>

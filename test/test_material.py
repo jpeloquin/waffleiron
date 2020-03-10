@@ -8,6 +8,7 @@ import numpy.testing as npt
 import febtools as feb
 import os
 from febtools.material import *
+from febtools.test.fixtures import RTOL_F, RTOL_STRESS
 from febtools.input import FebReader, textdata_list
 
 
@@ -309,3 +310,43 @@ class NeoHookeanTest(unittest.TestCase):
     # Don't bother with 1st Piola-Kirchoff stress; it's implemented as a
     # transform, so the accepted value would just duplicate the
     # implementation.
+
+
+def test_FEBio_Hex8_OrthoE():
+    """E2E test of OrthotropicElastic material."""
+    # Test 1: Read
+    pth_in = DIR_FIXTURES / \
+        (f"{Path(__file__).with_suffix('').name}." +\
+         "Hex8_OrthoE.feb")
+    model = feb.load_model(pth_in)
+    #
+    # Test 2: Write
+    pth_out = DIR_THIS / "output" / \
+        (f"{Path(__file__).with_suffix('').name}." +\
+         "Hex8_OrthoE.feb")
+    with open(pth_out, "wb") as f:
+        feb.output.write_feb(model, f)
+    # Test 3: Solve: Can FEBio use the roundtripped file?
+    feb.febio.run_febio(pth_out)
+    #
+    # Test 4: Is the output as expected?
+    model = feb.load_model(pth_out)
+    e = model.mesh.elements[0]
+    ##
+    ## Test 4.1: Do we see the correct applied displacements?  A test
+    ## failure here means that there is a defect in the code that reads
+    ## or writes the model.  Or, less likely, an FEBio bug.
+    F_applied = np.array([[1.11, 0.02, 0.05],
+                          [-0.10, 0.92, 0.07],
+                          [-0.06, 0.20, 1.07]])
+    F = np.mean([e.f(r) for r in e.gloc], axis=0)
+    npt.assert_allclose(F, F_applied, rtol=RTOL_F)
+    ##
+    ## Test 4.2: Do we the correct output Cauchy stress?
+    FEBio_cauchy_stress = np.array([[ 2.0102563 , -0.87915385, -0.33581227],
+                                    [-0.87915385, -0.09515007,  1.9258928 ],
+                                    [-0.33581227,  1.9258928 ,  2.589372  ]])
+    # FEBio_cauchy_stress = model.solution.value('stress', -1, 0, 1)
+    cauchy_stress_gpt = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
+    npt.assert_allclose(cauchy_stress_gpt, FEBio_cauchy_stress,
+                        rtol=RTOL_STRESS)

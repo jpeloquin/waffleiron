@@ -593,13 +593,16 @@ class IsotropicElastic:
         return s
 
 
-class LinearOrthotropicElastic:
-    """Linear orthotropic elastic material definition.
+class OrthotropicElastic:
+    """Orthotropic elastic material definition.
+
+    Matches FEOrthoElastic material in FEBio.  This material is *not*
+    linear.
 
     """
-    def __init__(self, props,
-                 orientation=_DEFAULT_ORIENT_RANK2,
-                 **kwargs):
+    # Note: I don't recognize the constitutitive model FEBio uses, so
+    # it's unclear if this material is "correct" in a broader sense.
+    def __init__(self, props):
         # Define material properties
         self.E1 = props['E1']
         self.E2 = props['E2']
@@ -610,14 +613,46 @@ class LinearOrthotropicElastic:
         self.v12 = props['ν12']
         self.v23 = props['ν23']
         self.v31 = props['ν31']
-        # Define basis vectors
-        self.orientation = orientation
+        # Derived properties
+        self.v21 = self.v12 * self.E2/self.E1
+        self.v13 = self.v31 * self.E1/self.E3
+        self.v32 = self.v23 * self.E3/self.E2
+        # Derived Lamé
+        μ1 = self.G12 + self.G31 - self.G23
+        μ2 = self.G12 - self.G31 + self.G23
+        μ3 = -self.G12 + self.G31 + self.G23
+        self.μ = [μ1, μ2, μ3]
+        # Lamé "coefficients"; for compliance matrix
+        self.Sλ = np.array([
+            [ 1/self.E1,         -self.v12/self.E1, -self.v31/self.E3 ],
+            [ -self.v12/self.E1, 1/self.E2,         -self.v23/self.E2 ],
+            [ -self.v31/self.E3, -self.v23/self.E2, 1/self.E3 ]])
+        # Lamé "constants"; for stiffness matrix
+        self.Cλ = np.linalg.inv(self.Sλ) - 2 * np.diag(self.μ)
 
     @classmethod
-    def from_feb(cls, E1, E2, E3, G12, G23, G31, v12, v23, v31, **kwargs):
-        return cls({"E1": E1, "E2": E2, "E3": E3, "G12": G12, "G23":
-                    G23, "G31": G31, "ν12": v12, "ν23": v23, "ν31":
-                    v31})
+    def from_feb(cls, E1, E2, E3, G12, G23, G31, v12, v23, v31):
+        return cls({"E1":  E1,  "E2":  E2,  "E3": E3,
+                    "G12": G12, "G23": G23, "G31": G31,
+                    "ν12": v12, "ν23": v23, "ν31": v31})
+
+    def tstress(self, F):
+        """Cauchy stress tensor."""
+        C = F.T @ F
+        B = F @ F.T
+        Q = np.eye(3)  # material orientation is handled separately
+        K = [Q[:,i] @ C @ Q[:,i] for i in range(3)]
+        # ^ squared stretch in symmetry plane direction
+        a = [F @ Q[:,i] / np.sqrt(K[i]) for i in range(3)]
+        A = [np.outer(ai, ai) for ai in a]
+        σ = np.zeros((3,3))
+        for i in range(3):
+            σ += self.μ[i] * K[i] * (A[i] @ (B - np.eye(3)) +\
+                                     (B - np.eye(3)) @ A[i])
+            for j in range(3):
+                σ += 0.5 * self.Cλ[i,j] * ( (K[i] - 1) * K[j] * A[j] +
+                                            (K[j] - 1) * K[i] * A[i])
+        return 0.5 * σ / np.linalg.det(F)
 
 
 class NeoHookean:
