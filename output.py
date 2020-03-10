@@ -563,9 +563,12 @@ def xml(model, version='2.5'):
 
     # Typical MKS constants
     Constants = ET.SubElement(Globals, 'Constants')
-    ET.SubElement(Constants, 'R').text = str(model.constants["R"])
-    ET.SubElement(Constants, 'T').text = str(model.environment["temperature"])
-    ET.SubElement(Constants, 'Fc').text = str(model.constants["F"])
+    if "R" in model.constants:
+        ET.SubElement(Constants, 'R').text = str(model.constants["R"])
+    if "temperature" in model.environment:
+        ET.SubElement(Constants, 'T').text = str(model.environment["temperature"])
+    if "F" in model.constants:
+        ET.SubElement(Constants, 'Fc').text = str(model.constants["F"])
 
 
     # Materials section
