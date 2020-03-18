@@ -71,9 +71,10 @@ class OrientedMaterial:
             σ_loc = 1/J * F @ σ_loc_PK2 @ F.T
         elif Q.ndim == 2:
             # 3D material ("solid")
-            raise NotImplementedError  # Needs test case
-            σ_mat = self.material.tstress(Q.T @ F)  # stress in material basis
-            σ_loc = Q @ σ_mat @ Q.T  # stress in own local basis
+            σ_loc = self.material.tstress(F @ Q)
+            # ^ Stress in own local basis.  This is a change of
+            # coordinate system for the material, not an observer
+            # change, such that material anisotropy is accounted for.
         return σ_loc
 
     def pstress(self, F):
@@ -640,7 +641,7 @@ class OrthotropicElastic:
         """Cauchy stress tensor."""
         C = F.T @ F
         B = F @ F.T
-        Q = np.eye(3)  # material orientation is handled separately
+        Q = np.eye(3)  # material orientation is handled by OrientedMaterial
         K = [Q[:,i] @ C @ Q[:,i] for i in range(3)]
         # ^ squared stretch in symmetry plane direction
         a = [F @ Q[:,i] / np.sqrt(K[i]) for i in range(3)]

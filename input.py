@@ -678,31 +678,38 @@ def mat_obj_from_elemd(d):
     # Read material orientation
     #
     # Read material orientation in the form of <mat_axis> or <fiber>
-    if "mat_axis" in d["properties"]:
-        type_ = d["properties"]["mat_axis"]["type"]
-        if type_ == "vector":
-            orientation = orthonormal_basis(d["properties"]["mat_axis"]["a"],
-                                            d["properties"]["mat_axis"]["d"])
-        # <mat_axis type="local"> is converted to element-local
-        # orientation in Model's initializer; no need to handle it
-        # here.
-    elif "fiber" in d["properties"]:
+    p_mat_axis = d["properties"].pop("mat_axis", None)
+    p_fiber = d["properties"].pop("fiber", None)
+    if p_mat_axis is not None and p_fiber is not None:
+        # FEBio's documentation says that only one could be defined, but
+        # FEBio itself accepts both, with undocumented handling (e.g.,
+        # precedence).  So raise an error.
+        raise ValueError(f"Found both <mat_axis> and <fiber> XML elements in {d['material']}; only one may be present.")
+    if p_mat_axis is not None:
+        if p_mat_axis["type"] == "vector":
+            orientation = orthonormal_basis(p_mat_axis["a"], p_mat_axis["d"])
+        # <mat_axis type="local"> is converted to a heterogeneous
+        # orientation in Model's initializer; no need to handle it here.
+    elif p_fiber is not None:
         # Currently we only support <fiber type="angles">.  Other
         # types: local, vector, spherical, cylindrical.
-        if d["properties"]["fiber"]["type"] == "angles":
-            θ = d["properties"]["fiber"]["theta"]  # azimuth
-            φ = d["properties"]["fiber"]["phi"]  # zenith angle
-            orientation = vec_from_sph(θ, φ)
-        elif d["properties"]["fiber"]["type"] == "vector":
-            orientation = np.array(d["properties"]["fiber"]["value"])
+        if p_fiber["type"] == "angles":
+            orientation = vec_from_sph(p_fiber["theta"], p_fiber["phi"])
+        elif p_fiber["type"] == "vector":
+            orientation = np.array(p_fiber["value"])
         else:
             raise NotImplementedError
     # Read material orientation in the form of material property-like
     # XML elements.
-    if "theta" in d["properties"] and "phi" in d["properties"]:
-        θ = d["properties"]["theta"]  # azimuth
-        φ = d["properties"]["phi"]  # zenith angle
-        matprop_orientation = vec_from_sph(θ, φ)
+    p_theta = d["properties"].pop("theta", None)
+    p_phi = d["properties"].pop("phi", None)
+    # Verify that both spherical angles are present, or neither
+    if p_theta is not None and p_phi is None:
+        raise ValueError(f"Found a <theta> element but no <phi> in {d['material']}; both spherical angles are required to define a material orientation.")
+    if p_theta is None and p_phi is not None:
+        raise ValueError(f"Found a <phi> element but no <theta> in {d['material']}; both spherical angles are required to define a material orientation.")
+    if p_theta is not None and p_phi is not None:
+        matprop_orientation = vec_from_sph(p_theta, p_phi)
         if orientation is None:
             orientation = matprop_orientation
         else:

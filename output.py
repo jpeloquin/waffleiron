@@ -11,7 +11,7 @@ from lxml import etree as ET
 import febtools as feb
 from .core import Body, ImplicitBody, ContactConstraint, NameRegistry, NodeSet, Sequence, ScaledSequence, RigidInterface
 from .control import step_duration
-from . import material as material_lib
+from . import material as matlib
 from .math import sph_from_vec
 from . import febioxml_2_5 as febioxml
 from . import febioxml_2_0
@@ -286,8 +286,8 @@ def material_to_feb(mat, model):
         if np.array(orientation).ndim == 2:
             # material axes orientation
             e_mat_axis = ET.Element("mat_axis", type="vector")
-            ET.SubElement(e_mat_axis, "a").text = febioxml.bvec_to_text(mat.orientation[:,0])
-            ET.SubElement(e_mat_axis, "d").text = febioxml.bvec_to_text(mat.orientation[:,1])
+            ET.SubElement(e_mat_axis, "a").text = febioxml.bvec_to_text(orientation[:,0])
+            ET.SubElement(e_mat_axis, "d").text = febioxml.bvec_to_text(orientation[:,1])
             e.insert(0, e_mat_axis)
             e.append(e_mat_axis)
         elif np.array(orientation).ndim == 1:
@@ -515,7 +515,7 @@ def xml(model, version='2.5'):
     # diagonal error termination if an unreferenced rigid body material
     # is present.
     for mat in set(material_registry.objects()) - materials_used:
-        if type(mat) is material_lib.RigidBody:
+        if type(mat) is matlib.RigidBody:
             material_registry.remove_object(mat)
     _fixup_ordinal_ids(material_registry)
     # Ensure each material has an ID
@@ -797,9 +797,17 @@ def xml(model, version='2.5'):
         # Warn if there's an incompatibility between requested materials
         # and modules.
         for mat in material_registry.objects():
+            # Extract delegate material object from OrientatedMaterial
+            # so that we can check it.  TODO: This is a hack; find a
+            # cleaner solution that doesn't require special-casing the
+            # module compatibility check.
+            if isinstance(mat, matlib.OrientedMaterial):
+                checked_mat = mat.material
+            else:
+                checked_mat = mat
             if ("module" in step) and\
-               ((not type(mat) in febioxml.module_compat_by_mat) or\
-                (step['module'] not in febioxml.module_compat_by_mat[type(mat)])):
+               ((not type(checked_mat) in febioxml.module_compat_by_mat) or\
+                (step['module'] not in febioxml.module_compat_by_mat[type(checked_mat)])):
                 raise ValueError(f"Material `{type(mat)}` is not listed as compatible with Module {step['module']}")
         e_con = ET.SubElement(e_step, 'Control')
         if version == '2.0':

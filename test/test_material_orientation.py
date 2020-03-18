@@ -11,12 +11,12 @@ from febtools.conditions import prescribe_deformation
 from febtools.control import auto_control_section
 from febtools.febio import run_febio
 from febtools.math import vec_from_sph
-from febtools.test.fixtures import gen_model_single_spiky_Hex8
+from febtools.test.fixtures import gen_model_single_spiky_Hex8, RTOL_F, RTOL_STRESS
 
 
 DIR_THIS = Path(__file__).parent
 DIR_FIXTURES = Path(__file__).parent / "fixtures"
-RTOL_STRESS = 5e-6
+
 
 def _fixture_FEBio_fiberDirectionLocal_Hex8_fiber():
     """Create fixture for FEBio_fiberDirectionLocal_Hex8_fiber test
@@ -76,18 +76,22 @@ def _fixture_FEBio_fiberDirectionLocal_Hex8_fiber():
     run_febio(pth)
 
 
-def test_FEBio_SOHomFibAng_Hex8_fiber():
-    """E2E test of submaterial orientation, <fiber type="angles">"""
+def test_FEBio_SOHomFibAng_Hex8_ExpFiber():
+    """E2E test of 1D submaterial homogeneousorientation
+
+    Orientation given as <fiber type="angles"> in FEBio XML.
+
+    """
     # Test 1: Read
     pth_in = DIR_FIXTURES / \
         (f"{Path(__file__).with_suffix('').name}." +\
-         "SOHomFibAng_Hex8_fiber.feb")
+         "SOHomFibAng_Hex8_ExpFiber.feb")
     model = feb.load_model(pth_in)
     #
     # Test 2: Write
     pth_out = DIR_THIS / "output" / \
         (f"{Path(__file__).with_suffix('').name}." +\
-         "SOHomFibAng_Hex8_fiber.feb")
+         "SOHomFibAng_Hex8_ExpFiber.feb")
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
@@ -116,4 +120,53 @@ def test_FEBio_SOHomFibAng_Hex8_fiber():
     # FEBio_cauchy_stress = model.solution.value('stress', -1, 0, 1)
     cauchy_stress_gpt = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
     npt.assert_allclose(FEBio_cauchy_stress, cauchy_stress_gpt,
+                        rtol=RTOL_STRESS)
+
+
+def test_FEBio_MOHomMatAxVec_Hex8_LinOrtho():
+    """E2E test of 3D material homogeneous orientation
+
+    Orientation given as <mat_axis type="vector"> in FEBio XML.
+
+    """
+    # Test 1: Read
+    pth_in = DIR_FIXTURES / \
+        (f"{Path(__file__).with_suffix('').name}." +\
+         "MOHomMatAxVec_Hex8_OrthoE.feb")
+    model = feb.load_model(pth_in)
+    #
+    # Test 2: Write
+    pth_out = DIR_THIS / "output" / \
+        (f"{Path(__file__).with_suffix('').name}." +\
+         "MOHomMatAxVec_Hex8_OrthoE.feb")
+    with open(pth_out, "wb") as f:
+        feb.output.write_feb(model, f)
+    # Test 3: Solve: Can FEBio use the roundtripped file?
+    run_febio(pth_out)
+    #
+    # Test 4: Is the output as expected?
+    model = feb.load_model(pth_out)
+    e = model.mesh.elements[0]
+    ##
+    ## Test 4.1: Do we see the correct applied displacements?  A test
+    ## failure here means that there is a defect in the code that reads
+    ## or writes the model.  Or, less likely, an FEBio bug.
+    FEBio_F_gpt_avg = np.array([[ 1.14,  0.18, 0.11],
+                                [-0.2 ,  1.09,  0.17],
+                                [-0.11,  0.2 ,  1.12]])
+    F = np.mean([e.f(r) for r in e.gloc], axis=0)
+    npt.assert_allclose(F, FEBio_F_gpt_avg, rtol=RTOL_F)
+    ##
+    ## Test 4.2: Do we the correct output Cauchy stress?
+    FEBio_cauchy_stress = np.array([[ 4.164129  , -0.19348246,  0.19261515],
+                                    [-0.19348246,  3.7601907 ,  4.5406365 ],
+                                    [ 0.19261515,  4.5406365 ,  3.565557  ]],
+                                   dtype=np.float32)
+    # For unoriented case
+    # FEBio_cauchy_stress = np.array([[ 3.2427673 , -0.13115434,  0.12526082],
+    #                                 [-0.13115434,  3.580308  ,  3.7436085 ],
+    #                                 [ 0.12526082,  3.7436085 ,  3.776064  ]])
+    # FEBio_cauchy_stress = model.solution.value('stress', -1, 0, 1)
+    cauchy_stress_gpt = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
+    npt.assert_allclose(cauchy_stress_gpt, FEBio_cauchy_stress,
                         rtol=RTOL_STRESS)
