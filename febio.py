@@ -8,6 +8,8 @@ class FEBioError(Exception):
 
 
 def run_febio(pth_feb):
+    if isinstance(pth_feb, str):
+        pth_feb = Path(pth_feb)
     proc = subprocess.run(['febio', '-i', pth_feb.name],
                       cwd=Path(pth_feb).parent,  # FEBio always writes xplt to current dir
                       stdout=subprocess.PIPE,
