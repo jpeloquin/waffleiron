@@ -252,8 +252,8 @@ def normalize_xml(root):
     This function also does some validation.
 
     """
-    # Validation: Only one of <Control> or <Step> should exist
-    if root.find("Control") is None and root.find("Step") is None:
+    # Validation: At most one of <Control> or <Step> should exist
+    if root.find("Control") is not None and root.find("Step") is not None:
         msg = (f"{root.base} has both a <Control> and <Step> section. The FEBio documentation does not specify how these sections are supposed to interact, so normalization is aborted.")
         raise ValueError(msg)
     #
