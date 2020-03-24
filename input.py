@@ -390,8 +390,8 @@ class FebReader:
                 obj = named_sets[entity_type][name]
                 model.named[entity_type].add(name, obj)
 
-        # From <Materials>, read local (spatially varying) material
-        # coordinate systems (MCSs) encoded using local node IDs
+        # From <Materials>, read heterogeneous local basis encoded using
+        # local node IDs.
         e_mcs_local = self.root.findall('Material//mat_axis[@type="local"]')
         if e_mcs_local:
             # Check if there are multiple <mat_axis type="local">
@@ -403,9 +403,9 @@ class FebReader:
             if not all(equal):
                 msg = f'{e_mat.base}:{e_mat.sourceline} Multiple <mat_axis type="local"> elements with unequal values are present.  febtools does not support this case.'
                 raise ValueError(msg)
-            # Convert the node ID encoded MCS to an explicit MCS for
-            # each finite element.  We can use just the first MCS
-            # XML element because we have just confirmed they are
+            # Convert the node ID encoded local basis to an explicit
+            # basis for each finite element.  We can use the first
+            # <mat_axis> element because we have just confirmed they are
             # all the same.
             elements_by_mat = {}
             for element in model.mesh.elements:
@@ -415,7 +415,7 @@ class FebReader:
                 mat = materials_by_id[mat_id]
                 ids = _vec_from_text(e_mcs_local[0].text)  # 1-indexed
                 for e in elements_by_mat[mat]:
-                    element.local_basis = febioxml.basis_mat_axis_local(e, ids)
+                    e.local_basis = febioxml.basis_mat_axis_local(e, ids)
 
         # Read explicit rigid bodies.  Create a Body object for each
         # rigid body "material" in the XML with explicit geometry.
