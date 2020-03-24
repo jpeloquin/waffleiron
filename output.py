@@ -537,7 +537,6 @@ def xml(model, version='2.5'):
         e_module.attrib["type"] = module
     # FEBio XML 2.0 sets <analysis_type> in <Control>
 
-    Globals = ET.SubElement(root, 'Globals')
     Material = ET.SubElement(root, 'Material')
 
     parts = febioxml.parts(model)
@@ -558,14 +557,20 @@ def xml(model, version='2.5'):
     Output = ET.SubElement(root, 'Output')
 
     # Typical MKS constants
-    Constants = ET.SubElement(Globals, 'Constants')
+    e_Constants = ET.Element('Constants')
     if "R" in model.constants:
-        ET.SubElement(Constants, 'R').text = str(model.constants["R"])
+        ET.SubElement(e_Constants, 'R').text = str(model.constants["R"])
     if "temperature" in model.environment:
-        ET.SubElement(Constants, 'T').text = str(model.environment["temperature"])
+        ET.SubElement(e_Constants, 'T').text = str(model.environment["temperature"])
     if "F" in model.constants:
-        ET.SubElement(Constants, 'Fc').text = str(model.constants["F"])
-
+        ET.SubElement(e_Constants, 'Fc').text = str(model.constants["F"])
+    # Add Globals/Constants if any defined; FEBio can't cope with an empty
+    # Globals element.
+    if len(e_Constants.getchildren()) > 0:
+        e_Globals = ET.Element('Globals')
+        e_Globals.append(e_Constants)
+        root.insert(root.index(e_module) + 1, e_Globals)
+        # ^ FEBio requires that first element must be <Module>
 
     # Materials section
     #
