@@ -5,7 +5,6 @@ from math import degrees
 from datetime import datetime
 # Public packages
 import numpy as np
-from scipy.spatial.transform import Rotation
 from lxml import etree as ET
 # Within-module packages
 import febtools as feb
