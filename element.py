@@ -61,8 +61,8 @@ class Element:
         """
         self.ids = None # indices of nodes in mesh
         self.mesh = None
+        self.basis = None
         self.material = material
-        self.local_basis = None
         self.properties = {'displacement': np.array([(0, 0, 0) for i in nodes])}
         # Nodal coordinates
         self.nodes = np.array(nodes)
@@ -299,6 +299,20 @@ class Element:
 
         r = fmin(fn, r, disp=False)
         return r
+
+    def tstress(self, r):
+        F = self.f(r)
+        if self.basis is None:
+            return self.material.tstress(F)
+        else:
+            # Assumes 2-tensor material orientation, but sometimes in a
+            # fully displacement-constrained simulation, users use bare
+            # fibers as the material, which take 1-tensor (vector)
+            # material orientation.
+            Q = self.basis
+            σ_world = self.material.tstress(F @ Q)
+        return σ_world
+
 
 class Element3D(Element):
     """Class for 3D elements.

@@ -1,0 +1,501 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<febio_spec version="2.5">
+  <!--Exported to FEBio XML by febtools prerelease at 2020-03-23T21:39:50-->
+  <Module type="solid"/>
+  <Material>
+    <material type="orthotropic elastic" name="0" id="1">
+      <mat_axis type="local">6,2,7</mat_axis>
+      <E1>12.2</E1>
+      <E2>17.2</E2>
+      <E3>14.3</E3>
+      <G12>9.9</G12>
+      <G23>7.1</G23>
+      <G31>11.5</G31>
+      <v12>0.2</v12>
+      <v23>-0.1</v23>
+      <v31>0.3</v31>
+    </material>
+  </Material>
+  <Geometry>
+    <Nodes>
+      <node id="1">-3.5355339e-01, -3.5355339e-01, -3.5355339e-01</node>
+      <node id="2">0.0000000e+00, -3.5355339e-01, -3.5355339e-01</node>
+      <node id="3">3.5355339e-01, -3.5355339e-01, -3.5355339e-01</node>
+      <node id="4">-3.5355339e-01, 0.0000000e+00, -3.5355339e-01</node>
+      <node id="5">0.0000000e+00, 0.0000000e+00, -3.5355339e-01</node>
+      <node id="6">3.5355339e-01, 0.0000000e+00, -3.5355339e-01</node>
+      <node id="7">-3.5355339e-01, 3.5355339e-01, -3.5355339e-01</node>
+      <node id="8">0.0000000e+00, 3.5355339e-01, -3.5355339e-01</node>
+      <node id="9">3.5355339e-01, 3.5355339e-01, -3.5355339e-01</node>
+      <node id="10">-3.5355339e-01, -3.5355339e-01, 0.0000000e+00</node>
+      <node id="11">0.0000000e+00, -3.5355339e-01, 0.0000000e+00</node>
+      <node id="12">3.5355339e-01, -3.5355339e-01, 0.0000000e+00</node>
+      <node id="13">-3.5355339e-01, 0.0000000e+00, 0.0000000e+00</node>
+      <node id="14">0.0000000e+00, 0.0000000e+00, 0.0000000e+00</node>
+      <node id="15">3.5355339e-01, 0.0000000e+00, 0.0000000e+00</node>
+      <node id="16">-3.5355339e-01, 3.5355339e-01, 0.0000000e+00</node>
+      <node id="17">0.0000000e+00, 3.5355339e-01, 0.0000000e+00</node>
+      <node id="18">3.5355339e-01, 3.5355339e-01, 0.0000000e+00</node>
+      <node id="19">-3.5355339e-01, -3.5355339e-01, 3.5355339e-01</node>
+      <node id="20">0.0000000e+00, -3.5355339e-01, 3.5355339e-01</node>
+      <node id="21">3.5355339e-01, -3.5355339e-01, 3.5355339e-01</node>
+      <node id="22">-3.5355339e-01, 0.0000000e+00, 3.5355339e-01</node>
+      <node id="23">0.0000000e+00, 0.0000000e+00, 3.5355339e-01</node>
+      <node id="24">3.5355339e-01, 0.0000000e+00, 3.5355339e-01</node>
+      <node id="25">-3.5355339e-01, 3.5355339e-01, 3.5355339e-01</node>
+      <node id="26">0.0000000e+00, 3.5355339e-01, 3.5355339e-01</node>
+      <node id="27">3.5355339e-01, 3.5355339e-01, 3.5355339e-01</node>
+      <node id="28">-5.7735027e-01, -5.7735027e-01, -5.7735027e-01</node>
+      <node id="29">0.0000000e+00, -7.0710678e-01, -7.0710678e-01</node>
+      <node id="30">5.7735027e-01, -5.7735027e-01, -5.7735027e-01</node>
+      <node id="31">-7.0710678e-01, 0.0000000e+00, -7.0710678e-01</node>
+      <node id="32">0.0000000e+00, 0.0000000e+00, -1.0000000e+00</node>
+      <node id="33">7.0710678e-01, 0.0000000e+00, -7.0710678e-01</node>
+      <node id="34">-5.7735027e-01, 5.7735027e-01, -5.7735027e-01</node>
+      <node id="35">0.0000000e+00, 7.0710678e-01, -7.0710678e-01</node>
+      <node id="36">5.7735027e-01, 5.7735027e-01, -5.7735027e-01</node>
+      <node id="37">-7.0710678e-01, -7.0710678e-01, 0.0000000e+00</node>
+      <node id="38">0.0000000e+00, -1.0000000e+00, 0.0000000e+00</node>
+      <node id="39">7.0710678e-01, -7.0710678e-01, 0.0000000e+00</node>
+      <node id="40">-1.0000000e+00, 0.0000000e+00, 0.0000000e+00</node>
+      <node id="41">1.0000000e+00, 0.0000000e+00, 0.0000000e+00</node>
+      <node id="42">-7.0710678e-01, 7.0710678e-01, 0.0000000e+00</node>
+      <node id="43">0.0000000e+00, 1.0000000e+00, 0.0000000e+00</node>
+      <node id="44">7.0710678e-01, 7.0710678e-01, 0.0000000e+00</node>
+      <node id="45">-5.7735027e-01, -5.7735027e-01, 5.7735027e-01</node>
+      <node id="46">0.0000000e+00, -7.0710678e-01, 7.0710678e-01</node>
+      <node id="47">5.7735027e-01, -5.7735027e-01, 5.7735027e-01</node>
+      <node id="48">-7.0710678e-01, 0.0000000e+00, 7.0710678e-01</node>
+      <node id="49">0.0000000e+00, 0.0000000e+00, 1.0000000e+00</node>
+      <node id="50">7.0710678e-01, 0.0000000e+00, 7.0710678e-01</node>
+      <node id="51">-5.7735027e-01, 5.7735027e-01, 5.7735027e-01</node>
+      <node id="52">0.0000000e+00, 7.0710678e-01, 7.0710678e-01</node>
+      <node id="53">5.7735027e-01, 5.7735027e-01, 5.7735027e-01</node>
+    </Nodes>
+    <Elements type="hex8" mat="1">
+      <elem id="1">1, 2, 5, 4, 10, 11, 14, 13</elem>
+      <elem id="2">2, 3, 6, 5, 11, 12, 15, 14</elem>
+      <elem id="3">4, 5, 8, 7, 13, 14, 17, 16</elem>
+      <elem id="4">5, 6, 9, 8, 14, 15, 18, 17</elem>
+      <elem id="5">10, 11, 14, 13, 19, 20, 23, 22</elem>
+      <elem id="6">11, 12, 15, 14, 20, 21, 24, 23</elem>
+      <elem id="7">13, 14, 17, 16, 22, 23, 26, 25</elem>
+      <elem id="8">14, 15, 18, 17, 23, 24, 27, 26</elem>
+      <elem id="9">1, 28, 29, 2, 10, 37, 38, 11</elem>
+      <elem id="10">2, 29, 30, 3, 11, 38, 39, 12</elem>
+      <elem id="11">10, 37, 38, 11, 19, 45, 46, 20</elem>
+      <elem id="12">11, 38, 39, 12, 20, 46, 47, 21</elem>
+      <elem id="13">3, 30, 33, 6, 12, 39, 41, 15</elem>
+      <elem id="14">6, 33, 36, 9, 15, 41, 44, 18</elem>
+      <elem id="15">12, 39, 41, 15, 21, 47, 50, 24</elem>
+      <elem id="16">15, 41, 44, 18, 24, 50, 53, 27</elem>
+      <elem id="17">9, 36, 35, 8, 18, 44, 43, 17</elem>
+      <elem id="18">8, 35, 34, 7, 17, 43, 42, 16</elem>
+      <elem id="19">18, 44, 43, 17, 27, 53, 52, 26</elem>
+      <elem id="20">17, 43, 42, 16, 26, 52, 51, 25</elem>
+      <elem id="21">7, 34, 31, 4, 16, 42, 40, 13</elem>
+      <elem id="22">4, 31, 28, 1, 13, 40, 37, 10</elem>
+      <elem id="23">16, 42, 40, 13, 25, 51, 48, 22</elem>
+      <elem id="24">13, 40, 37, 10, 22, 48, 45, 19</elem>
+      <elem id="25">1, 28, 31, 4, 2, 29, 32, 5</elem>
+      <elem id="26">2, 29, 32, 5, 3, 30, 33, 6</elem>
+      <elem id="27">4, 31, 34, 7, 5, 32, 35, 8</elem>
+      <elem id="28">5, 32, 35, 8, 6, 33, 36, 9</elem>
+      <elem id="29">19, 45, 46, 20, 22, 48, 49, 23</elem>
+      <elem id="30">20, 46, 47, 21, 23, 49, 50, 24</elem>
+      <elem id="31">22, 48, 49, 23, 25, 51, 52, 26</elem>
+      <elem id="32">23, 49, 50, 24, 26, 52, 53, 27</elem>
+    </Elements>
+    <ElementSet name="autogen-mat_axis">
+      <elem id="32"/>
+    </ElementSet>
+    <NodeSet name="nodal_bc_step1_variable_x1_seq1_autogen_0">
+      <node id="1"/>
+      <node id="2"/>
+      <node id="3"/>
+      <node id="4"/>
+      <node id="5"/>
+      <node id="6"/>
+      <node id="7"/>
+      <node id="8"/>
+      <node id="9"/>
+      <node id="10"/>
+      <node id="11"/>
+      <node id="12"/>
+      <node id="13"/>
+      <node id="14"/>
+      <node id="15"/>
+      <node id="16"/>
+      <node id="17"/>
+      <node id="18"/>
+      <node id="19"/>
+      <node id="20"/>
+      <node id="21"/>
+      <node id="22"/>
+      <node id="23"/>
+      <node id="24"/>
+      <node id="25"/>
+      <node id="26"/>
+      <node id="27"/>
+      <node id="28"/>
+      <node id="29"/>
+      <node id="30"/>
+      <node id="31"/>
+      <node id="32"/>
+      <node id="33"/>
+      <node id="34"/>
+      <node id="35"/>
+      <node id="36"/>
+      <node id="37"/>
+      <node id="38"/>
+      <node id="39"/>
+      <node id="40"/>
+      <node id="41"/>
+      <node id="42"/>
+      <node id="43"/>
+      <node id="44"/>
+      <node id="45"/>
+      <node id="46"/>
+      <node id="47"/>
+      <node id="48"/>
+      <node id="49"/>
+      <node id="50"/>
+      <node id="51"/>
+      <node id="52"/>
+      <node id="53"/>
+    </NodeSet>
+    <NodeSet name="nodal_bc_step1_variable_x2_seq1_autogen_0">
+      <node id="1"/>
+      <node id="2"/>
+      <node id="3"/>
+      <node id="4"/>
+      <node id="5"/>
+      <node id="6"/>
+      <node id="7"/>
+      <node id="8"/>
+      <node id="9"/>
+      <node id="10"/>
+      <node id="11"/>
+      <node id="12"/>
+      <node id="13"/>
+      <node id="14"/>
+      <node id="15"/>
+      <node id="16"/>
+      <node id="17"/>
+      <node id="18"/>
+      <node id="19"/>
+      <node id="20"/>
+      <node id="21"/>
+      <node id="22"/>
+      <node id="23"/>
+      <node id="24"/>
+      <node id="25"/>
+      <node id="26"/>
+      <node id="27"/>
+      <node id="28"/>
+      <node id="29"/>
+      <node id="30"/>
+      <node id="31"/>
+      <node id="32"/>
+      <node id="33"/>
+      <node id="34"/>
+      <node id="35"/>
+      <node id="36"/>
+      <node id="37"/>
+      <node id="38"/>
+      <node id="39"/>
+      <node id="40"/>
+      <node id="41"/>
+      <node id="42"/>
+      <node id="43"/>
+      <node id="44"/>
+      <node id="45"/>
+      <node id="46"/>
+      <node id="47"/>
+      <node id="48"/>
+      <node id="49"/>
+      <node id="50"/>
+      <node id="51"/>
+      <node id="52"/>
+      <node id="53"/>
+    </NodeSet>
+    <NodeSet name="nodal_bc_step1_variable_x3_seq1_autogen_0">
+      <node id="1"/>
+      <node id="2"/>
+      <node id="3"/>
+      <node id="4"/>
+      <node id="5"/>
+      <node id="6"/>
+      <node id="7"/>
+      <node id="8"/>
+      <node id="9"/>
+      <node id="10"/>
+      <node id="11"/>
+      <node id="12"/>
+      <node id="13"/>
+      <node id="14"/>
+      <node id="15"/>
+      <node id="16"/>
+      <node id="17"/>
+      <node id="18"/>
+      <node id="19"/>
+      <node id="20"/>
+      <node id="21"/>
+      <node id="22"/>
+      <node id="23"/>
+      <node id="24"/>
+      <node id="25"/>
+      <node id="26"/>
+      <node id="27"/>
+      <node id="28"/>
+      <node id="29"/>
+      <node id="30"/>
+      <node id="31"/>
+      <node id="32"/>
+      <node id="33"/>
+      <node id="34"/>
+      <node id="35"/>
+      <node id="36"/>
+      <node id="37"/>
+      <node id="38"/>
+      <node id="39"/>
+      <node id="40"/>
+      <node id="41"/>
+      <node id="42"/>
+      <node id="43"/>
+      <node id="44"/>
+      <node id="45"/>
+      <node id="46"/>
+      <node id="47"/>
+      <node id="48"/>
+      <node id="49"/>
+      <node id="50"/>
+      <node id="51"/>
+      <node id="52"/>
+      <node id="53"/>
+    </NodeSet>
+  </Geometry>
+  <MeshData>
+    <NodeData name="nodal_bc_step1_x1_seq1_autogen" node_set="nodal_bc_step1_variable_x1_seq1_autogen_0">
+      <node lid="1">-0.07778175</node>
+      <node lid="2">-0.02828427</node>
+      <node lid="3">0.0212132</node>
+      <node lid="4">-0.06010408</node>
+      <node lid="5">-0.0106066</node>
+      <node lid="6">0.03889087</node>
+      <node lid="7">-0.04242641</node>
+      <node lid="8">0.007071068</node>
+      <node lid="9">0.05656854</node>
+      <node lid="10">-0.06717514</node>
+      <node lid="11">-0.01767767</node>
+      <node lid="12">0.03181981</node>
+      <node lid="13">-0.04949747</node>
+      <node lid="14">0</node>
+      <node lid="15">0.04949747</node>
+      <node lid="16">-0.03181981</node>
+      <node lid="17">0.01767767</node>
+      <node lid="18">0.06717514</node>
+      <node lid="19">-0.05656854</node>
+      <node lid="20">-0.007071068</node>
+      <node lid="21">0.04242641</node>
+      <node lid="22">-0.03889087</node>
+      <node lid="23">0.0106066</node>
+      <node lid="24">0.06010408</node>
+      <node lid="25">-0.0212132</node>
+      <node lid="26">0.02828427</node>
+      <node lid="27">0.07778175</node>
+      <node lid="28">-0.1270171</node>
+      <node lid="29">-0.05656854</node>
+      <node lid="30">0.03464102</node>
+      <node lid="31">-0.1202082</node>
+      <node lid="32">-0.03</node>
+      <node lid="33">0.07778175</node>
+      <node lid="34">-0.06928203</node>
+      <node lid="35">0.01414214</node>
+      <node lid="36">0.09237604</node>
+      <node lid="37">-0.1343503</node>
+      <node lid="38">-0.05</node>
+      <node lid="39">0.06363961</node>
+      <node lid="40">-0.14</node>
+      <node lid="41">0.14</node>
+      <node lid="42">-0.06363961</node>
+      <node lid="43">0.05</node>
+      <node lid="44">0.1343503</node>
+      <node lid="45">-0.09237604</node>
+      <node lid="46">-0.01414214</node>
+      <node lid="47">0.06928203</node>
+      <node lid="48">-0.07778175</node>
+      <node lid="49">0.03</node>
+      <node lid="50">0.1202082</node>
+      <node lid="51">-0.03464102</node>
+      <node lid="52">0.05656854</node>
+      <node lid="53">0.1270171</node>
+    </NodeData>
+    <NodeData name="nodal_bc_step1_x2_seq1_autogen" node_set="nodal_bc_step1_variable_x2_seq1_autogen_0">
+      <node lid="1">-0.03181981</node>
+      <node lid="2">-0.03889087</node>
+      <node lid="3">-0.04596194</node>
+      <node lid="4">-8.41829e-21</node>
+      <node lid="5">-0.007071068</node>
+      <node lid="6">-0.01414214</node>
+      <node lid="7">0.03181981</node>
+      <node lid="8">0.02474874</node>
+      <node lid="9">0.01767767</node>
+      <node lid="10">-0.02474874</node>
+      <node lid="11">-0.03181981</node>
+      <node lid="12">-0.03889087</node>
+      <node lid="13">0.007071068</node>
+      <node lid="14">0</node>
+      <node lid="15">-0.007071068</node>
+      <node lid="16">0.03889087</node>
+      <node lid="17">0.03181981</node>
+      <node lid="18">0.02474874</node>
+      <node lid="19">-0.01767767</node>
+      <node lid="20">-0.02474874</node>
+      <node lid="21">-0.03181981</node>
+      <node lid="22">0.01414214</node>
+      <node lid="23">0.007071068</node>
+      <node lid="24">8.41829e-21</node>
+      <node lid="25">0.04596194</node>
+      <node lid="26">0.03889087</node>
+      <node lid="27">0.03181981</node>
+      <node lid="28">-0.05196152</node>
+      <node lid="29">-0.07778175</node>
+      <node lid="30">-0.07505554</node>
+      <node lid="31">-1.683658e-20</node>
+      <node lid="32">-0.02</node>
+      <node lid="33">-0.02828427</node>
+      <node lid="34">0.05196152</node>
+      <node lid="35">0.04949747</node>
+      <node lid="36">0.02886751</node>
+      <node lid="37">-0.04949747</node>
+      <node lid="38">-0.09</node>
+      <node lid="39">-0.07778175</node>
+      <node lid="40">0.02</node>
+      <node lid="41">-0.02</node>
+      <node lid="42">0.07778175</node>
+      <node lid="43">0.09</node>
+      <node lid="44">0.04949747</node>
+      <node lid="45">-0.02886751</node>
+      <node lid="46">-0.04949747</node>
+      <node lid="47">-0.05196152</node>
+      <node lid="48">0.02828427</node>
+      <node lid="49">0.02</node>
+      <node lid="50">1.683658e-20</node>
+      <node lid="51">0.07505554</node>
+      <node lid="52">0.07778175</node>
+      <node lid="53">0.05196152</node>
+    </NodeData>
+    <NodeData name="nodal_bc_step1_x3_seq1_autogen" node_set="nodal_bc_step1_variable_x3_seq1_autogen_0">
+      <node lid="1">-0.02828427</node>
+      <node lid="2">-0.03181981</node>
+      <node lid="3">-0.03535534</node>
+      <node lid="4">-0.03889087</node>
+      <node lid="5">-0.04242641</node>
+      <node lid="6">-0.04596194</node>
+      <node lid="7">-0.04949747</node>
+      <node lid="8">-0.05303301</node>
+      <node lid="9">-0.05656854</node>
+      <node lid="10">0.01414214</node>
+      <node lid="11">0.0106066</node>
+      <node lid="12">0.007071068</node>
+      <node lid="13">0.003535534</node>
+      <node lid="14">0</node>
+      <node lid="15">-0.003535534</node>
+      <node lid="16">-0.007071068</node>
+      <node lid="17">-0.0106066</node>
+      <node lid="18">-0.01414214</node>
+      <node lid="19">0.05656854</node>
+      <node lid="20">0.05303301</node>
+      <node lid="21">0.04949747</node>
+      <node lid="22">0.04596194</node>
+      <node lid="23">0.04242641</node>
+      <node lid="24">0.03889087</node>
+      <node lid="25">0.03535534</node>
+      <node lid="26">0.03181981</node>
+      <node lid="27">0.02828427</node>
+      <node lid="28">-0.04618802</node>
+      <node lid="29">-0.06363961</node>
+      <node lid="30">-0.05773503</node>
+      <node lid="31">-0.07778175</node>
+      <node lid="32">-0.12</node>
+      <node lid="33">-0.09192388</node>
+      <node lid="34">-0.08082904</node>
+      <node lid="35">-0.106066</node>
+      <node lid="36">-0.09237604</node>
+      <node lid="37">0.02828427</node>
+      <node lid="38">0.03</node>
+      <node lid="39">0.01414214</node>
+      <node lid="40">0.01</node>
+      <node lid="41">-0.01</node>
+      <node lid="42">-0.01414214</node>
+      <node lid="43">-0.03</node>
+      <node lid="44">-0.02828427</node>
+      <node lid="45">0.09237604</node>
+      <node lid="46">0.106066</node>
+      <node lid="47">0.08082904</node>
+      <node lid="48">0.09192388</node>
+      <node lid="49">0.12</node>
+      <node lid="50">0.07778175</node>
+      <node lid="51">0.05773503</node>
+      <node lid="52">0.06363961</node>
+      <node lid="53">0.04618802</node>
+    </NodeData>
+  </MeshData>
+  <Boundary/>
+  <Contact/>
+  <Constraints/>
+  <LoadData>
+    <loadcurve extend="constant" id="1" type="linear">
+      <point>0.0, 1.0</point>
+      <point>1.0, 1</point>
+    </loadcurve>
+    <loadcurve extend="extrapolate" id="2" type="linear">
+      <point>0, 0</point>
+      <point>1, 1</point>
+    </loadcurve>
+  </LoadData>
+  <Output>
+    <plotfile type="febio"/>
+  </Output>
+  <Step name="Step1">
+    <Control>
+      <time_steps>1</time_steps>
+      <step_size>1.0</step_size>
+      <dtol>0.001</dtol>
+      <etol>0.01</etol>
+      <rtol>0</rtol>
+      <lstol>0.9</lstol>
+      <min_residual>1e-20</min_residual>
+      <qnmethod>0</qnmethod>
+      <reform_each_time_step>True</reform_each_time_step>
+      <diverge_reform>True</diverge_reform>
+      <max_refs>15</max_refs>
+      <max_ups>10</max_ups>
+      <plot_level>PLOT_MUST_POINTS</plot_level>
+      <time_stepper>
+        <dtmin>0.1</dtmin>
+        <max_retries>5</max_retries>
+        <opt_iter>10</opt_iter>
+        <dtmax lc="1">1</dtmax>
+      </time_stepper>
+    </Control>
+    <Boundary>
+      <prescribe bc="x" node_set="nodal_bc_step1_variable_x1_seq1_autogen_0">
+        <scale lc="2">1.0</scale>
+        <value node_data="nodal_bc_step1_x1_seq1_autogen"/>
+        <relative>0</relative>
+      </prescribe>
+      <prescribe bc="y" node_set="nodal_bc_step1_variable_x2_seq1_autogen_0">
+        <scale lc="2">1.0</scale>
+        <value node_data="nodal_bc_step1_x2_seq1_autogen"/>
+        <relative>0</relative>
+      </prescribe>
+      <prescribe bc="z" node_set="nodal_bc_step1_variable_x3_seq1_autogen_0">
+        <scale lc="2">1.0</scale>
+        <value node_data="nodal_bc_step1_x3_seq1_autogen"/>
+        <relative>0</relative>
+      </prescribe>
+    </Boundary>
+  </Step>
+</febio_spec>

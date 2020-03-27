@@ -415,7 +415,7 @@ class FebReader:
                 mat = materials_by_id[mat_id]
                 ids = _vec_from_text(e_mcs_local[0].text)  # 1-indexed
                 for e in elements_by_mat[mat]:
-                    e.local_basis = febioxml.basis_mat_axis_local(e, ids)
+                    e.basis = febioxml.basis_mat_axis_local(e, ids)
 
         # Read explicit rigid bodies.  Create a Body object for each
         # rigid body "material" in the XML with explicit geometry.
@@ -626,6 +626,7 @@ class FebReader:
         # Read elements
         elements = []  # nodal index format
         for elset in self.root.findall("./Geometry/Elements"):
+            # TODO: Allow loading meshes that have no material.
             mat_id = int(elset.attrib['mat']) - 1  # zero-index
 
             # map element type strings to classes
@@ -661,7 +662,7 @@ class FebReader:
                 eid = int(eset_elements[leid].attrib["id"]) - 1
                 # Who thought this much indirection in a data file
                 # format was a good idea?
-                mesh.elements[eid].local_basis = basis
+                mesh.elements[eid].basis = basis
         return mesh
 
 

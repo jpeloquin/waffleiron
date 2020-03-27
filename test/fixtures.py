@@ -9,7 +9,9 @@ from febtools.material import from_Lamé
 
 
 RTOL_F = 5e-7
-RTOL_STRESS = 5e-6
+ATOL_F = 5e-8
+RTOL_STRESS = 5e-7
+ATOL_STRESS = 5e-7
 
 
 def gen_model_center_crack_Hex8():

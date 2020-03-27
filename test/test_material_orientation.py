@@ -11,7 +11,7 @@ from febtools.conditions import prescribe_deformation
 from febtools.control import auto_control_section
 from febtools.febio import run_febio
 from febtools.math import vec_from_sph
-from febtools.test.fixtures import gen_model_single_spiky_Hex8, RTOL_F, RTOL_STRESS
+from febtools.test.fixtures import gen_model_single_spiky_Hex8, RTOL_F, ATOL_F, RTOL_STRESS, ATOL_STRESS
 
 
 DIR_THIS = Path(__file__).parent
@@ -119,8 +119,8 @@ def test_FEBio_SOHomFibAng_Hex8_ExpFiber():
                                     [-515.7405,   153.15533,  401.15314]])
     # FEBio_cauchy_stress = model.solution.value('stress', -1, 0, 1)
     cauchy_stress_gpt = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
-    npt.assert_allclose(FEBio_cauchy_stress, cauchy_stress_gpt,
-                        rtol=RTOL_STRESS)
+    npt.assert_allclose(cauchy_stress_gpt, FEBio_cauchy_stress,
+                        rtol=RTOL_STRESS, atol=1e-3)
 
 
 def test_FEBio_MOHomMatAxVec_Hex8_LinOrtho():
@@ -169,4 +169,67 @@ def test_FEBio_MOHomMatAxVec_Hex8_LinOrtho():
     # FEBio_cauchy_stress = model.solution.value('stress', -1, 0, 1)
     cauchy_stress_gpt = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
     npt.assert_allclose(cauchy_stress_gpt, FEBio_cauchy_stress,
-                        rtol=RTOL_STRESS)
+                        rtol=RTOL_STRESS, atol=ATOL_STRESS)
+
+
+def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE():
+    """E2E test of heterogeneous local basis.
+
+    Heterogneous local basis given as <mat_axis type="local"> in
+    top-most material in FEBio XML.
+
+    """
+    # Test 1: Read
+    pth_in = DIR_FIXTURES / \
+        (f"{Path(__file__).with_suffix('').name}." +\
+         "LOHetMatAxLoc_Hex8_OrthoE.feb")
+    model = feb.load_model(pth_in)
+    #
+    # Test 2: Write
+    pth_out = DIR_THIS / "output" / \
+        (f"{Path(__file__).with_suffix('').name}." +\
+         "LOHetMatAxLoc_Hex8_OrthoE.feb")
+    with open(pth_out, "wb") as f:
+        feb.output.write_feb(model, f)
+    # Test 3: Solve: Can FEBio use the roundtripped file?
+    run_febio(pth_out)
+    #
+    # Test 4: Is the output as expected?
+    model = feb.load_model(pth_out)
+    ##
+    ## Test 4.1: Do we see the correct applied displacements?  A test
+    ## failure here means that there is a defect in the code that reads
+    ## or writes the model.  Or, less likely, an FEBio bug.
+    F_applied = np.array([[1.14, 0.05, 0.03],
+                          [-0.02, 1.09, 0.02],
+                          [-0.01, -0.03, 1.12]])
+    for e in model.mesh.elements:
+        F = np.mean([e.f(r) for r in e.gloc], axis=0)
+        npt.assert_allclose(F, F_applied, rtol=RTOL_F, atol=ATOL_F)
+    ##
+    ## Test 4.2: Do we the correct output Cauchy stress?
+    ##
+    ## Test 4.2.1: Is the expected stress values in the xplt file?  A
+    ## failure here implies a failure to read or write the heterogeneous
+    ## local basis.
+    σ_expected_E9 = np.array([[ 2.8196144 ,  0.15565133,  0.15947175],
+                              [ 0.15565133,  1.7131327 , -0.149578  ],
+                              [ 0.15947175, -0.149578  ,  2.4056263 ]],
+                             dtype=np.float32)
+    σ_xplt_E9 = model.solution.value("stress", -1, 8, 1)
+    npt.assert_allclose(σ_xplt_E9, σ_expected_E9, rtol=RTOL_STRESS)
+    σ_expected_E12 = np.array([[ 2.9279528 ,  0.39352927,  0.22572668],
+                               [ 0.39352927,  1.5805135 , -0.05470883],
+                               [ 0.22572668, -0.05470883,  2.4882329 ]],
+                              dtype=np.float32)
+    σ_xplt_E12 = model.solution.value("stress", -1, 11, 1)
+    npt.assert_allclose(σ_xplt_E12, σ_expected_E12, rtol=RTOL_STRESS,
+                        atol=ATOL_STRESS)
+    ## Test 4.2.2: Does febtools calculate the same stress as FEBio?
+    for i in range(8, 12):
+        e = model.mesh.elements[i]
+        σ_FEBio = model.solution.value("stress", -1, i, 1)
+        # e.material is just OrthotropicElastic; doesn't include local basis
+        σ = np.mean([e.tstress(r) for r in e.gloc], axis=0)
+        npt.assert_allclose(σ, σ_FEBio, rtol=RTOL_STRESS,
+                            atol=ATOL_STRESS)

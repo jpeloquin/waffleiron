@@ -163,12 +163,12 @@ def meshdata_section(model):
     # ^ index into the extra element set we're forced to construct
     for i, e in enumerate(model.mesh.elements):
         # Write local basis if defined
-        if e.local_basis is not None:
+        if e.basis is not None:
             e_elem = ET.SubElement(e_edata_mat_axis, "elem", lid=str(i_elemset+1))
             e_elem.append(ET.Comment(f"Element {i + 1}"))
             i_elemset += 1
-            ET.SubElement(e_elem, "a").text = bvec_to_text(e.local_basis[:,0])
-            ET.SubElement(e_elem, "d").text = bvec_to_text(e.local_basis[:,1])
+            ET.SubElement(e_elem, "a").text = bvec_to_text(e.basis[:,0])
+            ET.SubElement(e_elem, "d").text = bvec_to_text(e.basis[:,1])
             ET.SubElement(e_elemset, "elem", id=str(i+1))
     if len(e_edata_mat_axis) != 0:
         e_meshdata.append(e_edata_mat_axis)
