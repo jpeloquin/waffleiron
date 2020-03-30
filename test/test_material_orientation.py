@@ -233,3 +233,71 @@ def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE():
         σ = np.mean([e.tstress(r) for r in e.gloc], axis=0)
         npt.assert_allclose(σ, σ_FEBio, rtol=RTOL_STRESS,
                             atol=ATOL_STRESS)
+
+
+def test_FEBio_LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber():
+    """E2E test of heterogeneous local basis + homogeneous 1D submaterial
+orientation.
+
+    Heterogeneous local basis given as <mat_axis type="local"> in
+    top-most material in FEBio XML.
+
+    Homogeneous 1D submaterial orientation given as <fiber
+    type="angles"> in FEBio XML.
+
+    """
+    # Test 1: Read
+    pth_in = DIR_FIXTURES / \
+        (f"{Path(__file__).with_suffix('').name}." +\
+         "LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber.feb")
+    model = feb.load_model(pth_in)
+    #
+    # Test 2: Write
+    pth_out = DIR_THIS / "output" / \
+        (f"{Path(__file__).with_suffix('').name}." +\
+         "LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber.feb")
+    with open(pth_out, "wb") as f:
+        feb.output.write_feb(model, f)
+    # Test 3: Solve: Can FEBio use the roundtripped file?
+    run_febio(pth_out)
+    #
+    # Test 4: Is the output as expected?
+    model = feb.load_model(pth_out)
+    ##
+    ## Test 4.1: Do we see the correct applied displacements?  A test
+    ## failure here means that there is a defect in the code that reads
+    ## or writes the model.  Or, less likely, an FEBio bug.
+    F_applied = np.array([[1.14, 0.05, 0.03],
+                          [-0.02, 1.09, 0.02],
+                          [-0.01, -0.03, 1.12]])
+    for e in model.mesh.elements:
+        F = np.mean([e.f(r) for r in e.gloc], axis=0)
+        npt.assert_allclose(F, F_applied, rtol=RTOL_F, atol=ATOL_F)
+    ##
+    ## Test 4.2: Do we the correct output Cauchy stress?
+    ##
+    ## Test 4.2.1: Is the expected stress values in the xplt file?  A
+    ## failure here implies a failure to read or write the heterogeneous
+    ## local basis.
+    σ_expected_E9 = np.array([[0.16242483, 0.14094624, 0.00296378],
+                              [0.14094624, 0.13130957, 0.00079237],
+                              [0.00296378, 0.00079237, 0.2629625 ]],
+                             dtype=np.float32)
+    σ_xplt_E9 = model.solution.value("stress", -1, 8, 1)
+    npt.assert_allclose(σ_xplt_E9, σ_expected_E9, rtol=RTOL_STRESS,
+                        atol=ATOL_STRESS)
+    σ_expected_E12 = np.array([[ 0.00653787,  0.00997643,  0.00532855],
+                               [ 0.00997643,  0.21919638, -0.01209543],
+                               [ 0.00532855, -0.01209543,  0.225038  ]],
+                              dtype=np.float32)
+    σ_xplt_E12 = model.solution.value("stress", -1, 11, 1)
+    npt.assert_allclose(σ_xplt_E12, σ_expected_E12, rtol=RTOL_STRESS,
+                        atol=ATOL_STRESS)
+    ## Test 4.2.2: Does febtools calculate the same stress as FEBio?
+    for i in range(8, 12):
+        e = model.mesh.elements[i]
+        σ_FEBio = model.solution.value("stress", -1, i, 1)
+        # e.material is just OrthotropicElastic; doesn't include local basis
+        σ = np.mean([e.tstress(r) for r in e.gloc], axis=0)
+        npt.assert_allclose(σ, σ_FEBio, rtol=RTOL_STRESS,
+                            atol=ATOL_STRESS)
