@@ -1,10 +1,21 @@
 import os, random
+from pathlib import Path
+from shutil import copyfile
 import unittest
 
 import numpy as np
 import numpy.testing as npt
 
 import febtools as feb
+from febtools.febio import run_febio
+
+from febtools.test.fixtures import RTOL_STRESS, ATOL_STRESS
+
+
+DIR_THIS = Path(__file__).parent
+DIR_FIXTURES = Path(__file__).parent / "fixtures"
+DIR_OUTPUT = DIR_THIS / "output"
+
 
 def f_tensor_logfile(elemdata, step, eid):
     """Return F tensor read from a logfile.
@@ -426,6 +437,33 @@ class ElementMethodsTestHex8(unittest.TestCase):
             F_expected = f_tensor_logfile(self.elemdata, istep, eid)
             F = self.model.mesh.elements[eid].f((0, 0, 0))
             npt.assert_almost_equal(F, F_expected, decimal=5)
+
+
+def test_FEBio_intraElementHetF_Hex8():
+    """Test handling of intra-element F-tensor heterogeneity.
+
+    FEBio evaluates element data values at the Gauss points and reports
+    the average over the Gauss points in its logfile and plotfile
+    output.  This Gauss point averaging is not readily apparent in the F
+    tensor output, but is very obvious for strain and stress tensors.
+
+    """
+    pth_in = DIR_FIXTURES / "test_element.intraElementHetF_Hex8.feb"
+    pth_out = DIR_OUTPUT / "test_element.intraElementHetF_Hex8.feb"
+    copyfile(pth_in, pth_out)
+    run_febio(pth_out)
+    model = feb.load_model(pth_out)
+    e = model.mesh.elements[0]
+    # Does the test case actually different values for evaluation at r =
+    # (0, 0, 0) vs. averaging over the Gauss points?
+    σ_center = e.tstress((0, 0, 0))
+    σ_gpt = np.mean([e.tstress(r) for r in e.gloc], axis=0)
+    assert np.all(np.abs(σ_gpt - σ_center) > 0.003)
+    # Does febtools' stress averaged over Gauss points match FEBio
+    # output stress?
+    σ_FEBio = model.solution.value("stress", -1, 0, 1)
+    npt.assert_allclose(σ_gpt, σ_FEBio, rtol=RTOL_STRESS,
+                        atol=ATOL_STRESS)
 
 
 class ElementMethodsTestQuad4(unittest.TestCase):
