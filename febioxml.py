@@ -1,3 +1,4 @@
+import os
 import lxml.etree as ET
 from .core import NodeSet, FaceSet, ElementSet
 from .element import Quad4, Tri3, Hex8, Penta6, Element
