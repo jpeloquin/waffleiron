@@ -9,7 +9,7 @@ from scipy.spatial import KDTree
 from scipy.spatial.distance import cdist
 # Intra-package imports
 from .control import default_control_section
-from .core import _default_tol, Body, NodeSet, NameRegistry, _validate_dof
+from .core import _default_tol, Body, NodeSet, ScaledSequence, NameRegistry, _validate_dof
 from .selection import e_grow
 from . import util
 
@@ -121,8 +121,13 @@ class Model:
         _validate_dof(dof)
         if sequence == 'fixed':
             scales = [None]*len(node_ids)
-        elif scales is None:  # variable BC
-            scales = {i: default_scale for i in node_ids}
+        else:
+            # variable BC
+            if scales is None:
+                scales = {i: default_scale for i in node_ids}
+            if isinstance(sequence, ScaledSequence):
+                scales = {i: sequence.scale * scales[i]
+                          for i in node_ids}
         for i in node_ids:
             bc_node = self.steps[step_id]['bc']['node'].setdefault(i, {})
             bc_node[dof] = {'variable': variable,

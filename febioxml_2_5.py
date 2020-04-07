@@ -112,7 +112,7 @@ def iter_node_conditions(root):
                     "axis": None,  # x1, fluid, charge, etc.
                     "variable": None,  # displacement, force, pressure, etc.
                     "sequence ID": None,
-                    "scale": 1.0,
+                    "scale": 0.0,  # FEBio default; it really should be 1.0
                     "nodal values": None,
                     "step ID": None}
             # Read values
@@ -120,15 +120,14 @@ def iter_node_conditions(root):
             info["dof"] = DOF_NAME_FROM_XML_BC[e_prescribe.attrib["bc"]]
             info["variable"] = VAR_FROM_XML_BC[e_prescribe.attrib["bc"]]
             e_scale = e_prescribe.find("scale")
-            seq_scale = 0.0  # FEBio default
             if e_scale.text is not None:
-                seq_scale = _to_number(e_scale.text)
+                info["scale"] = _to_number(e_scale.text)
             info["sequence ID"] =  _to_number(e_scale.attrib["lc"]) - 1
+            # Node-specific values
             e_value = e_prescribe.find("value")
             if e_value is not None:
                 if "node_data" in e_value.attrib:
                     # Node-specific data; look up the data in MeshData
-                    info["scale"] = seq_scale
                     e_NodeSet = _find_unique_tag(root,
                                                  "Geometry/NodeSet[@name='" +
                                                  info['node set name'] +

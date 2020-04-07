@@ -583,8 +583,12 @@ class FebReader:
                 nodes = model.named["node sets"].obj(condition["node set name"])
                 seq = model.named["sequences"].obj(condition["sequence ID"],
                                                    nametype="ordinal_id")
+                # Check if we need a scaled sequence
+                if condition["scale"] != 1.0:
+                    seq = ScaledSequence(seq, condition["scale"])
                 model.apply_nodal_bc(nodes, condition["dof"],
-                                     condition["variable"], seq,
+                                     condition["variable"],
+                                     seq,
                                      scales=condition["nodal values"],
                                      step_id=condition["step ID"])
 

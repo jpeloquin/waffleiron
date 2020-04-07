@@ -60,7 +60,12 @@ def _get_or_create_item_id(registry, item):
 
 
 def _get_or_create_seq_id(registry, sequence):
-    """Get or create ID for a sequence."""
+    """Return ID for a Sequence, creating it if needed.
+
+    The returned ID refers to the underlying Sequence object, never to a
+    ScaledSequence.
+
+    """
     if type(sequence) is ScaledSequence:
         sequence = sequence.sequence
     return _get_or_create_item_id(registry, sequence)
@@ -888,17 +893,20 @@ def xml(model, version='2.5'):
                         setdefault(bc["sequence"], []).\
                         append((node_id, bc['scale']))
         # TODO: support kind == 'fixed'.  (Does that make sense for a step?)
-        for kind in node_memo:
-            for dof in node_memo[kind]:
+        for kind in node_memo:  # 'variable' or (in future) 'fixed'
+            for dof in node_memo[kind]:  # 'x1', 'x2', 'fluid', etc.
                 for sequence in node_memo[kind][dof]:
+                    # `sequence` can be a Sequence or ScaledSequence
                     bc = node_memo[kind][dof][sequence]
                     e_bc = ET.SubElement(e_bc_nodal_parent,
                                          TAG_FROM_BC['node'][kind],  # 'fix' | 'prescribe'
                                          bc=XML_BC_FROM_DOF[dof])
                     if kind == 'variable':
+                        # Get ID for Sequence (recall that a
+                        # ScaledSequence has no ID; only its underlying
+                        # Sequence gets an ID)
                         seq_id = _get_or_create_seq_id(model.named["sequences"],
                                                        sequence)
-                        nm_sequence = model.named["sequences"]
                         if version == '2.0':
                             e_bc.attrib['lc'] =  str(seq_id + 1)
                             # Write nodes as children of <Step><Boundary><prescribe>
@@ -921,8 +929,15 @@ def xml(model, version='2.5'):
                             # Write the node-specific boundary condition
                             # scaling factors in Geometry/MeshData/NodeData.
                             e_NodeData = ET.SubElement(e_MeshData, "NodeData")
-                            name_nodedata = "nodal_bc_" \
+                            ## Generate a non-duplicate name for the <NodeData> element
+                            stemname_nodedata = "nodal_bc_" \
                                 f"step{istep+1}_{dof}_seq{seq_id}_autogen"
+                            i = 0
+                            name_nodedata = f"{stemname_nodedata}{i}"
+                            while e_MeshData.find(f"NodeData[@name='{name_nodedata}']"):
+                                i += 1
+                                name_nodedata = f"{stemname_nodedata}{i}"
+                            ## Finish <NodeData> element
                             e_NodeData.attrib["name"] = name_nodedata
                             e_NodeData.attrib["node_set"] = name
                             for node_id, scale in bc:
