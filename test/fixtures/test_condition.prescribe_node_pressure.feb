@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<febio_spec version="2.5">
+  <Module type="biphasic"/>
+  <Globals>
+    <Constants>
+      <T>298</T>
+      <R>8.315e-06</R>
+    </Constants>
+  </Globals>
+  <Control>
+    <time_steps>2</time_steps>
+    <step_size>0.5</step_size>
+    <max_refs>15</max_refs>
+    <max_ups>10</max_ups>
+    <diverge_reform>1</diverge_reform>
+    <reform_each_time_step>1</reform_each_time_step>
+    <dtol>0.001</dtol>
+    <etol>0.01</etol>
+    <rtol>0</rtol>
+    <lstol>0.9</lstol>
+    <min_residual>1e-20</min_residual>
+    <qnmethod>0</qnmethod>
+    <time_stepper>
+      <dtmin>0.1</dtmin>
+      <dtmax lc="1">0.5</dtmax>
+      <max_retries>5</max_retries>
+      <opt_iter>10</opt_iter>
+    </time_stepper>
+    <analysis type="static"/>
+    <plot_level>PLOT_MUST_POINTS</plot_level>
+  </Control>
+  <Material>
+    <material id="1" name="Material1" type="biphasic">
+      <solid type="Holmes-Mow">
+        <E>5</E>
+        <v>0.2</v>
+        <beta>1.5</beta>
+      </solid>
+      <permeability type="perm-Holmes-Mow">
+        <perm>0.05</perm>
+        <M>1.75</M>
+        <alpha>1</alpha>
+      </permeability>
+    </material>
+  </Material>
+  <Geometry>
+    <Nodes name="Object01">
+      <node id="1"> -0.5, -0.5,  0.0</node>
+      <node id="2">  0.5, -0.5,  0.0</node>
+      <node id="3">  0.5,  0.5,  0.0</node>
+      <node id="4"> -0.5,  0.5,  0.0</node>
+      <node id="5"> -0.5, -0.5,  1.0</node>
+      <node id="6">  0.5, -0.5,  1.0</node>
+      <node id="7">  0.5,  0.5,  1.0</node>
+      <node id="8"> -0.5,  0.5,  1.0</node>
+    </Nodes>
+    <Elements type="hex8" mat="1" name="Part1">
+      <elem id="1">     1,    2,    3,    4,     5,    6,    7,    8</elem>
+    </Elements>
+    <NodeSet name="AllNodes">
+      <node id="1"/>
+      <node id="2"/>
+      <node id="3"/>
+      <node id="4"/>
+      <node id="5"/>
+      <node id="6"/>
+      <node id="7"/>
+      <node id="8"/>
+    </NodeSet>
+    <NodeSet name="−x_face">
+      <node id="1"/>
+      <node id="4"/>
+      <node id="5"/>
+      <node id="8"/>
+    </NodeSet>
+    <NodeSet name="+x_face">
+      <node id="2"/>
+      <node id="3"/>
+      <node id="6"/>
+      <node id="7"/>
+    </NodeSet>
+    <NodeSet name="−y_face">
+      <node id="1"/>
+      <node id="2"/>
+      <node id="3"/>
+      <node id="4"/>
+    </NodeSet>
+    <NodeSet name="+y_face">
+      <node id="5"/>
+      <node id="6"/>
+      <node id="7"/>
+      <node id="8"/>
+    </NodeSet>
+    <NodeSet name="−z_face">
+      <node id="3"/>
+      <node id="4"/>
+      <node id="7"/>
+      <node id="8"/>
+    </NodeSet>
+    <NodeSet name="+z_face">
+      <node id="1"/>
+      <node id="2"/>
+      <node id="5"/>
+      <node id="6"/>
+    </NodeSet>
+  </Geometry>
+  <Boundary>
+    <fix bc="x" node_set="AllNodes"/>
+    <fix bc="y" node_set="AllNodes"/>
+    <fix bc="z" node_set="AllNodes"/>
+    <prescribe bc="p" node_set="−x_face">
+      <scale lc="2">150</scale>
+      <relative>0</relative>
+    </prescribe>
+    <prescribe bc="p" node_set="+x_face">
+      <scale lc="2">50</scale>
+      <relative>0</relative>
+    </prescribe>
+  </Boundary>
+  <LoadData>
+    <loadcurve id="1" type="step" extend="extrapolate">
+      <!--for must points-->
+      <point>0, 0.5</point>
+      <point>0.5, 0.5</point>
+      <point>1, 0.5</point>
+    </loadcurve>
+    <loadcurve id="2" type="linear" extend="constant">
+      <!-- for pressure ramp -->
+      <point>0, 0</point>
+      <point>1, 1</point>
+    </loadcurve>
+  </LoadData>
+  <Output>
+    <plotfile type="febio">
+      <var type="displacement"/>
+      <var type="Lagrange strain"/>
+      <var type="stress"/>
+      <var type="velocity"/>
+      <var type="effective fluid pressure"/>
+      <var type="fluid pressure"/>
+      <var type="fluid flux"/>
+      <var type="fixed charge density"/>
+    </plotfile>
+  </Output>
+</febio_spec>

@@ -15,6 +15,7 @@ from febtools.test.fixtures import gen_model_single_spiky_Hex8
 
 
 DIR_THIS = Path(__file__).parent
+DIR_FIXTURES = DIR_THIS / "fixtures"
 
 
 def test_pipeline_prescribe_deformation_singleHex8():
@@ -84,3 +85,41 @@ def test_pipeline_prescribe_deformation_singleHex8():
                         [F_febio["Fyx"][0], F_febio["Fyy"][0], F_febio["Fyz"][0]],
                         [F_febio["Fzx"][0], F_febio["Fzy"][0], F_febio["Fzz"][0]]])
     npt.assert_array_almost_equal_nulp(F_febio, F)
+
+
+def test_FEBio_prescribe_node_pressure_Hex8():
+    """E2E test of prescribed nodal pressure boundary condition"""
+    # Test 1: Read
+    pth_in = DIR_FIXTURES / \
+        (f"{Path(__file__).with_suffix('').name}." +\
+         "prescribe_node_pressure.feb")
+    model = feb.load_model(pth_in)
+    #
+    # Test 2: Write
+    pth_out = DIR_THIS / "output" / \
+        (f"{Path(__file__).with_suffix('').name}." +\
+         "prescribe_node_pressure.feb")
+    with open(pth_out, "wb") as f:
+        feb.output.write_feb(model, f)
+    # Test 3: Solve: Can FEBio use the roundtripped file?
+    feb.febio.run_febio(pth_out)
+    #
+    # Test 4: Is the output as expected?
+    model = feb.load_model(pth_out)
+    e = model.mesh.elements[0]
+    ##
+    ## Test 4.1: Do we see the correct resultant fluid pressure?
+    p_FEBio_1 = model.solution.value("fluid pressure", step=1,
+                                     entity_id=0, region_id=1)
+    npt.assert_almost_equal(p_FEBio_1, 50.0)
+    p_FEBio_2 = model.solution.value("fluid pressure", step=2,
+                                     entity_id=0, region_id=1)
+    npt.assert_almost_equal(p_FEBio_2, 100.0)
+    ##
+    ## Test 4.2: Do we the correct resultant fluid flux?
+    j_FEBio_1 = model.solution.value("fluid flux", step=1,
+                                     entity_id=0, region_id=1)[0]
+    j_FEBio_2 = model.solution.value("fluid flux", step=2,
+                                     entity_id=0, region_id=1)[0]
+    npt.assert_almost_equal(j_FEBio_1, 2.5)
+    npt.assert_almost_equal(j_FEBio_2, 5.0)
