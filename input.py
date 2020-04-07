@@ -534,11 +534,20 @@ class FebReader:
 
         # Steps
         model.steps = []
+        # Find default module defined outside <Step>
+        e_module = self.root.find("Module")
+        if e_module is not None:
+            top_module = e_module.attrib["type"]
+        else:
+            top_module = None
+        # Read the <Step> elements
         for e_step in self.root.findall('Step'):
             # Module
             e_module = e_step.find('Module')
             if e_module is not None:
                 module = e_module.text
+            elif top_module is not None:
+                module = top_module
             else:
                 module = "solid"  # TODO: Pick default based on
                                   # materials
