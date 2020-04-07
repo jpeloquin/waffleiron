@@ -929,20 +929,33 @@ def xml(model, version='2.5'):
                             # Write the node-specific boundary condition
                             # scaling factors in Geometry/MeshData/NodeData.
                             e_NodeData = ET.SubElement(e_MeshData, "NodeData")
-                            ## Generate a non-duplicate name for the <NodeData> element
+                            # Generate a non-duplicate name for the <NodeData> element
                             stemname_nodedata = "nodal_bc_" \
                                 f"step{istep+1}_{dof}_seq{seq_id}_autogen"
                             i = 0
                             name_nodedata = f"{stemname_nodedata}{i}"
-                            while e_MeshData.find(f"NodeData[@name='{name_nodedata}']"):
+                            while e_MeshData.find(f"NodeData[@name='{name_nodedata}']") is not None:
                                 i += 1
                                 name_nodedata = f"{stemname_nodedata}{i}"
-                            ## Finish <NodeData> element
+                            # Finish writing NodeData element
                             e_NodeData.attrib["name"] = name_nodedata
                             e_NodeData.attrib["node_set"] = name
+                            # Write NodeData/node elements.  To specify
+                            # a node, FEBio XML, for some reason, uses
+                            # the 1-indexed position of the node in the
+                            # node set as a "local ID", as opposed to
+                            # just using the node's ID.  Our node sets,
+                            # being sets, are unordered.  To be able to
+                            # generate the local ID, we write
+                            # NodeSet/node elements in FEBio XML in
+                            # ascending order of node ID.
+                            lid_from_node_id = {node_id: i + 1
+                                                for i, node_id
+                                                in enumerate(sorted(node_set))}
                             for node_id, scale in bc:
-                                ET.SubElement(e_NodeData, "node", lid=str(node_id + 1)).\
-                                    text = float_to_text(scale)
+                                ET.SubElement(e_NodeData, "node",
+                                              lid=str(lid_from_node_id[node_id])).\
+                                              text = float_to_text(scale)
                             # Reference the node-specific boundary
                             # condition scaling factors
                             ET.SubElement(e_bc, "value", node_data=name_nodedata)
