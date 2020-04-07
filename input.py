@@ -17,7 +17,7 @@ from .core import Body, ImplicitBody, Sequence, ScaledSequence, NodeSet, FaceSet
 from . import xplt
 from . import febioxml, febioxml_2_5, febioxml_2_0
 from . import material as material_lib
-from .febioxml import control_tagnames_from_febio, control_values_from_febio, elem_cls_from_feb, normalize_xml, _to_number, _maybe_to_number, _find_unique_tag
+from .febioxml import control_tagnames_from_febio, control_values_from_febio, elem_cls_from_feb, normalize_xml, _to_number, _maybe_to_number, _find_unique_tag, VAR_FROM_XML_BC, DOF_NAME_FROM_XML_BC
 
 def _nstrip(string):
     """Remove trailing nulls from string.
@@ -452,32 +452,6 @@ class FebReader:
                 # This <rigid> element represents an implicit rigid body
                 implicit_bodies[mat_id] = ImplicitBody(model.mesh, node_set, mat)
 
-        # Boundary condition: fixed nodes
-        axis_name_conv_from_xml = {'x': 'x1',
-                                   'y': 'x2',
-                                   'z': 'x3',
-                                   'p': 'fluid'}
-        # Map "bc" attribute value from <prescribe>, <prescribed>,
-        # <fix>, or <fixed> element to a variable name.
-        var_from_xml_bc = {'x': 'displacement',
-                           'y': 'displacement',
-                           'z': 'displacement',
-                           'Rx': 'rotation',
-                           'Ry': 'rotation',
-                           'Rz': 'rotation',
-                           'p': 'pressure'}
-        # Map "bc" attribute value from <prescribe>, <prescribed>,
-        # <fix>, or <fixed> element to a degree of freedom.
-        dof_name_from_xml_bc = {"x": "x1",
-                                "y": "x2",
-                                "z": "x3",
-                                "Rx": "α1",
-                                "Ry": "α2",
-                                "Rz": "α3",
-                                "p": "fluid"}
-        # ^ Mapping of axis → constrained variable for <fix> tags in
-        # FEBio XML.
-
         # Read fixed boundary conditions. TODO: Support solutes
         #
         # Here, no prefix on an axis / BC name means it's named as in
@@ -493,11 +467,11 @@ class FebReader:
             elif self.feb_version == '2.5':
                 # In FEBio XML 2.5, bc labels are comma-delimeted.
                 fixed = febioxml_2_5.split_bc_names(e_fix.attrib['bc'])
-            # For each axis, apply the fixed BCs to the model.
-            for xml_ax in fixed:
-                ax = dof_name_from_xml_bc[xml_ax]
-                #^ `ax` is 'x', 'y', 'z', 'Rx', etc.
-                var = var_from_xml_bc[xml_ax]
+            # For each DoF, apply the fixed BCs to the model.
+            for xml_bc in fixed:
+                dof = DOF_NAME_FROM_XML_BC[xml_bc]
+                #^ `dof` is 'x', 'y', 'z', 'Rx', etc.
+                var = VAR_FROM_XML_BC[xml_bc]
                 #^ `var` is 'displacement', 'rotation', 'fluid', etc.
                 if var == "pressure":
                     # This is a hack to deal with febtools' model.fixed
@@ -505,7 +479,7 @@ class FebReader:
                     # pressure for nodes.  At the time of this writing
                     # the axis / variable split hasn't been implemented
                     # for fixed boundary conditions.
-                    ax = "pressure"
+                    dof = "pressure"
                 # Get the nodeset that is constrained
                 if self.feb_version == "2.0":
                     # In FEBio XML 2.0, each node to which the fixed boundary
@@ -517,18 +491,18 @@ class FebReader:
                     # In FEBio XML 2.5, the node set to which the fixed
                     # boundary condition is applied is referenced by name.
                     node_ids = model.named["node sets"].obj(e_fix.attrib["node_set"])
-                if not model.fixed['node'][ax]:
-                    # If there is no node set assigned to this axis yet,
+                if not model.fixed['node'][dof]:
+                    # If there is no node set assigned to this dof yet,
                     # simply re-use the node set.  This will preserve
                     # the node set's name if the model is re-exported.
-                    model.fixed['node'][ax] = node_ids
+                    model.fixed['node'][dof] = node_ids
                 else:
                     # We are changing the node set, so existing
                     # references to it may become semantically invalid.
                     # And we can't remove the node set from the name
                     # registry because then later elements won't be
                     # interpretable.  So we must create a new node set.
-                    model.fixed['node'][ax] = NodeSet(model.fixed['node'][ax] | node_ids)
+                    model.fixed['node'][dof] = NodeSet(model.fixed['node'][dof] | node_ids)
         #
         # Read constraints on rigid bodies.  Each <rigid_body> element
         # defines constraints for one rigid body, identified by its
@@ -546,11 +520,11 @@ class FebReader:
             # Read the constraints for the body found in the first half
             # of this loop.
             for e_dof in e_rb.findall("fixed"):
-                dof = dof_name_from_xml_bc[e_dof.attrib["bc"]]
+                dof = DOF_NAME_FROM_XML_BC[e_dof.attrib["bc"]]
                 model.fixed["body"][dof].add(body)
             for e_dof in e_rb.findall("prescribed"):
-                dof = dof_name_from_xml_bc[e_dof.attrib["bc"]]
-                var = var_from_xml_bc[e_dof.attrib["bc"]]
+                dof = DOF_NAME_FROM_XML_BC[e_dof.attrib["bc"]]
+                var = VAR_FROM_XML_BC[e_dof.attrib["bc"]]
                 seq = _read_parameter(e_dof, self.sequences)
                 model.apply_body_bc(body, dof, var, seq, step_id=None)
 
@@ -600,7 +574,7 @@ class FebReader:
                 nodes = model.named["node sets"].obj(condition["node set name"])
                 seq = model.named["sequences"].obj(condition["sequence ID"],
                                                    nametype="ordinal_id")
-                model.apply_nodal_bc(nodes, condition["axis"],
+                model.apply_nodal_bc(nodes, condition["dof"],
                                      condition["variable"], seq,
                                      scales=condition["nodal values"],
                                      step_id=condition["step ID"])

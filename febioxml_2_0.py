@@ -38,7 +38,7 @@ def xml(model):
     for step in model.steps:
         # Sequences in nodal displacement boundary conditions
         for node_id, bc in step['bc']['node'].items():
-            for axis, d in bc.items():
+            for dof, d in bc.items():
                 if 'sequence' in d:
                     seq = d['sequence']
                     if seq not in seq_id:
@@ -136,9 +136,9 @@ def xml(model):
         Geometry[:] += geo_subs['ElementData']
 
     # Boundary section (fixed nodal BCs)
-    for axis, nodeset in model.fixed['node'].items():
+    for dof, nodeset in model.fixed['node'].items():
         if nodeset:
-            e_fix = ET.SubElement(e_boundary, 'fix', bc=axis_to_febio[axis])
+            e_fix = ET.SubElement(e_boundary, 'fix', bc=XML_BC_FROM_DOF[dof])
             for nid in nodeset:
                 ET.SubElement(e_fix, 'node', id=str(nid + 1))
 
@@ -228,17 +228,17 @@ def xml(model):
                     varying[seq].setdefault(ax, {})[i] = v
         # Write varying nodal BCs
         for seq, d in varying.items():
-            for axis, vnodes in d.items():
+            for dof, vnodes in d.items():
                 e_pres = ET.SubElement(e_bd, 'prescribe',
-                                       bc=axis_to_febio[axis],
+                                       bc=XML_BC_FROM_DOF[dof],
                                        lc=str(seq_id[seq] + 1))
                 for nid, v in vnodes.items():
                     e_node = ET.SubElement(e_pres, 'node', id=str(nid + 1)).text = str(v)
         # Write fixed nodal BCs
-        for axis, node_ids in fixed.items():
-            e_axis = ET.SubElement(e_bd, 'fix', bc=axis_to_febio[axis])
+        for dof, node_ids in fixed.items():
+            e_bc = ET.SubElement(e_bd, 'fix', bc=XML_BC_FROM_DOF[dof])
             for i in node_ids:
-                ET.SubElement(e_axis, 'node', id=str(i + 1))
+                ET.SubElement(e_bc, 'node', id=str(i + 1))
 
     tree = ET.ElementTree(root)
     return tree

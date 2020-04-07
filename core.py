@@ -9,13 +9,12 @@ import numpy as np
 _default_tol = 10*np.finfo(float).eps
 
 
-def _validate_axis(axis, body=False):
-    allowed_axes = ['x1', 'x2', 'x3', 'fluid', 'temperature', 'charge']
+def _validate_dof(dof, body=False):
+    allowed_dofs = ['x1', 'x2', 'x3', 'fluid', 'temperature', 'charge']
     if body:
-       allowed_axes += ['α1', 'α2', 'α3']
-    if not axis in allowed_axes:
-        msg = f"{axis} is not a supported axis type.  The supported axis types are " +\
-            ", ".join(allowed_axes) + "."
+       allowed_dofs += ['α1', 'α2', 'α3']
+    if not dof in allowed_dofs:
+        msg = f"{dof} is not a supported axis type.  The supported degrees of freedom are {','.join(allowed_axes)}."
         raise ValueError(msg)
 
 

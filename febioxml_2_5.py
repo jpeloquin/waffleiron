@@ -110,15 +110,15 @@ def iter_node_conditions(root):
             # Re-initialize output
             info = {"node set name": None,
                     "axis": None,  # x1, fluid, charge, etc.
-                    "variable": None,  # displacement, force, etc.
+                    "variable": None,  # displacement, force, pressure, etc.
                     "sequence ID": None,
                     "scale": 1.0,
                     "nodal values": None,
                     "step ID": None}
             # Read values
             info["node set name"] = e_prescribe.attrib["node_set"]
-            info["axis"] = axis_from_febio[e_prescribe.attrib["bc"]]
-            info["variable"] = "displacement"
+            info["dof"] = DOF_NAME_FROM_XML_BC[e_prescribe.attrib["bc"]]
+            info["variable"] = VAR_FROM_XML_BC[e_prescribe.attrib["bc"]]
             e_scale = e_prescribe.find("scale")
             seq_scale = 0.0  # FEBio default
             if e_scale.text is not None:

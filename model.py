@@ -9,7 +9,7 @@ from scipy.spatial import KDTree
 from scipy.spatial.distance import cdist
 # Intra-package imports
 from .control import default_control_section
-from .core import _default_tol, Body, NodeSet, NameRegistry, _validate_axis
+from .core import _default_tol, Body, NodeSet, NameRegistry, _validate_dof
 from .selection import e_grow
 from . import util
 
@@ -96,7 +96,7 @@ class Model:
         self.steps.append(step)
 
 
-    def apply_nodal_bc(self, node_ids, axis, variable, sequence,
+    def apply_nodal_bc(self, node_ids, dof, variable, sequence,
                        scales=None, step_id=-1):
         """Apply a boundary condition to a set of nodes.
 
@@ -107,7 +107,7 @@ class Model:
 
         node_ids := collection of integer node IDs
 
-        axis := 'x1', 'x2', 'x3', 'fluid', 'temperature', or 'charge'.
+        dof := 'x1', 'x2', 'x3', 'fluid', 'temperature', or 'charge'.
 
         variable := 'displacement', 'force', 'pressure', or 'flow'
 
@@ -118,20 +118,20 @@ class Model:
 
         """
         default_scale = 1
-        _validate_axis(axis)
+        _validate_dof(dof)
         if sequence == 'fixed':
             scales = [None]*len(node_ids)
         elif scales is None:  # variable BC
             scales = {i: default_scale for i in node_ids}
         for i in node_ids:
             bc_node = self.steps[step_id]['bc']['node'].setdefault(i, {})
-            bc_node[axis] = {'variable': variable,
+            bc_node[dof] = {'variable': variable,
                              'sequence': sequence,
                              'scale': scales[i]}
         # TODO: Support global nodal BCs.
 
 
-    def apply_body_bc(self, body, axis, variable, sequence, scale=1,
+    def apply_body_bc(self, body, dof, variable, sequence, scale=1,
                       step_id=-1):
         """Apply a variable displacement boundary condition to a body.
 
@@ -140,7 +140,7 @@ class Model:
         model to FEBio, it will automatically leak the boundary
         condition to all subsequent steps.)
 
-        axis := 'x1', 'x2', 'x3', 'fluid', 'temperature', or 'charge'.
+        dof := 'x1', 'x2', 'x3', 'fluid', 'temperature', or 'charge'.
 
         sequence := conditions.Sequence object or 'fixed'
 
@@ -152,7 +152,7 @@ class Model:
         step.
 
         """
-        _validate_axis(axis, body=True)
+        _validate_dof(dof, body=True)
         if sequence == 'fixed':
             scale = None
         if step_id is None:
@@ -162,7 +162,7 @@ class Model:
             # Setting step-local BC
             bc_dict = self.steps[step_id]["bc"]["body"]
         bc = bc_dict.setdefault(body, {})
-        bc[axis] = {'variable': variable,
+        bc[dof] = {'variable': variable,
                     'sequence': sequence,
                     'scale': scale}
         # TODO: Remove scale; just used ScaledSequence for that case

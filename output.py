@@ -14,11 +14,14 @@ from . import material as matlib
 from .math import sph_from_vec
 from . import febioxml_2_5 as febioxml
 from . import febioxml_2_0
-from .febioxml import float_to_text, vec_to_text, bvec_to_text, control_tagnames_to_febio, control_values_to_febio, TAG_FROM_BC
+from .febioxml import float_to_text, vec_to_text, bvec_to_text, control_tagnames_to_febio, control_values_to_febio, TAG_FROM_BC, DOF_NAME_FROM_XML_BC
 # ^ The intent here is to eventually be able to switch between FEBio XML
 # formats by exchanging this import statement for a different version.
 # Common functionality can be shared between febioxml_*_*.py files via
 # imports.
+
+
+XML_BC_FROM_DOF = {dof: bc for bc, dof in DOF_NAME_FROM_XML_BC.items()}
 
 
 def default_febio_config():
@@ -459,7 +462,7 @@ def body_constraints_to_feb(body, constraints, material_registry,
         raise ValueError(msg)
     # Create the XML tags for the rigid body BC
     e_body = ET.Element('rigid_body', mat=str(mat_id + 1))
-    for axis, bc in constraints.items():
+    for dof, bc in constraints.items():
         if bc['sequence'] == 'fixed':
             kind = 'fixed'
         else:  # bc['sequence'] is Sequence
@@ -475,7 +478,7 @@ def body_constraints_to_feb(body, constraints, material_registry,
         else:
              raise ValueError(f"Variable {bc['variable']} not supported for BCs.")
         e_bc = ET.SubElement(e_body, tagname,
-                             bc=febioxml.axis_to_febio[axis])
+                             bc=XML_BC_FROM_DOF[dof])
         if kind == 'variable':
             seq_id = _get_or_create_seq_id(sequence_registry, seq)
             e_bc.attrib['lc'] = str(seq_id + 1)
@@ -664,22 +667,23 @@ def xml(model, version='2.5'):
                       node_set=node_set_name)
     #
     # Write fixed nodal constraints to global <Boundary>
-    for axis, nodeset in model.fixed['node'].items():
+    for dof, nodeset in model.fixed['node'].items():
         if nodeset:
             if version == '2.0':
                 # Tag heirarchy: <Boundary><fix bc="x"><node id="1"> for each node
                 e_fixed_nodeset = ET.SubElement(e_boundary, 'fix',
-                                                bc=febioxml.axis_to_febio[axis])
+                                                bc=XML_BC_FROM_DOF[dof])
                 for i in nodeset:
                     ET.SubElement(e_fixed_nodeset, 'node', id=str(i + 1))
             elif version_major == 2 and version_minor >= 5:
                 # Tag heirarchy: <Boundary><fix bc="x" node_set="set_name">
-                name_base = f"fixed_{axis}_autogen-nodeset"
+                name_base = f"fixed_{dof}_autogen-nodeset"
                 name = _get_or_create_name(model.named["node sets"],
                                            name_base, nodeset)
                 add_nodeset(root, name, nodeset)
                 # Create the tag
-                ET.SubElement(e_boundary, 'fix', bc=febioxml.axis_to_febio[axis],
+                ET.SubElement(e_boundary, 'fix',
+                              bc=XML_BC_FROM_DOF[dof],
                               node_set=name)
     #
     # Write fixed body constraints to global <Boundary>
@@ -692,9 +696,9 @@ def xml(model, version='2.5'):
         e_bc_body_parent = e_boundary
     # Collect rigid body boundary conditions in a more convenient
     # hierarchy
-    for axis, bodies in model.fixed['body'].items():
+    for dof, bodies in model.fixed['body'].items():
         for body in bodies:
-            body_bcs.setdefault(body, set()).add(axis)
+            body_bcs.setdefault(body, set()).add(dof)
     # Create the tags specifying fixed constraints for the rigid bodies
     for body, axes in body_bcs.items():
         e_body = ET.SubElement(e_bc_body_parent, 'rigid_body')
@@ -708,8 +712,8 @@ def xml(model, version='2.5'):
         e_body.attrib['mat'] = str(mat_id + 1)
         # Write tags for each of the fixed degrees of freedom.  Use
         # sorted order to be deterministic & human-friendly.
-        for ax in sorted(axes):
-            ET.SubElement(e_body, 'fixed', bc=febioxml.axis_to_febio[ax])
+        for dof in sorted(dof):
+            ET.SubElement(e_body, 'fixed', bc=XML_BC_FROM_DOF[dof])
     #
     # TODO: Write time-varying nodal constraints to global <Boundary>
     #
@@ -841,12 +845,12 @@ def xml(model, version='2.5'):
         # FEBio XML spreads the boundary conditions (constraints) out in
         # amongst many tags, in a rather disorganized fashion.
         #
-        # For nodal contraints, there is one parent tag per kind + axis
+        # For nodal contraints, there is one parent tag per kind + dof
         # + sequence, and one child tag per node + value.  The parent
         # tag may be named 'prescribe' or 'fix'.
         #
         # For body constraints, there is one parent tag per body, and
-        # one child tag per kind + axis + sequence + value.  The parent
+        # one child tag per kind + dof + sequence + value.  The parent
         # tag may be named 'prescribed' or 'fixed'.  (Note the different
         # tense compared to nodal constraints—so much for consistency.)
         #
@@ -860,32 +864,32 @@ def xml(model, version='2.5'):
         # Collect nodal BCs in a more convenient heirarchy for writing
         # FEBio XML.  FEBio XML only supports nodal boundary conditions
         # if the node list shares the same boundary condition kind
-        # ("fixed" or "variable"), axis, and sequence, so we sort the
+        # ("fixed" or "variable"), dof, and sequence, so we sort the
         # nodal boundary conditions into one collection for each
         # distinct combination of these attributes.  The resulting
         # dictionary looks like:
-        # node_memo['fixed'|'variable'][axis][sequence] = (node_ids, scales)
+        # node_memo['fixed'|'variable'][dof][sequence] = (node_ids, scales)
         node_memo = defaultdict(dict)
         if ("bc" in step) and ("node" in step["bc"]):
             for node_id in step['bc']['node']:
-                for ax in step['bc']['node'][node_id]:  # axis
-                    bc = step['bc']['node'][node_id][ax]
+                for dof in step['bc']['node'][node_id]:
+                    bc = step['bc']['node'][node_id][dof]
                     if bc['sequence'] == 'fixed':
                         kind = 'fixed'
                     else:  # bc['sequence'] is Sequence
                         kind = 'variable'
                     node_memo[kind].\
-                        setdefault(ax, {}).\
+                        setdefault(dof, {}).\
                         setdefault(bc["sequence"], []).\
                         append((node_id, bc['scale']))
         # TODO: support kind == 'fixed'.  (Does that make sense for a step?)
         for kind in node_memo:
-            for axis in node_memo[kind]:
-                for sequence in node_memo[kind][axis]:
-                    bc = node_memo[kind][axis][sequence]
+            for dof in node_memo[kind]:
+                for sequence in node_memo[kind][dof]:
+                    bc = node_memo[kind][dof][sequence]
                     e_bc = ET.SubElement(e_bc_nodal_parent,
                                          TAG_FROM_BC['node'][kind],  # 'fix' | 'prescribe'
-                                         bc=febioxml.axis_to_febio[axis])
+                                         bc=XML_BC_FROM_DOF[dof])
                     if kind == 'variable':
                         seq_id = _get_or_create_seq_id(model.named["sequences"],
                                                        sequence)
@@ -902,7 +906,7 @@ def xml(model, version='2.5'):
                                                  lc=str(seq_id + 1))
                             e_sc.text = "1.0"
                             nm_base = "nodal_bc_" \
-                                f"step{istep+1}_{kind}_{axis}_seq{seq_id}_autogen"
+                                f"step{istep+1}_{kind}_{dof}_seq{seq_id}_autogen"
                             node_set = NodeSet([i for i, sc in bc])
                             # ^ Need to make a NodeSet so it's hashable
                             # and can thus receive a name
@@ -913,7 +917,7 @@ def xml(model, version='2.5'):
                             # scaling factors in Geometry/MeshData/NodeData.
                             e_NodeData = ET.SubElement(e_MeshData, "NodeData")
                             name_nodedata = "nodal_bc_" \
-                                f"step{istep+1}_{axis}_seq{seq_id}_autogen"
+                                f"step{istep+1}_{dof}_seq{seq_id}_autogen"
                             e_NodeData.attrib["name"] = name_nodedata
                             e_NodeData.attrib["node_set"] = name
                             for node_id, scale in bc:

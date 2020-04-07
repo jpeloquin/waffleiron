@@ -4,14 +4,24 @@ from .element import Quad4, Tri3, Hex8, Penta6, Element
 from . import material
 from .math import orthonormal_basis
 
-axis_to_febio = {'x1': 'x',
-                 'x2': 'y',
-                 'x3': 'z',
-                 'α1': 'Rx',
-                 'α2': 'Ry',
-                 'α3': 'Rz',
-                 'pressure': 'p'}
-axis_from_febio = {k: v for v, k in axis_to_febio.items()}
+# Map "bc" attribute value from <prescribe>, <prescribed>,
+# <fix>, or <fixed> element to a variable name.
+VAR_FROM_XML_BC = {'x': 'displacement',
+                   'y': 'displacement',
+                   'z': 'displacement',
+                   'Rx': 'rotation',
+                   'Ry': 'rotation',
+                   'Rz': 'rotation',
+                   'p': 'pressure'}
+# Map "bc" attribute value from <prescribe>, <prescribed>,
+# <fix>, or <fixed> element to a degree of freedom.
+DOF_NAME_FROM_XML_BC = {"x": "x1",
+                        "y": "x2",
+                        "z": "x3",
+                        "Rx": "α1",
+                        "Ry": "α2",
+                        "Rz": "α3",
+                        "p": "fluid"}
 
 TAG_FROM_BC = {'node': {'variable': 'prescribe',
                         'fixed': 'fix'},
