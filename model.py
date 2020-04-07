@@ -131,8 +131,8 @@ class Model:
         for i in node_ids:
             bc_node = self.steps[step_id]['bc']['node'].setdefault(i, {})
             bc_node[dof] = {'variable': variable,
-                             'sequence': sequence,
-                             'scale': scales[i]}
+                            'sequence': sequence,
+                            'scale': scales[i]}
         # TODO: Support global nodal BCs.
 
 
