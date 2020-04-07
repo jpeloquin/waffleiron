@@ -435,7 +435,12 @@ def control_parameter_to_feb(parameter, value):
     else:
         val_feb = str(value)
     e = ET.Element(nm_feb)
-    e.text = val_feb
+    if nm_feb == "analysis":
+        # For some reason, <analysis> stores its value as an attribute,
+        # whereas every other XML element stores its value as its value.
+        e.attrib["type"] = val_feb
+    else:
+        e.text = val_feb
     return e
 
 
