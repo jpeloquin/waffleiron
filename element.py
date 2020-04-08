@@ -305,9 +305,9 @@ class Element:
         if self.basis is None:
             return self.material.tstress(F)
         else:
-            # Assumes 2-tensor material orientation, but sometimes in a
-            # fully displacement-constrained simulation, users use bare
-            # fibers as the material, which take 1-tensor (vector)
+            # TODO: Assumes 2-tensor material orientation, but in a
+            # fully displacement-constrained simulation, users can use
+            # bare fibers as the material, which take 1-tensor (vector)
             # material orientation.
             Q = self.basis
             σ_world = self.material.tstress(F @ Q)
