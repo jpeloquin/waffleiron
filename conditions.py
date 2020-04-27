@@ -18,28 +18,21 @@ def densify(curve, n):
     return dense_curve
 
 
-def cyclic_stretch_sequence(targets, rate, n=None, baseline=1.0):
-    """Add a series of cyclic stretch blocks as a simulation step.
+def cyclic_stretch_sequence(targets, rate, n=1, baseline=1.0):
+    """Return a Sequence representing cyclic stretch.
 
-    One "block" is a series of cycles to the same peak stretch value.
-    Each cycle returns to the specified baseline stretch before the next
-    cycle starts.
-
-    model := feb.Model instance.  The model will be mutated to add the
-    new simulation step.
-
-    targets := List of numbers.  Each number is a peak stretch ratio for
-    one block, in order.
+    targets := List of numbers.  Each value specifies the peak stretch
+    ratio for a block of cycles, in order.
 
     rate := Number, or list of numbers.  The strain rate for each block
-    of cycles.
+    of cycles.  If a list, there must be one value per block, in the
+    same order as `targets`.
 
     n := integer, or list of integers (optional).  The number of cycles
     in each block of cyclic stretches.  If an integer is provided, it
     will be applied to all blocks.  If a list is provided, it must be
     the same length as `targets`, and the values will be applied to each
-    block in turn.  If no value is specified for `n`, 1 cycle per block
-    will be assumed.
+    block in turn.
 
     baseline := number.  The starting and ending stretch ratio for each cycle.
 
@@ -49,8 +42,6 @@ def cyclic_stretch_sequence(targets, rate, n=None, baseline=1.0):
         rate = [rate for y in targets]
 
     # Expand n
-    if n is None:
-        n_by_block = [1 for y in targets]
     elif not hasattr(n, '__iter__'):
         n_by_block = [n for y in targets]
     else:
