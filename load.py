@@ -5,17 +5,53 @@ import numpy as np
 from .core import Sequence, NodeSet
 
 
-def densify(curve, n):
-    dense_curve = []
-    for i, (x0, y0) in enumerate(curve[:-1]):
-        x1 = curve[i + 1][0]
-        y1 = curve[i + 1][1]
-        x = np.linspace(x0, x1, n + 1)
-        y = np.interp(x, [x0, x1], [y0, y1])
-        dense_curve += [(a, b) for a, b in zip(x[:-1], y[:-1])]
-    # Add last point
-    dense_curve.append((curve[-1]))
-    return dense_curve
+def apply_uniax_stretch(model, stretches, axis='x1'):
+    """Apply stretch with must points and a fixed width grip line.
+
+    axis := 'x1' or 'x2'; the direction along which to stretch the mesh.
+    Displacement is prescribed to the node(s) furthest +ve and -ve along
+    the specified axis.
+
+    """
+    axis1 = axis
+    if axis == 'x1':
+        axis2 = 'x2'
+        iaxis1 = 0
+        iaxis2 = 1
+    elif axis == 'x2':
+        axis2 = 'x1'
+        iaxis1 = 1
+        iaxis2 = 0
+    else:
+        msg = "`axis` must be 'x1' or 'x2'; {} was provided"
+        raise ValueError(msg.format(axis))
+    maxima = np.max(model.mesh.nodes, 0)
+    minima = np.min(model.mesh.nodes, 0)
+    # Moving (gripped) nodes
+    gripped_nodes = [i for i, x in enumerate(model.mesh.nodes)
+                     if x[iaxis1] == minima[iaxis1] or
+                     x[iaxis1] == maxima[iaxis1]]
+    u1 = [(stretches[-1] - 1) * model.mesh.nodes[i][iaxis1]
+          for i in gripped_nodes]
+    # ^ gripped node displacements at final timepoint
+    seq_bc = Sequence([(0, 0), (1, 1)])
+    model.apply_nodal_displacement(gripped_nodes, values=u1, axis=axis1,
+                                   sequence=seq_bc)
+    # Fixed nodes
+    model.fixed['node'][axis2].update(gripped_nodes)
+    gripped_nodes_back = [i for i in gripped_nodes
+                          if model.mesh.nodes[i][2] == minima[2]]
+    model.fixed['node']['x3'].update(gripped_nodes_back)
+    # Define number of steps
+    nsteps = len(stretches) * 1 + 1
+    nmust = len(stretches) * 1 + 1
+    dtmax = 1.0 / nsteps
+    # Calculate must points to match input stretches
+    t_must = [(u - 1) / (stretches[-1] - 1) for u in stretches]
+    seq_must = Sequence([(t, dtmax) for t in t_must],
+                        typ="step")
+    model.steps[0]['control']['plot level'] = 'PLOT_MUST_POINTS'
+    model.steps[0]['control']['time stepper']['dtmax'] = seq_must
 
 
 def cyclic_stretch_sequence(targets, rate, n=1, baseline=1.0):

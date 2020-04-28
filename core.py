@@ -6,7 +6,7 @@ from warnings import warn
 import numpy as np
 
 # Set tolerances
-_default_tol = 10*np.finfo(float).eps
+_DEFAULT_TOL = 10*np.finfo(float).eps
 
 
 def _validate_dof(dof, body=False):

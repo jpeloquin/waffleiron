@@ -1,8 +1,81 @@
-# Distributed packages
+from math import ceil
+# Public repo packages
 import numpy as np
+from numpy.linalg import norm
 from shapely.geometry import LineString, Point, Polygon
-# Locally developed packages
-import febtools as feb
+# Febtools modules
+from .math import even_pt_series
+from .element import Hex8, Quad4
+from .model import Mesh
+
+def zstack(mesh, zcoords):
+    """Stack a 2d mesh in the z direction to make a 3d mesh.
+
+    Arguments
+    ---------
+    zcoords -- The z-coordinate of each layer of nodes in the stacked
+    mesh.  The number of element layers will be one less than the
+    length of zcoords.
+
+    Material properties are preserved.  Boundary conditions are not.
+
+    """
+    # `zstack` is here instead of in util.py because a it's used
+    # extensively in this module to build 3D meshes.
+    #
+    # Create 3d node list
+    nodes = []
+    for z in zcoords:
+        node_layer = [(pt[0], pt[1], z) for pt in mesh.nodes]
+        nodes = nodes + node_layer
+
+    # Create elements
+    eid = 0
+    elements = []
+    # Iterate over element layers
+    for i in range(len(zcoords) - 1):
+        # Iterate over elements in 2d mesh
+        for e2d in mesh.elements:
+            nids = ([a + i * len(mesh.nodes)
+                     for a in e2d.ids] +
+                    [a + (i + 1) * len(mesh.nodes)
+                     for a in e2d.ids])
+            if isinstance(e2d, Quad4):
+                cls = Hex8
+            else:
+                raise ValueError("Only Quad4 meshes can be used in zstack right now.")
+            e3d = cls.from_ids(nids, nodes, mat=e2d.material)
+            elements.append(e3d)
+
+    mesh3d = Mesh(nodes=nodes, elements=elements)
+    return mesh3d
+
+
+def rectangular_prism(length, width, thickness, hmin):
+    """Create an FE mesh of a rectangular prism.
+
+    The origin is in the center of the rectangle.
+
+    """
+    if type(hmin) in [float, int]:
+        hmin = [hmin]*3
+    # Create rectangle in xy plane
+    A = np.array([-length/2, -width/2])
+    B = np.array([ length/2, -width/2])
+    C = np.array([ length/2,  width/2])
+    D = np.array([-length/2,  width/2])
+    n_AB = ceil(norm(A-B)/hmin[0]) + 1
+    AB = even_pt_series([A, B], n_AB)
+    DC = even_pt_series([D, C], n_AB)
+    n_BC = ceil(norm(B-C)/hmin[1]) + 1
+    AD = even_pt_series([A, D], n_BC)
+    BC = even_pt_series([B, C], n_BC)
+    mesh = quadrilateral(AD, BC, AB, DC)
+    # Create rectangular prism
+    zi = np.linspace(-thickness/2, thickness/2, ceil(thickness/hmin[2]) + 1)
+    mesh = zstack(mesh, zi)
+    return mesh
+
 
 def quadrilateral(col1, col2, row1, row2):
     """Mesh a quadrilateral with quad elements.
@@ -110,6 +183,6 @@ def quadrilateral(col1, col2, row1, row2):
             e = np.array([0, 1, nc + 1, nc]) + n_base + j
             elements.append(e)
 
-    mesh = feb.Mesh.from_ids(nodes, elements, feb.element.Quad4)
+    mesh = Mesh.from_ids(nodes, elements, Quad4)
 
     return mesh

@@ -9,8 +9,8 @@ from scipy.spatial import KDTree
 from scipy.spatial.distance import cdist
 # Intra-package imports
 from .control import default_control_section
-from .core import _default_tol, Body, NodeSet, ScaledSequence, NameRegistry, _validate_dof
-from .selection import e_grow
+from .core import _DEFAULT_TOL, Body, NodeSet, ScaledSequence, NameRegistry, _validate_dof
+from .select import e_grow, find_closest_timestep
 from . import util
 
 # Increase recursion limit for kdtree
@@ -191,7 +191,7 @@ class Model:
                 # is sort of deprecated)
                 step_times = solution.step_times
             step_ids = [a for a in range(len(step_times))]
-            step = util.find_closest_timestep(t, step_times, step_ids)
+            step = find_closest_timestep(t, step_times, step_ids)
         elif t is not None and step is not None:
             raise ValueError("Provide either `t` or `step`, not both.")
         data = solution.step_data(step)
@@ -395,7 +395,7 @@ class Mesh:
             elements = elements + self.elem_with_node[idx]
         return set(elements)
 
-    def merge(self, other, candidates='auto', tol=_default_tol):
+    def merge(self, other, candidates='auto', tol=_DEFAULT_TOL):
         """Merge this mesh with another
 
         Inputs

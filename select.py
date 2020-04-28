@@ -13,6 +13,47 @@ from febtools.geometry import inter_face_angle, face_normal
 
 default_tol = 10*np.finfo(float).eps
 
+
+def find_closest_timestep(target, times, steps, rtol=0.01, atol="auto"):
+    """Return step index closest to given time."""
+    times = np.array(times)
+    if atol == "auto":
+        atol = max(abs(np.nextafter(target, 0) - target),
+                   abs(np.nextafter(target, target**2) - target))
+    if len(steps) != len(times):
+        raise ValueError("len(steps) ≠ len(times).  All steps must have a corresponding time value and vice versa.")
+    idx = np.argmin(np.abs(times - target))
+    step = steps[idx]
+    time = times[idx]
+    # Raise a warning if the specified value is not close to a step.  In
+    # the future this function may support interpolation or other fixes.
+    t_error = time - target
+    if t_error == 0:
+        t_relerror = 0
+    elif idx == 0 and t_error < 0:
+        # The selection specifies a time point before the first given step
+        t_interval = (times[idx + 1] - times[idx])
+        t_relerror = t_error / t_interval
+    elif step == steps[-1] and t_error > 0:
+        # The selection specifies a time point after the
+        # last time step.  It might only be a little
+        # after, within acceptable tolerance when
+        # working with floating point values, so we do
+        # not raise an error until further checks.
+        t_interval = (times[idx] - times[idx-1])
+        t_relerror = t_error / t_interval
+    else:
+        t_interval = abs(times[idx] -
+                        times[idx + int(np.sign(t_error))])
+        t_relerror = t_error / t_interval
+    # Check error tolerance
+    if abs(t_error) > atol:
+        raise ValueError(f"Time step selection absolute error > atol; target time — selected time = {t_error}; atol = {atol}.")
+    if abs(t_relerror) > abs(rtol):
+        raise ValueError(f"Time step selection relative error > rtol; target time — selected time = {t_error}; step interval = {t_interval}; relative error = {t_relerror}; rtol = {rtol}.")
+    return step
+
+
 class ElementSelection:
     def __init__(self, mesh, elements=None):
         """Create a selection of elements.
@@ -32,6 +73,7 @@ class ElementSelection:
             self.elements = set(mesh.elements)
         else:
             self.elements = elements
+
 
 def elements_containing_point(point, elements, bb=None,
                               tol=default_tol):
@@ -64,6 +106,36 @@ def elements_containing_point(point, elements, bb=None,
                 if feb.geometry.point_in_element(e, p, dtol=tol)]
     return elements
 
+
+def select_elems_around_node(mesh, i, n=1):
+    """Select elements centered on node i.
+
+    Parameters
+    ----------
+
+    mesh : febtools.mesh.Mesh object
+
+    i : integer
+        The index of the central node.
+
+    n : integer, optional
+        The number of concentric rings of elements to select.
+
+    """
+    nodelist = set([i])
+    elements = set([])
+    for n in range(n):
+        for i in nodelist:
+            elements = elements | set(mesh.elem_with_node[i])
+        nodelist = set(i for e in elements
+                       for i in e.ids)
+        # ^ This needlessly re-adds elements already in the domain;
+        # there's probably a better way; see undirected graph search.
+        # Doing this efficiently requires transforming the mesh into a
+        # graph data structure.
+    return elements
+
+
 def corner_nodes(mesh):
     """Return ids of corner nodes.
 
@@ -71,6 +143,7 @@ def corner_nodes(mesh):
     ids = [i for i in range(len(mesh.nodes))
            if len(mesh.elem_with_node[i]) == 1]
     return ids
+
 
 def surface_faces(mesh):
     """Return surface faces.
@@ -100,6 +173,7 @@ def surface_faces(mesh):
                                        processed_nodes)
     return surf_faces
 
+
 def bisect(elements, p, v):
     """Return elements on one side of of a plane.
 
@@ -124,6 +198,7 @@ def bisect(elements, p, v):
         return any(d >= dpv)
     eset = [e for e in elements if on_pside(e)]
     return set(eset)
+
 
 def element_slice(elements, v, extent=default_tol,
                   axis=(0, 0, 1)):
@@ -156,6 +231,7 @@ def element_slice(elements, v, extent=default_tol,
     elements = bisect(elements, p=v2 * axis, v=-axis)
     return set(elements)
 
+
 def e_grow(selection, candidates, n):
     """Grow element selection by n elements.
 
@@ -186,6 +262,7 @@ def e_grow(selection, candidates, n):
         n_iter += 1
     return seed
 
+
 def faces_by_normal(elements, normal, delta=default_tol):
     """Return all faces with target normal.
 
@@ -198,6 +275,7 @@ def faces_by_normal(elements, normal, delta=default_tol):
             if np.dot(n, normal) > target:
                 faces.append(f)
     return faces
+
 
 def f_grow_to_edge(faces, mesh, delta=30):
     """Select all adjacent faces with similar normals.
@@ -234,6 +312,7 @@ def f_grow_to_edge(faces, mesh, delta=30):
         new_faces.difference_update(f_subsurface)
         f_subsurface.update(new_faces)
     return f_subsurface
+
 
 def adj_faces(face, mesh, mode='all'):
     """Return faces connected to a face.

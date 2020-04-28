@@ -7,7 +7,7 @@ import numpy as np
 import numpy.testing as npt
 # febtools' local modules
 import febtools as feb
-from febtools.conditions import prescribe_deformation
+from febtools.load import prescribe_deformation
 from febtools.control import auto_control_section
 from febtools.febioxml import basis_mat_axis_local
 from febtools.element import Hex8

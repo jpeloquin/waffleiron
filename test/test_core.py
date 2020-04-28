@@ -1,10 +1,13 @@
-# Run these tests with nose
+"""Tests of core data structures.
+
+Run these tests with nose.
+
+"""
 import unittest, os
-
 from copy import deepcopy
-
+# Febtools modules
 import febtools as feb
-from febtools.selection import elements_containing_point
+from febtools.select import elements_containing_point
 from febtools import Mesh
 
 ### Face connectivity

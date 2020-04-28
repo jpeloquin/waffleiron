@@ -1,14 +1,78 @@
-import febtools as feb
-import unittest, os
+import os
+from math import inf
 import numpy as np
 from numpy import dot
 from math import degrees, radians, cos, sin
+from unittest import TestCase
+# Febtools packages
+import febtools as feb
+from febtools.select import find_closest_timestep, adj_faces, surface_faces
+# Treat warnings as errors
+import warnings
+warnings.simplefilter("error")
 
-class QuadMesh(unittest.TestCase):
+
+class FindClosestTimestep(TestCase):
+
+    def setUp(self):
+        self.times = [0.0, 0.5, 1.0, 1.5, 2.0]
+        self.steps = [0, 1, 2, 3, 4]
+
+    def test_in_middle(self):
+        assert(find_closest_timestep(1.0, self.times, self.steps) == 2)
+
+    def test_in_middle_atol_ok(self):
+        assert(find_closest_timestep(1.2, self.times, self.steps,
+                                     atol=0.2, rtol=inf) == 2)
+
+    def test_in_middle_rtol_ok(self):
+        assert(find_closest_timestep(0.75, self.times, self.steps,
+                                     atol=inf, rtol=0.51) == 1)
+
+    def test_in_middle_atol_bad(self):
+        with self.assertRaisesRegex(ValueError, "absolute error > atol"):
+            assert(find_closest_timestep(0.52, self.times, self.steps,
+                                         rtol=inf) == 1)
+
+    def test_in_middle_rtol_bad(self):
+        with self.assertRaisesRegex(ValueError, "relative error > rtol"):
+            assert(find_closest_timestep(0.52, self.times, self.steps,
+                                         atol=inf) == 1)
+
+    def test_before_start_ok(self):
+        assert(find_closest_timestep(-0.005, self.times, self.steps,
+                                     atol=0.005) == 0)
+
+    def test_before_start_bad(self):
+        with self.assertRaisesRegex(ValueError, "absolute error > atol"):
+            assert(find_closest_timestep(-0.005, self.times, self.steps) == 0)
+
+    def test_at_start(self):
+        assert(find_closest_timestep(0.0, self.times, self.steps) == 0)
+
+    def test_at_end(self):
+        assert(find_closest_timestep(2.0, self.times, self.steps) == 4)
+
+    def test_past_end_ok(self):
+        assert(find_closest_timestep(2.5, self.times, self.steps,
+                                     atol=0.51, rtol=1.01) == 4)
+
+    def test_past_end_bad(self):
+        with self.assertRaisesRegex(ValueError, "absolute error > atol"):
+            assert(find_closest_timestep(2.5, self.times, self.steps) == 4)
+
+    def test_nonmatching_values(self):
+        times = [0.0, 0.5, 1.0, 1.5, 2.0]
+        steps = [0, 1, 2, 3]
+        with self.assertRaisesRegex(ValueError, "len\(steps\) ≠ len\(times\)"):
+            find_closest_timestep(0.5, times, steps)
+
+
+class QuadMesh(TestCase):
     """Test selection of corners in rotated mesh.
 
     """
-    
+
     def setUp(self):
         reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic_quad4.feb'))
         self.model = reader.model()
@@ -21,19 +85,16 @@ class QuadMesh(unittest.TestCase):
         nodes_new = [dot(R, node) for node in self.model.mesh.nodes]
         self.model.mesh.nodes = nodes_new
         self.model.mesh.update_elements()
-            
 
     def test_select_corners(self):
         """Test for selection of four exterior corner nodes.
 
         """
-        corner_nodes = feb.selection.corner_nodes(self.model.mesh)
+        corner_nodes = feb.select.corner_nodes(self.model.mesh)
         assert not set(corner_nodes) - set([0, 100, 5554, 5454])
 
 
-from febtools.selection import adj_faces, surface_faces
-
-class SelectionHex8Consolidated(unittest.TestCase):
+class SelectionHex8Consolidated(TestCase):
     """Test selections for hex8 mesh with center crack.
 
     """
@@ -55,18 +116,18 @@ class SelectionHex8Consolidated(unittest.TestCase):
         l = p2 - p1
         n = feb.geometry._cross(l, (0, 0, 1))
         # Bisect off the elements in the afforementioned triangle
-        elset = feb.selection.bisect(self.mesh.elements, p=p1, v=n)
+        elset = feb.select.bisect(self.mesh.elements, p=p1, v=n)
         assert len(elset) == 6*4
 
     def test_element_slice(self):
         # select the two layers in the middle
-        eset = feb.selection.element_slice(self.mesh.elements,
+        eset = feb.select.element_slice(self.mesh.elements,
                                            v=0,
                                            axis=(0, 0, 1))
         assert len(eset) == len(self.mesh.elements) / 2
 
 
-class SelectionHex8(unittest.TestCase):
+class SelectionHex8(TestCase):
     """Test selections for a hex8 mesh with a hole.
 
     """

@@ -52,10 +52,7 @@ def test_pipeline_prescribe_deformation_singleHex8():
                   [-0.20, 1.14, 0.17],
                   [-0.11, 0.20, 0.93]])
     node_set = feb.NodeSet([i for i in range(len(model.mesh.nodes))])
-    feb.conditions.prescribe_deformation(model,
-                                         node_set,
-                                         F,
-                                         sequence)
+    feb.load.prescribe_deformation(model, node_set, F, sequence)
 
     # Test 2: Can the resulting model be converted to FEBio XML?
     fnm_stem = "prescribe_deformation_singleHex8"

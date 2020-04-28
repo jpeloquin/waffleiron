@@ -46,7 +46,7 @@ class CenterCrackHex8(unittest.TestCase):
     def test_right_tip(self):
         # Calculate J
 
-        zslice = feb.selection.element_slice(self.model.mesh.elements,
+        zslice = feb.select.element_slice(self.model.mesh.elements,
                                              v=0e-3, axis=(0, 0, 1))
         nodes = [n for e in zslice for n in e.nodes]
         maxima = np.max(nodes, axis=0)
@@ -56,7 +56,7 @@ class CenterCrackHex8(unittest.TestCase):
         # define integration domain
         domain = [e for e in zslice
                   if self.tip_line_r.intersection(e.ids)]
-        domain = feb.selection.e_grow(domain, zslice, n=2)
+        domain = feb.select.e_grow(domain, zslice, n=2)
         domain = feb.analysis.apply_q_3d(domain, self.crack_faces,
                                          self.tip_line_r,
                                          q=[1, 0, 0])
@@ -78,7 +78,7 @@ class CenterCrackHex8(unittest.TestCase):
         """Test if J is valid for left crack tip.
 
         """
-        zslice = feb.selection.element_slice(self.model.mesh.elements,
+        zslice = feb.select.element_slice(self.model.mesh.elements,
                                              v=0e-3, axis=(0, 0, 1))
         nodes = [n for e in zslice for n in e.nodes]
         maxima = np.max(nodes, axis=0)
@@ -88,7 +88,7 @@ class CenterCrackHex8(unittest.TestCase):
         # define integration domain
         domain = [e for e in zslice
                   if self.tip_line_l.intersection(e.ids)]
-        domain = feb.selection.e_grow(domain, zslice, n=2)
+        domain = feb.select.e_grow(domain, zslice, n=2)
         domain = feb.analysis.apply_q_3d(domain, self.crack_faces,
                                          self.tip_line_l,
                                          q=[-1, 0, 0])
@@ -127,7 +127,7 @@ class CenterCrackHex8(unittest.TestCase):
                 np.dot(R, e.properties['displacement'].T).T
 
         # Calculate J
-        zslice = feb.selection.element_slice(self.model.mesh.elements,
+        zslice = feb.select.element_slice(self.model.mesh.elements,
                                              v=0e-3, axis=(0, 0, 1))
         nodes = [n for e in zslice for n in e.nodes]
         deltaL = np.max(nodes, axis=0)[2] - np.min(nodes, axis=0)[2]
@@ -135,7 +135,7 @@ class CenterCrackHex8(unittest.TestCase):
         # Right tip
         domain = [e for e in zslice
                   if self.tip_line_r.intersection(e.ids)]
-        domain = feb.selection.e_grow(domain, zslice, n=2)
+        domain = feb.select.e_grow(domain, zslice, n=2)
         domain = feb.analysis.apply_q_3d(domain, self.crack_faces,
                                          self.tip_line_r,
                                          q=[cos(angle), sin(angle), 0])
@@ -169,7 +169,7 @@ class CenterCrackHex8(unittest.TestCase):
                 np.dot(R, e.properties['displacement'].T).T
 
         # Calculate J
-        zslice = feb.selection.element_slice(self.model.mesh.elements,
+        zslice = feb.select.element_slice(self.model.mesh.elements,
                                              v=0e-3, axis=(0, 0, 1))
 
         nodes = [n for e in zslice for n in e.nodes]
@@ -179,7 +179,7 @@ class CenterCrackHex8(unittest.TestCase):
                 # Right tip
         domain = [e for e in zslice
                   if self.tip_line_l.intersection(e.ids)]
-        domain = feb.selection.e_grow(domain, zslice, n=2)
+        domain = feb.select.e_grow(domain, zslice, n=2)
         domain = feb.analysis.apply_q_3d(domain, self.crack_faces,
                                          self.tip_line_l,
                                          q=[-cos(angle), -sin(angle), 0])

@@ -3,35 +3,6 @@ import numpy as np
 from febtools.exceptions import SelectionException
 
 
-def select_elems_around_node(mesh, i, n=3):
-    """Select elements centered on node i.
-
-    Parameters
-    ----------
-
-    mesh : febtools.mesh.Mesh object
-
-    i : integer
-        The index of the central node.
-
-    n : integer, optional
-        The number of concentric rings of elements to select.
-
-    """
-    nodelist = set([i])
-    elements = set([])
-    for n in range(n):
-        for i in nodelist:
-            elements = elements | set(mesh.elem_with_node[i])
-        nodelist = set(i for e in elements
-                       for i in e.ids)
-        # ^ This needlessly re-adds elements already in the domain;
-        # there's probably a better way; see undirected graph search.
-        # Doing this efficiently requires transforming the mesh into a
-        # graph data structure.
-    return elements
-
-
 def eval_fn_x(soln, fn, pt):
     """Evaluate a function at a specific point.
 

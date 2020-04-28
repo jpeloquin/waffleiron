@@ -49,11 +49,10 @@ def gen_model_center_crack_Hex8():
     tip_line_l = set(tip_line_l)
 
     # identify crack faces
-    f_candidates = feb.selection.surface_faces(model.mesh)
+    f_candidates = feb.select.surface_faces(model.mesh)
     f_seed = [f for f in f_candidates
               if (len(set(f) & tip_line_r) > 1)]
-    f_crack_surf = feb.selection.f_grow_to_edge(f_seed,
-                                                model.mesh)
+    f_crack_surf = feb.select.f_grow_to_edge(f_seed, model.mesh)
     crack_faces = f_crack_surf
 
     attrib = {"E": E,
