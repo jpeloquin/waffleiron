@@ -2,7 +2,6 @@ import numpy as np
 from numpy import dot, trace, eye, outer
 from numpy.linalg import det
 from math import log, exp, sin, cos, radians, pi
-import febtools as feb
 # Same-package modules
 from .core import Sequence, ScaledSequence
 
@@ -468,7 +467,7 @@ class HolmesMow:
 
     def __init__(self, props, **kwargs):
         if 'E' in props and 'v' in props:
-            y, mu = feb.material.to_Lamé(props['E'], props['v'])
+            y, mu = to_Lamé(props['E'], props['v'])
         elif 'lambda' in props and 'mu' in props:
             y = props['lambda']
             mu = props['lambda']
@@ -539,7 +538,7 @@ class IsotropicElastic:
     """
     def __init__(self, props, **kwargs):
         if 'E' in props and 'v' in props:
-            y, mu = feb.material.to_Lamé(props['E'], props['v'])
+            y, mu = to_Lamé(props['E'], props['v'])
         elif 'lambda' in props and 'mu' in props:
             y = props['lambda']
             mu = props['mu']
@@ -668,7 +667,7 @@ class NeoHookean:
     """
     def __init__(self, props, **kwargs):
         if 'E' in props and 'v' in props:
-            y, mu = feb.material.to_Lamé(props['E'], props['v'])
+            y, mu = to_Lamé(props['E'], props['v'])
         elif 'lambda' in props and 'mu' in props:
             y = props['lambda']
             mu = props['lambda']
