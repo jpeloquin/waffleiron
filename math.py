@@ -1,6 +1,6 @@
 """Convenient mathematical operations."""
 # Base packages
-from math import radians, degrees, cos, sin
+from math import radians, degrees, cos, sin, e, pi
 # Published packages
 import numpy as np
 
@@ -44,94 +44,108 @@ def vec_from_sph(θ, φ):
                      cos(radians(φ))))
 
 
-def biasrange_log(start, stop, n=10):
-    """Log spaced series with n points, finer near start.
+def linspaced(offset, span, n):
+    """Return a series of n equally spaced values x.
+
+    The spacing scales as x, with:
+
+    offset := Distance between x = 0 and the first value in the series.
+
+    span := Distance between the first and last value in the series.
+
+    n := Number of values in the series.  Non-negative.
 
     """
-    # x ∈ [0, 1]
-    x = (10**np.linspace(0, np.log10(10 + 1), n) - 1) / 10
-    l = stop - start
-    x = [sc * l + start for sc in x]
-    # fix start and endpoints to given values, as numerical
-    # error will have accumulated
-    x[0] = start
-    x[-1] = stop
-    return x
+    if n == 1 and span != 0:
+        raise ValueError(f"Cannot span distance of {span} with n = {n} value.")
+    return np.linspace(offset, offset + span, n)
 
 
-def biasrange_sqrt(start, stop, n=10):
-    """Points spaced ∝ √x.
+def logspaced(offset, span, n, dmin=None):
+    """Return a series of n log-spaced values x.
 
-    """
-    # x ∈ [0, 1]
-    x0 = 0
-    x1 = 1
-    x = np.linspace(x0**0.5, x1**0.5, n)**2.0
-    x = start + (stop - start) * x
-    return x
+    The spacing scales as ln(x), with:
 
+    offset := Distance between x = 0 and the first value in the series.  Non-negative.
 
-def bias_pt_series(line, n=None, bias='log', minstep=None,
-                   bias_direction=1):
-    """Return a series of points on a line segment with biased spacing.
+    span := Distance between the first and last value in the series.  Non-negative.
 
-    `line` is a list of two points in 2-space or higher dimensions.
+    n := Number of values in the series.  Non-negative.
 
-    If `n` is not `None`, that many points are returned, and `minstep`
-    should be `None`.  The default is 10 points.
-
-    If `minstep` is not `None`, the number of points will be chosen
-    such that the smallest distance between points is less than or
-    equal to `minstep`.
-
-    If bias_direction is 1, the smallest interval is at the start of
-    the list.  If bias_direction is -1, it is at the end.
+    dmin := (optional) Distance between the first and second value in
+    the series, applied if offset = 0.  The default is `span *
+    (1/n)**e`, which has no particular rationale but seems to produce
+    acceptable results.
 
     """
-    p1 = np.array(line[0]) # origin of directed line segment
-    p2 = np.array(line[1])
-    v = p2 - p1
-    length = np.linalg.norm(v) # line length
-    if length == 0.0:
-        raise ValueError("Line has zero length.")
-    u = v / length # unit vector pointing in line direction
-
-    if bias == 'log':
-        fspc = biasrange_log
-    elif bias == 'linear':
-        fspc = np.linspace
-    elif bias == 'sqrt':
-        fspc = biasrange_sqrt
-
-    # Figure out how many points to return
-    if n is None and minstep is None:
-        # Return 10 points (default)
-        n = 10
-        s = fspc(0, 1, n)
-    elif n is None and minstep is not None:
-        # Calculate the number of points necessary to achieve the
-        # specified minimum step size
-        n = 2
-        s = fspc(0, 1, n)
-        dmin = s[1] * length
-        while dmin > minstep:
-            n = n + 1
-            s = fspc(0, 1, n)
-            dmin = s[1] * length
-    elif n is not None and minstep is None:
-        s = fspc(0, 1, n)
+    if span < 0:
+        raise ValueError(f"Span, {span}, must be non-negative.")
+    elif span == 0:
+        return np.zeros(n) + offset
+    if n < 0:
+        raise ValueError(f"Number of samples, n = {n}, must be non-negative.")
+    elif n == 0:
+        return np.array([])
+    elif n == 1 and span != 0:
+        raise ValueError(f"Cannot span distance of {span} with n = {n} value.")
+    if offset < 0:
+        raise ValueError(f"Offset, {offset}, must be non-negative.")
+    elif offset == 0:
+        if dmin is None:
+            dmin = (1/n)**e * span
+        x = np.zeros(n)
+        x[1:] = np.geomspace(span, dmin, n-1)[::-1]
+        # ^ work reversed so geomspace generates end point for n = 2.
     else:
-        # Both n and minstep are defined
-        raise Exception('The number of points `n` and the minimum '
-                        'distance between points `minstep` are both defined; '
-                        'only one can be defined at a time.')
+        x = np.geomspace(offset, offset+span, n)
+    return x
 
-    # Compute the points
-    if bias_direction == -1:
-        s = [(1 - sc) for sc in s][::-1]
-    pts = [sc * length * u + p1 for sc in s]
 
-    return pts
+def powerspaced(offset, span, n, power, dmin=None):
+    """Return a series of n power-spaced values x.
+
+    The spacing scales as x^power, with:
+
+    offset := Distance between x = 0 and the first value in the series.  Non-negative.
+
+    span := Distance between the first and last value in the series.  Non-negative.
+
+    n := Number of values in the series.  Non-negative.
+
+    power := the exponent in the spacing ~ x^power relationship.
+
+    dmin := (optional) Distance between the first and second value in
+    the series, applied if offset = 0.  The default is `span *
+    (1/n)**(-1/power)`, which has no particular rationale but seems to
+    produce acceptable results.
+
+    """
+    if offset < 0:
+        raise ValueError(f"Offset, {offset}, must be non-negative.")
+    if span < 0:
+        raise ValueError(f"Span, {span}, must be non-negative.")
+    elif span == 0:
+        return np.zeros(n) + offset
+    if n < 0:
+        raise ValueError(f"Number of samples, n = {n}, must be non-negative.")
+    elif n == 0:
+        return np.array([])
+    elif n == 1 and span != 0:
+        raise ValueError(f"Cannot span distance of {span} with n = {n} value.")
+    if power == 0:
+        # The normal code path assumes that `f(x) = x^power` has an
+        # inverse.
+        return linspaced(offset, span, n)
+    elif power < 0 and offset == 0:
+        # Handle singularity at x = 0 for negative powers
+        if dmin is None:
+            dmin = (1/n)**(-1/power) * span
+        x = np.zeros(n)
+        x[1:] = np.linspace((offset+span)**power, dmin**power, n-1)[::-1]**(1/power)
+        # ^ work reversed so linspace generates end point for n = 2.
+    else:  # power > 0
+        x = np.linspace(offset**power, (offset+span)**power, n)**(1/power)
+    return x
 
 
 def densify(curve, n):
@@ -145,28 +159,3 @@ def densify(curve, n):
     # Add last point
     dense_curve.append((curve[-1]))
     return dense_curve
-
-
-def even_pt_series(line, n):
-    """Return a list of n points evenly spaced along line segment.
-
-    """
-    # This is just a stub to postpone renaming all uses of
-    # `even_pt_series` to `pt_series`.
-    return pt_series(line, n, f=np.linspace)
-
-
-def pt_series(line, n, f=np.linspace):
-    """Return a list of points spaced along a line segment.
-
-    line := a list of n-tuples (points), or equivalent iterable
-
-    The returned points are numpy arrays of the same dimension as A and B.
-
-    """
-    A = np.array(line[0])
-    B = np.array(line[1])
-    v = B - A
-    AB = [A + s * v for s in f(0, 1, n)]
-    AB[-1] = B # for exactness
-    return AB

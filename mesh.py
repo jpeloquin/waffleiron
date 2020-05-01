@@ -4,7 +4,7 @@ import numpy as np
 from numpy.linalg import norm
 from shapely.geometry import LineString, Point, Polygon
 # Febtools modules
-from .math import even_pt_series
+from .geometry import pt_series
 from .element import Hex8, Quad4
 from .model import Mesh
 
@@ -65,11 +65,11 @@ def rectangular_prism(length, width, thickness, hmin):
     C = np.array([ length/2,  width/2])
     D = np.array([-length/2,  width/2])
     n_AB = ceil(norm(A-B)/hmin[0]) + 1
-    AB = even_pt_series([A, B], n_AB)
-    DC = even_pt_series([D, C], n_AB)
+    AB = pt_series([A, B], n_AB)
+    DC = pt_series([D, C], n_AB)
     n_BC = ceil(norm(B-C)/hmin[1]) + 1
-    AD = even_pt_series([A, D], n_BC)
-    BC = even_pt_series([B, C], n_BC)
+    AD = pt_series([A, D], n_BC)
+    BC = pt_series([B, C], n_BC)
     mesh = quadrilateral(AD, BC, AB, DC)
     # Create rectangular prism
     zi = np.linspace(-thickness/2, thickness/2, ceil(thickness/hmin[2]) + 1)
