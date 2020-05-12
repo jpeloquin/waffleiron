@@ -6,7 +6,6 @@
     <material type="solid mixture" name="Mat0" id="1">
       <mat_axis type="local">1,2,5</mat_axis>
       <solid type="Holmes-Mow">
-				<density>1</density>
 				<E>0.018</E>
 				<v>0.24</v>
 				<beta>3.4</beta>
