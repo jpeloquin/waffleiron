@@ -78,7 +78,7 @@ def cyclic_stretch_sequence(targets, rate, n=1, baseline=1.0):
         rate = [rate for y in targets]
 
     # Expand n
-    elif not hasattr(n, '__iter__'):
+    if not hasattr(n, '__iter__'):
         n_by_block = [n for y in targets]
     else:
         n_by_block = n
