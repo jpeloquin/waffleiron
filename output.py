@@ -541,7 +541,7 @@ def xml(model, version='2.5'):
     version_major, version_minor = [int(a) for a in version.split(".")]
 
     # Set solver module (analysis type)
-    module = choose_module([m for m in model.named["materials"].objects()])
+    module = choose_module([m for m in material_registry.objects()])
     if version_major == 2 and version_minor >= 5:
         # In FEBio XML ≥ 2.5, <Module> must exist and be first tag
         e_module = ET.SubElement(root, 'Module')
