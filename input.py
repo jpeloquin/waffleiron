@@ -725,8 +725,10 @@ def mat_obj_from_elemd(d):
             # passed to this function.
             raise ValueError("""A porelastic solid was encountered with {len(d['constituents'])} solid constituents.  Poroelastic solids must have exactly one solid constituent.""")
         solid = mat_obj_from_elemd(d["constituents"][0])
+        solid_fraction = d["properties"]["phi0"]  # what is the default?
         # Return the Poroelastic Solid object
-        material = material_lib.PoroelasticSolid(solid, permeability)
+        material = material_lib.PoroelasticSolid(solid, permeability,
+                                                 solid_fraction)
     elif d["material"] == "multigeneration":
         # Constructing materials for the list of generations works
         # just like a solid mixture

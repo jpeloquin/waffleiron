@@ -195,6 +195,7 @@ def iso_holmes_mow_perm_to_feb(mat, model):
 def poroelastic_to_feb(mat, model):
     """Convert Poroelastic material instance to FEBio XML"""
     e = ET.Element('material', type='biphasic')
+    e.append(_property_to_feb(mat.solid_fraction, "phi0", model))
     # Add solid material
     e_solid = material_to_feb(mat.solid_material, model)
     e_solid.tag = 'solid'

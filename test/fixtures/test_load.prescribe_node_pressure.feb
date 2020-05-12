@@ -31,6 +31,10 @@
   </Control>
   <Material>
     <material id="1" name="Material1" type="biphasic">
+      <!-- solid fraction doesn't affect this simulation, presumably
+           because fluid pressure is prescribed.  Just don't make it
+           equal to 1. -->
+      <phi0>0.5</phi0>
       <solid type="Holmes-Mow">
         <E>5</E>
         <v>0.2</v>

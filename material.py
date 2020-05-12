@@ -128,13 +128,21 @@ class IsotropicHolmesMowPermeability(Permeability):
 
 
 class PoroelasticSolid:
-    """Fluid-saturated solid.
+    """Fluid-saturated solid."""
 
-    Currently only isotropic permeability is allowed.
+    def __init__(self, solid, permeability: Permeability, solid_fraction):
+        """Return PoroelasticSolid instance
 
-    """
-    def __init__(self, solid, permeability: Permeability, **kwargs):
+        solid := Solid material instance.
+
+        permeability := Permeability instance.
+
+        solid_fraction := Volume fraction of solid.  Volume fraciton of
+        solid + volume fraction of fluid = 1.
+
+        """
         self.solid_material = solid
+        self.solid_fraction = solid_fraction
         self.permeability = permeability
 
 

@@ -32,6 +32,7 @@
 	</Globals>
 	<Material>
 		<material id="1" name="Material1" type="biphasic">
+      <phi0>0.2</phi0>
       <solid type="solid mixture">
 			  <solid type="isotropic elastic">
 				  <density>1</density>
