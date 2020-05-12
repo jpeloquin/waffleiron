@@ -65,12 +65,8 @@ class Model:
         # equality) and true constraints (one part of the model is
         # constrained by some equality).
 
-        # Initialize dictionaries to hold named named entities
-        self.named = {"materials": NameRegistry(),
-                      "node sets": NameRegistry(),
-                      "face sets": NameRegistry(),
-                      "element sets": NameRegistry(),
-                      "sequences": NameRegistry()}
+        # TODO: Compose all aspects of mesh into model
+        self.named = self.mesh.named
 
         # initial nodal values
         self.initial_values = {'velocity': [],
@@ -241,8 +237,16 @@ class Mesh:
             # Store reference to this mesh
             e.mesh = self
         self.elements = elements
+
         # Bodies
         self.bodies = set()
+
+        # Initialize dictionaries to hold named named entities
+        self.named = {"materials": NameRegistry(),
+                      "node sets": NameRegistry(),
+                      "face sets": NameRegistry(),
+                      "element sets": NameRegistry(),
+                      "sequences": NameRegistry()}
 
         # Precompute derived properties
         self.prepare()
