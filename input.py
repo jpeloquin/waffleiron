@@ -283,11 +283,11 @@ class FebReader:
                     extend = 'constant'  # default
                 # Set interpolation
                 if 'type' in e_lc.attrib:
-                    typ = e_lc.attrib['type']
+                    interp = e_lc.attrib['type']
                 else:
-                    typ = 'linear'  # default
+                    interp = 'linear'  # default
                 # Create and store the Sequence object
-                self._sequences[ord_id] = Sequence(curve, typ=typ, extend=extend)
+                self._sequences[ord_id] = Sequence(curve, interp=interp, extend=extend)
         return self._sequences
 
 

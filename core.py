@@ -153,14 +153,14 @@ class Sequence:
     method.
 
     """
-    def __init__(self, seq, typ='smooth', extend='constant'):
+    def __init__(self, seq, interp='smooth', extend='constant'):
         # Input checking
         assert extend in ['extrapolate', 'constant', 'repeat',
                           'repeat continuous']
-        assert typ in ['step', 'linear', 'smooth']
+        assert interp in ['step', 'linear', 'smooth']
         # Parameters
         self.points = seq
-        self.typ = typ
+        self.interpolant = interp
         self.extend = extend
 
 

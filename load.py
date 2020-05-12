@@ -49,7 +49,7 @@ def apply_uniax_stretch(model, stretches, axis='x1'):
     # Calculate must points to match input stretches
     t_must = [(u - 1) / (stretches[-1] - 1) for u in stretches]
     seq_must = Sequence([(t, dtmax) for t in t_must],
-                        typ="step")
+                        interp="step")
     model.steps[0]['control']['plot level'] = 'PLOT_MUST_POINTS'
     model.steps[0]['control']['time stepper']['dtmax'] = seq_must
 
@@ -102,7 +102,7 @@ def cyclic_stretch_sequence(targets, rate, n=1, baseline=1.0):
 
     # Create [(time, eng. strain), ...] curve
     curve = [(t, y - 1.0) for t, y in zip(times, stretches)]
-    sequence = Sequence(curve, extend='constant', typ='linear')
+    sequence = Sequence(curve, extend='constant', interp='linear')
 
     return sequence
 

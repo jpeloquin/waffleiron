@@ -25,7 +25,7 @@ def auto_control_section(sequence, pts_per_segment=1):
     control['plot level'] = 'PLOT_MUST_POINTS'
     curve_must_dt = densify([(a, b) for a, b in zip(time, dt)],
                             n=pts_per_segment)
-    seq_dtmax = Sequence(curve_must_dt, extend='constant', typ='linear')
+    seq_dtmax = Sequence(curve_must_dt, extend='constant', interp='linear')
     control['time stepper']['dtmax'] = seq_dtmax
     # Calculate appropriate step size.  Need to work around FEBio bug
     # https://forums.febio.org/project.php?issueid=765.  FEBio skips

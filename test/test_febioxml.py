@@ -163,7 +163,7 @@ class FEBio_MatAxisLocal_Hex8(TestCase):
         # Model 1: Local basis; material axes given by <mat_axis type="local">
         localb_model = gen_model_single_spiky_Hex8(material=material)
         sequence = feb.Sequence(((0, 0), (1, 1)),
-                                extend="extrapolate", typ="linear")
+                                extend="extrapolate", interp="linear")
         localb_model.add_step(control=auto_control_section(sequence, pts_per_segment=1))
         node_set = [i for i in range(len(localb_model.mesh.nodes))]
         prescribe_deformation(localb_model, node_set, F, sequence)
@@ -185,7 +185,7 @@ class FEBio_MatAxisLocal_Hex8(TestCase):
         # ^ dim 0 over basis vectors, dim 1 over X
         globalb_model = gen_model_single_spiky_Hex8(material=material)
         sequence = feb.Sequence(((0, 0), (1, 1)),
-                                extend="extrapolate", typ="linear")
+                                extend="extrapolate", interp="linear")
         globalb_model.add_step(control=auto_control_section(sequence, pts_per_segment=1))
         node_set = [i for i in range(len(globalb_model.mesh.nodes))]
         prescribe_deformation(globalb_model, node_set, F, sequence)
