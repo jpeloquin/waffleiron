@@ -4,6 +4,7 @@ import numpy as np
 from numpy.linalg import norm
 from shapely.geometry import LineString, Point, Polygon
 # Febtools modules
+from .core import NodeSet
 from .geometry import pt_series
 from .element import Hex8, Quad4
 from .model import Mesh
@@ -51,29 +52,58 @@ def zstack(mesh, zcoords):
     return mesh3d
 
 
-def rectangular_prism(length, width, thickness, hmin):
+def rectangular_prism(length, width, thickness):
     """Create an FE mesh of a rectangular prism.
+
+    Each key dimension is a tuple of (length, number of elements).
+    Element spacing is linear.
 
     The origin is in the center of the rectangle.
 
     """
-    if type(hmin) in [float, int]:
-        hmin = [hmin]*3
+    l = length[0];  nl = length[1]
+    w = width[0];  nw = width[1]
+    t = thickness[0];  nt = thickness[1]
     # Create rectangle in xy plane
-    A = np.array([-length/2, -width/2])
-    B = np.array([ length/2, -width/2])
-    C = np.array([ length/2,  width/2])
-    D = np.array([-length/2,  width/2])
-    n_AB = ceil(norm(A-B)/hmin[0]) + 1
-    AB = pt_series([A, B], n_AB)
-    DC = pt_series([D, C], n_AB)
-    n_BC = ceil(norm(B-C)/hmin[1]) + 1
-    AD = pt_series([A, D], n_BC)
-    BC = pt_series([B, C], n_BC)
+    A = np.array([-l/2, -w/2])
+    B = np.array([ l/2, -w/2])
+    C = np.array([ l/2,  w/2])
+    D = np.array([-l/2,  w/2])
+    AB = pt_series([A, B], nl + 1)
+    DC = pt_series([D, C], nl + 1)
+    AD = pt_series([A, D], nw + 1)
+    BC = pt_series([B, C], nw + 1)
     mesh = quadrilateral(AD, BC, AB, DC)
     # Create rectangular prism
-    zi = np.linspace(-thickness/2, thickness/2, ceil(thickness/hmin[2]) + 1)
+    zi = np.linspace(-t/2, t/2, nt + 1)
     mesh = zstack(mesh, zi)
+    # Label the faces
+    nodes = np.array(mesh.nodes)  # remove when array is default
+    # ±x faces
+    ns = NodeSet(np.nonzero(np.isclose(nodes[:,0], -l/2, rtol=0, atol=np.spacing(l/2)))[0])
+    assert len(ns) == (nw + 1) * (nt + 1)
+    mesh.named["node sets"].add("−x1 face", ns)
+    ns = NodeSet(np.nonzero(np.isclose(nodes[:,0], l/2, rtol=0, atol=np.spacing(l/2)))[0])
+    assert len(ns) == (nw + 1) * (nt + 1)
+    mesh.named["node sets"].add("+x1 face", ns)
+    # ±y faces
+    ns = NodeSet(np.nonzero(np.isclose(nodes[:,1], -w/2, rtol=0,
+                                       atol=np.spacing(w/2)))[0])
+    assert len(ns) == (nl + 1) * (nt + 1)
+    mesh.named["node sets"].add("−x2 face", ns)
+    ns = NodeSet(np.nonzero(np.isclose(nodes[:,1], w/2, rtol=0,
+                                       atol=np.spacing(w/2)))[0])
+    assert len(ns) == (nl + 1) * (nt + 1)
+    mesh.named["node sets"].add("+x2 face", ns)
+    # ±z faces
+    ns = NodeSet(np.nonzero(np.isclose(nodes[:,2], -t/2, rtol=0,
+                                       atol=np.spacing(t/2)))[0])
+    assert len(ns) == (nl + 1) * (nw + 1)
+    mesh.named["node sets"].add("−x3 face", ns)
+    ns = NodeSet(np.nonzero(np.isclose(nodes[:,2], t/2, rtol=0,
+                                       atol=np.spacing(t/2)))[0])
+    assert len(ns) == (nl + 1) * (nw + 1)
+    mesh.named["node sets"].add("+x3 face", ns)
     return mesh
 
 
