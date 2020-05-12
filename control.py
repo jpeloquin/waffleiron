@@ -13,7 +13,7 @@ from .core import Sequence
 from .math import densify
 
 
-def auto_control_section(sequence, pts_per_segment=6):
+def auto_control_section(sequence, pts_per_segment=1):
     curve = sequence.points
     # Assign good default control settings
     control = default_control_section()
