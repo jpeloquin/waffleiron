@@ -129,10 +129,9 @@ def holmesmow_to_feb(mat, model):
 
     """
     e = ET.Element('material', type='Holmes-Mow')
-    E, ν = feb.material.from_Lamé(mat.y, mat.mu)
-    e.append(_property_to_feb(E, "E", model))
-    e.append(_property_to_feb(ν, "v", model))
-    e.append(_property_to_feb(mat.beta, "beta", model))
+    e.append(_property_to_feb(mat.E, "E", model))
+    e.append(_property_to_feb(mat.ν, "v", model))
+    e.append(_property_to_feb(mat.β, "beta", model))
     return e
 
 

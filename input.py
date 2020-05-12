@@ -743,6 +743,8 @@ def mat_obj_from_elemd(d):
                        zip(d["properties"]["start times"], constituents))
         material = cls(generations)
     elif hasattr(cls, "from_feb") and callable(cls.from_feb):
+        if "density" in d["properties"]:
+            del d["properties"]["density"]  # density not supported yet
         material = cls.from_feb(**d["properties"])
     else:
         material = cls(d["properties"])
