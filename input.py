@@ -470,16 +470,9 @@ class FebReader:
             # For each DoF, apply the fixed BCs to the model.
             for xml_bc in fixed:
                 dof = DOF_NAME_FROM_XML_BC[xml_bc]
-                #^ `dof` is 'x', 'y', 'z', 'Rx', etc.
+                # ^ `dof` is 'x1', 'x2', 'x3', 'α1', 'fluid', etc.
                 var = VAR_FROM_XML_BC[xml_bc]
-                #^ `var` is 'displacement', 'rotation', 'fluid', etc.
-                if var == "pressure":
-                    # This is a hack to deal with febtools' model.fixed
-                    # dict only supporting fixed displacement and
-                    # pressure for nodes.  At the time of this writing
-                    # the axis / variable split hasn't been implemented
-                    # for fixed boundary conditions.
-                    dof = "pressure"
+                # ^ `var` is 'displacement', 'rotation', 'pressure', etc.
                 # Get the nodeset that is constrained
                 if self.feb_version == "2.0":
                     # In FEBio XML 2.0, each node to which the fixed boundary
@@ -491,18 +484,19 @@ class FebReader:
                     # In FEBio XML 2.5, the node set to which the fixed
                     # boundary condition is applied is referenced by name.
                     node_ids = model.named["node sets"].obj(e_fix.attrib["node_set"])
-                if not model.fixed['node'][dof]:
+                if not model.fixed['node'][(dof, var)]:
                     # If there is no node set assigned to this dof yet,
                     # simply re-use the node set.  This will preserve
                     # the node set's name if the model is re-exported.
-                    model.fixed['node'][dof] = node_ids
+                    model.fixed['node'][(dof, var)] = node_ids
                 else:
                     # We are changing the node set, so existing
                     # references to it may become semantically invalid.
                     # And we can't remove the node set from the name
                     # registry because then later elements won't be
                     # interpretable.  So we must create a new node set.
-                    model.fixed['node'][dof] = NodeSet(model.fixed['node'][dof] | node_ids)
+                    model.fixed['node'][(dof, var)] =\
+                        NodeSet(model.fixed['node'][(dof, var)] | node_ids)
         #
         # Read constraints on rigid bodies.  Each <rigid_body> element
         # defines constraints for one rigid body, identified by its

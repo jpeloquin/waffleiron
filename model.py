@@ -40,13 +40,21 @@ class Model:
         self.constants = {"R": 8.31446261815324,  # J/mol·K
                           "F": 96485.33212}  # C/mol
 
-        axes = ('x1', 'x2', 'x3', 'pressure', 'concentration')
-        self.fixed = {'node': {k: NodeSet() for k in axes},
-                      'body': {k: set() for k in axes}}
-        self.fixed['body'].update({'α1': set(),
-                                   'α2': set(),
-                                   'α3': set()})
-        axes = ('x1', 'x2', 'x3', 'pressure', 'concentration')
+        # Fixed conditions
+        self.fixed = {}
+        self.fixed["node"] = {("x1", "displacement"): NodeSet(),
+                              ("x2", "displacement"): NodeSet(),
+                              ("x3", "displacement"): NodeSet(),
+                              ("fluid", "pressure"): NodeSet(),
+                              ("solute", "concentration"): NodeSet()}
+        self.fixed["body"] = {("x1", "displacement"): set(),
+                              ("x2", "displacement"): set(),
+                              ("x3", "displacement"): set(),
+                              ("fluid", "pressure"): set(),
+                              ("solute", "concentration"): set(),
+                              ("α1", "rotation"): set(),
+                              ("α2", "rotation"): set(),
+                              ("α3", "rotation"): set()}
         # Note: for multiphasic problems, concentration is a list of
         # sets
         #
