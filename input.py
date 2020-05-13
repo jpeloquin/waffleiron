@@ -17,7 +17,7 @@ from .core import Body, ImplicitBody, Sequence, ScaledSequence, NodeSet, FaceSet
 from . import xplt
 from . import febioxml, febioxml_2_5, febioxml_2_0
 from . import material as material_lib
-from .febioxml import control_tagnames_from_febio, control_values_from_febio, elem_cls_from_feb, normalize_xml, _to_number, _maybe_to_number, _find_unique_tag, VAR_FROM_XML_BC, DOF_NAME_FROM_XML_BC
+from .febioxml import control_tagnames_from_febio, control_values_from_febio, elem_cls_from_feb, normalize_xml, _to_number, _maybe_to_number, _find_unique_tag, VAR_FROM_XML_NODE_BC, DOF_NAME_FROM_XML_NODE_BC
 
 def _nstrip(string):
     """Remove trailing nulls from string.
@@ -469,9 +469,9 @@ class FebReader:
                 fixed = febioxml_2_5.split_bc_names(e_fix.attrib['bc'])
             # For each DoF, apply the fixed BCs to the model.
             for xml_bc in fixed:
-                dof = DOF_NAME_FROM_XML_BC[xml_bc]
+                dof = DOF_NAME_FROM_XML_NODE_BC[xml_bc]
                 # ^ `dof` is 'x1', 'x2', 'x3', 'α1', 'fluid', etc.
-                var = VAR_FROM_XML_BC[xml_bc]
+                var = VAR_FROM_XML_NODE_BC[xml_bc]
                 # ^ `var` is 'displacement', 'rotation', 'pressure', etc.
                 # Get the nodeset that is constrained
                 if self.feb_version == "2.0":
@@ -514,11 +514,11 @@ class FebReader:
             # Read the constraints for the body found in the first half
             # of this loop.
             for e_dof in e_rb.findall("fixed"):
-                dof = DOF_NAME_FROM_XML_BC[e_dof.attrib["bc"]]
+                dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
                 model.fixed["body"][dof].add(body)
             for e_dof in e_rb.findall("prescribed"):
-                dof = DOF_NAME_FROM_XML_BC[e_dof.attrib["bc"]]
-                var = VAR_FROM_XML_BC[e_dof.attrib["bc"]]
+                dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
+                var = VAR_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
                 seq = _read_parameter(e_dof, self.sequences)
                 model.apply_body_bc(body, dof, var, seq, step_id=None)
 

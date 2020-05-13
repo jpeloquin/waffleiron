@@ -117,8 +117,8 @@ def iter_node_conditions(root):
                     "step ID": None}
             # Read values
             info["node set name"] = e_prescribe.attrib["node_set"]
-            info["dof"] = DOF_NAME_FROM_XML_BC[e_prescribe.attrib["bc"]]
-            info["variable"] = VAR_FROM_XML_BC[e_prescribe.attrib["bc"]]
+            info["dof"] = DOF_NAME_FROM_XML_NODE_BC[e_prescribe.attrib["bc"]]
+            info["variable"] = VAR_FROM_XML_NODE_BC[e_prescribe.attrib["bc"]]
             e_scale = e_prescribe.find("scale")
             if e_scale.text is not None:
                 info["scale"] = _to_number(e_scale.text)

@@ -14,15 +14,18 @@ from . import material as matlib
 from .math import sph_from_vec
 from . import febioxml_2_5 as febioxml
 from . import febioxml_2_0
-from .febioxml import float_to_text, vec_to_text, bvec_to_text, control_tagnames_to_febio, control_values_to_febio, TAG_FROM_BC, DOF_NAME_FROM_XML_BC, VAR_FROM_XML_BC
+from .febioxml import float_to_text, vec_to_text, bvec_to_text, control_tagnames_to_febio, control_values_to_febio, TAG_FROM_BC, DOF_NAME_FROM_XML_NODE_BC, VAR_FROM_XML_NODE_BC
 # ^ The intent here is to eventually be able to switch between FEBio XML
 # formats by exchanging this import statement for a different version.
 # Common functionality can be shared between febioxml_*_*.py files via
 # imports.
 
 
-XML_BC_FROM_DOF = {(dof, VAR_FROM_XML_BC[tag]): tag
-                   for tag, dof in DOF_NAME_FROM_XML_BC.items()}
+XML_BC_FROM_DOF = {(dof, VAR_FROM_XML_NODE_BC[tag]): tag
+                   for tag, dof in DOF_NAME_FROM_XML_NODE_BC.items()}
+XML_BC_FROM_DOF.update({("x1", "force"): "x",
+                        ("x2", "force"): "y",
+                        ("x3", "force"): "z"})
 
 
 def default_febio_config():
@@ -483,13 +486,13 @@ def body_constraints_to_feb(body, constraints, material_registry,
         # Determine which tag name to use for the specified
         # variable: force or displacement
         if bc['variable'] in ["displacement", "rotation"]:
-             tagname = TAG_FROM_BC['body'][kind]
+            tagname = TAG_FROM_BC['body'][kind]
         elif bc['variable'] == 'force':
-             tagname = 'force'
+            tagname = 'force'
         else:
-             raise ValueError(f"Variable {bc['variable']} not supported for BCs.")
-        e_bc = ET.SubElement(e_body, tagname,
-                             bc=XML_BC_FROM_DOF[(dof, bc["variable"])])
+            raise ValueError(f"Variable {bc['variable']} not supported for BCs.")
+        bc_attr = XML_BC_FROM_DOF[(dof, bc["variable"])]
+        e_bc = ET.SubElement(e_body, tagname, bc=bc_attr)
         if kind == 'variable':
             seq_id = _get_or_create_seq_id(sequence_registry, seq)
             e_bc.attrib['lc'] = str(seq_id + 1)

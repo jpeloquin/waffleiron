@@ -6,23 +6,23 @@ from . import material
 from .math import orthonormal_basis
 
 # Map "bc" attribute value from <prescribe>, <prescribed>,
-# <fix>, or <fixed> element to a variable name.
-VAR_FROM_XML_BC = {'x': 'displacement',
-                   'y': 'displacement',
-                   'z': 'displacement',
-                   'Rx': 'rotation',
-                   'Ry': 'rotation',
-                   'Rz': 'rotation',
-                   'p': 'pressure'}
+# <fix>, or <fixed> element to a variable name.  This mapping is only valid for 
+VAR_FROM_XML_NODE_BC = {'x': 'displacement',
+                        'y': 'displacement',
+                        'z': 'displacement',
+                        'Rx': 'rotation',
+                        'Ry': 'rotation',
+                        'Rz': 'rotation',
+                        'p': 'pressure'}
 # Map "bc" attribute value from <prescribe>, <prescribed>,
 # <fix>, or <fixed> element to a degree of freedom.
-DOF_NAME_FROM_XML_BC = {"x": "x1",
-                        "y": "x2",
-                        "z": "x3",
-                        "Rx": "α1",
-                        "Ry": "α2",
-                        "Rz": "α3",
-                        "p": "fluid"}
+DOF_NAME_FROM_XML_NODE_BC = {"x": "x1",
+                             "y": "x2",
+                             "z": "x3",
+                             "Rx": "α1",
+                             "Ry": "α2",
+                             "Rz": "α3",
+                             "p": "fluid"}
 
 TAG_FROM_BC = {'node': {'variable': 'prescribe',
                         'fixed': 'fix'},
