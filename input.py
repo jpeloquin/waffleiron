@@ -536,6 +536,7 @@ class FebReader:
             top_module = None
         # Read the <Step> elements
         for e_step in self.root.findall('Step'):
+            step_name = e_step.attrib["name"] if "name" in e_step.attrib else None
             # Module
             e_module = e_step.find('Module')
             if e_module is not None:
@@ -566,7 +567,7 @@ class FebReader:
                     control['time stepper'][k] = _read_parameter(e, self.sequences)
             # Add the step.  Use the method to get correct defaults;
             # e.g, correct keys for missing boundary conditions.
-            model.add_step(module=module, control=control)
+            model.add_step(module=module, control=control, name=step_name)
 
         # Read prescribed nodal conditions.
         #

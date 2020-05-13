@@ -812,8 +812,8 @@ def xml(model, version='2.5'):
     cumulative_time = 0.0
     visited_implicit_bodies = set()
     for istep, step in enumerate(model.steps):
-        e_step = ET.SubElement(root, 'Step',
-                               name='Step{}'.format(istep + 1))
+        step_name = step["name"] if step["name"] is not None else 'Step{}'.format(istep + 1)
+        e_step = ET.SubElement(root, 'Step', name=step_name)
         if version == '2.0':
             ET.SubElement(e_step, 'Module', type=step['module'])
         # Warn if there's an incompatibility between requested materials

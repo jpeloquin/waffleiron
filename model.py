@@ -87,13 +87,14 @@ class Model:
     def add_contact(self, constraint):
         self.constraints.append(constraint)
 
-    def add_step(self, module='solid', control=None):
+    def add_step(self, module='solid', control=None, name=None):
         """Add a step with default control values and no BCs.
 
         """
         if control is None:
             control = default_control_section()
-        step = {'module': module,
+        step = {"name": name,
+                'module': module,
                 'control': control,
                 'bc': {'node': {},
                        'body': {}}}
