@@ -831,18 +831,18 @@ def xml(model, version='2.5'):
                ((not type(checked_mat) in febioxml.module_compat_by_mat) or\
                 (step['module'] not in febioxml.module_compat_by_mat[type(checked_mat)])):
                 raise ValueError(f"Material `{type(mat)}` is not listed as compatible with Module {step['module']}")
-        e_con = ET.SubElement(e_step, 'Control')
+        e_Control = ET.Element('Control')
         if version == '2.0':
-            ET.SubElement(e_con, 'analysis', type=module)
+            ET.SubElement(e_Control, 'analysis', type=module)
         # Write all the single-element Control parameters (i.e,
         # everything but <time_stepper>
         for parameter in step['control']:
             if parameter == "time stepper":
                 continue
             e_param = control_parameter_to_feb(parameter, step['control'][parameter])
-            e_con.append(e_param)
+            e_Control.append(e_param)
         # Write <time_stepper> and all its children
-        e_ts = ET.SubElement(e_con, 'time_stepper')
+        e_ts = ET.SubElement(e_Control, 'time_stepper')
         ET.SubElement(e_ts, 'dtmin').text = \
             str(step['control']['time stepper']['dtmin'])
         ET.SubElement(e_ts, 'max_retries').text = \
@@ -870,11 +870,12 @@ def xml(model, version='2.5'):
         #
         # FEBio does seem to handle empty tags appropriately, which
         # helps.
-        e_bc_nodal_parent = ET.SubElement(e_step, 'Boundary')
+        e_Boundary = ET.Element('Boundary')
+        e_bc_nodal_parent = e_Boundary
         if version == '2.0':
             e_bc_body_parent = ET.SubElement(e_step, 'Constraints')
         elif version_major == 2 and version_minor >= 5:
-            e_bc_body_parent = e_bc_nodal_parent
+            e_bc_body_parent = e_Boundary
         # Collect nodal BCs in a more convenient heirarchy for writing
         # FEBio XML.  FEBio XML only supports nodal boundary conditions
         # if the node list shares the same boundary condition kind
@@ -965,6 +966,10 @@ def xml(model, version='2.5'):
                             ET.SubElement(e_bc, "value", node_data=name_nodedata)
                             # Other attributes
                             ET.SubElement(e_bc, 'relative').text = "0"
+
+        # Add <Boundary> and <Control> elements to <Step>, in that order
+        e_step.append(e_Boundary)
+        e_step.append(e_Control)
 
         if ("bc" in step) and ("body" in step["bc"]):
             for body, constraints in step["bc"]["body"].items():
