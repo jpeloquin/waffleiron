@@ -515,7 +515,10 @@ class FebReader:
             # of this loop.
             for e_dof in e_rb.findall("fixed"):
                 dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
-                model.fixed["body"][dof].add(body)
+                var = VAR_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
+                # Despite the name, these maps are valid for rigid
+                # bodies too.
+                model.fixed["body"][(dof, var)].add(body)
             for e_dof in e_rb.findall("prescribed"):
                 dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
                 var = VAR_FROM_XML_NODE_BC[e_dof.attrib["bc"]]

@@ -5,8 +5,10 @@ from .element import Quad4, Tri3, Hex8, Penta6, Element
 from . import material
 from .math import orthonormal_basis
 
-# Map "bc" attribute value from <prescribe>, <prescribed>,
-# <fix>, or <fixed> element to a variable name.  This mapping is only valid for 
+# Map "bc" attribute value from <prescribe>, <prescribed>, <fix>, or
+# <fixed> element to a variable name.  This list is valid for both node
+# and rigid body conditions.  FEBio handles force conditions in other
+# XML elements: for rigid bodies, <force>, and for nodes, <nodal_load>.
 VAR_FROM_XML_NODE_BC = {'x': 'displacement',
                         'y': 'displacement',
                         'z': 'displacement',
