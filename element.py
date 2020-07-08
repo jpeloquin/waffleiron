@@ -2,7 +2,7 @@ import numpy as np
 from scipy.optimize import fmin
 
 import febtools as feb
-from febtools.geometry import _cross
+from febtools.geometry import cross
 
 def elem_obj(element, nodes, eid=None):
     """Returns an Element object from node and element tuples.
@@ -381,7 +381,7 @@ class Element2D(Element):
         for l in self.edge_nodes:
             v = points[l[1]] - points[l[0]]
             face_normal = self.face_normals()[0]
-            normals.append(_cross(v, face_normal))
+            normals.append(cross(v, face_normal))
         return normals
 
 

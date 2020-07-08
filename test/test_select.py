@@ -114,7 +114,7 @@ class SelectionHex8Consolidated(TestCase):
         p1 = np.array([0.005, 0.00734127, 0.0])
         p2 = np.array([0.0028879, 0.01, 0.0])
         l = p2 - p1
-        n = feb.geometry._cross(l, (0, 0, 1))
+        n = feb.geometry.cross(l, (0, 0, 1))
         # Bisect off the elements in the afforementioned triangle
         elset = feb.select.bisect(self.mesh.elements, p=p1, v=n)
         assert len(elset) == 6*4

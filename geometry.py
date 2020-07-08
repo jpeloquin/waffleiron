@@ -4,7 +4,7 @@ import numpy as np
 
 tol = np.finfo(float).eps
 
-def _cross(u, v):
+def cross(u, v):
     """Cross product for two vectors in R3.
 
     """
@@ -26,7 +26,7 @@ def face_normal(face, mesh, config='reference'):
     v1 = points[1] - points[0]
     v2 = points[-1] - points[0]
     # compute the face normal
-    normal = _cross(v1, v2)
+    normal = cross(v1, v2)
     return normal
 
 def inter_face_angle(f1, f2, mesh, tol=2 * np.finfo(float).eps):
