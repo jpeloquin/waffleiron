@@ -258,8 +258,8 @@ class Element:
         """
         normals = []
         # Iterate over faces
-        for f in self.face_nodes:
-            normals.append(feb.geometry.face_normal(f, self))
+        for f in self.faces():
+            normals.append(feb.geometry.face_normal(f, self.mesh))
         return normals
 
     def faces_with_node(self, node_id):
