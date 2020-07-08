@@ -787,7 +787,7 @@ def xml(model, version='2.5'):
     # Output section
     plotfile = ET.SubElement(Output, 'plotfile', type='febio')
     if model.output["variables"] is None:
-        output_vars = ["displacement", "stress"]
+        output_vars = ["displacement", "stress", "relative volume"]
         if module == "biphasic":
             output_vars += ["effective fluid pressure",
                             "fluid pressure",
