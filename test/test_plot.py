@@ -30,7 +30,7 @@ class ScalarFieldTest(unittest.TestCase):
         scale = px_w / (maxima[0] - minima[0])
         px_h = (maxima[1] - minima[1]) * scale
         xi = np.linspace(minima[0], maxima[0], num=px_w)
-        yi = np.linspace(minima[1], maxima[1], num=px_h)
+        yi = np.linspace(minima[1], maxima[1], num=int(np.ceil(px_h)))
         xv, yv = np.meshgrid(xi, yi)
         yv = np.flipud(yv)
         pts = np.concatenate([xv[...,np.newaxis],
