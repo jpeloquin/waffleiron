@@ -405,7 +405,7 @@ def add_contact_section(model, xml_root, named_surface_pairs, named_contacts):
         surface_name = {"leader": "",
                         "follower": ""}
         for k, face_set in zip(("leader", "follower"), (contact.leader, contact.follower)):
-            nm = _get_or_create_name(model.named_sets["faces"],
+            nm = _get_or_create_name(model.named["face sets"],
                                      f"contact_surface_-_{contact.algorithm}",
                                      face_set)
             surface_name[k] = nm
@@ -509,8 +509,8 @@ def xml(model, version='2.5'):
 
     """
     # Create dictionaries to keep track of named items
-    named_surface_pairs = {}
-    named_contacts = {}
+    named_surface_pairs = NameRegistry()
+    named_contacts = NameRegistry()
     # Register all materials that are assigned to elements.  We do this
     # early because in FEBio XML the material ids are needed to define
     # the geometry and meshdata sections.  Technically, implicit bodies
