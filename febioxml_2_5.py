@@ -113,6 +113,7 @@ def iter_node_conditions(root):
                     "variable": None,  # displacement, force, pressure, etc.
                     "sequence ID": None,
                     "scale": 0.0,  # FEBio default; it really should be 1.0
+                    "relative": False,
                     "nodal values": None,
                     "step ID": None}
             # Read values
@@ -146,8 +147,8 @@ def iter_node_conditions(root):
                     val_scale = _to_number(e_value.text)
                     info["scale"] = seq_scale * val_scale
             e_relative = e_prescribe.find("relative")
-            if e_relative is not None and e_relative.text == "1":
-                raise ValueError("Relative prescribed nodal displacements are not yet supported.")
+            if e_relative is not None:
+                info["relative"] = True
             info["step ID"] = step_id
             yield info
 

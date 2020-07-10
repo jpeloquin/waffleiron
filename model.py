@@ -102,7 +102,7 @@ class Model:
 
 
     def apply_nodal_bc(self, node_ids, dof, variable, sequence,
-                       scales=None, step_id=-1):
+                       scales=None, relative=False, step_id=-1):
         """Apply a boundary condition to a set of nodes.
 
         The boundary condition is applied to the selected solution step,
@@ -137,7 +137,8 @@ class Model:
             bc_node = self.steps[step_id]['bc']['node'].setdefault(i, {})
             bc_node[dof] = {'variable': variable,
                             'sequence': sequence,
-                            'scale': scales[i]}
+                            'scale': scales[i],
+                            'relative': relative}
         # TODO: Support global nodal BCs.
 
 

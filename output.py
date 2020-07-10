@@ -868,8 +868,7 @@ def xml(model, version='2.5'):
         # tag may be named 'prescribed' or 'fixed'.  (Note the different
         # tense compared to nodal constraints—so much for consistency.)
         #
-        # FEBio does seem to handle empty tags appropriately, which
-        # helps.
+        # FEBio does handle empty tags appropriately, which helps.
         e_Boundary = ET.Element('Boundary')
         e_bc_nodal_parent = e_Boundary
         if version == '2.0':
@@ -883,7 +882,7 @@ def xml(model, version='2.5'):
         # nodal boundary conditions into one collection for each
         # distinct combination of these attributes.  The resulting
         # dictionary looks like:
-        # node_memo['fixed'|'variable'][dof][sequence] = (node_ids, scales)
+        # node_memo['fixed'|'variable'][dof][sequence] = (node_ids, scales, relative)
         node_memo = defaultdict(dict)
         if ("bc" in step) and ("node" in step["bc"]):
             for node_id in step['bc']['node']:
@@ -896,7 +895,7 @@ def xml(model, version='2.5'):
                     node_memo[kind].\
                         setdefault((dof, bc["variable"]), {}).\
                         setdefault(bc["sequence"], []).\
-                        append((node_id, bc['scale']))
+                        append((node_id, bc['scale'], bc["relative"]))
         # TODO: support kind == 'fixed'.  (Does that make sense for a step?)
         for kind in node_memo:  # 'variable' or 'fixed'
             for dof_var in node_memo[kind]:  # ("x1", "displacement"), etc.
@@ -925,7 +924,7 @@ def xml(model, version='2.5'):
                             e_sc.text = "1.0"
                             nm_base = "nodal_bc_" \
                                 f"step{istep+1}_{kind}_{dof_var[0]}_seq{seq_id}_autogen"
-                            node_set = NodeSet([i for i, sc in bc])
+                            node_set = NodeSet([i for i, sc, relative in bc])
                             # ^ Need to make a NodeSet so it's hashable
                             # and can thus receive a name
                             name = _get_or_create_name(model.named["node sets"],
@@ -957,7 +956,7 @@ def xml(model, version='2.5'):
                             lid_from_node_id = {node_id: i + 1
                                                 for i, node_id
                                                 in enumerate(sorted(node_set))}
-                            for node_id, scale in bc:
+                            for node_id, scale, relative in bc:
                                 ET.SubElement(e_NodeData, "node",
                                               lid=str(lid_from_node_id[node_id])).\
                                               text = float_to_text(scale)
@@ -965,7 +964,7 @@ def xml(model, version='2.5'):
                             # condition scaling factors
                             ET.SubElement(e_bc, "value", node_data=name_nodedata)
                             # Other attributes
-                            ET.SubElement(e_bc, 'relative').text = "0"
+                            ET.SubElement(e_bc, 'relative').text = str(int(relative))
 
         # Add <Boundary> and <Control> elements to <Step>, in that order
         e_step.append(e_Boundary)

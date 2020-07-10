@@ -588,6 +588,7 @@ class FebReader:
                                      condition["variable"],
                                      seq,
                                      scales=condition["nodal values"],
+                                     relative=condition["relative"],
                                      step_id=condition["step ID"])
 
         # Output variables
