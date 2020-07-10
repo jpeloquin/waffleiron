@@ -167,12 +167,26 @@ class Sequence:
 class ScaledSequence:
     """A time-varying sequence proportional to another sequence.
 
-    Defined by a scaling factor + another sequence.
+    Defined by a scaling factor and base sequence.  Since multiple
+    objects may reference the same base sequence, ScaledSequence does
+    not provide functions to modify the base sequence.
 
     """
     def __init__(self, sequence: Sequence, scale: float):
         self.scale = scale
         self.sequence = sequence
+
+    @property
+    def points(self):
+        return self.sequence.points
+
+    @property
+    def interpolant(self):
+        return self.sequence.interpolant
+
+    @property
+    def extend(self):
+        return self.sequence.extend
 
 
 class NameRegistry:
