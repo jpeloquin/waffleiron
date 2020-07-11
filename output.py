@@ -14,7 +14,7 @@ from . import material as matlib
 from .math import sph_from_vec
 from . import febioxml_2_5 as febioxml
 from . import febioxml_2_0
-from .febioxml import float_to_text, vec_to_text, bvec_to_text, control_tagnames_to_febio, control_values_to_febio, TAG_FROM_BC, DOF_NAME_FROM_XML_NODE_BC, VAR_FROM_XML_NODE_BC
+from .febioxml import bool_to_text, float_to_text, vec_to_text, bvec_to_text, control_tagnames_to_febio, control_values_to_febio, TAG_FROM_BC, DOF_NAME_FROM_XML_NODE_BC, VAR_FROM_XML_NODE_BC
 # ^ The intent here is to eventually be able to switch between FEBio XML
 # formats by exchanging this import statement for a different version.
 # Common functionality can be shared between febioxml_*_*.py files via
@@ -430,8 +430,22 @@ def contact_section(contacts, model, xml_root, named_surface_pairs,
           .text = "1" if contact.penalty['type'] == 'auto' else "0"
         ET.SubElement(tag_contact, 'penalty').text = f"{contact.penalty['factor']}"
         # Write algorithm modification tags
-        ET.SubElement(tag_contact, 'laugon').text = "1" if contact.augmented_lagrange else "0"
-        # (two_pass would go here)
+        ET.SubElement(tag_contact, 'laugon').text =\
+            bool_to_text(contact.augmented_lagrange)
+        ET.SubElement(tag_contact, "symmetric_stiffness").text =\
+            bool_to_text(contact.symmetric_stiffness)
+        e_two_pass = ET.SubElement(tag_contact, "two_pass")
+        if contact.passes == 2:
+            e_two_pass.text = "1"
+        elif contact.passes == 1:
+            e_two_pass.text = "0"
+        else:
+            raise ValueError(f"{contact.passes} passes requested in a contact constraint; FEBio supports either 0 or 1.")
+        # Write other parameters.  The FEBio manual is a bit spotty, so
+        # extra contact parameters are stuffed in a dictionary.  Write
+        # them out as-is, only casting them to strings.
+        for k, v in contact.other_params.items():
+            ET.SubElement(tag_contact, k).text = f"{v}"
     return tag_contact_section
 
 

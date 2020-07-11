@@ -113,6 +113,8 @@ def _maybe_to_number(s):
     except ValueError:
         return s
 
+def bool_to_text(v):
+    return "1" if v else "0"
 
 def vec_to_text(v):
     return ', '.join(f"{a:.7e}" for a in v)

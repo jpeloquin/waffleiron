@@ -100,6 +100,7 @@ class ContactConstraint:
                  penalty_factor=None,
                  augmented_lagrange=False,
                  passes=1,
+                 symmetric_stiffness=False,
                  tension=False,
                  **kwargs):
         self.leader = leader
@@ -107,6 +108,7 @@ class ContactConstraint:
         self.algorithm = algorithm
         self.tension = tension
         self.augmented_lagrange = augmented_lagrange
+        self.symmetric_stiffness = symmetric_stiffness
         self.passes = passes
         if auto_penalty:
             self.penalty = {'type': 'auto',
@@ -117,6 +119,9 @@ class ContactConstraint:
             assert penalty_factor is not None
             self.penalty = {'type': 'manual',
                             'factor': penalty_factor}
+        self.other_params = {}
+        for k, v in kwargs.items():
+            self.other_params[k] = v
         # TODO: Warn if two passes are specified and at least one of the
         # surfaces belongs to a rigid body.
 
