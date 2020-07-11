@@ -388,13 +388,12 @@ def choose_module(materials):
     return module
 
 
-def add_contact_section(model, xml_root, named_surface_pairs, named_contacts):
+def contact_section(contacts, model, xml_root, named_surface_pairs,
+                    named_contacts):
     tag_geometry = xml_root.find("./Geometry")
-    tag_contact_section = ET.SubElement(xml_root, 'Contact')
+    tag_contact_section = ET.Element("Contact")
     tags_surfpair = []
-    contact_constraints = [constraint for constraint in model.constraints
-                           if type(constraint) is ContactConstraint]
-    for contact in contact_constraints:
+    for contact in contacts:
         tag_contact = ET.SubElement(tag_contact_section, 'contact', type=contact.algorithm)
         # Name the contact to match its surface pair so someone reading
         # the XML can match them more easily
@@ -561,7 +560,11 @@ def xml(model, version='2.5'):
 
     e_boundary = ET.SubElement(root, 'Boundary')
     if version_major == 2 and version_minor >= 5:
-        tag_contact = add_contact_section(model, root, named_surface_pairs, named_contacts)
+        contact_constraints = [c for c in model.constraints
+                               if isinstance(c, ContactConstraint)]
+        tag_contact = contact_section(contact_constraints, model,
+                                      root, named_surface_pairs, named_contacts)
+        root.append(tag_contact)
     else:
         tag_contact = febioxml_2_0.contact_section(model)
         root.append(tag_contact)
@@ -970,8 +973,15 @@ def xml(model, version='2.5'):
                             # Other attributes
                             ET.SubElement(e_bc, 'relative').text = str(int(relative))
 
-        # Add <Boundary> and <Control> elements to <Step>, in that order
+        # Temporal (step-specific) contacts
+        contacts = [c for c in step["bc"]["contact"]
+                    if isinstance(c, ContactConstraint)]
+        e_Contact = contact_section(contacts, model, root,
+                                    named_surface_pairs, named_contacts)
+
+        # Add <Boundary>, <Contact>, and <Control> elements to <Step>, in that order
         e_step.append(e_Boundary)
+        e_step.append(e_Contact)
         e_step.append(e_Control)
 
         if ("bc" in step) and ("body" in step["bc"]):

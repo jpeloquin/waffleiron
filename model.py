@@ -84,8 +84,13 @@ class Model:
         # lists.
         self.steps = []
 
-    def add_contact(self, constraint):
-        self.constraints.append(constraint)
+    def add_contact(self, constraint, step=None):
+        if step == None:
+            # Apply the contact as an atemporal constraint
+            self.constraints.append(constraint)
+        else:
+            # Apply the contact as a step-specific constraint
+            self.steps[step]['bc']['contact'].append(constraint)
 
     def add_step(self, module='solid', control=None, name=None):
         """Add a step with default control values and no BCs.
@@ -97,7 +102,8 @@ class Model:
                 'module': module,
                 'control': control,
                 'bc': {'node': {},
-                       'body': {}}}
+                       'body': {},
+                       'contact': []}}
         self.steps.append(step)
 
 
