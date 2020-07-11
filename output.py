@@ -764,8 +764,10 @@ def xml(model, version='2.5'):
         if "bc" in step:
             for i, ax_bc in step['bc']['node'].items():
                 for ax, d in ax_bc.items():
-                    if d == 'variable':  # varying ("prescribed") BC
+                    if isinstance(d['sequence'], Sequence):
                         curves_to_adjust.add(d['sequence'])
+                    elif isinstance(d['sequence'], ScaledSequence):
+                        curves_to_adjust.add(d['sequence'].sequence)
         # Gather the body constraint curves
         if "bc" in step:
             for body, body_constraints in step['bc']['body'].items():
@@ -773,9 +775,11 @@ def xml(model, version='2.5'):
                     # params = {'variable': variable <string>,
                     #           'sequence': Sequence object or 'fixed',
                     #           'scale': scale <numeric>
-                    if type(params['sequence']) is Sequence:
+                    if isinstance(params['sequence'], Sequence):
                         curves_to_adjust.add(params['sequence'])
-                        # TODO: Add test to exercise this code
+                    elif isinstance(params['sequence'], ScaledSequence):
+                        curves_to_adjust.add(params['sequence'].sequence)
+                    # TODO: Add test to exercise this code
         # Adjust the curves
         for curve in curves_to_adjust:
             curve.points = [(cumulative_time + t, v)
