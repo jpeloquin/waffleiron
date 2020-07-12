@@ -158,7 +158,7 @@ class Sequence:
     method.
 
     """
-    def __init__(self, seq, interp='smooth', extend='constant'):
+    def __init__(self, seq, interp='linear', extend='constant'):
         # Input checking
         assert extend in ['extrapolate', 'constant', 'repeat',
                           'repeat continuous']
