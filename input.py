@@ -349,6 +349,36 @@ class FebReader:
                         p['value'] = v
             return p
 
+    def _read_rigid_body_element(self, model, e_rigid_body, explicit_bodies,
+                                 implicit_bodies, step_id):
+        """Read & apply a <rigid_body> element."""
+        # Each <rigid_body> element defines constraints for one rigid
+        # body, identified by its material ID.  Constraints may be fixed
+        # (atemporal) or time-varying (temporal).
+        #
+        # Get the Body object from the material id
+        mat_id = int(e_rigid_body.attrib["mat"]) - 1
+        if mat_id in explicit_bodies:
+            body = explicit_bodies[mat_id]
+        else:
+            # Assume mat_id refers to an implicit rigid body
+            body = implicit_bodies[mat_id]
+        # Read the body's constraints
+        for e_dof in e_rigid_body.findall("fixed"):
+            dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
+            var = VAR_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
+            model.fixed["body"][(dof, var)].add(body)
+        for e_dof in e_rigid_body.findall("prescribed"):
+            dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
+            var = VAR_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
+            seq = _read_parameter(e_dof, self.sequences)
+            if e_dof.get("type", None) == "relative":
+                relative = True
+            else:
+                relative = False
+            model.apply_body_bc(body, dof, var, seq, step_id=step_id,
+                                relative=relative)
+
     def model(self):
         """Return model.
 
@@ -497,33 +527,11 @@ class FebReader:
                     # interpretable.  So we must create a new node set.
                     model.fixed['node'][(dof, var)] =\
                         NodeSet(model.fixed['node'][(dof, var)] | node_ids)
-        #
-        # Read constraints on rigid bodies.  Each <rigid_body> element
-        # defines constraints for one rigid body, identified by its
-        # material ID.  Constraints may be fixed or time-varying.
+
+        # Read global constraints on rigid bodies
         for e_rb in self.root.findall("Boundary/rigid_body"):
-            # Get the Body object to which <rigid_body> refers to by
-            # material id.
-            body = None  # clear leftover state
-            mat_id = int(e_rb.attrib["mat"]) - 1
-            if mat_id in explicit_bodies:
-                body = explicit_bodies[mat_id]
-            else:
-                # Assume mat_id is refers to an implicit rigid body
-                body = implicit_bodies[mat_id]
-            # Read the constraints for the body found in the first half
-            # of this loop.
-            for e_dof in e_rb.findall("fixed"):
-                dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
-                var = VAR_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
-                # Despite the name, these maps are valid for rigid
-                # bodies too.
-                model.fixed["body"][(dof, var)].add(body)
-            for e_dof in e_rb.findall("prescribed"):
-                dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
-                var = VAR_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
-                seq = _read_parameter(e_dof, self.sequences)
-                model.apply_body_bc(body, dof, var, seq, step_id=None)
+            self._read_rigid_body_element(model, e_rb, explicit_bodies,
+                                          implicit_bodies, step_id=None)
 
         # Load curves (sequences)
         for seq_id, seq in self.sequences.items():
@@ -538,7 +546,7 @@ class FebReader:
         else:
             top_module = None
         # Read the <Step> elements
-        for e_step in self.root.findall('Step'):
+        for step_id, e_step in enumerate(self.root.findall('Step')):
             step_name = e_step.attrib["name"] if "name" in e_step.attrib else None
             # Module
             e_module = e_step.find('Module')
@@ -571,6 +579,12 @@ class FebReader:
             # Add the step.  Use the method to get correct defaults;
             # e.g, correct keys for missing boundary conditions.
             model.add_step(module=module, control=control, name=step_name)
+            #
+            # Read body loadings
+            for e_rb in e_step.findall("Boundary/rigid_body"):
+                self._read_rigid_body_element(model, e_rb, explicit_bodies,
+                                              implicit_bodies, step_id=step_id)
+            # Node loadings are handled later
 
         # Read prescribed nodal conditions.
         #
