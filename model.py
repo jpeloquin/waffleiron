@@ -149,7 +149,7 @@ class Model:
 
 
     def apply_body_bc(self, body, dof, variable, sequence, scale=1,
-                      step_id=-1):
+                      relative=False, step_id=-1):
         """Apply a variable displacement boundary condition to a body.
 
         The boundary condition is applied to the selected solution step,
@@ -180,8 +180,9 @@ class Model:
             bc_dict = self.steps[step_id]["bc"]["body"]
         bc = bc_dict.setdefault(body, {})
         bc[dof] = {'variable': variable,
-                    'sequence': sequence,
-                    'scale': scale}
+                   'sequence': sequence,
+                   'scale': scale,
+                   'relative': relative}
         # TODO: Remove scale; just used ScaledSequence for that case
 
 

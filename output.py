@@ -502,6 +502,8 @@ def body_constraints_to_feb(body, constraints, material_registry,
             tagname = TAG_FROM_BC['body'][kind]
         elif bc['variable'] == 'force':
             tagname = 'force'
+            if bc['relative']:
+                raise ValueError(f"A relative body boundary condition for {dof} {bc['variable']} was requested, but relative body boundary conditions are supported only for displacement.")
         else:
             raise ValueError(f"Variable {bc['variable']} not supported for BCs.")
         bc_attr = XML_BC_FROM_DOF[(dof, bc["variable"])]
@@ -509,6 +511,7 @@ def body_constraints_to_feb(body, constraints, material_registry,
         if kind == 'variable':
             seq_id = _get_or_create_seq_id(sequence_registry, seq)
             e_bc.attrib['lc'] = str(seq_id + 1)
+            if bc['relative']: e_bc.attrib["type"] = "relative"
             e_bc.text = str(v)
     return e_body
 
