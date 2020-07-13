@@ -169,63 +169,6 @@ def read_named_sets(xml_root):
     return sets
 
 
-def iter_node_conditions(root):
-    """Return generator over prescribed nodal condition info.
-
-    Returns dict of property names → values.  All properties are
-    guaranteed to be not-None, except "nodal values", which will be None
-    if the condition applies the same condition to all nodes.
-
-    All returned IDs are 0-indexed for consistency with febtools.
-
-    """
-    step_id = -1  # Curent step ID (0-indexed)
-    for e_Step in root.findall("Step"):
-        step_id += 1
-        for e_prescribe in e_Step.findall("Boundary/prescribe"):
-            # Re-initialize output
-            info = {"node set name": None,
-                    "axis": None,  # x1, fluid, charge, etc.
-                    "variable": None,  # displacement, force, etc.
-                    "sequence ID": None,
-                    "scale": 1.0,
-                    "nodal values": None,
-                    "step ID": None}
-            # Read values
-            info["node set name"] = e_prescribe.attrib["node_set"]
-            info["axis"] = axis_from_febio[e_prescribe.attrib["bc"]]
-            info["variable"] = "displacement"
-            e_scale = e_prescribe.find("scale")
-            seq_scale = 0.0  # FEBio default
-            if e_scale.text is not None:
-                seq_scale = _to_number(e_scale.text)
-            info["sequence ID"] =  _to_number(e_scale.attrib["lc"]) - 1
-            e_value = e_prescribe.find("value")
-            if e_value is not None:
-                if "node_data" in e_value.attrib:
-                    # Node-specific data; look up the data in MeshData
-                    info["scale"] = seq_scale
-                    e_NodeSet = _find_unique_tag(root,
-                                                 "Geometry/NodeSet[@name='" +
-                                                 info['node set name'] +
-                                                 "']")
-                    e_NodeData = _find_unique_tag(root,
-                                                  "MeshData/NodeData[@name='" +
-                                                  e_value.attrib["node_data"] +
-                                                  "']")
-                    info["nodal values"] = {}
-                    for e_node, e_value in zip(e_NodeSet.findall("node"),
-                                               e_NodeData.findall("node")):
-                        id_ = int(e_node.attrib["id"]) - 1
-                        info["nodal values"][id_] = _to_number(e_value.text)
-                else:
-                    # One value for all nodes; redundant with "scale"
-                    val_scale = _to_number(e_value.text)
-                    info["scale"] = seq_scale * val_scale
-            info["step ID"] = step_id
-            yield info
-
-
 def basis_mat_axis_local(element: Element,
                          local_ids=(1, 2, 4)):
     """Return element basis for FEBio XML <mat_axis type="local"> values.
