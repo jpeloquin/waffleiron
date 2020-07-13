@@ -88,14 +88,14 @@ control_values_from_febio = {k: {v_xml: v_us for v_us, v_xml in conv.items()}
 
 # TODO: Redesign the compatibility system so that compatibility can be
 # derived from the material's type.
-module_compat_by_mat = {material.PoroelasticSolid: set(['biphasic']),
-                        material.RigidBody: set(['solid', 'biphasic']),
-                        material.OrthotropicElastic: set(['solid', 'biphasic']),
-                        material.IsotropicElastic: set(['solid', 'biphasic']),
-                        material.SolidMixture: set(['solid', 'biphasic']),
-                        material.PowerLinearFiber: set(['solid', 'biphasic']),
-                        material.ExponentialFiber: set(['solid', 'biphasic']),
-                        material.HolmesMow: set(['solid', 'biphasic'])}
+module_compat_by_mat = {material.PoroelasticSolid: {'biphasic'},
+                        material.RigidBody: {'solid', 'biphasic'},
+                        material.OrthotropicElastic: {'solid', 'biphasic'},
+                        material.IsotropicElastic: {'solid', 'biphasic'},
+                        material.SolidMixture: {'solid', 'biphasic'},
+                        material.PowerLinearFiber: {'solid', 'biphasic'},
+                        material.ExponentialFiber: {'solid', 'biphasic'},
+                        material.HolmesMow: {'solid', 'biphasic'}}
 
 
 def _to_number(s):
