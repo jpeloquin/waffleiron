@@ -499,7 +499,7 @@ class FTestTri3(unittest.TestCase):
                                     decimal=5)
 
 
-@unittest.skip("extended directors not yet implemented, so shell elements will not provide the correct F tensor")
+@unittest.skip("extensible directors not yet implemented, so shell elements will not provide the correct F tensor")
 class FTestQuad4(unittest.TestCase):
     """Test F tensor calculations for Tri3 mesh.
 
