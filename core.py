@@ -1,5 +1,4 @@
 from copy import copy
-from collections import defaultdict
 from operator import itemgetter
 from warnings import warn
 
