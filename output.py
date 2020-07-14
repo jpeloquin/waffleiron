@@ -816,6 +816,10 @@ def xml(model, version='2.5'):
             output_vars += ["effective fluid pressure",
                             "fluid pressure",
                             "fluid flux"]
+        rigid_bodies_present = any(isinstance(m, feb.material.RigidBody)
+                                   for m in material_registry.objects())
+        if rigid_bodies_present:
+            output_vars += ["reaction forces"]
     else:
         output_vars = model.output["variables"]
     for var in output_vars:
