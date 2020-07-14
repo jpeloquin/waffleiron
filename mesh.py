@@ -52,7 +52,7 @@ def zstack(mesh, zcoords):
     return mesh3d
 
 
-def rectangular_prism(length, width, thickness):
+def rectangular_prism(length, width, thickness, material=None):
     """Create an FE mesh of a rectangular prism.
 
     Each key dimension is a tuple of (length, number of elements).
@@ -104,6 +104,10 @@ def rectangular_prism(length, width, thickness):
                                        atol=np.spacing(t/2)))[0])
     assert len(ns) == (nl + 1) * (nw + 1)
     mesh.named["node sets"].add("+x3 face", ns)
+    # Assign material
+    if material is not None:
+        for e in mesh.elements:
+            e.material = material
     return mesh
 
 
