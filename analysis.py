@@ -75,7 +75,14 @@ def apply_q_2d(mesh, crack_tip, q=[1, 0, 0], n=3, qtype='plateau'):
 
     # Apply q to all elements
     for e in mesh.elements:
-        e.properties['q'] = np.array([q_nodes[i] for i in e.ids])
+        q_local = [q_nodes[i] for i in e.ids]
+        if all([a is not None for a in q_local]):
+            e.properties['q'] = np.array(q_local)
+        else:
+            # Can't make an array if some nodes' values are None and
+            # others' are 3-element arrays.  Numpy ≥ 1.19 will issue a
+            # warning.
+            e.properties['q'] = q_local
 
     return elements
 
