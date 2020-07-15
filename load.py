@@ -57,20 +57,21 @@ def apply_uniax_stretch(model, stretches, axis='x1'):
 def cyclic_stretch_sequence(targets, rate, n=1, baseline=1.0):
     """Return a Sequence representing cyclic stretch.
 
-    targets := List of numbers.  Each value specifies the peak stretch
-    ratio for a block of cycles, in order.
+    targets := List consisting of one peak value for each block of
+    identical cycles, listed in block order.
 
-    rate := Number, or list of numbers.  The strain rate for each block
-    of cycles.  If a list, there must be one value per block, in the
-    same order as `targets`.
+    rate := Number, or list of numbers.  The deformation rate for each
+    block of identical cycles.  If a list, there must be one value per
+    block, in the same order as `targets`.  Should have same units as
+    `targets`.
 
     n := integer, or list of integers (optional).  The number of cycles
-    in each block of cyclic stretches.  If an integer is provided, it
+    in each block of identical cycles.  If an integer is provided, it
     will be applied to all blocks.  If a list is provided, it must be
     the same length as `targets`, and the values will be applied to each
     block in turn.
 
-    baseline := number.  The starting and ending stretch ratio for each cycle.
+    baseline := number.  The start and end (trough) value of each cycle.
 
     """
     # Expand strain rate
@@ -99,11 +100,8 @@ def cyclic_stretch_sequence(targets, rate, n=1, baseline=1.0):
             dt = abs(dv / r)
             stretches.append(baseline)
             times.append(times[-1] + dt)
-
-    # Create [(time, eng. strain), ...] curve
-    curve = [(t, y - 1.0) for t, y in zip(times, stretches)]
+    curve = [a for a in zip(times, stretches)]
     sequence = Sequence(curve, extend='constant', interp='linear')
-
     return sequence
 
 
