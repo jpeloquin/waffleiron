@@ -455,7 +455,10 @@ def control_parameter_to_feb(parameter, value):
     if parameter in control_values_to_febio:
         val_feb = control_values_to_febio[parameter][value]
     else:
-        val_feb = str(value)
+        if isinstance(value, bool):
+            val_feb = bool_to_text(value)
+        else:
+            val_feb = str(value)
     e = ET.Element(nm_feb)
     if nm_feb == "analysis":
         # For some reason, <analysis> stores its value as an attribute,
