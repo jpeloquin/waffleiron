@@ -1,6 +1,7 @@
 # Python built-ins
 from math import radians
 import os
+from pathlib import Path
 # Public packages
 import numpy as np
 # febtools' local modules
@@ -12,6 +13,8 @@ RTOL_F = 5e-7
 ATOL_F = 5e-8
 RTOL_STRESS = 5e-7
 ATOL_STRESS = 5e-7
+DIR_FIXTURES = Path(__file__).parent / "fixtures"
+DIR_OUT = Path(__file__).parent / "output"
 
 
 def gen_model_center_crack_Hex8():

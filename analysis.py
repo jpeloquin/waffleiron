@@ -1,5 +1,7 @@
 import numpy as np
 
+from febtools.core import NodeSet
+from febtools.model import Model
 from febtools.exceptions import SelectionException
 
 
@@ -272,3 +274,43 @@ def jintegral(domain, infinitessimal=False):
         j += e.integrate(integrand)
 
     return j
+
+
+def strain_gauge(model: Model, a: NodeSet, b: NodeSet):
+    """Return strain between a and b as a time series.
+
+    Inputs:
+    -------
+
+    model := febtools Model object with a solution.
+
+    a := First strain gauge marker / anchor.
+
+    b := Second strain gauge marker / anchor.
+
+    Strain is calculated from the center of one marker to the center of
+    the other marker.  The order of markers does not matter.  For
+    collective markers (e.g., node sets) the order of entities within
+    each marker does not matter.
+
+    For a node set marker, the center of the marker is the arithmetic
+    mean of the positions of all nodes in the node set.
+
+    Returns:
+    --------
+
+    scalar time series of engineering strain; for all times t,
+    (displacement between a and b at t) / (distance between a and b at t
+    = 0 s).
+
+    """
+    λ = np.empty(len(model.solution.step_times))
+    λ[:] = np.nan  # make any indexing errors more obvious
+    for i in range(len(model.solution.step_times)):
+        δ = np.array(model.solution.step_data(i)["node variables"]["displacement"])
+        δ_a = np.mean([δ[j] for j in a], axis=0)
+        δ_b = np.mean([δ[j] for j in b], axis=0)
+        x_a = np.mean([model.mesh.nodes[j] for j in a], axis=0)
+        x_b = np.mean([model.mesh.nodes[j] for j in b], axis=0)
+        λ[i] = np.linalg.norm((x_b + δ_b) - (x_a + δ_a)) / np.linalg.norm(x_b - x_a)
+    return λ

@@ -1,6 +1,6 @@
 # Run these tests with nose
 from nose.tools import with_setup
-import unittest
+from unittest import TestCase
 import os
 import itertools, math
 from math import pi, radians, cos, sin
@@ -12,9 +12,10 @@ from febtools.input import FebReader
 from febtools.material import from_Lamé, to_Lamé
 from febtools.analysis import *
 from febtools import material
-from febtools.test.fixtures import gen_model_center_crack_Hex8
+from febtools.test.fixtures import gen_model_center_crack_Hex8, DIR_OUT, RTOL_F, ATOL_F
 
-class CenterCrackHex8(unittest.TestCase):
+
+class CenterCrackHex8(TestCase):
     """Center cracked isotropic elastic plate in 3d.
 
     """
@@ -192,7 +193,7 @@ class CenterCrackHex8(unittest.TestCase):
         npt.assert_allclose(jbar_l, 76.20, rtol=1e-4)
 
 
-class CenterCrackQuad4(unittest.TestCase):
+class CenterCrackQuad4(TestCase):
 
     def setUp(self):
         reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic_quad4.feb'))
@@ -256,3 +257,36 @@ class CenterCrackQuad4(unittest.TestCase):
                               q=[1, 0, 0])
         J = jintegral(elements)
         npt.assert_allclose(J, 72.75, atol=0.01)
+
+
+class FEBio_StrainGauge_Hex8_HolmesMow(TestCase):
+    """Test strain_gauge with Hex8 elements"""
+
+    path = DIR_OUT / "test_analysis.StrainGauge_Hex8_HolmesMow.feb"
+
+    def setUp(self):
+        """Create and run model"""
+        mat = feb.material.HolmesMow(10, 0.3, 4)
+        model = feb.Model(feb.mesh.rectangular_prism((2, 2), (2, 2), (2, 2),
+                                                     material=mat))
+        seq = feb.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
+        model.add_step(control=feb.control.auto_control_section(seq, 10))
+        F = np.array([[1.5, 0.5, 0],
+                      [0, 1, 0],
+                      [0, 0, 1]])
+        left = model.named["node sets"].obj("−x1 face")
+        right = model.named["node sets"].obj("+x1 face")
+        feb.load.prescribe_deformation(model, left, np.eye(3), seq)
+        feb.load.prescribe_deformation(model, right, F, seq)
+        with open(self.path, "wb") as f:
+            feb.output.write_feb(model, f)
+        feb.febio.run_febio(self.path)
+        self.solved = feb.load_model(self.path)
+
+    def nodeset_nodeset_test(self):
+        left = self.solved.named["node sets"].obj("−x1 face")
+        right = self.solved.named["node sets"].obj("+x1 face")
+        λ = feb.analysis.strain_gauge(self.solved, left, right)
+        expected = np.array([1.0, 1.025, 1.05, 1.07500001, 1.1, 1.125,
+                             1.15000002, 1.175, 1.2, 1.22499998, 1.25])
+        npt.assert_allclose(λ, expected, rtol=RTOL_F, atol=ATOL_F)
