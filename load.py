@@ -101,7 +101,7 @@ def cyclic_stretch_sequence(targets, rate, n=1, baseline=1.0):
             stretches.append(baseline)
             times.append(times[-1] + dt)
     curve = [a for a in zip(times, stretches)]
-    sequence = Sequence(curve, extend='constant', interp='linear')
+    sequence = Sequence(curve, extrap='constant', interp='linear')
     return sequence
 
 

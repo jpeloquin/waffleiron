@@ -170,7 +170,7 @@ def xml(model):
     # Write adjusted sequences
     for i, seq in sequences:
         e_lc = ET.SubElement(e_loaddata, 'loadcurve', id=str(i+1),
-                             type=seq.typ, extend=seq.extend)
+                             type=seq.typ, extrap=seq.extrap)
         for pt in seq.points:
             ET.SubElement(e_lc, 'point').text = ','.join(str(x) for x in pt)
 

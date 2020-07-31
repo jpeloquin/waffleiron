@@ -278,16 +278,20 @@ class FebReader:
                 curve = [parse_pt(a.text) for a in e_lc.getchildren()]
                 # Set extrapolation
                 if 'extend' in e_lc.attrib:
-                    extend = e_lc.attrib['extend']
+                    extrap = e_lc.attrib['extend']
+                    if extrap == "extrapolate":
+                        # FEBio XML uses "extrapolate" to mean linear
+                        # extrapolation
+                        extrap = "linear"
                 else:
-                    extend = 'constant'  # default
+                    extrap = 'constant'  # default
                 # Set interpolation
                 if 'type' in e_lc.attrib:
                     interp = e_lc.attrib['type']
                 else:
                     interp = 'linear'  # default
                 # Create and store the Sequence object
-                self._sequences[ord_id] = Sequence(curve, interp=interp, extend=extend)
+                self._sequences[ord_id] = Sequence(curve, interp=interp, extrap=extrap)
         return self._sequences
 
 

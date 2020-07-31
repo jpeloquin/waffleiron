@@ -48,7 +48,7 @@ def _fixture_FEBio_fiberDirectionLocal_Hex8_fiber():
     for e in model.mesh.elements:
         e.material = material
     sequence = feb.Sequence(((0, 0), (1, 1)),
-                            extend="extrapolate", interp="linear")
+                            extrap="extrapolate", interp="linear")
     model.add_step(control=auto_control_section(sequence, pts_per_segment=1))
     F = np.array([[1.14, 0.18, 0.11],
                   [-0.20, 1.09, 0.17],

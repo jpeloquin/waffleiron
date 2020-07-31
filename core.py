@@ -162,15 +162,16 @@ class Sequence:
     method.
 
     """
-    def __init__(self, seq, interp='linear', extend='constant'):
+    def __init__(self, seq, interp='linear', extrap='constant'):
         # Input checking
-        assert extend in ['extrapolate', 'constant', 'repeat',
-                          'repeat continuous']
+        if not extrap in ['constant', 'linear', 'repeat',
+                          'repeat continuous']:
+            raise ValueError(f"`extrap` may equal 'constant', 'linear', 'repeat', or 'repeat continuous'.  Received '{extrap}'")
         assert interp in ['step', 'linear', 'smooth']
         # Parameters
         self.points = seq
         self.interpolant = interp
-        self.extend = extend
+        self.extrapolant = extrap
 
 
 class ScaledSequence:
@@ -194,8 +195,8 @@ class ScaledSequence:
         return self.sequence.interpolant
 
     @property
-    def extend(self):
-        return self.sequence.extend
+    def extrapolant(self):
+        return self.sequence.extrapolant
 
 
 class NameRegistry:

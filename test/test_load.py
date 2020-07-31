@@ -44,7 +44,7 @@ def test_pipeline_prescribe_deformation_singleHex8():
     for e in model.mesh.elements:
         e.material = material
     sequence = feb.Sequence(((0, 0), (1, 1)),
-                            extend="extrapolate", interp="linear")
+                            extrap="linear", interp="linear")
     model.add_step(control=auto_control_section(sequence, pts_per_segment=1))
 
     # Test 1: Does prescribe_deformation complete without error?

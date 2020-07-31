@@ -341,7 +341,7 @@ def add_sequence(xml_root, model, sequence):
     e_loadcurve = ET.SubElement(e_loaddata, "loadcurve",
                                 id=str(seq_id + 1),
                                 type=sequence.interpolant,
-                                extend=sequence.extend)
+                                extrap=sequence.extrapolant)
     for pt in sequence.points:
         ET.SubElement(e_loadcurve, "point").text = ", ".join(str(x) for x in pt)
 
