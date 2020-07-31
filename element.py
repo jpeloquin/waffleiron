@@ -404,7 +404,6 @@ class Tri3(Element2D):
         super(Tri3, self).__init__(*args, **kwargs)
         self.properties['thickness'] = (1.0, 1.0, 1.0)
 
-    @property
     def centroid(self, config='reference'):
         """Centroid of element.
 
