@@ -1,11 +1,16 @@
 from copy import copy
 from operator import itemgetter
+from typing import NewType
 from warnings import warn
 
 import numpy as np
 
 # Set tolerances
 _DEFAULT_TOL = 10*np.finfo(float).eps
+
+ZeroIdxID = NewType("ZeroIdxID", int)
+OneIdxID = NewType("OneIdxID", int)
+NodeID = NewType("NodeID", ZeroIdxID)
 
 
 def _validate_dof(dof, body=False):
