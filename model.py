@@ -236,11 +236,12 @@ class Mesh:
 
         """
         # Nodes
-        if np.array(nodes).size == 0:
+        nodes = np.array(nodes)
+        if nodes.size == 0:
             self.nodes = nodes
         # if nodes are 2D, add z = 0
         elif len(nodes[0]) == 2:
-            self.nodes = [(x, y, 0.0) for (x, y) in nodes]
+            self.nodes = np.hstack([nodes, np.zeros((len(nodes), 1))])
         else:
             self.nodes = nodes
         # Elements
@@ -440,8 +441,8 @@ class Mesh:
         """
         if candidates == 'auto':
             candidates = range(len(other.nodes))
-        # copy nodes so any error will not corrupt the original mesh
-        nodelist = deepcopy(self.nodes)
+        # Copy the node list so errors will not corrupt the original
+        nodelist = [node for node in self.nodes]
         nodes_cd = [other.nodes[i] for i in candidates]
         dist = cdist(nodes_cd, self.nodes, 'euclidean')
         # ^ i indexes candidate list (other), j indexes nodes in self
@@ -467,7 +468,7 @@ class Mesh:
                 newind.append(len(nodelist))
                 nodelist.append(p)
         # Update this mesh's node list
-        self.nodes = nodelist
+        self.nodes = np.array(nodelist)
         # Define new elements for "other" mesh
         # new_simplices = [list(e.ids) for e in other.elements]
         for i, e in enumerate(other.elements):
