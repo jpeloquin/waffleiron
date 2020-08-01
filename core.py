@@ -6,7 +6,7 @@ from warnings import warn
 import numpy as np
 
 # Set tolerances
-_DEFAULT_TOL = 10*np.finfo(float).eps
+_DEFAULT_TOL = 10 * np.finfo(float).eps
 
 ZeroIdxID = NewType("ZeroIdxID", int)
 OneIdxID = NewType("OneIdxID", int)
@@ -14,9 +14,9 @@ NodeID = NewType("NodeID", ZeroIdxID)
 
 
 def _validate_dof(dof, body=False):
-    allowed_dofs = ['x1', 'x2', 'x3', 'fluid', 'temperature', 'charge']
+    allowed_dofs = ["x1", "x2", "x3", "fluid", "temperature", "charge"]
     if body:
-       allowed_dofs += ['α1', 'α2', 'α3']
+        allowed_dofs += ["α1", "α2", "α3"]
     if not dof in allowed_dofs:
         msg = f"{dof} is not a supported axis type.  The supported degrees of freedom are {','.join(allowed_axes)}."
         raise ValueError(msg)
@@ -28,6 +28,7 @@ class Body:
     Explicit rigid bodies should be constructed using this type.
 
     """
+
     def __init__(self, elements):
         self.elements = elements
         # self.master_inode = elements[0].ids[0]
@@ -52,6 +53,7 @@ class EntitySet(set):
     comparable.
 
     """
+
     def __hash__(self):
         return id(self) // 16
 
@@ -70,6 +72,7 @@ class ElementSet(EntitySet):
 
 class ImplicitBody:
     """A geometric body defined by its interface with a mesh."""
+
     def __init__(self, mesh, interface: NodeSet, material=None):
         """Constructor for ImplicitBody object.
 
@@ -87,10 +90,12 @@ class ImplicitBody:
 
 class RigidInterface:
     """A rigid constraint between a rigid body and a node set."""
+
     # Future enhancement: There is no particular reason that a rigid
     # interface should be restricted to an explicit rigid body and a
     # node set.  Two node sets work fine; just create an implicit rigid
     # body for one of them.
+
     def __init__(self, rigid_body, node_set):
         self.rigid_body = rigid_body
         self.node_set = node_set
@@ -98,15 +103,21 @@ class RigidInterface:
 
 class ContactConstraint:
     """A constraint defining contact between two surfaces."""
-    def __init__(self, leader, follower, algorithm=None,
-                 auto_penalty=True,
-                 auto_penalty_scale=1,
-                 penalty_factor=None,
-                 augmented_lagrange=False,
-                 passes=1,
-                 symmetric_stiffness=False,
-                 tension=False,
-                 **kwargs):
+
+    def __init__(
+        self,
+        leader,
+        follower,
+        algorithm=None,
+        auto_penalty=True,
+        auto_penalty_scale=1,
+        penalty_factor=None,
+        augmented_lagrange=False,
+        passes=1,
+        symmetric_stiffness=False,
+        tension=False,
+        **kwargs,
+    ):
         self.leader = leader
         self.follower = follower
         self.algorithm = algorithm
@@ -115,14 +126,14 @@ class ContactConstraint:
         self.symmetric_stiffness = symmetric_stiffness
         self.passes = passes
         if auto_penalty:
-            self.penalty = {'type': 'auto',
-                            'factor': auto_penalty_scale}
+            self.penalty = {"type": "auto", "factor": auto_penalty_scale}
             if penalty_factor is not None:
-                warn("A value for `penalty_factor` was provided, but automatic penalty factor calculation was also requested.  The `penalty_factor` value will not be used.  You may want to set `auto_penalty_scale` instead.")
+                warn(
+                    "A value for `penalty_factor` was provided, but automatic penalty factor calculation was also requested.  The `penalty_factor` value will not be used.  You may want to set `auto_penalty_scale` instead."
+                )
         else:
             assert penalty_factor is not None
-            self.penalty = {'type': 'manual',
-                            'factor': penalty_factor}
+            self.penalty = {"type": "manual", "factor": penalty_factor}
         self.other_params = {}
         for k, v in kwargs.items():
             self.other_params[k] = v
@@ -147,10 +158,8 @@ def _e_bb(elements):
     """Create bounding box array from element list.
 
     """
-    bb_max = np.vstack([np.max(e.nodes, axis=0)
-                        for e in elements])
-    bb_min = np.vstack([np.min(e.nodes, axis=0)
-                        for e in elements])
+    bb_max = np.vstack([np.max(e.nodes, axis=0) for e in elements])
+    bb_min = np.vstack([np.min(e.nodes, axis=0) for e in elements])
     bb = (bb_min, bb_max)
     return bb
 
@@ -162,12 +171,14 @@ class Sequence:
     method.
 
     """
-    def __init__(self, seq, interp='linear', extrap='constant'):
+
+    def __init__(self, seq, interp="linear", extrap="constant"):
         # Input checking
-        if not extrap in ['constant', 'linear', 'repeat',
-                          'repeat continuous']:
-            raise ValueError(f"`extrap` may equal 'constant', 'linear', 'repeat', or 'repeat continuous'.  Received '{extrap}'")
-        assert interp in ['step', 'linear', 'smooth']
+        if not extrap in ["constant", "linear", "repeat", "repeat continuous"]:
+            raise ValueError(
+                f"`extrap` may equal 'constant', 'linear', 'repeat', or 'repeat continuous'.  Received '{extrap}'"
+            )
+        assert interp in ["step", "linear", "smooth"]
         # Parameters
         self.points = seq
         self.interpolant = interp
@@ -182,6 +193,7 @@ class ScaledSequence:
     not provide functions to modify the base sequence.
 
     """
+
     def __init__(self, sequence: Sequence, scale: float):
         self.scale = scale
         self.sequence = sequence
@@ -206,6 +218,7 @@ class NameRegistry:
     `object → (name + nametype)s`.
 
     """
+
     def __init__(self):
         self._from_name = {}
         self._from_name["canonical"] = {}
@@ -219,8 +232,7 @@ class NameRegistry:
 
         """
         # Check for existing objects with this name
-        if (obj in self._from_object and
-            nametype in self._from_object[obj]):
+        if obj in self._from_object and nametype in self._from_object[obj]:
             oldname = self._from_object[obj][nametype]
             # Remove the name from the name → object map. The object →
             # names map is overwritten later by assignment.

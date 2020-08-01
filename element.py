@@ -4,6 +4,7 @@ from scipy.optimize import fmin
 import febtools as feb
 from febtools.geometry import cross
 
+
 def elem_obj(element, nodes, eid=None):
     """Returns an Element object from node and element tuples.
 
@@ -14,8 +15,7 @@ def elem_obj(element, nodes, eid=None):
     n = len(element)
     if n == 3:
         etype = Tri3
-    elif n == 4 \
-       and (len(nodes[0]) == 2 or all([x[2] == 0.0 for x in nodes])):
+    elif n == 4 and (len(nodes[0]) == 2 or all([x[2] == 0.0 for x in nodes])):
         etype = Quad4
     elif n == 8:
         etype = Hex8
@@ -47,6 +47,7 @@ class Element:
     useful with the z dimension.  This will be fixed.
 
     """
+
     def __init__(self, nodes, material=None):
         """Create an element from a list of nodes.
 
@@ -59,11 +60,11 @@ class Element:
             calculated by indexing into `mesh`.
 
         """
-        self.ids = None # indices of nodes in mesh
+        self.ids = None  # indices of nodes in mesh
         self.mesh = None
         self.basis = None
         self.material = material
-        self.properties = {'displacement': np.array([(0, 0, 0) for i in nodes])}
+        self.properties = {"displacement": np.array([(0, 0, 0) for i in nodes])}
         # Nodal coordinates
         self.nodes = np.array(nodes)
         assert self.nodes.shape[1] >= 2
@@ -89,7 +90,7 @@ class Element:
         values = np.array(values)
         self.properties[label] = values
 
-    def x(self, config='reference'):
+    def x(self, config="reference"):
         """Nodal positions in reference or deformed configuration.
 
         Index 1 := node number.
@@ -97,15 +98,19 @@ class Element:
         Index 2 := coordinate.
 
         """
-        if config == 'reference':
+        if config == "reference":
             x = self.nodes
-        elif config == 'deformed':
-            x = self.nodes + self.properties['displacement']
+        elif config == "deformed":
+            x = self.nodes + self.properties["displacement"]
         else:
-            raise Exception('Value "{}" for config not recognized.  Use "reference" or "deformed"'.format(config))
+            raise Exception(
+                'Value "{}" for config not recognized.  Use "reference" or "deformed"'.format(
+                    config
+                )
+            )
         return x
 
-    def interp(self, r, prop='displacement'):
+    def interp(self, r, prop="displacement"):
         """Interpolate node-valued data at r.
 
         values := A list with a 1:1 mapping to the list of nodes in
@@ -113,13 +118,13 @@ class Element:
         (but must be consistent).
 
         """
-        if prop == 'position':
+        if prop == "position":
             v = self.x()
         else:
-            v = self.properties[prop] # nodal values
+            v = self.properties[prop]  # nodal values
         return np.dot(v.T, self.N(*r))
 
-    def dinterp(self, r, prop='displacement'):
+    def dinterp(self, r, prop="displacement"):
         """Return d/dx of node-valued data at natural basis point r
 
         The node-valued data may be scalar, vector, or tensor.
@@ -150,7 +155,7 @@ class Element:
         ishape = nodal_v.shape[1:]
         if not ishape:
             ishape = (1,)
-        oshape = ishape + (j.shape[0],) # allow true 2d elements
+        oshape = ishape + (j.shape[0],)  # allow true 2d elements
 
         flat_v = np.array([a.ravel() for a in nodal_v])
         dvdr = np.dot(ddr.T, flat_v).T
@@ -161,9 +166,9 @@ class Element:
 
         return out.squeeze()
 
-    def ddinterp(self, r, prop='displacement'):
+    def ddinterp(self, r, prop="displacement"):
         if type(prop) is str:
-            nodal_v = self.properties[prop] # nodal values
+            nodal_v = self.properties[prop]  # nodal values
         else:
             nodal_v = prop
 
@@ -196,8 +201,7 @@ class Element:
 
     def f_avg(self):
         """Return F tensor averaged across integration points."""
-        return np.mean([self.f(self.gloc[i]) for i in range(len(self.gloc))],
-                       axis=0)
+        return np.mean([self.f(self.gloc[i]) for i in range(len(self.gloc))], axis=0)
 
     def f(self, r):
         """Calculate F tensor (convenience function).
@@ -205,11 +209,11 @@ class Element:
         r := coordinate vector in element's natural basis
 
         """
-        dudx = self.dinterp(r, prop='displacement')
+        dudx = self.dinterp(r, prop="displacement")
         F = dudx + np.eye(3)
         return F
 
-    def j(self, r, config='reference'):
+    def j(self, r, config="reference"):
         """Jacobian matrix (∂x_i/∂r_j) evaluated at r
 
         """
@@ -227,15 +231,19 @@ class Element:
             coordinate at which f is evaluated.
 
         """
-        return sum((fn(self, r, *args, **kwargs) * self.jdet(r) * w
-                    for r, w in zip(self.gloc, self.gwt)))
+        return sum(
+            (
+                fn(self, r, *args, **kwargs) * self.jdet(r) * w
+                for r, w in zip(self.gloc, self.gwt)
+            )
+        )
 
-    def centroid(self, config='reference'):
+    def centroid(self, config="reference"):
         """Centroid of element.
 
         """
         x = self.x(config)
-        return self.interp((0,0,0), 'position')
+        return self.interp((0, 0, 0), "position")
 
     def faces(self):
         """Return the faces of this element.
@@ -245,14 +253,13 @@ class Element:
 
         """
         if self.ids is not None:
-            faces = tuple(tuple(self.ids[i] for i in f)
-                          for f in self.face_nodes)
+            faces = tuple(tuple(self.ids[i] for i in f) for f in self.face_nodes)
         else:
             faces = self.face_nodes
         faces = [feb._canonical_face(f) for f in faces]
         return faces
 
-    def face_normals(self, config='reference'):
+    def face_normals(self, config="reference"):
         """List of face normals
 
         """
@@ -268,24 +275,22 @@ class Element:
         The node id here is local to the element.
 
         """
-        return [i for i, f in enumerate(self.face_nodes)
-                if node_id in f]
+        return [i for i, f in enumerate(self.face_nodes) if node_id in f]
 
-    def to_natural(self, pt, config='reference'):
+    def to_natural(self, pt, config="reference"):
         """Return natural coordinates for pt = (x, y, z)
 
         """
         pt = np.array(pt)
         x = self.x(config)
-        x0 = np.dot(self.N(*[0]*self.r_n), x)
+        x0 = np.dot(self.N(*[0] * self.r_n), x)
         v = pt - x0
-        j = self.j([0]*self.r_n)
+        j = self.j([0] * self.r_n)
         jinv = np.linalg.pinv(j)
         r = np.dot(jinv, v)
 
         def fn(r, e=self, p=pt):
-            return np.sum((np.array(p)
-                           - e.interp(r, prop='position'))**2.0)
+            return np.sum((np.array(p) - e.interp(r, prop="position")) ** 2.0)
 
         # def dfn(r, e=self, p=pt):
         #     sign = np.sign(np.array(pt)
@@ -318,9 +323,10 @@ class Element3D(Element):
     """Class for 3D elements.
 
     """
+
     is_planar = False
 
-    def jdet(self, r, config='reference'):
+    def jdet(self, r, config="reference"):
         """Calculate determinant of the R3 → R3 jacobian.
 
         """
@@ -333,14 +339,15 @@ class Element2D(Element):
     All shell elements should inherit from this class.
 
     """
+
     is_planar = True
 
-    def jdet(self, r, config='reference'):
+    def jdet(self, r, config="reference"):
         """Calculate determinant of the R3 → R2 jacobian.
 
         """
         j = self.j(r, config)
-        n = np.cross(j[:,0], j[:,1])
+        n = np.cross(j[:, 0], j[:, 1])
         try:
             return n[2]
         except IndexError:
@@ -355,8 +362,7 @@ class Element2D(Element):
 
         """
         if self.ids is not None:
-            edges = tuple(tuple(self.ids[i] for i in edge)
-                          for edge in self.edge_nodes)
+            edges = tuple(tuple(self.ids[i] for i in edge) for edge in self.edge_nodes)
         else:
             edges = self.edge_nodes
         return edges
@@ -365,10 +371,9 @@ class Element2D(Element):
         """Indices of edges that include node id.
 
         """
-        return [i for i, l in enumerate(self.edge_nodes)
-                if node_id in l]
+        return [i for i, l in enumerate(self.edge_nodes) if node_id in l]
 
-    def edge_normals(self, config='reference'):
+    def edge_normals(self, config="reference"):
         """Return list of edge normals.
 
         The edge normals are constrained to lie in the same plane as
@@ -389,27 +394,26 @@ class Tri3(Element2D):
     """Functions for tri3 elements.
 
     """
-    n = 3
-    r_n = 2 # number of natural basis parameters
-    node_connectivity = [[1, 2],
-                         [0, 2],
-                         [1, 0]]
 
-    feb_name = 'tri3'
+    n = 3
+    r_n = 2  # number of natural basis parameters
+    node_connectivity = [[1, 2], [0, 2], [1, 0]]
+
+    feb_name = "tri3"
 
     # oriented so positive normal follows node ordering convention
     face_nodes = [[0, 1, 2]]
 
     def __init__(self, *args, **kwargs):
         super(Tri3, self).__init__(*args, **kwargs)
-        self.properties['thickness'] = (1.0, 1.0, 1.0)
+        self.properties["thickness"] = (1.0, 1.0, 1.0)
 
-    def centroid(self, config='reference'):
+    def centroid(self, config="reference"):
         """Centroid of element.
 
         """
         x = self.x(config)
-        r = (1.0/3.0, 1.0/3.0)
+        r = (1.0 / 3.0, 1.0 / 3.0)
         c = np.dot(x.T, self.N(*r))
         return c
 
@@ -445,48 +449,57 @@ class Hex8(Element3D):
     """Functions for hex8 trilinear elements.
 
     """
-    n = 8 # number of vertices
-    r_n = 3 # number of natural basis parameters
 
-    feb_name = 'hex8'
+    n = 8  # number of vertices
+    r_n = 3  # number of natural basis parameters
 
-    node_connectivity = [[1, 3, 4], # 0
-                         [0, 2, 3], # 1
-                         [1, 3, 6], # 2
-                         [0, 2, 7], # 3
-                         [0, 5, 7], # 4
-                         [1, 4, 6], # 5
-                         [2, 5, 7], # 6
-                         [3, 4, 6]] # 7
+    feb_name = "hex8"
+
+    node_connectivity = [
+        [1, 3, 4],  # 0
+        [0, 2, 3],  # 1
+        [1, 3, 6],  # 2
+        [0, 2, 7],  # 3
+        [0, 5, 7],  # 4
+        [1, 4, 6],  # 5
+        [2, 5, 7],  # 6
+        [3, 4, 6],
+    ]  # 7
 
     # Oriented positive = out
-    face_nodes = ((0, 1, 5, 4),
-                  (1, 2, 6, 5),
-                  (2, 3, 7, 6),
-                  (3, 0, 4, 7),
-                  (4, 5, 6, 7),
-                  (0, 3, 2, 1))
+    face_nodes = (
+        (0, 1, 5, 4),
+        (1, 2, 6, 5),
+        (2, 3, 7, 6),
+        (3, 0, 4, 7),
+        (4, 5, 6, 7),
+        (0, 3, 2, 1),
+    )
 
     # Vertex point locations in natural coordinates
-    vloc = ((-1.0, -1.0, -1.0),
-            ( 1.0, -1.0, -1.0),
-            ( 1.0,  1.0, -1.0),
-            (-1.0,  1.0, -1.0),
-            (-1.0, -1.0,  1.0),
-            ( 1.0, -1.0,  1.0),
-            ( 1.0,  1.0,  1.0),
-            (-1.0,  1.0,  1.0))
+    vloc = (
+        (-1.0, -1.0, -1.0),
+        (1.0, -1.0, -1.0),
+        (1.0, 1.0, -1.0),
+        (-1.0, 1.0, -1.0),
+        (-1.0, -1.0, 1.0),
+        (1.0, -1.0, 1.0),
+        (1.0, 1.0, 1.0),
+        (-1.0, 1.0, 1.0),
+    )
 
     # Gauss point locations
-    g = 1.0 / 3.0**0.5
-    gloc = ((-g, -g, -g),
-            ( g, -g, -g),
-            ( g,  g, -g),
-            (-g,  g, -g),
-            (-g, -g,  g),
-            ( g, -g,  g),
-            ( g,  g,  g),
-            (-g,  g,  g))
+    g = 1.0 / 3.0 ** 0.5
+    gloc = (
+        (-g, -g, -g),
+        (g, -g, -g),
+        (g, g, -g),
+        (-g, g, -g),
+        (-g, -g, g),
+        (g, -g, g),
+        (g, g, g),
+        (-g, g, g),
+    )
 
     # Guass weights
     gwt = (1, 1, 1, 1, 1, 1, 1, 1)
@@ -517,31 +530,31 @@ class Hex8(Element3D):
         dn = [np.zeros(3) for i in range(8)]
         # dN/dr
         dn[0][0] = -0.125 * (1 - s) * (1 - t)
-        dn[1][0] =  0.125 * (1 - s) * (1 - t)
-        dn[2][0] =  0.125 * (1 + s) * (1 - t)
+        dn[1][0] = 0.125 * (1 - s) * (1 - t)
+        dn[2][0] = 0.125 * (1 + s) * (1 - t)
         dn[3][0] = -0.125 * (1 + s) * (1 - t)
         dn[4][0] = -0.125 * (1 - s) * (1 + t)
-        dn[5][0] =  0.125 * (1 - s) * (1 + t)
-        dn[6][0] =  0.125 * (1 + s) * (1 + t)
+        dn[5][0] = 0.125 * (1 - s) * (1 + t)
+        dn[6][0] = 0.125 * (1 + s) * (1 + t)
         dn[7][0] = -0.125 * (1 + s) * (1 + t)
         # dN/ds
         dn[0][1] = -0.125 * (1 - r) * (1 - t)
         dn[1][1] = -0.125 * (1 + r) * (1 - t)
-        dn[2][1] =  0.125 * (1 + r) * (1 - t)
-        dn[3][1] =  0.125 * (1 - r) * (1 - t)
+        dn[2][1] = 0.125 * (1 + r) * (1 - t)
+        dn[3][1] = 0.125 * (1 - r) * (1 - t)
         dn[4][1] = -0.125 * (1 - r) * (1 + t)
         dn[5][1] = -0.125 * (1 + r) * (1 + t)
-        dn[6][1] =  0.125 * (1 + r) * (1 + t)
-        dn[7][1] =  0.125 * (1 - r) * (1 + t)
+        dn[6][1] = 0.125 * (1 + r) * (1 + t)
+        dn[7][1] = 0.125 * (1 - r) * (1 + t)
         # dN/dt
         dn[0][2] = -0.125 * (1 - r) * (1 - s)
         dn[1][2] = -0.125 * (1 + r) * (1 - s)
         dn[2][2] = -0.125 * (1 + r) * (1 + s)
         dn[3][2] = -0.125 * (1 - r) * (1 + s)
-        dn[4][2] =  0.125 * (1 - r) * (1 - s)
-        dn[5][2] =  0.125 * (1 + r) * (1 - s)
-        dn[6][2] =  0.125 * (1 + r) * (1 + s)
-        dn[7][2] =  0.125 * (1 - r) * (1 + s)
+        dn[4][2] = 0.125 * (1 - r) * (1 - s)
+        dn[5][2] = 0.125 * (1 + r) * (1 - s)
+        dn[6][2] = 0.125 * (1 + r) * (1 + s)
+        dn[7][2] = 0.125 * (1 - r) * (1 + s)
         return dn
 
     @staticmethod
@@ -549,88 +562,88 @@ class Hex8(Element3D):
         """"Shape function 2nd derivatives.
 
         """
-        ddn = np.zeros((8,3,3))
+        ddn = np.zeros((8, 3, 3))
         # dN/dr^2 = 0
         # dN / drds
-        ddn[0][0][1] =  0.125 * (1 - t)
+        ddn[0][0][1] = 0.125 * (1 - t)
         ddn[1][0][1] = -0.125 * (1 - t)
-        ddn[2][0][1] =  0.125 * (1 - t)
+        ddn[2][0][1] = 0.125 * (1 - t)
         ddn[3][0][1] = -0.125 * (1 - t)
-        ddn[4][0][1] =  0.125 * (1 + t)
+        ddn[4][0][1] = 0.125 * (1 + t)
         ddn[5][0][1] = -0.125 * (1 + t)
-        ddn[6][0][1] =  0.125 * (1 + t)
+        ddn[6][0][1] = 0.125 * (1 + t)
         ddn[7][0][1] = -0.125 * (1 + t)
         # dN / drdt
-        ddn[0][0][2] =  0.125 * (1 - s)
+        ddn[0][0][2] = 0.125 * (1 - s)
         ddn[1][0][2] = -0.125 * (1 - s)
         ddn[2][0][2] = -0.125 * (1 + s)
-        ddn[3][0][2] =  0.125 * (1 + s)
+        ddn[3][0][2] = 0.125 * (1 + s)
         ddn[4][0][2] = -0.125 * (1 - s)
-        ddn[5][0][2] =  0.125 * (1 - s)
-        ddn[6][0][2] =  0.125 * (1 + s)
+        ddn[5][0][2] = 0.125 * (1 - s)
+        ddn[6][0][2] = 0.125 * (1 + s)
         ddn[7][0][2] = -0.125 * (1 + s)
         # dN / dsdr
-        ddn[0][1][0] =  0.125 * (1 - t)
+        ddn[0][1][0] = 0.125 * (1 - t)
         ddn[1][1][0] = -0.125 * (1 - t)
-        ddn[2][1][0] =  0.125 * (1 - t)
+        ddn[2][1][0] = 0.125 * (1 - t)
         ddn[3][1][0] = -0.125 * (1 - t)
-        ddn[4][1][0] =  0.125 * (1 + t)
+        ddn[4][1][0] = 0.125 * (1 + t)
         ddn[5][1][0] = -0.125 * (1 + t)
-        ddn[6][1][0] =  0.125 * (1 + t)
+        ddn[6][1][0] = 0.125 * (1 + t)
         ddn[7][1][0] = -0.125 * (1 + t)
         # dN / ds^2 = 0
         # dN / dsdt
-        ddn[0][1][2] =  0.125 * (1 - r)
-        ddn[1][1][2] =  0.125 * (1 + r)
+        ddn[0][1][2] = 0.125 * (1 - r)
+        ddn[1][1][2] = 0.125 * (1 + r)
         ddn[2][1][2] = -0.125 * (1 + r)
         ddn[3][1][2] = -0.125 * (1 - r)
         ddn[4][1][2] = -0.125 * (1 - r)
         ddn[5][1][2] = -0.125 * (1 + r)
-        ddn[6][1][2] =  0.125 * (1 + r)
-        ddn[7][1][2] =  0.125 * (1 - r)
+        ddn[6][1][2] = 0.125 * (1 + r)
+        ddn[7][1][2] = 0.125 * (1 - r)
         # dN / dtdr
-        ddn[0][2][0] =  0.125 * (1 - s)
+        ddn[0][2][0] = 0.125 * (1 - s)
         ddn[1][2][0] = -0.125 * (1 - s)
         ddn[2][2][0] = -0.125 * (1 + s)
-        ddn[3][2][0] =  0.125 * (1 + s)
+        ddn[3][2][0] = 0.125 * (1 + s)
         ddn[4][2][0] = -0.125 * (1 - s)
-        ddn[5][2][0] =  0.125 * (1 - s)
-        ddn[6][2][0] =  0.125 * (1 + s)
+        ddn[5][2][0] = 0.125 * (1 - s)
+        ddn[6][2][0] = 0.125 * (1 + s)
         ddn[7][2][0] = -0.125 * (1 + s)
         # dN / dtds
-        ddn[0][2][1] =  0.125 * (1 - r)
-        ddn[1][2][1] =  0.125 * (1 + r)
+        ddn[0][2][1] = 0.125 * (1 - r)
+        ddn[1][2][1] = 0.125 * (1 + r)
         ddn[2][2][1] = -0.125 * (1 + r)
         ddn[3][2][1] = -0.125 * (1 - r)
         ddn[4][2][1] = -0.125 * (1 - r)
         ddn[5][2][1] = -0.125 * (1 + r)
-        ddn[6][2][1] =  0.125 * (1 + r)
-        ddn[7][2][1] =  0.125 * (1 - r)
+        ddn[6][2][1] = 0.125 * (1 + r)
+        ddn[7][2][1] = 0.125 * (1 - r)
         # dN/ dt^2 = 0
         return ddn
+
 
 class Penta6(Element3D):
     """Functions for penta6 linear elements.
 
     """
-    n = 6 # number of vertices
-    r_n = 3 # number of natural basis parameters
 
-    feb_name = 'penta6'
+    n = 6  # number of vertices
+    r_n = 3  # number of natural basis parameters
 
-    node_connectivity = [[1, 2, 3], # 0
-                         [0, 2, 4], # 1
-                         [0, 1, 5], # 2
-                         [0, 4, 5], # 3
-                         [1, 3, 5], # 4
-                         [2, 3, 4]] # 5
+    feb_name = "penta6"
+
+    node_connectivity = [
+        [1, 2, 3],  # 0
+        [0, 2, 4],  # 1
+        [0, 1, 5],  # 2
+        [0, 4, 5],  # 3
+        [1, 3, 5],  # 4
+        [2, 3, 4],
+    ]  # 5
 
     # Oriented positive = out
-    face_nodes = ((0, 1, 4, 3),
-                  (1, 2, 4, 5),
-                  (2, 0, 3, 5),
-                  (0, 2, 1),
-                  (3, 4, 5))
+    face_nodes = ((0, 1, 4, 3), (1, 2, 4, 5), (2, 0, 3, 5), (0, 2, 1), (3, 4, 5))
 
     # Vertex point locations in natural coordinates.
     # TODO: confirm these coordinates are correct
@@ -642,16 +655,18 @@ class Penta6(Element3D):
     #         (0.0, 1.0,  1.0))
 
     # Gauss point locations
-    g = 1.0 / 3.0**0.5
-    gloc = ((1/6, 1/6, -g),
-            (2/3, 1/6, -g),
-            (1/6, 2/3, -g),
-            (1/6, 1/6,  g),
-            (2/3, 1/6,  g),
-            (1/6, 2/3,  g))
+    g = 1.0 / 3.0 ** 0.5
+    gloc = (
+        (1 / 6, 1 / 6, -g),
+        (2 / 3, 1 / 6, -g),
+        (1 / 6, 2 / 3, -g),
+        (1 / 6, 1 / 6, g),
+        (2 / 3, 1 / 6, g),
+        (1 / 6, 2 / 3, g),
+    )
 
     # Guass weights
-    gwt = (1/6, 1/6, 1/6, 1/6, 1/6, 1/6)
+    gwt = (1 / 6, 1 / 6, 1 / 6, 1 / 6, 1 / 6, 1 / 6)
 
     @staticmethod
     def N(r, s, t):
@@ -677,20 +692,20 @@ class Penta6(Element3D):
         dn = [np.zeros(3) for i in range(6)]
         # dN/dr
         dn[0][0] = -0.5 * (1 - t)
-        dn[1][0] =  0.5 * (1 - t)
-        dn[2][0] =  0.0
+        dn[1][0] = 0.5 * (1 - t)
+        dn[2][0] = 0.0
         dn[3][0] = -0.5 * (1 + t)
-        dn[4][0] =  0.5 * (1 + t)
-        dn[5][0] =  0.0
+        dn[4][0] = 0.5 * (1 + t)
+        dn[5][0] = 0.0
         # dN/ds
         dn[0][1] = -0.5 * (1 - t)
-        dn[1][1] =  0.0
-        dn[2][1] =  0.5 * (1 - t)
+        dn[1][1] = 0.0
+        dn[2][1] = 0.5 * (1 - t)
         dn[3][1] = -0.5 * (1 + t)
-        dn[4][1] =  0.0
-        dn[5][1] =  0.5 * (1 + t)
+        dn[4][1] = 0.0
+        dn[5][1] = 0.5 * (1 + t)
         # dN/dt
-        dn[0][2] =  0.0
+        dn[0][2] = 0.0
         dn[1][2] = -0.5 * r
         dn[2][2] = -0.5 * s
         dn[3][2] = 0.0
@@ -703,39 +718,39 @@ class Penta6(Element3D):
         """"Shape function 2nd derivatives.
 
         """
-        ddn = np.zeros((6,3,3))
+        ddn = np.zeros((6, 3, 3))
         # dN/dr^2 = 0
         # dN / drds = 0
         # dN / drdt
-        ddn[0][0][2] =  0.5
+        ddn[0][0][2] = 0.5
         ddn[1][0][2] = -0.5
-        ddn[2][0][2] =  0.0
+        ddn[2][0][2] = 0.0
         ddn[3][0][2] = -0.5
-        ddn[4][0][2] =  0.5
-        ddn[5][0][2] =  0.0
+        ddn[4][0][2] = 0.5
+        ddn[5][0][2] = 0.0
         # dN / dsdr = 0
         # dN / ds^2 = 0
         # dN / dsdt
-        ddn[0][1][2] =  0.5
-        ddn[1][1][2] =  0.0
+        ddn[0][1][2] = 0.5
+        ddn[1][1][2] = 0.0
         ddn[2][1][2] = -0.5
         ddn[3][1][2] = -0.5
-        ddn[4][1][2] =  0.0
-        ddn[5][1][2] =  0.5
+        ddn[4][1][2] = 0.0
+        ddn[5][1][2] = 0.5
         # dN / dtdr
-        ddn[0][2][0] =  0.0
+        ddn[0][2][0] = 0.0
         ddn[1][2][0] = -0.5
-        ddn[2][2][0] =  0.0
-        ddn[3][2][0] =  0.0
-        ddn[4][2][0] =  0.5
-        ddn[5][2][0] =  0.0
+        ddn[2][2][0] = 0.0
+        ddn[3][2][0] = 0.0
+        ddn[4][2][0] = 0.5
+        ddn[5][2][0] = 0.0
         # dN / dtds
-        ddn[0][2][1] =  0.0
-        ddn[1][2][1] =  0.0
+        ddn[0][2][1] = 0.0
+        ddn[1][2][1] = 0.0
         ddn[2][2][1] = -0.5
-        ddn[3][2][1] =  0.0
-        ddn[4][2][1] =  0.0
-        ddn[5][2][1] =  0.5
+        ddn[3][2][1] = 0.0
+        ddn[4][2][1] = 0.0
+        ddn[5][2][1] = 0.5
         # dN/ dt^2 = 0
         return ddn
 
@@ -748,38 +763,27 @@ class Quad4(Element2D):
     which is used in the solver.
 
     """
-    n = 4
-    r_n = 2 # number of natural basis parameters
-    node_connectivity = [[1, 3],
-                         [0, 2],
-                         [1, 3],
-                         [2, 0]]
 
-    feb_name = 'quad4'
+    n = 4
+    r_n = 2  # number of natural basis parameters
+    node_connectivity = [[1, 3], [0, 2], [1, 3], [2, 0]]
+
+    feb_name = "quad4"
 
     face_nodes = [[0, 1, 2, 3]]
 
-    edge_nodes = [[0, 1],
-                  [1, 2],
-                  [2, 3],
-                  [3, 0]]
+    edge_nodes = [[0, 1], [1, 2], [2, 3], [3, 0]]
 
-    ## vertex point locations in natural coordinates
-    vloc = ((-1.0, -1.0),
-            ( 1.0, -1.0),
-            ( 1.0, 1.0),
-            (-1.0, 1.0))
+    # vertex point locations in natural coordinates
+    vloc = ((-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0))
 
-    a = 1.0 / 3.0**0.5
-    gloc = ((-a, -a),           # Gauss point locations
-            ( a, -a),
-            ( a, a),
-            (-a, a))
-    gwt = (1, 1, 1, 1)          # Gauss weights
+    a = 1.0 / 3.0 ** 0.5
+    gloc = ((-a, -a), (a, -a), (a, a), (-a, a))  # Gauss point locations
+    gwt = (1, 1, 1, 1)  # Gauss weights
 
     def __init__(self, *args, **kwargs):
         super(Quad4, self).__init__(*args, **kwargs)
-        self.properties['thickness'] = (1.0, 1.0, 1.0, 1.0)
+        self.properties["thickness"] = (1.0, 1.0, 1.0, 1.0)
 
     @staticmethod
     def N(r, s, t=None):
@@ -801,14 +805,14 @@ class Quad4(Element2D):
         dn = [np.zeros(2) for i in range(4)]
         # d/dr
         dn[0][0] = -0.25 * (1 - s)
-        dn[1][0] =  0.25 * (1 - s)
-        dn[2][0] =  0.25 * (1 + s)
+        dn[1][0] = 0.25 * (1 - s)
+        dn[2][0] = 0.25 * (1 + s)
         dn[3][0] = -0.25 * (1 + s)
         # d/ds
         dn[0][1] = -0.25 * (1 - r)
         dn[1][1] = -0.25 * (1 + r)
-        dn[2][1] =  0.25 * (1 + r)
-        dn[3][1] =  0.25 * (1 - r)
+        dn[2][1] = 0.25 * (1 + r)
+        dn[3][1] = 0.25 * (1 - r)
         return dn
 
     @staticmethod
@@ -819,14 +823,14 @@ class Quad4(Element2D):
         ddn = np.zeros((4, 2, 2))
         # dN / dr² = 0
         # dN / drds
-        ddn[0][0][1] =  0.25
+        ddn[0][0][1] = 0.25
         ddn[1][0][1] = -0.25
-        ddn[2][0][1] =  0.25
+        ddn[2][0][1] = 0.25
         ddn[3][0][1] = -0.25
         # dN / dsdr
-        ddn[0][1][0] =  0.25
+        ddn[0][1][0] = 0.25
         ddn[1][1][0] = -0.25
-        ddn[2][1][0] =  0.25
+        ddn[2][1][0] = 0.25
         ddn[3][1][0] = -0.25
         # dN / ds² = 0
 

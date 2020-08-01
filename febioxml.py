@@ -9,93 +9,100 @@ from .math import orthonormal_basis
 # <fixed> element to a variable name.  This list is valid for both node
 # and rigid body conditions.  FEBio handles force conditions in other
 # XML elements: for rigid bodies, <force>, and for nodes, <nodal_load>.
-VAR_FROM_XML_NODE_BC = {'x': 'displacement',
-                        'y': 'displacement',
-                        'z': 'displacement',
-                        'Rx': 'rotation',
-                        'Ry': 'rotation',
-                        'Rz': 'rotation',
-                        'p': 'pressure'}
+VAR_FROM_XML_NODE_BC = {
+    "x": "displacement",
+    "y": "displacement",
+    "z": "displacement",
+    "Rx": "rotation",
+    "Ry": "rotation",
+    "Rz": "rotation",
+    "p": "pressure",
+}
 # Map "bc" attribute value from <prescribe>, <prescribed>,
 # <fix>, or <fixed> element to a degree of freedom.
-DOF_NAME_FROM_XML_NODE_BC = {"x": "x1",
-                             "y": "x2",
-                             "z": "x3",
-                             "Rx": "α1",
-                             "Ry": "α2",
-                             "Rz": "α3",
-                             "p": "fluid"}
+DOF_NAME_FROM_XML_NODE_BC = {
+    "x": "x1",
+    "y": "x2",
+    "z": "x3",
+    "Rx": "α1",
+    "Ry": "α2",
+    "Rz": "α3",
+    "p": "fluid",
+}
 
-TAG_FROM_BC = {'node': {'variable': 'prescribe',
-                        'fixed': 'fix'},
-               'body': {'variable': 'prescribed',
-                        'fixed': 'fixed'}}
+TAG_FROM_BC = {
+    "node": {"variable": "prescribe", "fixed": "fix"},
+    "body": {"variable": "prescribed", "fixed": "fixed"},
+}
 
+elem_cls_from_feb = {"quad4": Quad4, "tri3": Tri3, "hex8": Hex8, "penta6": Penta6}
 
-elem_cls_from_feb = {'quad4': Quad4,
-                     'tri3': Tri3,
-                     'hex8': Hex8,
-                     'penta6': Penta6}
-
-solid_class_from_name = {'isotropic elastic': material.IsotropicElastic,
-                         'Holmes-Mow': material.HolmesMow,
-                         'fiber-exp-pow': material.ExponentialFiber,
-                         'fiber-pow-linear': material.PowerLinearFiber,
-                         'neo-Hookean': material.NeoHookean,
-                         'solid mixture': material.SolidMixture,
-                         'rigid body': material.RigidBody,
-                         'biphasic': material.PoroelasticSolid,
-                         'Donnan equilibrium': material.DonnanSwelling,
-                         'multigeneration': material.Multigeneration,
-                         "orthotropic elastic": material.OrthotropicElastic}
+solid_class_from_name = {
+    "isotropic elastic": material.IsotropicElastic,
+    "Holmes-Mow": material.HolmesMow,
+    "fiber-exp-pow": material.ExponentialFiber,
+    "fiber-pow-linear": material.PowerLinearFiber,
+    "neo-Hookean": material.NeoHookean,
+    "solid mixture": material.SolidMixture,
+    "rigid body": material.RigidBody,
+    "biphasic": material.PoroelasticSolid,
+    "Donnan equilibrium": material.DonnanSwelling,
+    "multigeneration": material.Multigeneration,
+    "orthotropic elastic": material.OrthotropicElastic,
+}
 solid_name_from_class = {v: k for k, v in solid_class_from_name.items()}
 
-perm_class_from_name = {"perm-Holmes-Mow": material.IsotropicHolmesMowPermeability,
-                        "perm-const-iso": material.IsotropicConstantPermeability}
+perm_class_from_name = {
+    "perm-Holmes-Mow": material.IsotropicHolmesMowPermeability,
+    "perm-const-iso": material.IsotropicConstantPermeability,
+}
 perm_name_from_class = {v: k for k, v in perm_class_from_name.items()}
 
-
-control_tagnames_to_febio = {'time steps': 'time_steps',
-                             'step size': 'step_size',
-                             'max refs': 'max_refs',
-                             'max ups': 'max_ups',
-                             'dtol': 'dtol',
-                             'etol': 'etol',
-                             'rtol': 'rtol',
-                             'lstol': 'lstol',
-                             'ptol': 'ptol',
-                             # ^ for biphasic analysis
-                             'plot level': 'plot_level',
-                             'time stepper': 'time_stepper',
-                             'max retries': 'max_retries',
-                             'dtmax': 'dtmax',
-                             'dtmin': 'dtmin',
-                             'opt iter': 'opt_iter',
-                             'min residual': 'min_residual',
-                             'update method': 'qnmethod',
-                             'symmetric biphasic': 'symmetric_biphasic',
-                             # ^ for biphsaic analysis
-                             'reform each time step': 'reform_each_time_step',
-                             # ^ for fluid analysis
-                             'reform on diverge': 'diverge_reform',
-                             'analysis type': 'analysis'}
+control_tagnames_to_febio = {
+    "time steps": "time_steps",
+    "step size": "step_size",
+    "max refs": "max_refs",
+    "max ups": "max_ups",
+    "dtol": "dtol",
+    "etol": "etol",
+    "rtol": "rtol",
+    "lstol": "lstol",
+    "ptol": "ptol",
+    # ^ for biphasic analysis
+    "plot level": "plot_level",
+    "time stepper": "time_stepper",
+    "max retries": "max_retries",
+    "dtmax": "dtmax",
+    "dtmin": "dtmin",
+    "opt iter": "opt_iter",
+    "min residual": "min_residual",
+    "update method": "qnmethod",
+    "symmetric biphasic": "symmetric_biphasic",
+    # ^ for biphsaic analysis
+    "reform each time step": "reform_each_time_step",
+    # ^ for fluid analysis
+    "reform on diverge": "diverge_reform",
+    "analysis type": "analysis",
+}
 control_tagnames_from_febio = {v: k for k, v in control_tagnames_to_febio.items()}
-control_values_to_febio = {'update method': {"quasi-Newton": "1",
-                                             "BFGS": "0"}}
-control_values_from_febio = {k: {v_xml: v_us for v_us, v_xml in conv.items()}
-                             for k, conv in control_values_to_febio.items()}
-
+control_values_to_febio = {"update method": {"quasi-Newton": "1", "BFGS": "0"}}
+control_values_from_febio = {
+    k: {v_xml: v_us for v_us, v_xml in conv.items()}
+    for k, conv in control_values_to_febio.items()
+}
 
 # TODO: Redesign the compatibility system so that compatibility can be
 # derived from the material's type.
-module_compat_by_mat = {material.PoroelasticSolid: {'biphasic'},
-                        material.RigidBody: {'solid', 'biphasic'},
-                        material.OrthotropicElastic: {'solid', 'biphasic'},
-                        material.IsotropicElastic: {'solid', 'biphasic'},
-                        material.SolidMixture: {'solid', 'biphasic'},
-                        material.PowerLinearFiber: {'solid', 'biphasic'},
-                        material.ExponentialFiber: {'solid', 'biphasic'},
-                        material.HolmesMow: {'solid', 'biphasic'}}
+module_compat_by_mat = {
+    material.PoroelasticSolid: {"biphasic"},
+    material.RigidBody: {"solid", "biphasic"},
+    material.OrthotropicElastic: {"solid", "biphasic"},
+    material.IsotropicElastic: {"solid", "biphasic"},
+    material.SolidMixture: {"solid", "biphasic"},
+    material.PowerLinearFiber: {"solid", "biphasic"},
+    material.ExponentialFiber: {"solid", "biphasic"},
+    material.HolmesMow: {"solid", "biphasic"},
+}
 
 
 def _to_number(s):
@@ -113,15 +120,17 @@ def _maybe_to_number(s):
     except ValueError:
         return s
 
+
 def bool_to_text(v):
     return "1" if v else "0"
 
+
 def vec_to_text(v):
-    return ', '.join(f"{a:.7e}" for a in v)
+    return ", ".join(f"{a:.7e}" for a in v)
 
 
 def bvec_to_text(v):
-    return ', '.join(float_to_text(a) for a in v)
+    return ", ".join(float_to_text(a) for a in v)
 
 
 def float_to_text(a):
@@ -134,43 +143,49 @@ def _find_unique_tag(root, path):
     if len(tags) == 1:
         return tags[0]
     elif len(tags) > 1:
-        raise ValueError(f"Multiple `{path}` tags in file `{os.path.abspath(root.base)}`")
+        raise ValueError(
+            f"Multiple `{path}` tags in file `{os.path.abspath(root.base)}`"
+        )
 
 
 def read_named_sets(xml_root):
     """Read nodesets, etc., and apply them to a model."""
-    sets = {'node sets': {},
-            'face sets': {},
-            'element sets': {}}
-    tag_name = {'node sets': 'NodeSet',
-                'face sets': 'Surface',
-                'element sets': 'ElementSet'}
-    cls_from_entity_type = {"node sets": NodeSet,
-                            "face sets": FaceSet,
-                            "element sets": ElementSet}
+    sets = {"node sets": {}, "face sets": {}, "element sets": {}}
+    tag_name = {
+        "node sets": "NodeSet",
+        "face sets": "Surface",
+        "element sets": "ElementSet",
+    }
+    cls_from_entity_type = {
+        "node sets": NodeSet,
+        "face sets": FaceSet,
+        "element sets": ElementSet,
+    }
     # Handle items that are stored by id
     for k in ["node sets", "element sets"]:
-        for e_set in xml_root.findall('./Geometry/' + tag_name[k]):
+        for e_set in xml_root.findall("./Geometry/" + tag_name[k]):
             cls = cls_from_entity_type[k]
             items = cls()
             for e_item in e_set.getchildren():
-                item_id = int(e_item.attrib['id']) - 1
+                item_id = int(e_item.attrib["id"]) - 1
                 items.update([item_id])
-            sets[k][e_set.attrib['name']] = items
+            sets[k][e_set.attrib["name"]] = items
     # Handle items that are stored as themselves
     for k in ["face sets"]:
-        for tag_set in xml_root.findall('./Geometry/' + tag_name[k]):
+        for tag_set in xml_root.findall("./Geometry/" + tag_name[k]):
             cls = cls_from_entity_type[k]
             items = cls()
             for tag_item in tag_set.getchildren():
-                items.add(_canonical_face([int(s.strip()) - 1
-                                              for s in tag_item.text.split(",")]))
+                items.add(
+                    _canonical_face(
+                        [int(s.strip()) - 1 for s in tag_item.text.split(",")]
+                    )
+                )
             sets[k][tag_set.attrib["name"]] = items
     return sets
 
 
-def basis_mat_axis_local(element: Element,
-                         local_ids=(1, 2, 4)):
+def basis_mat_axis_local(element: Element, local_ids=(1, 2, 4)):
     """Return element basis for FEBio XML <mat_axis type="local"> values.
 
     element is an Element object.
@@ -211,7 +226,7 @@ def normalize_xml(root):
     """
     # Validation: At most one of <Control> or <Step> should exist
     if root.find("Control") is not None and root.find("Step") is not None:
-        msg = (f"{root.base} has both a <Control> and <Step> section. The FEBio documentation does not specify how these sections are supposed to interact, so normalization is aborted.")
+        msg = f"{root.base} has both a <Control> and <Step> section. The FEBio documentation does not specify how these sections are supposed to interact, so normalization is aborted."
         raise ValueError(msg)
     #
     # Normalization: When a bare <Control> element exists, wrap it in a

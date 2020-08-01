@@ -2,7 +2,9 @@ class SelectionException(Exception):
     """Exception for invalid selections.
 
     """
+
     pass
+
 
 class UnsupportedFormatError(ValueError):
     """Exception for reads or writes to unsupported file formats.
@@ -16,7 +18,7 @@ class UnsupportedFormatError(ValueError):
 
     """
 
-    def __init__(self, msg, pth, form = None):
+    def __init__(self, msg, pth, form=None):
         super(UnsupportedFormatError, self).__init__(msg)
         self.file_path = pth
         self.file_format = form

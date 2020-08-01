@@ -4,62 +4,66 @@ import numpy as np
 from numpy import dot
 from math import degrees, radians, cos, sin
 from unittest import TestCase
+
 # Febtools packages
 import febtools as feb
 from febtools.select import find_closest_timestep, adj_faces, surface_faces
+
 # Treat warnings as errors
 import warnings
+
 warnings.simplefilter("error")
 
 
 class FindClosestTimestep(TestCase):
-
     def setUp(self):
         self.times = [0.0, 0.5, 1.0, 1.5, 2.0]
         self.steps = [0, 1, 2, 3, 4]
 
     def test_in_middle(self):
-        assert(find_closest_timestep(1.0, self.times, self.steps) == 2)
+        assert find_closest_timestep(1.0, self.times, self.steps) == 2
 
     def test_in_middle_atol_ok(self):
-        assert(find_closest_timestep(1.2, self.times, self.steps,
-                                     atol=0.2, rtol=inf) == 2)
+        assert (
+            find_closest_timestep(1.2, self.times, self.steps, atol=0.2, rtol=inf) == 2
+        )
 
     def test_in_middle_rtol_ok(self):
-        assert(find_closest_timestep(0.75, self.times, self.steps,
-                                     atol=inf, rtol=0.51) == 1)
+        assert (
+            find_closest_timestep(0.75, self.times, self.steps, atol=inf, rtol=0.51)
+            == 1
+        )
 
     def test_in_middle_atol_bad(self):
         with self.assertRaisesRegex(ValueError, "absolute error > atol"):
-            assert(find_closest_timestep(0.52, self.times, self.steps,
-                                         rtol=inf) == 1)
+            assert find_closest_timestep(0.52, self.times, self.steps, rtol=inf) == 1
 
     def test_in_middle_rtol_bad(self):
         with self.assertRaisesRegex(ValueError, "relative error > rtol"):
-            assert(find_closest_timestep(0.52, self.times, self.steps,
-                                         atol=inf) == 1)
+            assert find_closest_timestep(0.52, self.times, self.steps, atol=inf) == 1
 
     def test_before_start_ok(self):
-        assert(find_closest_timestep(-0.005, self.times, self.steps,
-                                     atol=0.005) == 0)
+        assert find_closest_timestep(-0.005, self.times, self.steps, atol=0.005) == 0
 
     def test_before_start_bad(self):
         with self.assertRaisesRegex(ValueError, "absolute error > atol"):
-            assert(find_closest_timestep(-0.005, self.times, self.steps) == 0)
+            assert find_closest_timestep(-0.005, self.times, self.steps) == 0
 
     def test_at_start(self):
-        assert(find_closest_timestep(0.0, self.times, self.steps) == 0)
+        assert find_closest_timestep(0.0, self.times, self.steps) == 0
 
     def test_at_end(self):
-        assert(find_closest_timestep(2.0, self.times, self.steps) == 4)
+        assert find_closest_timestep(2.0, self.times, self.steps) == 4
 
     def test_past_end_ok(self):
-        assert(find_closest_timestep(2.5, self.times, self.steps,
-                                     atol=0.51, rtol=1.01) == 4)
+        assert (
+            find_closest_timestep(2.5, self.times, self.steps, atol=0.51, rtol=1.01)
+            == 4
+        )
 
     def test_past_end_bad(self):
         with self.assertRaisesRegex(ValueError, "absolute error > atol"):
-            assert(find_closest_timestep(2.5, self.times, self.steps) == 4)
+            assert find_closest_timestep(2.5, self.times, self.steps) == 4
 
     def test_nonmatching_values(self):
         times = [0.0, 0.5, 1.0, 1.5, 2.0]
@@ -74,14 +78,16 @@ class QuadMesh(TestCase):
     """
 
     def setUp(self):
-        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic_quad4.feb'))
+        reader = feb.input.FebReader(
+            os.path.join(
+                "test", "fixtures", "center_crack_uniax_isotropic_elastic_quad4.feb"
+            )
+        )
         self.model = reader.model()
         # rotate mesh to make the corner identification a little more
         # difficult
         a = radians(15)
-        R = np.array([[cos(a), -sin(a), 0],
-                      [sin(a), cos(a), 0],
-                      [0, 0, 1]])
+        R = np.array([[cos(a), -sin(a), 0], [sin(a), cos(a), 0], [0, 0, 1]])
         nodes_new = [dot(R, node) for node in self.model.mesh.nodes]
         self.model.mesh.nodes = nodes_new
         self.model.mesh.update_elements()
@@ -98,10 +104,15 @@ class SelectionHex8Consolidated(TestCase):
     """Test selections for hex8 mesh with center crack.
 
     """
+
     # gradually move SelectionHex8 tests to here
 
     def setUp(self):
-        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic_hex8.feb'))
+        reader = feb.input.FebReader(
+            os.path.join(
+                "test", "fixtures", "center_crack_uniax_isotropic_elastic_hex8.feb"
+            )
+        )
         self.mesh = reader.mesh()
 
     def test_bisect_oblique_vector(self):
@@ -117,13 +128,11 @@ class SelectionHex8Consolidated(TestCase):
         n = feb.geometry.cross(l, (0, 0, 1))
         # Bisect off the elements in the afforementioned triangle
         elset = feb.select.bisect(self.mesh.elements, p=p1, v=n)
-        assert len(elset) == 6*4
+        assert len(elset) == 6 * 4
 
     def test_element_slice(self):
         # select the two layers in the middle
-        eset = feb.select.element_slice(self.mesh.elements,
-                                           v=0,
-                                           axis=(0, 0, 1))
+        eset = feb.select.element_slice(self.mesh.elements, v=0, axis=(0, 0, 1))
         assert len(eset) == len(self.mesh.elements) / 2
 
 
@@ -131,8 +140,11 @@ class SelectionHex8(TestCase):
     """Test selections for a hex8 mesh with a hole.
 
     """
+
     def setUp(self):
-        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic.feb'))
+        reader = feb.input.FebReader(
+            os.path.join("test", "fixtures", "center_crack_uniax_isotropic_elastic.feb")
+        )
         self.mesh = reader.mesh()
         # get a specific face
         faces = self.mesh.faces_with_node(0)
@@ -141,7 +153,7 @@ class SelectionHex8(TestCase):
     ### Adjacent faces
 
     def test_all_adjacency(self):
-        faces = adj_faces(self.face, self.mesh, mode='all')
+        faces = adj_faces(self.face, self.mesh, mode="all")
         assert len(faces) == 22
         # make sure the input face is not returned
         assert not any(b == self.face for b in faces)
@@ -150,7 +162,7 @@ class SelectionHex8(TestCase):
         """Test edge adjacency.
 
         """
-        faces = adj_faces(self.face, self.mesh, mode='edge')
+        faces = adj_faces(self.face, self.mesh, mode="edge")
         assert len(faces) == 10
         # make sure the input face is not returned
         assert not any(b == self.face for b in faces)
@@ -162,7 +174,7 @@ class SelectionHex8(TestCase):
         superimposed faces.
 
         """
-        faces = adj_faces(self.face, self.mesh,  mode='face')
+        faces = adj_faces(self.face, self.mesh, mode="face")
         assert len(faces) == 0
         # make sure the input face is not returned
         assert self.face not in faces

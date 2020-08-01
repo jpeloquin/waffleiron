@@ -1,6 +1,7 @@
 """Convenient mathematical operations."""
 # Base packages
 from math import radians, degrees, cos, sin, e, pi
+
 # Published packages
 import numpy as np
 
@@ -39,9 +40,13 @@ def sph_from_vec(vec):
 
 def vec_from_sph(θ, φ):
     """Return unit vector from azimuth and zenith angles (in degrees)."""
-    return np.array((cos(radians(θ))*sin(radians(φ)),
-                     sin(radians(θ))*sin(radians(φ)),
-                     cos(radians(φ))))
+    return np.array(
+        (
+            cos(radians(θ)) * sin(radians(φ)),
+            sin(radians(θ)) * sin(radians(φ)),
+            cos(radians(φ)),
+        )
+    )
 
 
 def linspaced(offset, span, n):
@@ -92,12 +97,12 @@ def logspaced(offset, span, n, dmin=None):
         raise ValueError(f"Offset, {offset}, must be non-negative.")
     elif offset == 0:
         if dmin is None:
-            dmin = (1/n)**e * span
+            dmin = (1 / n) ** e * span
         x = np.zeros(n)
-        x[1:] = np.geomspace(span, dmin, n-1)[::-1]
+        x[1:] = np.geomspace(span, dmin, n - 1)[::-1]
         # ^ work reversed so geomspace generates end point for n = 2.
     else:
-        x = np.geomspace(offset, offset+span, n)
+        x = np.geomspace(offset, offset + span, n)
     return x
 
 
@@ -139,12 +144,14 @@ def powerspaced(offset, span, n, power, dmin=None):
     elif power < 0 and offset == 0:
         # Handle singularity at x = 0 for negative powers
         if dmin is None:
-            dmin = (1/n)**(-1/power) * span
+            dmin = (1 / n) ** (-1 / power) * span
         x = np.zeros(n)
-        x[1:] = np.linspace((offset+span)**power, dmin**power, n-1)[::-1]**(1/power)
+        x[1:] = np.linspace((offset + span) ** power, dmin ** power, n - 1)[::-1] ** (
+            1 / power
+        )
         # ^ work reversed so linspace generates end point for n = 2.
     else:  # power > 0
-        x = np.linspace(offset**power, (offset+span)**power, n)**(1/power)
+        x = np.linspace(offset ** power, (offset + span) ** power, n) ** (1 / power)
     return x
 
 

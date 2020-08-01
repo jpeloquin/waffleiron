@@ -3,13 +3,22 @@
 from copy import deepcopy
 from math import inf
 import sys
+
 # Public packages
 import numpy as np
 from scipy.spatial import KDTree
 from scipy.spatial.distance import cdist
+
 # Intra-package imports
 from .control import default_control_section
-from .core import _DEFAULT_TOL, Body, NodeSet, ScaledSequence, NameRegistry, _validate_dof
+from .core import (
+    _DEFAULT_TOL,
+    Body,
+    NodeSet,
+    ScaledSequence,
+    NameRegistry,
+    _validate_dof,
+)
 from .select import e_grow, find_closest_timestep
 from . import util
 
@@ -21,10 +30,10 @@ class Model:
     """An FE model: geometry, boundary conditions, solution.
 
     """
+
     def __init__(self, mesh):
         if type(mesh) is not Mesh:
-            raise TypeError("{} is not of type"
-                            "febtools.core.Model".format(mesh))
+            raise TypeError("{} is not of type" "febtools.core.Model".format(mesh))
 
         self.mesh = mesh  # The model geometry
         self.solution = None  # The solution for the model
@@ -37,24 +46,27 @@ class Model:
         self.output = {"variables": None}
 
         self.environment = {"temperature": 294}  # K
-        self.constants = {"R": 8.31446261815324,  # J/mol·K
-                          "F": 96485.33212}  # C/mol
+        self.constants = {"R": 8.31446261815324, "F": 96485.33212}  # J/mol·K  # C/mol
 
         # Fixed conditions
         self.fixed = {}
-        self.fixed["node"] = {("x1", "displacement"): NodeSet(),
-                              ("x2", "displacement"): NodeSet(),
-                              ("x3", "displacement"): NodeSet(),
-                              ("fluid", "pressure"): NodeSet(),
-                              ("solute", "concentration"): NodeSet()}
-        self.fixed["body"] = {("x1", "displacement"): set(),
-                              ("x2", "displacement"): set(),
-                              ("x3", "displacement"): set(),
-                              ("fluid", "pressure"): set(),
-                              ("solute", "concentration"): set(),
-                              ("α1", "rotation"): set(),
-                              ("α2", "rotation"): set(),
-                              ("α3", "rotation"): set()}
+        self.fixed["node"] = {
+            ("x1", "displacement"): NodeSet(),
+            ("x2", "displacement"): NodeSet(),
+            ("x3", "displacement"): NodeSet(),
+            ("fluid", "pressure"): NodeSet(),
+            ("solute", "concentration"): NodeSet(),
+        }
+        self.fixed["body"] = {
+            ("x1", "displacement"): set(),
+            ("x2", "displacement"): set(),
+            ("x3", "displacement"): set(),
+            ("fluid", "pressure"): set(),
+            ("solute", "concentration"): set(),
+            ("α1", "rotation"): set(),
+            ("α2", "rotation"): set(),
+            ("α3", "rotation"): set(),
+        }
         # Note: for multiphasic problems, concentration is a list of
         # sets
         #
@@ -63,8 +75,7 @@ class Model:
 
         # Global "boundary conditions" that apply to all steps.  Same
         # format as self.steps[i]["bc"]
-        self.varying = {'node': {},
-                        'body': {}}
+        self.varying = {"node": {}, "body": {}}
 
         # Contact
         self.constraints = []
@@ -77,9 +88,11 @@ class Model:
         self.named = self.mesh.named
 
         # initial nodal values
-        self.initial_values = {'velocity': [],
-                               'fluid_pressure': [],
-                               'concentration': []}
+        self.initial_values = {
+            "velocity": [],
+            "fluid_pressure": [],
+            "concentration": [],
+        }
         # Note: for multiphasic problems, concentration is a list of
         # lists.
         self.steps = []
@@ -90,25 +103,25 @@ class Model:
             self.constraints.append(constraint)
         else:
             # Apply the contact as a step-specific constraint
-            self.steps[step]['bc']['contact'].append(constraint)
+            self.steps[step]["bc"]["contact"].append(constraint)
 
-    def add_step(self, module='solid', control=None, name=None):
+    def add_step(self, module="solid", control=None, name=None):
         """Add a step with default control values and no BCs.
 
         """
         if control is None:
             control = default_control_section()
-        step = {"name": name,
-                'module': module,
-                'control': control,
-                'bc': {'node': {},
-                       'body': {},
-                       'contact': []}}
+        step = {
+            "name": name,
+            "module": module,
+            "control": control,
+            "bc": {"node": {}, "body": {}, "contact": []},
+        }
         self.steps.append(step)
 
-
-    def apply_nodal_bc(self, node_ids, dof, variable, sequence,
-                       scales=None, relative=False, step_id=-1):
+    def apply_nodal_bc(
+        self, node_ids, dof, variable, sequence, scales=None, relative=False, step_id=-1
+    ):
         """Apply a boundary condition to a set of nodes.
 
         The boundary condition is applied to the selected solution step,
@@ -130,26 +143,27 @@ class Model:
         """
         default_scale = 1
         _validate_dof(dof)
-        if sequence == 'fixed':
-            scales = [None]*len(node_ids)
+        if sequence == "fixed":
+            scales = [None] * len(node_ids)
         else:
             # variable BC
             if scales is None:
                 scales = {i: default_scale for i in node_ids}
             if isinstance(sequence, ScaledSequence):
-                scales = {i: sequence.scale * scales[i]
-                          for i in node_ids}
+                scales = {i: sequence.scale * scales[i] for i in node_ids}
         for i in node_ids:
-            bc_node = self.steps[step_id]['bc']['node'].setdefault(i, {})
-            bc_node[dof] = {'variable': variable,
-                            'sequence': sequence,
-                            'scale': scales[i],
-                            'relative': relative}
+            bc_node = self.steps[step_id]["bc"]["node"].setdefault(i, {})
+            bc_node[dof] = {
+                "variable": variable,
+                "sequence": sequence,
+                "scale": scales[i],
+                "relative": relative,
+            }
         # TODO: Support global nodal BCs.
 
-
-    def apply_body_bc(self, body, dof, variable, sequence, scale=1,
-                      relative=False, step_id=-1):
+    def apply_body_bc(
+        self, body, dof, variable, sequence, scale=1, relative=False, step_id=-1
+    ):
         """Apply a variable displacement boundary condition to a body.
 
         The boundary condition is applied to the selected solution step,
@@ -170,7 +184,7 @@ class Model:
 
         """
         _validate_dof(dof, body=True)
-        if sequence == 'fixed':
+        if sequence == "fixed":
             scale = None
         if step_id is None:
             # Setting global BC
@@ -179,12 +193,13 @@ class Model:
             # Setting step-local BC
             bc_dict = self.steps[step_id]["bc"]["body"]
         bc = bc_dict.setdefault(body, {})
-        bc[dof] = {'variable': variable,
-                   'sequence': sequence,
-                   'scale': scale,
-                   'relative': relative}
+        bc[dof] = {
+            "variable": variable,
+            "sequence": sequence,
+            "scale": scale,
+            "relative": relative,
+        }
         # TODO: Remove scale; just used ScaledSequence for that case
-
 
     def apply_solution(self, solution, t=None, step=None):
         """Attach a solution to the model.
@@ -208,10 +223,9 @@ class Model:
         elif t is not None and step is not None:
             raise ValueError("Provide either `t` or `step`, not both.")
         data = solution.step_data(step)
-        properties = data['node variables']
+        properties = data["node variables"]
         for k, v in properties.items():
             self.apply_nodal_properties(k, v)
-
 
     def apply_nodal_properties(self, key, values):
         """Apply nodal properties to each element.
@@ -225,6 +239,7 @@ class Mesh:
     """Stores a mesh geometry.
 
     """
+
     # nodetree = kd-tree for quick lookup of nodes
     # elem_with_node = For each node, list the parent elements.
 
@@ -260,11 +275,13 @@ class Mesh:
         self.bodies = set()
 
         # Initialize dictionaries to hold named named entities
-        self.named = {"materials": NameRegistry(),
-                      "node sets": NameRegistry(),
-                      "face sets": NameRegistry(),
-                      "element sets": NameRegistry(),
-                      "sequences": NameRegistry()}
+        self.named = {
+            "materials": NameRegistry(),
+            "node sets": NameRegistry(),
+            "face sets": NameRegistry(),
+            "element sets": NameRegistry(),
+            "sequences": NameRegistry(),
+        }
 
         # Precompute derived properties
         self.prepare()
@@ -303,9 +320,9 @@ class Mesh:
 
         """
         # Create KDTree for fast node lookup
-        ## A mesh might have an empty node and element list.  Commit
-        ## 25146ae specifically made prepare() tolerate empty meshes, so
-        ## presumably someone needs empty meshes.
+        # A mesh might have an empty node and element list.  Commit
+        # 25146ae specifically made prepare() tolerate empty meshes, so
+        # presumably someone needs empty meshes.
         if (self.nodes is not None) and (len(self.nodes) > 0):
             self.nodetree = KDTree(self.nodes)
 
@@ -338,9 +355,7 @@ class Mesh:
 
         """
         candidate_elements = self.elem_with_node[idx]
-        faces = [f for e in candidate_elements
-                 for f in e.faces()
-                 if idx in f]
+        faces = [f for e in candidate_elements for f in e.faces() if idx in f]
         return faces
 
     def clean_nodes(self):
@@ -362,6 +377,7 @@ class Mesh:
         element first.
 
         """
+
         def nodemap(i):
             if i < nid_remove:
                 return i
@@ -376,8 +392,7 @@ class Mesh:
         elems = [removal(e.ids) for e in self.elements]
         for i, ids in enumerate(elems):
             self.elements[i].ids = ids
-        self.nodes = [x for i, x in enumerate(self.nodes)
-                      if i != nid_remove]
+        self.nodes = [x for i, x in enumerate(self.nodes) if i != nid_remove]
 
     def node_connectivity(self):
         """Count how many elements each node belongs to.
@@ -402,7 +417,7 @@ class Mesh:
         else:
             p = (x, y, z)
         d = np.array(self.nodes) - p
-        d = np.sum(d**2., axis=1)
+        d = np.sum(d ** 2.0, axis=1)
         idx = np.nonzero(d == np.min(d))[0]
         return idx
 
@@ -410,14 +425,13 @@ class Mesh:
         """Find elements connected to elements.
 
         """
-        nodes = set([i for e in elements
-                     for i in e.ids])
+        nodes = set([i for e in elements for i in e.ids])
         elements = []
         for idx in nodes:
             elements = elements + self.elem_with_node[idx]
         return set(elements)
 
-    def merge(self, other, candidates='auto', tol=_DEFAULT_TOL):
+    def merge(self, other, candidates="auto", tol=_DEFAULT_TOL):
         """Merge this mesh with another
 
         Inputs
@@ -439,12 +453,12 @@ class Mesh:
             The merged mesh
 
         """
-        if candidates == 'auto':
+        if candidates == "auto":
             candidates = range(len(other.nodes))
         # Copy the node list so errors will not corrupt the original
         nodelist = [node for node in self.nodes]
         nodes_cd = [other.nodes[i] for i in candidates]
-        dist = cdist(nodes_cd, self.nodes, 'euclidean')
+        dist = cdist(nodes_cd, self.nodes, "euclidean")
         # ^ i indexes candidate list (other), j indexes nodes in self
         newind = []  # new indices for 'other' nodes after merge
         # Iterate over nodes in 'other'

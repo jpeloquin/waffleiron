@@ -1,13 +1,16 @@
 from math import ceil
+
 # Public repo packages
 import numpy as np
 from numpy.linalg import norm
 from shapely.geometry import LineString, Point, Polygon
+
 # Febtools modules
 from .core import NodeSet
 from .geometry import pt_series
 from .element import Hex8, Quad4
 from .model import Mesh
+
 
 def zstack(mesh, zcoords):
     """Stack a 2d mesh in the z direction to make a 3d mesh.
@@ -37,10 +40,9 @@ def zstack(mesh, zcoords):
     for i in range(len(zcoords) - 1):
         # Iterate over elements in 2d mesh
         for e2d in mesh.elements:
-            nids = ([a + i * len(mesh.nodes)
-                     for a in e2d.ids] +
-                    [a + (i + 1) * len(mesh.nodes)
-                     for a in e2d.ids])
+            nids = [a + i * len(mesh.nodes) for a in e2d.ids] + [
+                a + (i + 1) * len(mesh.nodes) for a in e2d.ids
+            ]
             if isinstance(e2d, Quad4):
                 cls = Hex8
             else:
@@ -61,47 +63,58 @@ def rectangular_prism(length, width, thickness, material=None):
     The origin is in the center of the rectangle.
 
     """
-    l = length[0];  nl = length[1]
-    w = width[0];  nw = width[1]
-    t = thickness[0];  nt = thickness[1]
+    l = length[0]
+    nl = length[1]
+    w = width[0]
+    nw = width[1]
+    t = thickness[0]
+    nt = thickness[1]
     # Create rectangle in xy plane
-    A = np.array([-l/2, -w/2])
-    B = np.array([ l/2, -w/2])
-    C = np.array([ l/2,  w/2])
-    D = np.array([-l/2,  w/2])
+    A = np.array([-l / 2, -w / 2])
+    B = np.array([l / 2, -w / 2])
+    C = np.array([l / 2, w / 2])
+    D = np.array([-l / 2, w / 2])
     AB = pt_series([A, B], nl + 1)
     DC = pt_series([D, C], nl + 1)
     AD = pt_series([A, D], nw + 1)
     BC = pt_series([B, C], nw + 1)
     mesh = quadrilateral(AD, BC, AB, DC)
     # Create rectangular prism
-    zi = np.linspace(-t/2, t/2, nt + 1)
+    zi = np.linspace(-t / 2, t / 2, nt + 1)
     mesh = zstack(mesh, zi)
     # Label the faces
     nodes = np.array(mesh.nodes)  # remove when array is default
     # ±x faces
-    ns = NodeSet(np.nonzero(np.isclose(nodes[:,0], -l/2, rtol=0, atol=np.spacing(l/2)))[0])
+    ns = NodeSet(
+        np.nonzero(np.isclose(nodes[:, 0], -l / 2, rtol=0, atol=np.spacing(l / 2)))[0]
+    )
     assert len(ns) == (nw + 1) * (nt + 1)
     mesh.named["node sets"].add("−x1 face", ns)
-    ns = NodeSet(np.nonzero(np.isclose(nodes[:,0], l/2, rtol=0, atol=np.spacing(l/2)))[0])
+    ns = NodeSet(
+        np.nonzero(np.isclose(nodes[:, 0], l / 2, rtol=0, atol=np.spacing(l / 2)))[0]
+    )
     assert len(ns) == (nw + 1) * (nt + 1)
     mesh.named["node sets"].add("+x1 face", ns)
     # ±y faces
-    ns = NodeSet(np.nonzero(np.isclose(nodes[:,1], -w/2, rtol=0,
-                                       atol=np.spacing(w/2)))[0])
+    ns = NodeSet(
+        np.nonzero(np.isclose(nodes[:, 1], -w / 2, rtol=0, atol=np.spacing(w / 2)))[0]
+    )
     assert len(ns) == (nl + 1) * (nt + 1)
     mesh.named["node sets"].add("−x2 face", ns)
-    ns = NodeSet(np.nonzero(np.isclose(nodes[:,1], w/2, rtol=0,
-                                       atol=np.spacing(w/2)))[0])
+    ns = NodeSet(
+        np.nonzero(np.isclose(nodes[:, 1], w / 2, rtol=0, atol=np.spacing(w / 2)))[0]
+    )
     assert len(ns) == (nl + 1) * (nt + 1)
     mesh.named["node sets"].add("+x2 face", ns)
     # ±z faces
-    ns = NodeSet(np.nonzero(np.isclose(nodes[:,2], -t/2, rtol=0,
-                                       atol=np.spacing(t/2)))[0])
+    ns = NodeSet(
+        np.nonzero(np.isclose(nodes[:, 2], -t / 2, rtol=0, atol=np.spacing(t / 2)))[0]
+    )
     assert len(ns) == (nl + 1) * (nw + 1)
     mesh.named["node sets"].add("−x3 face", ns)
-    ns = NodeSet(np.nonzero(np.isclose(nodes[:,2], t/2, rtol=0,
-                                       atol=np.spacing(t/2)))[0])
+    ns = NodeSet(
+        np.nonzero(np.isclose(nodes[:, 2], t / 2, rtol=0, atol=np.spacing(t / 2)))[0]
+    )
     assert len(ns) == (nl + 1) * (nw + 1)
     mesh.named["node sets"].add("+x3 face", ns)
     # Assign material
@@ -147,9 +160,9 @@ def quadrilateral(col1, col2, row1, row2):
     def spts_norm(pts):
         s = [0]
         for i in range(1, len(pts)):
-            p0 = np.array(pts[i-1])
+            p0 = np.array(pts[i - 1])
             p1 = np.array(pts[i])
-            s.append(s[i-1] + np.linalg.norm(p1 - p0))
+            s.append(s[i - 1] + np.linalg.norm(p1 - p0))
         stot = s[-1]
         snorm = [a / stot for a in s]
         return snorm
@@ -175,7 +188,7 @@ def quadrilateral(col1, col2, row1, row2):
     # plt.plot(np.array(col2)[:,0], np.array(col2)[:,1], 'r-*')
     # plt.show()
 
-    ## Create nodes
+    # Create nodes
 
     # initialize loop
     prevrow_pts = row1
@@ -198,19 +211,21 @@ def quadrilateral(col1, col2, row1, row2):
             # intersection due to finite precision
             pt = ln_r.intersection(ln_c)
             if pt.is_empty:
-                raise Exception("When placing a node, no "
-                                "intersection was found between "
-                                "lines drawn between gridlines. "
-                                "Check the input geometry.")
+                raise Exception(
+                    "When placing a node, no "
+                    "intersection was found between "
+                    "lines drawn between gridlines. "
+                    "Check the input geometry."
+                )
             pt = pt.coords[0]
             thisrow_pts.append(pt)
         thisrow_pts.append(col2[i])
         nodes = nodes + thisrow_pts
 
-    ## Stitch elements
+    # Stitch elements
     for i in range(1, nr):
         # some setup
-        n_base = (i - 1) * nc # number of nodes already fully stitched
+        n_base = (i - 1) * nc  # number of nodes already fully stitched
         prevrow_pts = thisrow_pts
         # do the actual stitching
         for j in range(nc - 1):

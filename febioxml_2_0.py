@@ -1,7 +1,9 @@
 # Base packages
 from collections import defaultdict
+
 # System packages
 from lxml import etree as ET
+
 # Same-package modules
 from .core import ContactConstraint, Sequence
 from .output import material_to_feb
@@ -10,6 +12,7 @@ from .febioxml import *
 
 feb_version = 2.0
 
+
 def xml(model):
     """Convert a model to an FEBio XML tree.
 
@@ -17,37 +20,37 @@ def xml(model):
     writing the XML to an on-disk .feb .
 
     """
-    root = ET.Element('febio_spec', version="{}".format(feb_version))
-    Globals = ET.SubElement(root, 'Globals')
-    Material = ET.SubElement(root, 'Material')
-    Geometry = ET.SubElement(root, 'Geometry')
-    Nodes = ET.SubElement(Geometry, 'Nodes')
-    e_boundary = ET.SubElement(root, 'Boundary')
-    e_loaddata = ET.SubElement(root, 'LoadData')
-    Output = ET.SubElement(root, 'Output')
+    root = ET.Element("febio_spec", version="{}".format(feb_version))
+    Globals = ET.SubElement(root, "Globals")
+    Material = ET.SubElement(root, "Material")
+    Geometry = ET.SubElement(root, "Geometry")
+    Nodes = ET.SubElement(Geometry, "Nodes")
+    e_boundary = ET.SubElement(root, "Boundary")
+    e_loaddata = ET.SubElement(root, "LoadData")
+    Output = ET.SubElement(root, "Output")
 
     # Typical MKS constants
-    Constants = ET.SubElement(Globals, 'Constants')
-    ET.SubElement(Constants, 'R').text = '8.314e-6'
-    ET.SubElement(Constants, 'T').text = '294'
-    ET.SubElement(Constants, 'Fc').text = '96485e-9'
+    Constants = ET.SubElement(Globals, "Constants")
+    ET.SubElement(Constants, "R").text = "8.314e-6"
+    ET.SubElement(Constants, "T").text = "294"
+    ET.SubElement(Constants, "Fc").text = "96485e-9"
 
     # Assign integer sequence ids.
     i = 0
     seq_id = {}
     for step in model.steps:
         # Sequences in nodal displacement boundary conditions
-        for node_id, bc in step['bc']['node'].items():
+        for node_id, bc in step["bc"]["node"].items():
             for dof, d in bc.items():
-                if 'sequence' in d:
-                    seq = d['sequence']
+                if "sequence" in d:
+                    seq = d["sequence"]
                     if seq not in seq_id:
                         seq_id[seq] = i
                         i += 1
         # Sequences in dtmax
-        if 'time stepper' in step['control']:
-            if 'dtmax' in step['control']['time stepper']:
-                dtmax = step['control']['time stepper']['dtmax']
+        if "time stepper" in step["control"]:
+            if "dtmax" in step["control"]["time stepper"]:
+                dtmax = step["control"]["time stepper"]["dtmax"]
                 if dtmax.__class__ is Sequence:
                     if dtmax not in seq_id:
                         seq_id[dtmax] = i
@@ -56,14 +59,15 @@ def xml(model):
     # Nodes section
     for i, x in enumerate(model.mesh.nodes):
         feb_nid = i + 1  # 1-indexed
-        e = ET.SubElement(Nodes, 'node', id="{}".format(feb_nid))
+        e = ET.SubElement(Nodes, "node", id="{}".format(feb_nid))
         e.text = ",".join("{:e}".format(n) for n in x)
         Nodes.append(e)
 
     # Materials section
     # enumerate materials
-    material_ids = {k: v for v, k
-                    in enumerate(set(e.material for e in model.mesh.elements))}
+    material_ids = {
+        k: v for v, k in enumerate(set(e.material for e in model.mesh.elements))
+    }
 
     # make material tags
     # sort by id to get around FEBio bug
@@ -72,10 +76,10 @@ def xml(model):
     for i, m in materials:
         tag = material_to_feb(m, model)
         try:
-            tag.attrib['name'] = model.named["materials"].name(i, "ordinal_id")
+            tag.attrib["name"] = model.named["materials"].name(i, "ordinal_id")
         except KeyError:
             pass
-        tag.attrib['id'] = str(i + 1)
+        tag.attrib["id"] = str(i + 1)
         Material.append(tag)
 
     # Elements and ElementData sections
@@ -91,56 +95,56 @@ def xml(model):
         like_elements.append((i, elem))
 
     # write element sets
-    e_elementdata = ET.SubElement(Geometry, 'ElementData')
+    e_elementdata = ET.SubElement(Geometry, "ElementData")
     for mat, d in elemsets.items():
         for ecls, like_elems in d.items():
-            e_elements = ET.SubElement(Geometry, 'Elements',
-                                       mat=str(material_ids[mat] + 1),
-                                       type=ecls.__name__.lower())
+            e_elements = ET.SubElement(
+                Geometry,
+                "Elements",
+                mat=str(material_ids[mat] + 1),
+                type=ecls.__name__.lower(),
+            )
             for i, e in like_elems:
                 # write the element's node ids
-                e_elem = ET.SubElement(e_elements, 'elem',
-                                       id=str(i + 1))
-                e_elem.text = ','.join(str(i + 1) for i in e.ids)
+                e_elem = ET.SubElement(e_elements, "elem", id=str(i + 1))
+                e_elem.text = ",".join(str(i + 1) for i in e.ids)
                 # write any defined element data
                 tagged = False
                 # ^ track if an element tag has been created in
                 # ElementData for the current element
-                if 'thickness' in elem.properties:
+                if "thickness" in elem.properties:
                     if not tagged:
-                        e_edata = ET.SubElement(e_elementdata, 'element',
-                                                id=str(i + 1))
+                        e_edata = ET.SubElement(e_elementdata, "element", id=str(i + 1))
                         tagged = True
-                    ET.SubElement(e_edata, 'thickness').text = \
-                        ','.join(str(t) for t in elem.properties['thickness'])
-                if 'v_fiber' in elem.properties:
+                    ET.SubElement(e_edata, "thickness").text = ",".join(
+                        str(t) for t in elem.properties["thickness"]
+                    )
+                if "v_fiber" in elem.properties:
                     if not tagged:
-                        e_edata = ET.SubElement(e_elementdata, 'element',
-                                                id=str(i + 1))
+                        e_edata = ET.SubElement(e_elementdata, "element", id=str(i + 1))
                         tagged = True
-                    ET.SubElement(e_edata, 'fiber').text = \
-                        ','.join(str(a) for a in elem.properties['v_fiber'])
+                    ET.SubElement(e_edata, "fiber").text = ",".join(
+                        str(a) for a in elem.properties["v_fiber"]
+                    )
 
     # FEBio needs Nodes to precede Elements to precede ElementData.
     # It apparently has very limited xml parsing.
-    geo_subs = {'Nodes': [],
-                'Elements': [],
-                'ElementData': []}
+    geo_subs = {"Nodes": [], "Elements": [], "ElementData": []}
     for e in Geometry:
         geo_subs[e.tag].append(e)
-    Geometry[:] = geo_subs['Nodes'] + geo_subs['Elements']
+    Geometry[:] = geo_subs["Nodes"] + geo_subs["Elements"]
     # Only add optional tags if they contain data.  Otherwise FEBio
     # chokes and gives an error message incorrectly blaming the
     # following line in the XML file.
     if e_elementdata[:] != []:
-        Geometry[:] += geo_subs['ElementData']
+        Geometry[:] += geo_subs["ElementData"]
 
     # Boundary section (fixed nodal BCs)
-    for dof, nodeset in model.fixed['node'].items():
+    for dof, nodeset in model.fixed["node"].items():
         if nodeset:
-            e_fix = ET.SubElement(e_boundary, 'fix', bc=XML_BC_FROM_DOF[dof])
+            e_fix = ET.SubElement(e_boundary, "fix", bc=XML_BC_FROM_DOF[dof])
             for nid in nodeset:
-                ET.SubElement(e_fix, 'node', id=str(nid + 1))
+                ET.SubElement(e_fix, "node", id=str(nid + 1))
 
     # LoadData (load curves)
     # sort sequences by id to get around FEBio bug
@@ -152,130 +156,139 @@ def xml(model):
     cumulative_time = 0.0
     for step in model.steps:
         # Adjust must point curves
-        dtmax = step['control']['time stepper']['dtmax']
+        dtmax = step["control"]["time stepper"]["dtmax"]
         if isinstance(dtmax, Sequence):
             dtmax.points = [(cumulative_time + t, v) for t, v in dtmax.points]
         # Adjust variable boundary condition curves
         curves_to_adjust = set([])
-        for i, ax_bc in step['bc']['node'].items():
+        for i, ax_bc in step["bc"]["node"].items():
             for ax, d in ax_bc.items():
-                if not d == 'fixed':  # varying ("prescribed") BC
-                    curves_to_adjust.update([d['sequence']])
+                if not d == "fixed":  # varying ("prescribed") BC
+                    curves_to_adjust.update([d["sequence"]])
         for curve in curves_to_adjust:
-            curve.points = [(cumulative_time + t, v)
-                            for t, v in curve.points]
+            curve.points = [(cumulative_time + t, v) for t, v in curve.points]
         # Tally running time
         duration = step_duration(step)
         cumulative_time += duration
     # Write adjusted sequences
     for i, seq in sequences:
-        e_lc = ET.SubElement(e_loaddata, 'loadcurve', id=str(i+1),
-                             type=seq.typ, extrap=seq.extrap)
+        e_lc = ET.SubElement(
+            e_loaddata, "loadcurve", id=str(i + 1), type=seq.typ, extrap=seq.extrap
+        )
         for pt in seq.points:
-            ET.SubElement(e_lc, 'point').text = ','.join(str(x) for x in pt)
+            ET.SubElement(e_lc, "point").text = ",".join(str(x) for x in pt)
 
     # Output section
-    plotfile = ET.SubElement(Output, 'plotfile', type='febio')
-    ET.SubElement(plotfile, 'var', type='displacement')
-    ET.SubElement(plotfile, 'var', type='stress')
+    plotfile = ET.SubElement(Output, "plotfile", type="febio")
+    ET.SubElement(plotfile, "var", type="displacement")
+    ET.SubElement(plotfile, "var", type="stress")
 
     # Step section(s)
     cumulative_time = 0.0
     for i, step in enumerate(model.steps):
-        e_step = ET.SubElement(root, 'Step',
-                               name='Step{}'.format(i + 1))
-        ET.SubElement(e_step, 'Module',
-                      type=step['module'])
+        e_step = ET.SubElement(root, "Step", name="Step{}".format(i + 1))
+        ET.SubElement(e_step, "Module", type=step["module"])
         # TODO: Warn if there's a poroelastic material and a solid
         # analysis is requested.  Or set the appropriate module
         # automatically.
-        e_con = ET.SubElement(e_step, 'Control')
-        ET.SubElement(e_con, 'analysis',
-                      type=step['control']['analysis type'])
+        e_con = ET.SubElement(e_step, "Control")
+        ET.SubElement(e_con, "analysis", type=step["control"]["analysis type"])
         for lbl1, lbl2 in control_tagnames_to_febio.items():
-            if lbl1 in step['control'] and lbl1 != 'time stepper':
-                txt = str(step['control'][lbl1])
+            if lbl1 in step["control"] and lbl1 != "time stepper":
+                txt = str(step["control"][lbl1])
                 ET.SubElement(e_con, lbl2).text = txt
-        e_ts = ET.SubElement(e_con, 'time_stepper')
-        ET.SubElement(e_ts, 'dtmin').text = \
-            str(step['control']['time stepper']['dtmin'])
-        ET.SubElement(e_ts, 'max_retries').text = \
-            str(step['control']['time stepper']['max retries'])
-        ET.SubElement(e_ts, 'opt_iter').text = \
-            str(step['control']['time stepper']['opt iter'])
+        e_ts = ET.SubElement(e_con, "time_stepper")
+        ET.SubElement(e_ts, "dtmin").text = str(
+            step["control"]["time stepper"]["dtmin"]
+        )
+        ET.SubElement(e_ts, "max_retries").text = str(
+            step["control"]["time stepper"]["max retries"]
+        )
+        ET.SubElement(e_ts, "opt_iter").text = str(
+            step["control"]["time stepper"]["opt iter"]
+        )
         # dtmax may have an associated sequence
-        dtmax = step['control']['time stepper']['dtmax']
-        e_dtmax = ET.SubElement(e_ts, 'dtmax')
+        dtmax = step["control"]["time stepper"]["dtmax"]
+        e_dtmax = ET.SubElement(e_ts, "dtmax")
         if isinstance(dtmax, Sequence):
             # Reference the load curve for dtmax
-            e_dtmax.attrib['lc'] = str(seq_id[dtmax] + 1)
+            e_dtmax.attrib["lc"] = str(seq_id[dtmax] + 1)
             e_dtmax.text = "1"
         else:
             e_dtmax.text = str(dtmax)
 
         # Boundary conditions
-        e_bd = ET.SubElement(e_step, 'Boundary')
+        e_bd = ET.SubElement(e_step, "Boundary")
         # collect BCs into FEBio-like data structure
         varying = defaultdict(dict)
         fixed = defaultdict(set)
-        for i, ax_bc in step['bc']['node'].items():
+        for i, ax_bc in step["bc"]["node"].items():
             for ax, d in ax_bc.items():
-                if d == 'fixed':  # fixed BC
+                if d == "fixed":  # fixed BC
                     fixed[ax].add(i)
                 else:  # varying ("prescribed") BC
-                    v = d['value']
-                    seq = d['sequence']
+                    v = d["value"]
+                    seq = d["sequence"]
                     varying[seq].setdefault(ax, {})[i] = v
         # Write varying nodal BCs
         for seq, d in varying.items():
             for dof, vnodes in d.items():
-                e_pres = ET.SubElement(e_bd, 'prescribe',
-                                       bc=XML_BC_FROM_DOF[dof],
-                                       lc=str(seq_id[seq] + 1))
+                e_pres = ET.SubElement(
+                    e_bd, "prescribe", bc=XML_BC_FROM_DOF[dof], lc=str(seq_id[seq] + 1)
+                )
                 for nid, v in vnodes.items():
-                    e_node = ET.SubElement(e_pres, 'node', id=str(nid + 1)).text = str(v)
+                    e_node = ET.SubElement(e_pres, "node", id=str(nid + 1)).text = str(
+                        v
+                    )
         # Write fixed nodal BCs
         for dof, node_ids in fixed.items():
-            e_bc = ET.SubElement(e_bd, 'fix', bc=XML_BC_FROM_DOF[dof])
+            e_bc = ET.SubElement(e_bd, "fix", bc=XML_BC_FROM_DOF[dof])
             for i in node_ids:
-                ET.SubElement(e_bc, 'node', id=str(i + 1))
+                ET.SubElement(e_bc, "node", id=str(i + 1))
 
     tree = ET.ElementTree(root)
     return tree
 
 
 def contact_section(model):
-    tag_branch = ET.Element('Contact')
-    contact_constraints = [constraint for constraint in model.constraints
-                           if type(constraint) is ContactConstraint]
+    tag_branch = ET.Element("Contact")
+    contact_constraints = [
+        constraint
+        for constraint in model.constraints
+        if type(constraint) is ContactConstraint
+    ]
     for contact in contact_constraints:
-        tag_contact = ET.SubElement(tag_branch, 'contact', type=contact.algorithm)
+        tag_contact = ET.SubElement(tag_branch, "contact", type=contact.algorithm)
         # Set compression only or tension–compression
         if contact.algorithm == "sliding-elastic":
-            ET.SubElement(tag_contact, 'tension').text = str(int(contact.tension))
+            ET.SubElement(tag_contact, "tension").text = str(int(contact.tension))
         else:
             if contact.tension:
-                raise ValueError(f"Only the sliding–elastic contact algorithm is known to support tension–compression contact in FEBio.")
+                raise ValueError(
+                    f"Only the sliding–elastic contact algorithm is known to support tension–compression contact in FEBio."
+                )
         # Write penalty-related tags
-        ET.SubElement(tag_contact, 'auto_penalty') \
-          .text = "1" if contact.penalty['type'] == 'auto' else "0"
-        ET.SubElement(tag_contact, 'penalty').text = f"{contact.penalty['factor']}"
+        ET.SubElement(tag_contact, "auto_penalty").text = (
+            "1" if contact.penalty["type"] == "auto" else "0"
+        )
+        ET.SubElement(tag_contact, "penalty").text = f"{contact.penalty['factor']}"
         # Write algorithm modification tags
-        ET.SubElement(tag_contact, 'laugon').text = "1" if contact.augmented_lagrange else "0"
+        ET.SubElement(tag_contact, "laugon").text = (
+            "1" if contact.augmented_lagrange else "0"
+        )
         # (two_pass would go here)
         # Write surfaces
-        e_master = ET.SubElement(tag_contact, 'surface', type="master")
+        e_master = ET.SubElement(tag_contact, "surface", type="master")
         for f in contact.leader:
             e_master.append(tag_face(f))
-        e_follower = ET.SubElement(tag_contact, 'surface', type="slave")
+        e_follower = ET.SubElement(tag_contact, "surface", type="slave")
         for f in contact.follower:
             e_follower.append(tag_face(f))
     return tag_branch
 
 
 def tag_face(face):
-    nm = {3: "tri3",
-          4: "quad4"}
+    nm = {3: "tri3", 4: "quad4"}
     tag = ET.Element(nm[len(face)])
     tag.text = ", ".join([f"{i+1}" for i in face])
     return tag

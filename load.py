@@ -1,11 +1,12 @@
 """Module for adding initial and boundary conditions to models."""
 # Third party modules
 import numpy as np
+
 # Same-package modules
 from .core import Sequence, NodeSet
 
 
-def apply_uniax_stretch(model, stretches, axis='x1'):
+def apply_uniax_stretch(model, stretches, axis="x1"):
     """Apply stretch with must points and a fixed width grip line.
 
     axis := 'x1' or 'x2'; the direction along which to stretch the mesh.
@@ -14,12 +15,12 @@ def apply_uniax_stretch(model, stretches, axis='x1'):
 
     """
     axis1 = axis
-    if axis == 'x1':
-        axis2 = 'x2'
+    if axis == "x1":
+        axis2 = "x2"
         iaxis1 = 0
         iaxis2 = 1
-    elif axis == 'x2':
-        axis2 = 'x1'
+    elif axis == "x2":
+        axis2 = "x1"
         iaxis1 = 1
         iaxis2 = 0
     else:
@@ -28,30 +29,32 @@ def apply_uniax_stretch(model, stretches, axis='x1'):
     maxima = np.max(model.mesh.nodes, 0)
     minima = np.min(model.mesh.nodes, 0)
     # Moving (gripped) nodes
-    gripped_nodes = [i for i, x in enumerate(model.mesh.nodes)
-                     if x[iaxis1] == minima[iaxis1] or
-                     x[iaxis1] == maxima[iaxis1]]
-    u1 = [(stretches[-1] - 1) * model.mesh.nodes[i][iaxis1]
-          for i in gripped_nodes]
+    gripped_nodes = [
+        i
+        for i, x in enumerate(model.mesh.nodes)
+        if x[iaxis1] == minima[iaxis1] or x[iaxis1] == maxima[iaxis1]
+    ]
+    u1 = [(stretches[-1] - 1) * model.mesh.nodes[i][iaxis1] for i in gripped_nodes]
     # ^ gripped node displacements at final timepoint
     seq_bc = Sequence([(0, 0), (1, 1)])
-    model.apply_nodal_displacement(gripped_nodes, values=u1, axis=axis1,
-                                   sequence=seq_bc)
+    model.apply_nodal_displacement(
+        gripped_nodes, values=u1, axis=axis1, sequence=seq_bc
+    )
     # Fixed nodes
-    model.fixed['node'][axis2].update(gripped_nodes)
-    gripped_nodes_back = [i for i in gripped_nodes
-                          if model.mesh.nodes[i][2] == minima[2]]
-    model.fixed['node']['x3'].update(gripped_nodes_back)
+    model.fixed["node"][axis2].update(gripped_nodes)
+    gripped_nodes_back = [
+        i for i in gripped_nodes if model.mesh.nodes[i][2] == minima[2]
+    ]
+    model.fixed["node"]["x3"].update(gripped_nodes_back)
     # Define number of steps
     nsteps = len(stretches) * 1 + 1
     nmust = len(stretches) * 1 + 1
     dtmax = 1.0 / nsteps
     # Calculate must points to match input stretches
     t_must = [(u - 1) / (stretches[-1] - 1) for u in stretches]
-    seq_must = Sequence([(t, dtmax) for t in t_must],
-                        interp="step")
-    model.steps[0]['control']['plot level'] = 'PLOT_MUST_POINTS'
-    model.steps[0]['control']['time stepper']['dtmax'] = seq_must
+    seq_must = Sequence([(t, dtmax) for t in t_must], interp="step")
+    model.steps[0]["control"]["plot level"] = "PLOT_MUST_POINTS"
+    model.steps[0]["control"]["time stepper"]["dtmax"] = seq_must
 
 
 def cyclic_stretch_sequence(targets, rate, n=1, baseline=1.0):
@@ -75,11 +78,11 @@ def cyclic_stretch_sequence(targets, rate, n=1, baseline=1.0):
 
     """
     # Expand strain rate
-    if not hasattr(rate, '__iter__'):
+    if not hasattr(rate, "__iter__"):
         rate = [rate for y in targets]
 
     # Expand n
-    if not hasattr(n, '__iter__'):
+    if not hasattr(n, "__iter__"):
         n_by_block = [n for y in targets]
     else:
         n_by_block = n
@@ -101,7 +104,7 @@ def cyclic_stretch_sequence(targets, rate, n=1, baseline=1.0):
             stretches.append(baseline)
             times.append(times[-1] + dt)
     curve = [a for a in zip(times, stretches)]
-    sequence = Sequence(curve, extrap='constant', interp='linear')
+    sequence = Sequence(curve, extrap="constant", interp="linear")
     return sequence
 
 
@@ -115,7 +118,11 @@ def prescribe_deformation(model, node_ids, F, sequence, **kwargs):
     u = x_new - x_old
     for i, node_id in enumerate(id_list):
         for iax, ax in enumerate(("x1", "x2", "x3")):
-            model.apply_nodal_bc(NodeSet([node_id]), ax, "displacement",
-                                 sequence=sequence,
-                                 scales={node_id: u[i, iax]},
-                                 **kwargs)
+            model.apply_nodal_bc(
+                NodeSet([node_id]),
+                ax,
+                "displacement",
+                sequence=sequence,
+                scales={node_id: u[i, iax]},
+                **kwargs
+            )

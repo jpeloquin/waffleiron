@@ -3,35 +3,57 @@ from collections import defaultdict
 from copy import copy, deepcopy
 from math import degrees
 from datetime import datetime
+
 # Public packages
 import numpy as np
 from lxml import etree as ET
+
 # Within-module packages
 import febtools as feb
-from .core import Body, ImplicitBody, ContactConstraint, NameRegistry, NodeSet, Sequence, ScaledSequence, RigidInterface
+from .core import (
+    Body,
+    ImplicitBody,
+    ContactConstraint,
+    NameRegistry,
+    NodeSet,
+    Sequence,
+    ScaledSequence,
+    RigidInterface,
+)
 from .control import step_duration
 from . import material as matlib
 from .math import sph_from_vec
 from . import febioxml_2_5 as febioxml
 from . import febioxml_2_0
-from .febioxml import bool_to_text, float_to_text, vec_to_text, bvec_to_text, control_tagnames_to_febio, control_values_to_febio, TAG_FROM_BC, DOF_NAME_FROM_XML_NODE_BC, VAR_FROM_XML_NODE_BC
+from .febioxml import (
+    bool_to_text,
+    float_to_text,
+    vec_to_text,
+    bvec_to_text,
+    control_tagnames_to_febio,
+    control_values_to_febio,
+    TAG_FROM_BC,
+    DOF_NAME_FROM_XML_NODE_BC,
+    VAR_FROM_XML_NODE_BC,
+)
+
 # ^ The intent here is to eventually be able to switch between FEBio XML
 # formats by exchanging this import statement for a different version.
 # Common functionality can be shared between febioxml_*_*.py files via
 # imports.
 
-
-XML_BC_FROM_DOF = {(dof, VAR_FROM_XML_NODE_BC[tag]): tag
-                   for tag, dof in DOF_NAME_FROM_XML_NODE_BC.items()}
-XML_BC_FROM_DOF.update({("x1", "force"): "x",
-                        ("x2", "force"): "y",
-                        ("x3", "force"): "z"})
+XML_BC_FROM_DOF = {
+    (dof, VAR_FROM_XML_NODE_BC[tag]): tag
+    for tag, dof in DOF_NAME_FROM_XML_NODE_BC.items()
+}
+XML_BC_FROM_DOF.update(
+    {("x1", "force"): "x", ("x2", "force"): "y", ("x3", "force"): "z"}
+)
 
 
 def default_febio_config():
     """Return default FEBio settings"""
-    return {"output variables": ["displacement",
-                                 "stress"]}
+    return {"output variables": ["displacement", "stress"]}
 
 
 def _get_or_create_item_id(registry, item):
@@ -86,8 +108,9 @@ def _fixup_ordinal_ids(registry):
         registry.add(i, item, nametype="ordinal_id")
     if len(registry.names("ordinal_id")) > 0:
         assert min(registry.names("ordinal_id")) == 0
-        assert max(registry.names("ordinal_id")) ==\
-            len(registry.names("ordinal_id")) - 1
+        assert (
+            max(registry.names("ordinal_id")) == len(registry.names("ordinal_id")) - 1
+        )
 
 
 def _property_to_feb(p, tag, model):
@@ -112,7 +135,7 @@ def exponential_fiber_to_feb(mat, model):
     """Convert ExponentialFiber material instance to FEBio XML.
 
     """
-    e = ET.Element('material', type='fiber-exp-pow')
+    e = ET.Element("material", type="fiber-exp-pow")
     e.append(_property_to_feb(mat.α, "alpha", model))
     e.append(_property_to_feb(mat.β, "beta", model))
     e.append(_property_to_feb(mat.ξ, "ksi", model))
@@ -121,7 +144,7 @@ def exponential_fiber_to_feb(mat, model):
 
 def power_linear_fiber_to_feb(mat, model):
     """Convert PowerLinearFiber material instance to FEBio XML."""
-    e = ET.Element('material', type='fiber-pow-linear')
+    e = ET.Element("material", type="fiber-pow-linear")
     e.append(_property_to_feb(mat.E, "E", model))
     e.append(_property_to_feb(mat.β, "beta", model))
     e.append(_property_to_feb(mat.λ0, "lam0", model))
@@ -132,7 +155,7 @@ def holmesmow_to_feb(mat, model):
     """Convert HolmesMow material instance to FEBio XML.
 
     """
-    e = ET.Element('material', type='Holmes-Mow')
+    e = ET.Element("material", type="Holmes-Mow")
     e.append(_property_to_feb(mat.E, "E", model))
     e.append(_property_to_feb(mat.ν, "v", model))
     e.append(_property_to_feb(mat.β, "beta", model))
@@ -143,7 +166,7 @@ def isotropicelastic_to_feb(mat, model):
     """Convert IsotropicElastic material instance to FEBio XML.
 
     """
-    e = ET.Element('material', type='isotropic elastic')
+    e = ET.Element("material", type="isotropic elastic")
     E, ν = feb.material.from_Lamé(mat.y, mat.mu)
     e.append(_property_to_feb(E, "E", model))
     e.append(_property_to_feb(ν, "v", model))
@@ -154,7 +177,7 @@ def orthotropic_elastic_to_feb(mat, model):
     """Convert OrthotropicElastic material instance to FEBio XML.
 
     """
-    e = ET.Element('material', type='orthotropic elastic')
+    e = ET.Element("material", type="orthotropic elastic")
     # Material properties
     e.append(_property_to_feb(mat.E1, "E1", model))
     e.append(_property_to_feb(mat.E2, "E2", model))
@@ -172,7 +195,7 @@ def neo_hookean_to_feb(mat, model):
     """Convert NeoHookean material instance to FEBio XML.
 
     """
-    e = ET.Element('material', type='neo-Hookean')
+    e = ET.Element("material", type="neo-Hookean")
     E, ν = feb.material.from_Lamé(mat.y, mat.mu)
     e.append(_property_to_feb(E, "E", model))
     e.append(_property_to_feb(ν, "v", model))
@@ -197,16 +220,18 @@ def iso_holmes_mow_perm_to_feb(mat, model):
 
 def poroelastic_to_feb(mat, model):
     """Convert Poroelastic material instance to FEBio XML"""
-    e = ET.Element('material', type='biphasic')
+    e = ET.Element("material", type="biphasic")
     e.append(_property_to_feb(mat.solid_fraction, "phi0", model))
     # Add solid material
     e_solid = material_to_feb(mat.solid_material, model)
-    e_solid.tag = 'solid'
+    e_solid.tag = "solid"
     e.append(e_solid)
     # Add permeability
     typ = febioxml.perm_name_from_class[type(mat.permeability)]
-    f = {feb.material.IsotropicConstantPermeability: iso_const_perm_to_feb,
-         feb.material.IsotropicHolmesMowPermeability: iso_holmes_mow_perm_to_feb}
+    f = {
+        feb.material.IsotropicConstantPermeability: iso_const_perm_to_feb,
+        feb.material.IsotropicHolmesMowPermeability: iso_holmes_mow_perm_to_feb,
+    }
     e_permeability = f[type(mat.permeability)](mat.permeability, model)
     e.append(e_permeability)
     return e
@@ -216,10 +241,10 @@ def solidmixture_to_feb(mat, model):
     """Convert SolidMixture material instance to FEBio XML.
 
     """
-    e = ET.Element('material', type='solid mixture')
+    e = ET.Element("material", type="solid mixture")
     for submat in mat.materials:
         m = material_to_feb(submat, model)
-        m.tag = 'solid'
+        m.tag = "solid"
         e.append(m)
     return e
 
@@ -238,11 +263,12 @@ def multigeneration_to_feb(mat, model):
         e_generation.append(e_submat)
     return e
 
+
 def rigid_body_to_feb(mat, model):
     """Convert SolidMixture material instance to FEBio XML.
 
     """
-    e = ET.Element('material', type='rigid body')
+    e = ET.Element("material", type="rigid body")
     if mat.density is None:
         density = 1
     else:
@@ -271,19 +297,21 @@ def material_to_feb(mat, model):
     else:
         orientation = None
     if mat is None:
-        e = ET.Element('material', type='unknown')
+        e = ET.Element("material", type="unknown")
     else:
-        f = {feb.material.ExponentialFiber: exponential_fiber_to_feb,
-             feb.material.PowerLinearFiber: power_linear_fiber_to_feb,
-             feb.material.HolmesMow: holmesmow_to_feb,
-             feb.material.IsotropicElastic: isotropicelastic_to_feb,
-             feb.material.NeoHookean: neo_hookean_to_feb,
-             feb.material.OrthotropicElastic: orthotropic_elastic_to_feb,
-             feb.material.PoroelasticSolid: poroelastic_to_feb,
-             feb.material.SolidMixture: solidmixture_to_feb,
-             feb.material.RigidBody: rigid_body_to_feb,
-             feb.material.DonnanSwelling: donnan_to_feb,
-             feb.material.Multigeneration: multigeneration_to_feb}
+        f = {
+            feb.material.ExponentialFiber: exponential_fiber_to_feb,
+            feb.material.PowerLinearFiber: power_linear_fiber_to_feb,
+            feb.material.HolmesMow: holmesmow_to_feb,
+            feb.material.IsotropicElastic: isotropicelastic_to_feb,
+            feb.material.NeoHookean: neo_hookean_to_feb,
+            feb.material.OrthotropicElastic: orthotropic_elastic_to_feb,
+            feb.material.PoroelasticSolid: poroelastic_to_feb,
+            feb.material.SolidMixture: solidmixture_to_feb,
+            feb.material.RigidBody: rigid_body_to_feb,
+            feb.material.DonnanSwelling: donnan_to_feb,
+            feb.material.Multigeneration: multigeneration_to_feb,
+        }
         try:
             e = f[type(mat)](mat, model)
         except ValueError:
@@ -297,8 +325,12 @@ def material_to_feb(mat, model):
         if np.array(orientation).ndim == 2:
             # material axes orientation
             e_mat_axis = ET.Element("mat_axis", type="vector")
-            ET.SubElement(e_mat_axis, "a").text = febioxml.bvec_to_text(orientation[:,0])
-            ET.SubElement(e_mat_axis, "d").text = febioxml.bvec_to_text(orientation[:,1])
+            ET.SubElement(e_mat_axis, "a").text = febioxml.bvec_to_text(
+                orientation[:, 0]
+            )
+            ET.SubElement(e_mat_axis, "d").text = febioxml.bvec_to_text(
+                orientation[:, 1]
+            )
             e.insert(0, e_mat_axis)
             e.append(e_mat_axis)
         elif np.array(orientation).ndim == 1:
@@ -307,7 +339,9 @@ def material_to_feb(mat, model):
             e_vector.text = bvec_to_text(orientation)
             e.append(e_vector)
         else:
-            raise ValueError(f"Rank {orientation.ndim} material orientation not supported.  Provided orientation was {orientation}.")
+            raise ValueError(
+                f"Rank {orientation.ndim} material orientation not supported.  Provided orientation was {orientation}."
+            )
     return e
 
 
@@ -319,7 +353,7 @@ def add_nodeset(xml_root, name, nodes):
     e_nodeset = ET.SubElement(e_geometry, "NodeSet", name=name)
     # Sort nodes to be user-friendly (humans often read .feb files)
     for node_id in sorted(nodes):
-        ET.SubElement(e_nodeset, 'node', id=str(node_id + 1))
+        ET.SubElement(e_nodeset, "node", id=str(node_id + 1))
 
 
 def add_sequence(xml_root, model, sequence):
@@ -338,10 +372,13 @@ def add_sequence(xml_root, model, sequence):
     """
     seq_id = model.named["sequences"].name(sequence, nametype="ordinal_id")
     e_loaddata = xml_root.find("./LoadData")
-    e_loadcurve = ET.SubElement(e_loaddata, "loadcurve",
-                                id=str(seq_id + 1),
-                                type=sequence.interpolant,
-                                extrap=sequence.extrapolant)
+    e_loadcurve = ET.SubElement(
+        e_loaddata,
+        "loadcurve",
+        id=str(seq_id + 1),
+        type=sequence.interpolant,
+        extrap=sequence.extrapolant,
+    )
     for pt in sequence.points:
         ET.SubElement(e_loadcurve, "point").text = ", ".join(str(x) for x in pt)
 
@@ -388,59 +425,72 @@ def choose_module(materials):
     return module
 
 
-def contact_section(contacts, model, xml_root, named_surface_pairs,
-                    named_contacts):
+def contact_section(contacts, model, xml_root, named_surface_pairs, named_contacts):
     tag_geometry = xml_root.find("./Geometry")
     tag_contact_section = ET.Element("Contact")
     tags_surfpair = []
     for contact in contacts:
-        tag_contact = ET.SubElement(tag_contact_section, 'contact', type=contact.algorithm)
+        tag_contact = ET.SubElement(
+            tag_contact_section, "contact", type=contact.algorithm
+        )
         # Name the contact to match its surface pair so someone reading
         # the XML can match them more easily
-        tag_contact.attrib["name"] =\
-            _get_or_create_name(named_contacts,
-                          f"contact_-_{contact.algorithm}", contact)
+        tag_contact.attrib["name"] = _get_or_create_name(
+            named_contacts, f"contact_-_{contact.algorithm}", contact
+        )
         # Autogenerate names for the face sets in the contact
-        surface_name = {"leader": "",
-                        "follower": ""}
-        for k, face_set in zip(("leader", "follower"), (contact.leader, contact.follower)):
-            nm = _get_or_create_name(model.named["face sets"],
-                                     f"contact_surface_-_{contact.algorithm}",
-                                     face_set)
+        surface_name = {"leader": "", "follower": ""}
+        for k, face_set in zip(
+            ("leader", "follower"), (contact.leader, contact.follower)
+        ):
+            nm = _get_or_create_name(
+                model.named["face sets"],
+                f"contact_surface_-_{contact.algorithm}",
+                face_set,
+            )
             surface_name[k] = nm
             tag_surface = ET.SubElement(tag_geometry, "Surface", name=nm)
             for face in face_set:
                 tag_surface.append(tag_face(face))
         # Autogenerate and add the surface pair
-        name_surfpair = _get_or_create_name(named_surface_pairs,
-                                            f"contact_surfaces_-_{contact.algorithm}",
-                                            (contact.leader, contact.follower))
+        name_surfpair = _get_or_create_name(
+            named_surface_pairs,
+            f"contact_surfaces_-_{contact.algorithm}",
+            (contact.leader, contact.follower),
+        )
         tag_surfpair = ET.SubElement(tag_geometry, "SurfacePair", name=name_surfpair)
         ET.SubElement(tag_surfpair, "master", surface=surface_name["leader"])
         ET.SubElement(tag_surfpair, "slave", surface=surface_name["follower"])
         tag_contact.attrib["surface_pair"] = name_surfpair
         # Set compression only or tension–compression
         if contact.algorithm == "sliding-elastic":
-            ET.SubElement(tag_contact, 'tension').text = str(int(contact.tension))
+            ET.SubElement(tag_contact, "tension").text = str(int(contact.tension))
         else:
             if contact.tension:
-                raise ValueError(f"Only the sliding–elastic contact algorithm is known to support tension–compression contact in FEBio.")
+                raise ValueError(
+                    f"Only the sliding–elastic contact algorithm is known to support tension–compression contact in FEBio."
+                )
         # Write penalty-related tags
-        ET.SubElement(tag_contact, 'auto_penalty') \
-          .text = "1" if contact.penalty['type'] == 'auto' else "0"
-        ET.SubElement(tag_contact, 'penalty').text = f"{contact.penalty['factor']}"
+        ET.SubElement(tag_contact, "auto_penalty").text = (
+            "1" if contact.penalty["type"] == "auto" else "0"
+        )
+        ET.SubElement(tag_contact, "penalty").text = f"{contact.penalty['factor']}"
         # Write algorithm modification tags
-        ET.SubElement(tag_contact, 'laugon').text =\
-            bool_to_text(contact.augmented_lagrange)
-        ET.SubElement(tag_contact, "symmetric_stiffness").text =\
-            bool_to_text(contact.symmetric_stiffness)
+        ET.SubElement(tag_contact, "laugon").text = bool_to_text(
+            contact.augmented_lagrange
+        )
+        ET.SubElement(tag_contact, "symmetric_stiffness").text = bool_to_text(
+            contact.symmetric_stiffness
+        )
         e_two_pass = ET.SubElement(tag_contact, "two_pass")
         if contact.passes == 2:
             e_two_pass.text = "1"
         elif contact.passes == 1:
             e_two_pass.text = "0"
         else:
-            raise ValueError(f"{contact.passes} passes requested in a contact constraint; FEBio supports either 0 or 1.")
+            raise ValueError(
+                f"{contact.passes} passes requested in a contact constraint; FEBio supports either 0 or 1."
+            )
         # Write other parameters.  The FEBio manual is a bit spotty, so
         # extra contact parameters are stuffed in a dictionary.  Write
         # them out as-is, only casting them to strings.
@@ -469,8 +519,9 @@ def control_parameter_to_feb(parameter, value):
     return e
 
 
-def body_constraints_to_feb(body, constraints, material_registry,
-                            implicit_rb_mat, sequence_registry):
+def body_constraints_to_feb(
+    body, constraints, material_registry, implicit_rb_mat, sequence_registry
+):
     """Return <rigid_body> element for a body's constraints dictionary.
 
     These <rigid_body> elements are used as children of a <Boundary>
@@ -487,39 +538,44 @@ def body_constraints_to_feb(body, constraints, material_registry,
         mat = implicit_rb_mat[body]
         mat_id = material_registry.name(mat, nametype="ordinal_id")
     else:
-        msg = f"body {k} does not have a supported type.  " + \
-            "Supported body types are Body and ImplicitBody."
+        msg = (
+            f"body {k} does not have a supported type.  "
+            + "Supported body types are Body and ImplicitBody."
+        )
         raise ValueError(msg)
     # Create the XML tags for the rigid body BC
-    e_body = ET.Element('rigid_body', mat=str(mat_id + 1))
+    e_body = ET.Element("rigid_body", mat=str(mat_id + 1))
     for dof, bc in constraints.items():
-        if bc['sequence'] == 'fixed':
-            kind = 'fixed'
+        if bc["sequence"] == "fixed":
+            kind = "fixed"
         else:  # bc['sequence'] is Sequence
-            kind = 'variable'
-            seq = bc['sequence']
-            v = bc['scale']
+            kind = "variable"
+            seq = bc["sequence"]
+            v = bc["scale"]
         # Determine which tag name to use for the specified
         # variable: force or displacement
-        if bc['variable'] in ["displacement", "rotation"]:
-            tagname = TAG_FROM_BC['body'][kind]
-        elif bc['variable'] == 'force':
-            tagname = 'force'
-            if bc['relative']:
-                raise ValueError(f"A relative body boundary condition for {dof} {bc['variable']} was requested, but relative body boundary conditions are supported only for displacement.")
+        if bc["variable"] in ["displacement", "rotation"]:
+            tagname = TAG_FROM_BC["body"][kind]
+        elif bc["variable"] == "force":
+            tagname = "force"
+            if bc["relative"]:
+                raise ValueError(
+                    f"A relative body boundary condition for {dof} {bc['variable']} was requested, but relative body boundary conditions are supported only for displacement."
+                )
         else:
             raise ValueError(f"Variable {bc['variable']} not supported for BCs.")
         bc_attr = XML_BC_FROM_DOF[(dof, bc["variable"])]
         e_bc = ET.SubElement(e_body, tagname, bc=bc_attr)
-        if kind == 'variable':
+        if kind == "variable":
             seq_id = _get_or_create_seq_id(sequence_registry, seq)
-            e_bc.attrib['lc'] = str(seq_id + 1)
-            if bc['relative']: e_bc.attrib["type"] = "relative"
+            e_bc.attrib["lc"] = str(seq_id + 1)
+            if bc["relative"]:
+                e_bc.attrib["type"] = "relative"
             e_bc.text = str(v)
     return e_body
 
 
-def xml(model, version='2.5'):
+def xml(model, version="2.5"):
     """Convert a model to an FEBio XML tree.
 
     Creating an FEBio XML tree from a model is useful because it allows
@@ -558,7 +614,7 @@ def xml(model, version='2.5'):
         _get_or_create_item_id(material_registry, mat)
     assert materials_used - set(material_registry.objects()) == set()
 
-    root = ET.Element('febio_spec', version="{}".format(version))
+    root = ET.Element("febio_spec", version="{}".format(version))
     msg = f"Exported to FEBio XML by febtools prerelease at {datetime.today().strftime('%Y-%m-%dT%H:%M:%S%z')}"
     root.append(ET.Comment(msg))
 
@@ -568,22 +624,24 @@ def xml(model, version='2.5'):
     module = choose_module([m for m in material_registry.objects()])
     if version_major == 2 and version_minor >= 5:
         # In FEBio XML ≥ 2.5, <Module> must exist and be first tag
-        e_module = ET.SubElement(root, 'Module')
+        e_module = ET.SubElement(root, "Module")
         e_module.attrib["type"] = module
     # FEBio XML 2.0 sets <analysis_type> in <Control>
 
-    Material = ET.SubElement(root, 'Material')
+    Material = ET.SubElement(root, "Material")
 
     parts = febioxml.parts(model)
     Geometry = febioxml.geometry_section(model, parts, material_registry)
     root.append(Geometry)
 
-    e_boundary = ET.SubElement(root, 'Boundary')
+    e_boundary = ET.SubElement(root, "Boundary")
     if version_major == 2 and version_minor >= 5:
-        contact_constraints = [c for c in model.constraints
-                               if isinstance(c, ContactConstraint)]
-        tag_contact = contact_section(contact_constraints, model,
-                                      root, named_surface_pairs, named_contacts)
+        contact_constraints = [
+            c for c in model.constraints if isinstance(c, ContactConstraint)
+        ]
+        tag_contact = contact_section(
+            contact_constraints, model, root, named_surface_pairs, named_contacts
+        )
         root.append(tag_contact)
     else:
         tag_contact = febioxml_2_0.contact_section(model)
@@ -591,22 +649,22 @@ def xml(model, version='2.5'):
     # The <Contact> tag must come before the first <Step> tag or FEBio
     # will only apply the specified contact constraints to the last step
     # (this is an FEBio bug).
-    e_constraints = ET.SubElement(root, 'Constraints')
-    e_loaddata = ET.SubElement(root, 'LoadData')
-    Output = ET.SubElement(root, 'Output')
+    e_constraints = ET.SubElement(root, "Constraints")
+    e_loaddata = ET.SubElement(root, "LoadData")
+    Output = ET.SubElement(root, "Output")
 
     # Typical MKS constants
-    e_Constants = ET.Element('Constants')
+    e_Constants = ET.Element("Constants")
     if "R" in model.constants:
-        ET.SubElement(e_Constants, 'R').text = str(model.constants["R"])
+        ET.SubElement(e_Constants, "R").text = str(model.constants["R"])
     if "temperature" in model.environment:
-        ET.SubElement(e_Constants, 'T').text = str(model.environment["temperature"])
+        ET.SubElement(e_Constants, "T").text = str(model.environment["temperature"])
     if "F" in model.constants:
-        ET.SubElement(e_Constants, 'Fc').text = str(model.constants["F"])
+        ET.SubElement(e_Constants, "Fc").text = str(model.constants["F"])
     # Add Globals/Constants if any defined; FEBio can't cope with an empty
     # Globals element.
     if len(e_Constants.getchildren()) > 0:
-        e_Globals = ET.Element('Globals')
+        e_Globals = ET.Element("Globals")
         e_Globals.append(e_Constants)
         root.insert(root.index(e_module) + 1, e_Globals)
         # ^ FEBio requires that first element must be <Module>
@@ -635,14 +693,14 @@ def xml(model, version='2.5'):
     # model.steps[i]['bc']['body'] for each step i.
     implicit_bodies_to_process = set()  # memo
     # Search fixed constraints for rigid bodies
-    for k in model.fixed['body']:
-        for body in model.fixed['body'][k]:
+    for k in model.fixed["body"]:
+        for body in model.fixed["body"][k]:
             if isinstance(body, ImplicitBody):
                 implicit_bodies_to_process.add(body)
     # Search steps' constraints for rigid bodies
     for step in model.steps:
         if "bc" in step:
-            for body in step['bc']['body']:
+            for body in step["bc"]["body"]:
                 if isinstance(body, ImplicitBody):
                     implicit_bodies_to_process.add(body)
     # Create FEBio rigid materials for all implicit rigid bodies and add
@@ -659,8 +717,8 @@ def xml(model, version='2.5'):
         # tag.append(ET.Comment("Implicit rigid body"))
         mat_id = len(Material)
         mat_name = body_name + "_psuedo-material"
-        tag.attrib['id'] = str(mat_id + 1)
-        tag.attrib['name'] = mat_name
+        tag.attrib["id"] = str(mat_id + 1)
+        tag.attrib["name"] = mat_name
         Material.append(tag)
         # Update material registries
         material_registry.add(mat_name, mat)
@@ -669,13 +727,11 @@ def xml(model, version='2.5'):
         #
         # Add the implicit body's rigid interface with the mesh.
         # Assumes interface is a node set.
-        if version == '2.0':
+        if version == "2.0":
             # FEBio XML 2.0 puts rigid bodies under §Constraints
-            e_interface = ET.SubElement(e_contact, 'contact',
-                                        type='rigid')
+            e_interface = ET.SubElement(e_contact, "contact", type="rigid")
             for i in implicit_body.interface:
-                ET.SubElement(e_interface, 'node', id=str(i + 1),
-                              rb=str(mat_id + 1))
+                ET.SubElement(e_interface, "node", id=str(i + 1), rb=str(mat_id + 1))
         elif version_major == 2 and version_minor >= 5:
             # FEBio XML 2.5 puts rigid bodies under §Boundary
             try:
@@ -683,11 +739,9 @@ def xml(model, version='2.5'):
             except KeyError:
                 name_base = f"{body_name}_interface"
                 nodeset = implicit_body.interface
-                name = _get_or_create_name(model.named["node sets"],
-                                           name_base, nodeset)
+                name = _get_or_create_name(model.named["node sets"], name_base, nodeset)
             add_nodeset(root, name, implicit_body.interface)
-            ET.SubElement(e_boundary, "rigid", rb=str(mat_id + 1),
-                          node_set=name)
+            ET.SubElement(e_boundary, "rigid", rb=str(mat_id + 1), node_set=name)
 
     # Write global <Boundary> element
     #
@@ -695,50 +749,51 @@ def xml(model, version='2.5'):
     for interface in model.constraints:
         if type(interface) is not RigidInterface:
             continue
-        rigid_body_id = material_registry.name(interface.rigid_body,
-                                               nametype="ordinal_id")
+        rigid_body_id = material_registry.name(
+            interface.rigid_body, nametype="ordinal_id"
+        )
         node_set_name = model.named["node sets"].name(interface.node_set)
         add_nodeset(root, node_set_name, interface.node_set)
-        ET.SubElement(e_Boundary, "rigid",
-                      rb=str(rigid_body_id + 1),
-                      node_set=node_set_name)
+        ET.SubElement(
+            e_Boundary, "rigid", rb=str(rigid_body_id + 1), node_set=node_set_name
+        )
     #
     # Write fixed nodal constraints to global <Boundary>
-    for (dof, var), nodeset in model.fixed['node'].items():
+    for (dof, var), nodeset in model.fixed["node"].items():
         if nodeset:
-            if version == '2.0':
+            if version == "2.0":
                 # Tag heirarchy: <Boundary><fix bc="x"><node id="1"> for each node
-                e_fixed_nodeset = ET.SubElement(e_boundary, 'fix',
-                                                bc=XML_BC_FROM_DOF[(dof, var)])
+                e_fixed_nodeset = ET.SubElement(
+                    e_boundary, "fix", bc=XML_BC_FROM_DOF[(dof, var)]
+                )
                 for i in nodeset:
-                    ET.SubElement(e_fixed_nodeset, 'node', id=str(i + 1))
+                    ET.SubElement(e_fixed_nodeset, "node", id=str(i + 1))
             elif version_major == 2 and version_minor >= 5:
                 # Tag heirarchy: <Boundary><fix bc="x" node_set="set_name">
                 name_base = f"fixed_{dof}_autogen-nodeset"
-                name = _get_or_create_name(model.named["node sets"],
-                                           name_base, nodeset)
+                name = _get_or_create_name(model.named["node sets"], name_base, nodeset)
                 add_nodeset(root, name, nodeset)
                 # Create the tag
-                ET.SubElement(e_boundary, 'fix',
-                              bc=XML_BC_FROM_DOF[(dof, var)],
-                              node_set=name)
+                ET.SubElement(
+                    e_boundary, "fix", bc=XML_BC_FROM_DOF[(dof, var)], node_set=name
+                )
     #
     # Write fixed body constraints to global <Boundary>
     body_bcs = {}
     # Choose where to put rigid body constraints depending on FEBio XML
     # version.
-    if version == '2.0':
+    if version == "2.0":
         e_bc_body_parent = e_constraints
     elif version_major == 2 and version_minor >= 5:
         e_bc_body_parent = e_boundary
     # Collect rigid body boundary conditions in a more convenient
     # hierarchy
-    for dof, bodies in model.fixed['body'].items():
+    for dof, bodies in model.fixed["body"].items():
         for body in bodies:
             body_bcs.setdefault(body, set()).add(dof)
     # Create the tags specifying fixed constraints for the rigid bodies
     for body, axes in body_bcs.items():
-        e_body = ET.SubElement(e_bc_body_parent, 'rigid_body')
+        e_body = ET.SubElement(e_bc_body_parent, "rigid_body")
         # Assign the body's material
         if isinstance(body, Body):
             body_material = body.elements[0].material
@@ -746,24 +801,27 @@ def xml(model, version='2.5'):
         elif isinstance(body, ImplicitBody):
             body_material = implicit_rigid_material_by_body[body]
         mat_id = material_registry.name(body_material, nametype="ordinal_id")
-        e_body.attrib['mat'] = str(mat_id + 1)
+        e_body.attrib["mat"] = str(mat_id + 1)
         # Write tags for each of the fixed degrees of freedom.  Use
         # sorted order to be deterministic & human-friendly.
         for dof, var in sorted(axes):
-            ET.SubElement(e_body, 'fixed', bc=XML_BC_FROM_DOF[(dof, var)])
+            ET.SubElement(e_body, "fixed", bc=XML_BC_FROM_DOF[(dof, var)])
     #
     # TODO: Write time-varying nodal constraints to global <Boundary>
     #
     # Write time-varying rigid body constraints to global <Boundary>
-    if version == '2.0':
+    if version == "2.0":
         e_bc_body_parent = e_constraints
     elif version_major == 2 and version_minor >= 5:
         e_bc_body_parent = e_boundary
     for body, constraints in model.varying["body"].items():
-        e_rb_new = body_constraints_to_feb(body, constraints,
-                                               material_registry,
-                                               implicit_rigid_material_by_body,
-                                               model.named["sequences"])
+        e_rb_new = body_constraints_to_feb(
+            body,
+            constraints,
+            material_registry,
+            implicit_rigid_material_by_body,
+            model.named["sequences"],
+        )
         mat_id = e_rb_new.attrib["mat"]
         e_rb_existing = e_bc_body_parent.find(f'rigid_body[@mat="{mat_id}"]')
         if e_rb_existing is None:
@@ -779,55 +837,52 @@ def xml(model, version='2.5'):
     cumulative_time = 0.0
     for step in model.steps:
         # Gather must point curves
-        dtmax = step['control']['time stepper']['dtmax']
+        dtmax = step["control"]["time stepper"]["dtmax"]
         if isinstance(dtmax, Sequence):
             dtmax.points = [(cumulative_time + t, v) for t, v in dtmax.points]
         # Gather variable boundary condition / constraint curves
         curves_to_adjust = set([])
         if "bc" in step:
-            for i, ax_bc in step['bc']['node'].items():
+            for i, ax_bc in step["bc"]["node"].items():
                 for ax, d in ax_bc.items():
-                    if isinstance(d['sequence'], Sequence):
-                        curves_to_adjust.add(d['sequence'])
-                    elif isinstance(d['sequence'], ScaledSequence):
-                        curves_to_adjust.add(d['sequence'].sequence)
+                    if isinstance(d["sequence"], Sequence):
+                        curves_to_adjust.add(d["sequence"])
+                    elif isinstance(d["sequence"], ScaledSequence):
+                        curves_to_adjust.add(d["sequence"].sequence)
         # Gather the body constraint curves
         if "bc" in step:
-            for body, body_constraints in step['bc']['body'].items():
+            for body, body_constraints in step["bc"]["body"].items():
                 for ax, params in body_constraints.items():
                     # params = {'variable': variable <string>,
                     #           'sequence': Sequence object or 'fixed',
                     #           'scale': scale <numeric>
-                    if isinstance(params['sequence'], Sequence):
-                        curves_to_adjust.add(params['sequence'])
-                    elif isinstance(params['sequence'], ScaledSequence):
-                        curves_to_adjust.add(params['sequence'].sequence)
+                    if isinstance(params["sequence"], Sequence):
+                        curves_to_adjust.add(params["sequence"])
+                    elif isinstance(params["sequence"], ScaledSequence):
+                        curves_to_adjust.add(params["sequence"].sequence)
                     # TODO: Add test to exercise this code
         # Adjust the curves
         for curve in curves_to_adjust:
-            curve.points = [(cumulative_time + t, v)
-                            for t, v in curve.points]
+            curve.points = [(cumulative_time + t, v) for t, v in curve.points]
         # Tally running time
         duration = step_duration(step)
         cumulative_time += duration
 
     # Output section
-    plotfile = ET.SubElement(Output, 'plotfile', type='febio')
+    plotfile = ET.SubElement(Output, "plotfile", type="febio")
     if model.output["variables"] is None:
         output_vars = ["displacement", "stress", "relative volume"]
         if module == "biphasic":
-            output_vars += ["effective fluid pressure",
-                            "fluid pressure",
-                            "fluid flux"]
-        rigid_bodies_present = any(isinstance(m, feb.material.RigidBody)
-                                   for m in material_registry.objects())
+            output_vars += ["effective fluid pressure", "fluid pressure", "fluid flux"]
+        rigid_bodies_present = any(
+            isinstance(m, feb.material.RigidBody) for m in material_registry.objects()
+        )
         if rigid_bodies_present:
             output_vars += ["reaction forces"]
     else:
         output_vars = model.output["variables"]
     for var in output_vars:
-        ET.SubElement(plotfile, 'var', type=var)
-
+        ET.SubElement(plotfile, "var", type=var)
 
     # Write MeshData.  Have to do this before handling boundary
     # conditions because some boundary conditions have part of their
@@ -838,15 +893,16 @@ def xml(model, version='2.5'):
     if len(e_ElementSet) != 0:
         Geometry.append(e_ElementSet)
 
-
     # Step section(s)
     cumulative_time = 0.0
     visited_implicit_bodies = set()
     for istep, step in enumerate(model.steps):
-        step_name = step["name"] if step["name"] is not None else 'Step{}'.format(istep + 1)
-        e_step = ET.SubElement(root, 'Step', name=step_name)
-        if version == '2.0':
-            ET.SubElement(e_step, 'Module', type=step['module'])
+        step_name = (
+            step["name"] if step["name"] is not None else "Step{}".format(istep + 1)
+        )
+        e_step = ET.SubElement(root, "Step", name=step_name)
+        if version == "2.0":
+            ET.SubElement(e_step, "Module", type=step["module"])
         # Warn if there's an incompatibility between requested materials
         # and modules.
         for mat in material_registry.objects():
@@ -858,30 +914,39 @@ def xml(model, version='2.5'):
                 checked_mat = mat.material
             else:
                 checked_mat = mat
-            if ("module" in step) and\
-               ((not type(checked_mat) in febioxml.module_compat_by_mat) or\
-                (step['module'] not in febioxml.module_compat_by_mat[type(checked_mat)])):
-                raise ValueError(f"Material `{type(mat)}` is not listed as compatible with Module {step['module']}")
-        e_Control = ET.Element('Control')
-        if version == '2.0':
-            ET.SubElement(e_Control, 'analysis', type=module)
+            if ("module" in step) and (
+                (not type(checked_mat) in febioxml.module_compat_by_mat)
+                or (
+                    step["module"]
+                    not in febioxml.module_compat_by_mat[type(checked_mat)]
+                )
+            ):
+                raise ValueError(
+                    f"Material `{type(mat)}` is not listed as compatible with Module {step['module']}"
+                )
+        e_Control = ET.Element("Control")
+        if version == "2.0":
+            ET.SubElement(e_Control, "analysis", type=module)
         # Write all the single-element Control parameters (i.e,
         # everything but <time_stepper>
-        for parameter in step['control']:
+        for parameter in step["control"]:
             if parameter == "time stepper":
                 continue
-            e_param = control_parameter_to_feb(parameter, step['control'][parameter])
+            e_param = control_parameter_to_feb(parameter, step["control"][parameter])
             e_Control.append(e_param)
         # Write <time_stepper> and all its children
-        e_ts = ET.SubElement(e_Control, 'time_stepper')
-        ET.SubElement(e_ts, 'dtmin').text = \
-            str(step['control']['time stepper']['dtmin'])
-        ET.SubElement(e_ts, 'max_retries').text = \
-            str(step['control']['time stepper']['max retries'])
-        ET.SubElement(e_ts, 'opt_iter').text = \
-            str(step['control']['time stepper']['opt iter'])
+        e_ts = ET.SubElement(e_Control, "time_stepper")
+        ET.SubElement(e_ts, "dtmin").text = str(
+            step["control"]["time stepper"]["dtmin"]
+        )
+        ET.SubElement(e_ts, "max_retries").text = str(
+            step["control"]["time stepper"]["max retries"]
+        )
+        ET.SubElement(e_ts, "opt_iter").text = str(
+            step["control"]["time stepper"]["opt iter"]
+        )
         # dtmax may have an associated sequence
-        dtmax = step['control']['time stepper']['dtmax']
+        dtmax = step["control"]["time stepper"]["dtmax"]
         e_dtmax = _property_to_feb(dtmax, "dtmax", model)
         e_ts.append(e_dtmax)
 
@@ -900,10 +965,10 @@ def xml(model, version='2.5'):
         # tense compared to nodal constraints—so much for consistency.)
         #
         # FEBio does handle empty tags appropriately, which helps.
-        e_Boundary = ET.Element('Boundary')
+        e_Boundary = ET.Element("Boundary")
         e_bc_nodal_parent = e_Boundary
-        if version == '2.0':
-            e_bc_body_parent = ET.SubElement(e_step, 'Constraints')
+        if version == "2.0":
+            e_bc_body_parent = ET.SubElement(e_step, "Constraints")
         elif version_major == 2 and version_minor >= 5:
             e_bc_body_parent = e_Boundary
         # Collect nodal BCs in a more convenient heirarchy for writing
@@ -916,60 +981,70 @@ def xml(model, version='2.5'):
         # node_memo['fixed'|'variable'][dof][sequence] = (node_ids, scales, relative)
         node_memo = defaultdict(dict)
         if ("bc" in step) and ("node" in step["bc"]):
-            for node_id in step['bc']['node']:
-                for dof in step['bc']['node'][node_id]:
-                    bc = step['bc']['node'][node_id][dof]
-                    if bc['sequence'] == 'fixed':
-                        kind = 'fixed'
+            for node_id in step["bc"]["node"]:
+                for dof in step["bc"]["node"][node_id]:
+                    bc = step["bc"]["node"][node_id][dof]
+                    if bc["sequence"] == "fixed":
+                        kind = "fixed"
                     else:  # bc['sequence'] is Sequence
-                        kind = 'variable'
-                    node_memo[kind].\
-                        setdefault((dof, bc["variable"]), {}).\
-                        setdefault(bc["sequence"], []).\
-                        append((node_id, bc['scale'], bc["relative"]))
+                        kind = "variable"
+                    node_memo[kind].setdefault((dof, bc["variable"]), {}).setdefault(
+                        bc["sequence"], []
+                    ).append((node_id, bc["scale"], bc["relative"]))
         # TODO: support kind == 'fixed'.  (Does that make sense for a step?)
         for kind in node_memo:  # 'variable' or 'fixed'
             for dof_var in node_memo[kind]:  # ("x1", "displacement"), etc.
                 for sequence in node_memo[kind][dof_var]:
                     # `sequence` can be a Sequence or ScaledSequence
                     bc = node_memo[kind][dof_var][sequence]
-                    e_bc = ET.SubElement(e_bc_nodal_parent,
-                                         TAG_FROM_BC['node'][kind],  # 'fix' | 'prescribe'
-                                         bc=XML_BC_FROM_DOF[dof_var])
-                    if kind == 'variable':
+                    e_bc = ET.SubElement(
+                        e_bc_nodal_parent,
+                        # 'fix' | 'prescribe'
+                        TAG_FROM_BC["node"][kind],
+                        bc=XML_BC_FROM_DOF[dof_var],
+                    )
+                    if kind == "variable":
                         # Get ID for Sequence (recall that a
                         # ScaledSequence has no ID; only its underlying
                         # Sequence gets an ID)
-                        seq_id = _get_or_create_seq_id(model.named["sequences"],
-                                                       sequence)
-                        if version == '2.0':
-                            e_bc.attrib['lc'] =  str(seq_id + 1)
+                        seq_id = _get_or_create_seq_id(
+                            model.named["sequences"], sequence
+                        )
+                        if version == "2.0":
+                            e_bc.attrib["lc"] = str(seq_id + 1)
                             # Write nodes as children of <Step><Boundary><prescribe>
                             for i, sc in bc:
-                                ET.SubElement(e_bc, 'node', id=str(i+1)).text =\
-                                    float_to_text(sc)
+                                ET.SubElement(
+                                    e_bc, "node", id=str(i + 1)
+                                ).text = float_to_text(sc)
                         elif version_major == 2 and version_minor >= 5:
                             # Use <Step><Boundary><prescribe node_set="set_name">
-                            e_sc = ET.SubElement(e_bc, 'scale',
-                                                 lc=str(seq_id + 1))
+                            e_sc = ET.SubElement(e_bc, "scale", lc=str(seq_id + 1))
                             e_sc.text = "1.0"
-                            nm_base = "nodal_bc_" \
+                            nm_base = (
+                                "nodal_bc_"
                                 f"step{istep+1}_{kind}_{dof_var[0]}_seq{seq_id}_autogen"
+                            )
                             node_set = NodeSet([i for i, sc, relative in bc])
                             # ^ Need to make a NodeSet so it's hashable
                             # and can thus receive a name
-                            name = _get_or_create_name(model.named["node sets"],
-                                                       nm_base, node_set)
-                            e_bc.attrib['node_set'] = name
+                            name = _get_or_create_name(
+                                model.named["node sets"], nm_base, node_set
+                            )
+                            e_bc.attrib["node_set"] = name
                             # Write the node-specific boundary condition
                             # scaling factors in Geometry/MeshData/NodeData.
                             e_NodeData = ET.SubElement(e_MeshData, "NodeData")
                             # Generate a non-duplicate name for the <NodeData> element
-                            stemname_nodedata = "nodal_bc_" \
-                                f"step{istep+1}_{dof}_seq{seq_id}_autogen"
+                            stemname_nodedata = (
+                                "nodal_bc_" f"step{istep+1}_{dof}_seq{seq_id}_autogen"
+                            )
                             i = 0
                             name_nodedata = f"{stemname_nodedata}{i}"
-                            while e_MeshData.find(f"NodeData[@name='{name_nodedata}']") is not None:
+                            while (
+                                e_MeshData.find(f"NodeData[@name='{name_nodedata}']")
+                                is not None
+                            ):
                                 i += 1
                                 name_nodedata = f"{stemname_nodedata}{i}"
                             # Finish writing NodeData element
@@ -984,24 +1059,29 @@ def xml(model, version='2.5'):
                             # generate the local ID, we write
                             # NodeSet/node elements in FEBio XML in
                             # ascending order of node ID.
-                            lid_from_node_id = {node_id: i + 1
-                                                for i, node_id
-                                                in enumerate(sorted(node_set))}
+                            lid_from_node_id = {
+                                node_id: i + 1
+                                for i, node_id in enumerate(sorted(node_set))
+                            }
                             for node_id, scale, relative in bc:
-                                ET.SubElement(e_NodeData, "node",
-                                              lid=str(lid_from_node_id[node_id])).\
-                                              text = float_to_text(scale)
+                                ET.SubElement(
+                                    e_NodeData,
+                                    "node",
+                                    lid=str(lid_from_node_id[node_id]),
+                                ).text = float_to_text(scale)
                             # Reference the node-specific boundary
                             # condition scaling factors
                             ET.SubElement(e_bc, "value", node_data=name_nodedata)
                             # Other attributes
-                            ET.SubElement(e_bc, 'relative').text = str(int(relative))
+                            ET.SubElement(e_bc, "relative").text = str(int(relative))
 
         # Temporal (step-specific) contacts
-        contacts = [c for c in step["bc"]["contact"]
-                    if isinstance(c, ContactConstraint)]
-        e_Contact = contact_section(contacts, model, root,
-                                    named_surface_pairs, named_contacts)
+        contacts = [
+            c for c in step["bc"]["contact"] if isinstance(c, ContactConstraint)
+        ]
+        e_Contact = contact_section(
+            contacts, model, root, named_surface_pairs, named_contacts
+        )
 
         # Add <Boundary>, <Contact>, and <Control> elements to <Step>, in that order
         e_step.append(e_Boundary)
@@ -1010,11 +1090,13 @@ def xml(model, version='2.5'):
 
         if ("bc" in step) and ("body" in step["bc"]):
             for body, constraints in step["bc"]["body"].items():
-                e_rigid_body = body_constraints_to_feb(body,
-                                                       constraints,
-                                                       material_registry,
-                                                       implicit_rigid_material_by_body,
-                                                       model.named["sequences"])
+                e_rigid_body = body_constraints_to_feb(
+                    body,
+                    constraints,
+                    material_registry,
+                    implicit_rigid_material_by_body,
+                    model.named["sequences"],
+                )
                 e_bc_body_parent.append(e_rigid_body)
 
     # Write XML elements for sequences (load curves) that are in the
@@ -1052,19 +1134,18 @@ def xml(model, version='2.5'):
 
 
 def tag_face(face):
-    nm = {3: "tri3",
-          4: "quad4"}
+    nm = {3: "tri3", 4: "quad4"}
     tag = ET.Element(nm[len(face)])
     tag.text = ", ".join([f"{i+1}" for i in face])
     return tag
 
+
 def write_xml(tree, f):
     """Write an XML tree to a .feb file"""
-    tree.write(f, pretty_print=True, xml_declaration=True,
-               encoding='utf-8')
+    tree.write(f, pretty_print=True, xml_declaration=True, encoding="utf-8")
 
 
-def write_feb(model, f, version='2.5'):
+def write_feb(model, f, version="2.5"):
     """Write model's FEBio XML representation to a file object.
 
     Inputs

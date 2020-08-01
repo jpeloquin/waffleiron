@@ -3,7 +3,7 @@ import numpy as np
 import numpy.testing as npt
 import febtools as feb
 
-np.seterr(all='raise')
+np.seterr(all="raise")
 _ZERO_ATOL = np.finfo(np.float).resolution * 1000
 
 
@@ -73,7 +73,10 @@ class TestLinspaced(TestCase):
         span = 15
         n = 21
         x = feb.math.linspaced(offset, span, n)
-        def f(x): return x
+
+        def f(x):
+            return x
+
         dfdi = np.diff(f(x))
         assert np.max(np.abs(np.diff(dfdi))) < _ZERO_ATOL
 
@@ -118,7 +121,9 @@ class TestLogspaced(TestCase):
         offset = 0
         n = -1
         span = 1
-        with self.assertRaisesRegex(ValueError, "Number of samples, .+, must be non-negative"):
+        with self.assertRaisesRegex(
+            ValueError, "Number of samples, .+, must be non-negative"
+        ):
             feb.math.logspaced(offset, span, n)
 
     # Test that size and span of output is as specified
@@ -161,7 +166,10 @@ class TestLogspaced(TestCase):
     def test_invariant(self):
         span = 15
         n = 21
-        def f(x): return np.log(x)
+
+        def f(x):
+            return np.log(x)
+
         for offset in (0, 1, 7):
             x = feb.math.logspaced(offset, span, n)
             if offset == 0:
@@ -216,7 +224,9 @@ class TestPowerspaced(TestCase):
         n = -1
         span = 1
         power = 1
-        with self.assertRaisesRegex(ValueError, "Number of samples, .+, must be non-negative"):
+        with self.assertRaisesRegex(
+            ValueError, "Number of samples, .+, must be non-negative"
+        ):
             feb.math.powerspaced(offset, span, n, power)
 
     # Test that size and span of output is as specified
@@ -226,7 +236,7 @@ class TestPowerspaced(TestCase):
         for offset in (0, 1, 5):
             for span in (0, 1, 17):
                 for n in (2, 11):
-                    for power in (-2/3, 0, 1.5):
+                    for power in (-2 / 3, 0, 1.5):
                         start = offset
                         end = offset + span
                         x = feb.math.powerspaced(offset, span, n, power)
@@ -256,7 +266,10 @@ class TestPowerspaced(TestCase):
     def test_invariant(self):
         span = 15
         n = 21
-        def f(x): return x**power
+
+        def f(x):
+            return x ** power
+
         for power in (-0.5, 0, 1, 1.5):
             for offset in (0, 1, 7):
                 x = feb.math.powerspaced(offset, span, n, power)
@@ -291,11 +304,29 @@ class TestPowerspaced(TestCase):
         power = -0.5
         offset = 1
         x = feb.math.powerspaced(offset, span, n, power)
-        x_true = [1, 1.0873783, 1.18673017, 1.30034758, 1.4310983,
-                  1.58260873, 1.75951804, 1.96783756, 2.21546832, 2.51296134,
-                  2.87466049, 3.32046444, 3.87862317, 4.59032614, 5.51752514,
-                  6.75688689, 8.46604867, 10.91633893, 14.60749942, 20.54425558,
-                  31]
+        x_true = [
+            1,
+            1.0873783,
+            1.18673017,
+            1.30034758,
+            1.4310983,
+            1.58260873,
+            1.75951804,
+            1.96783756,
+            2.21546832,
+            2.51296134,
+            2.87466049,
+            3.32046444,
+            3.87862317,
+            4.59032614,
+            5.51752514,
+            6.75688689,
+            8.46604867,
+            10.91633893,
+            14.60749942,
+            20.54425558,
+            31,
+        ]
         npt.assert_allclose(x, x_true)
 
     def test_value_negsqrt_with_dmin(self):
@@ -305,8 +336,27 @@ class TestPowerspaced(TestCase):
         offset = 0
         dmin = 0.06802721088435373  # (1/n)**(-1/power) * span
         x = feb.math.powerspaced(offset, span, n, power, dmin=dmin)
-        x_true = [0, 0.06802721, 0.0753963, 0.08403101, 0.09423865,
-                  0.10642584, 0.12113958, 0.13912976, 0.16144661, 0.18959752,
-                  0.22580847, 0.27347794, 0.33800443, 0.42838495, 0.56052999,
-                  0.7647765, 1.10498929, 1.73529883, 3.11117495, 7.12031558, 30]
+        x_true = [
+            0,
+            0.06802721,
+            0.0753963,
+            0.08403101,
+            0.09423865,
+            0.10642584,
+            0.12113958,
+            0.13912976,
+            0.16144661,
+            0.18959752,
+            0.22580847,
+            0.27347794,
+            0.33800443,
+            0.42838495,
+            0.56052999,
+            0.7647765,
+            1.10498929,
+            1.73529883,
+            3.11117495,
+            7.12031558,
+            30,
+        ]
         npt.assert_allclose(x, x_true)

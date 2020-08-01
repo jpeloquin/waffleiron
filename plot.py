@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 import febtools as feb
 
+
 def scalar_field(mesh, fn, pts):
     """Return a field evaluated over a grid of points.
 
@@ -28,8 +29,8 @@ def scalar_field(mesh, fn, pts):
     """
     # add z coordinates if omitted
     if pts.shape[2] == 2:
-        zv = np.zeros(pts[:,:,0].shape)
-        pts = np.concatenate([pts, zv[...,np.newaxis]], axis=2)
+        zv = np.zeros(pts[:, :, 0].shape)
+        pts = np.concatenate([pts, zv[..., np.newaxis]], axis=2)
 
     bb = feb.core._e_bb(mesh.elements)
 
@@ -39,7 +40,9 @@ def scalar_field(mesh, fn, pts):
             x = pts[i, j, 0]
             y = pts[i, j, 1]
             z = pts[i, j, 2]
-            elems = feb.select.elements_containing_point((x, y, z), mesh.elements, bb=bb)
+            elems = feb.select.elements_containing_point(
+                (x, y, z), mesh.elements, bb=bb
+            )
             if not elems:
                 field[i, j] = None
             else:
@@ -47,12 +50,13 @@ def scalar_field(mesh, fn, pts):
                 r = e.to_natural((x, y, z))
                 f = e.f(r)
                 field[i, j] = fn(f, e)
-        sys.stdout.write("\rLine {}/{}".format(i+1, field.shape[0]))
+        sys.stdout.write("\rLine {}/{}".format(i + 1, field.shape[0]))
         sys.stdout.flush()
     sys.stdout.write("\n")
     sys.stdout.flush()
 
     return field
+
 
 def plot_q(elements, length=1.0):
     """Plot nodal q vectors in elements.
@@ -61,39 +65,44 @@ def plot_q(elements, length=1.0):
 
     """
     # get subset of elements that actually has q values
-    qelements = [e for e in elements if 'q' in e.properties]
+    qelements = [e for e in elements if "q" in e.properties]
     # get list of q values
-    q = np.array([v for e in qelements for v in e.properties['q']])
+    q = np.array([v for e in qelements for v in e.properties["q"]])
     qnodes = np.array([x for e in qelements for x in e.nodes])
     nodes = np.array([x for e in elements for x in e.nodes])
     # plot vectors
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(qnodes[:,0], qnodes[:,1], qnodes[:,2],
-               c='k', edgecolor='k', s=4)
+    ax = fig.add_subplot(111, projection="3d")
+    ax.scatter(qnodes[:, 0], qnodes[:, 1], qnodes[:, 2], c="k", edgecolor="k", s=4)
     # the vector length is added to the node locations because
     # matplotlib draws the arrows such that the head is at the
     # provided point
-    ax.quiver(qnodes[:,0] + length*q[:,0],
-              qnodes[:,1] + length*q[:,1],
-              qnodes[:,2] + length*q[:,2],
-              q[:,0], q[:,1], q[:,2],
-              color='r', length=length)
+    ax.quiver(
+        qnodes[:, 0] + length * q[:, 0],
+        qnodes[:, 1] + length * q[:, 1],
+        qnodes[:, 2] + length * q[:, 2],
+        q[:, 0],
+        q[:, 1],
+        q[:, 2],
+        color="r",
+        length=length,
+    )
     # plot 0-values
-    #xyz = nodes[~np.any(q, axis=1)]
-    #ax.scatter(xyz[:,0], xyz[:,1], xyz[:,2],
-#               s=16, c='r', marker='*', edgecolor='r')
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
+    # xyz = nodes[~np.any(q, axis=1)]
+    # ax.scatter(xyz[:,0], xyz[:,1], xyz[:,2],
+    #               s=16, c='r', marker='*', edgecolor='r')
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
     return fig, ax
+
 
 def plot_element_nodes(element):
     """Plot numbered element nodes in 3D"""
     e = element
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.plot(e.nodes[:,0], e.nodes[:,1], e.nodes[:,2], '*k', markersize=8)
+    ax = fig.add_subplot(111, projection="3d")
+    ax.plot(e.nodes[:, 0], e.nodes[:, 1], e.nodes[:, 2], "*k", markersize=8)
     for i, pt in enumerate(e.nodes):
         ax.text(pt[0], pt[1], pt[2], "{}".format(i), color="red", fontsize=16)
     ax.set_xlabel("X")

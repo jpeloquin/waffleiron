@@ -11,17 +11,21 @@ import febtools as feb
 from .core import _canonical_face
 from febtools.geometry import inter_face_angle, face_normal
 
-default_tol = 10*np.finfo(float).eps
+default_tol = 10 * np.finfo(float).eps
 
 
 def find_closest_timestep(target, times, steps, rtol=0.01, atol="auto"):
     """Return step index closest to given time."""
     times = np.array(times)
     if atol == "auto":
-        atol = max(abs(np.nextafter(target, 0) - target),
-                   abs(np.nextafter(target, target**2) - target))
+        atol = max(
+            abs(np.nextafter(target, 0) - target),
+            abs(np.nextafter(target, target ** 2) - target),
+        )
     if len(steps) != len(times):
-        raise ValueError("len(steps) ≠ len(times).  All steps must have a corresponding time value and vice versa.")
+        raise ValueError(
+            "len(steps) ≠ len(times).  All steps must have a corresponding time value and vice versa."
+        )
     idx = np.argmin(np.abs(times - target))
     step = steps[idx]
     time = times[idx]
@@ -32,7 +36,7 @@ def find_closest_timestep(target, times, steps, rtol=0.01, atol="auto"):
         t_relerror = 0
     elif idx == 0 and t_error < 0:
         # The selection specifies a time point before the first given step
-        t_interval = (times[idx + 1] - times[idx])
+        t_interval = times[idx + 1] - times[idx]
         t_relerror = t_error / t_interval
     elif step == steps[-1] and t_error > 0:
         # The selection specifies a time point after the
@@ -40,17 +44,20 @@ def find_closest_timestep(target, times, steps, rtol=0.01, atol="auto"):
         # after, within acceptable tolerance when
         # working with floating point values, so we do
         # not raise an error until further checks.
-        t_interval = (times[idx] - times[idx-1])
+        t_interval = times[idx] - times[idx - 1]
         t_relerror = t_error / t_interval
     else:
-        t_interval = abs(times[idx] -
-                        times[idx + int(np.sign(t_error))])
+        t_interval = abs(times[idx] - times[idx + int(np.sign(t_error))])
         t_relerror = t_error / t_interval
     # Check error tolerance
     if abs(t_error) > atol:
-        raise ValueError(f"Time step selection absolute error > atol; target time — selected time = {t_error}; atol = {atol}.")
+        raise ValueError(
+            f"Time step selection absolute error > atol; target time — selected time = {t_error}; atol = {atol}."
+        )
     if abs(t_relerror) > abs(rtol):
-        raise ValueError(f"Time step selection relative error > rtol; target time — selected time = {t_error}; step interval = {t_interval}; relative error = {t_relerror}; rtol = {rtol}.")
+        raise ValueError(
+            f"Time step selection relative error > rtol; target time — selected time = {t_error}; step interval = {t_interval}; relative error = {t_relerror}; rtol = {rtol}."
+        )
     return step
 
 
@@ -75,8 +82,7 @@ class ElementSelection:
             self.elements = elements
 
 
-def elements_containing_point(point, elements, bb=None,
-                              tol=default_tol):
+def elements_containing_point(point, elements, bb=None, tol=default_tol):
     """Return element(s) containing a point
 
     point := (x, y, z)
@@ -97,13 +103,12 @@ def elements_containing_point(point, elements, bb=None,
     p = np.array(point)
     if not bb:
         bb = feb.core._e_bb(elements)
-    in_bb = np.all(np.logical_and((point + tol) >= bb[0],
-                                  (point - tol) <= bb[1]),
-                   axis=1)
+    in_bb = np.all(
+        np.logical_and((point + tol) >= bb[0], (point - tol) <= bb[1]), axis=1
+    )
     inds = np.nonzero(in_bb)[0]
     candidates = [elements[i] for i in inds]
-    elements = [e for e in candidates
-                if feb.geometry.point_in_element(e, p, dtol=tol)]
+    elements = [e for e in candidates if feb.geometry.point_in_element(e, p, dtol=tol)]
     return elements
 
 
@@ -127,8 +132,7 @@ def select_elems_around_node(mesh, i, n=1):
     for n in range(n):
         for i in nodelist:
             elements = elements | set(mesh.elem_with_node[i])
-        nodelist = set(i for e in elements
-                       for i in e.ids)
+        nodelist = set(i for e in elements for i in e.ids)
         # ^ This needlessly re-adds elements already in the domain;
         # there's probably a better way; see undirected graph search.
         # Doing this efficiently requires transforming the mesh into a
@@ -140,8 +144,7 @@ def corner_nodes(mesh):
     """Return ids of corner nodes.
 
     """
-    ids = [i for i in range(len(mesh.nodes))
-           if len(mesh.elem_with_node[i]) == 1]
+    ids = [i for i in range(len(mesh.nodes)) if len(mesh.elem_with_node[i]) == 1]
     return ids
 
 
@@ -160,17 +163,21 @@ def surface_faces(mesh):
         adv_front = set([i])
         processed_nodes = set()
         while adv_front:
-            candidate_faces = (f for i in adv_front
-                               for e in mesh.elem_with_node[i]
-                               for f in e.faces()
-                               if i in f)
-            on_surface = [f for f in candidate_faces
-                          if len(adj_faces(f, mesh, mode='face')) == 0]
+            candidate_faces = (
+                f
+                for i in adv_front
+                for e in mesh.elem_with_node[i]
+                for f in e.faces()
+                if i in f
+            )
+            on_surface = [
+                f for f in candidate_faces if len(adj_faces(f, mesh, mode="face")) == 0
+            ]
             surf_faces.update(on_surface)
             processed_nodes.update(adv_front)
-            adv_front = set.difference(set([i for f in surf_faces
-                                            for i in f]),
-                                       processed_nodes)
+            adv_front = set.difference(
+                set([i for f in surf_faces for i in f]), processed_nodes
+            )
     return surf_faces
 
 
@@ -188,7 +195,9 @@ def bisect(elements, p, v):
     # sanitize inputs
     v = np.array(v)
     p = np.array(p)
+
     # find distance from plane
+
     def on_pside(e, p=p, v=v):
         """Returns true if element touches (or intersects) plane.
 
@@ -196,12 +205,12 @@ def bisect(elements, p, v):
         dpv = np.dot(p, v)
         d = np.dot(e.nodes, v)
         return any(d >= dpv)
+
     eset = [e for e in elements if on_pside(e)]
     return set(eset)
 
 
-def element_slice(elements, v, extent=default_tol,
-                  axis=(0, 0, 1)):
+def element_slice(elements, v, extent=default_tol, axis=(0, 0, 1)):
     """Return a slice of elements.
 
     v := The distance along `axis` at which the slice plane is
@@ -248,8 +257,7 @@ def e_grow(selection, candidates, n):
     n_iter = 0  # number of completed iterations
     while active_nodes and n_iter != n:
         # Find adjacent elements
-        adjacent = set(e for e in candidates
-                       if any(i in active_nodes for i in e.ids))
+        adjacent = set(e for e in candidates if any(i in active_nodes for i in e.ids))
         # Grow the seed
         seed = seed | adjacent
         # Inactivate former boundary nodes
@@ -304,17 +312,15 @@ def f_grow_to_edge(faces, mesh, delta=30):
         seed_faces = copy(new_faces)
         new_faces = set()
         for seed_face in seed_faces:
-            af = adj_faces(seed_face, mesh, mode='edge')
-            af = [f for f in af
-                  if (inter_face_angle(f, seed_face, mesh)
-                      < delta_rad)]
+            af = adj_faces(seed_face, mesh, mode="edge")
+            af = [f for f in af if (inter_face_angle(f, seed_face, mesh) < delta_rad)]
             new_faces.update(af)
         new_faces.difference_update(f_subsurface)
         f_subsurface.update(new_faces)
     return f_subsurface
 
 
-def adj_faces(face, mesh, mode='all'):
+def adj_faces(face, mesh, mode="all"):
     """Return faces connected to a face.
 
     face : tuple of integers
@@ -340,14 +346,12 @@ def adj_faces(face, mesh, mode='all'):
     face = _canonical_face(face)
 
     # faces sharing at least one node, sans the queried face
-    nc_faces = set([b for i in face
-                    for b in mesh.faces_with_node(i)
-                    if b != face])
+    nc_faces = set([b for i in face for b in mesh.faces_with_node(i) if b != face])
 
-    if mode == 'all':
+    if mode == "all":
         return nc_faces
-    elif mode == 'edge':
+    elif mode == "edge":
         return [b for b in nc_faces if overlap(face, b) == 2]
-    elif mode == 'face':
+    elif mode == "face":
         n = len(face)
         return [b for b in nc_faces if overlap(face, b) == n]

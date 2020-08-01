@@ -13,18 +13,38 @@ from operator import itemgetter
 
 from .math import orthonormal_basis, vec_from_sph
 from .model import Model, Mesh
-from .core import Body, ImplicitBody, Sequence, ScaledSequence, NodeSet, FaceSet, ElementSet, RigidInterface
+from .core import (
+    Body,
+    ImplicitBody,
+    Sequence,
+    ScaledSequence,
+    NodeSet,
+    FaceSet,
+    ElementSet,
+    RigidInterface,
+)
 from . import xplt
 from . import febioxml, febioxml_2_5, febioxml_2_0
 from . import material as material_lib
-from .febioxml import control_tagnames_from_febio, control_values_from_febio, elem_cls_from_feb, normalize_xml, _to_number, _maybe_to_number, _find_unique_tag, VAR_FROM_XML_NODE_BC, DOF_NAME_FROM_XML_NODE_BC
+from .febioxml import (
+    control_tagnames_from_febio,
+    control_values_from_febio,
+    elem_cls_from_feb,
+    normalize_xml,
+    _to_number,
+    _maybe_to_number,
+    _find_unique_tag,
+    VAR_FROM_XML_NODE_BC,
+    DOF_NAME_FROM_XML_NODE_BC,
+)
+
 
 def _nstrip(string):
     """Remove trailing nulls from string.
 
     """
     for i, c in enumerate(string):
-        if c == '\x00':
+        if c == "\x00":
             return string[:i]
     return string
 
@@ -97,7 +117,7 @@ def load_model(fpath):
     # Attempt to read the xplt file, if it exists
     fp_xplt = fpath.with_suffix(".xplt")
     if os.path.exists(fp_xplt):
-        with open(fp_xplt, 'rb') as f:
+        with open(fp_xplt, "rb") as f:
             soln = xplt.XpltData(f.read())
         xplt_ok = True
     else:
@@ -110,8 +130,10 @@ def load_model(fpath):
         model = Model(soln.mesh())
         model.apply_solution(soln)
     elif not feb_ok and not xplt_ok:
-        raise ValueError("Neither `{}` nor `{}` could be read.  Check that they exist "
-                         "and are accessible.".format(fp_feb, fp_xplt))
+        raise ValueError(
+            "Neither `{}` nor `{}` could be read.  Check that they exist "
+            "and are accessible.".format(fp_feb, fp_xplt)
+        )
     return model
 
 
@@ -126,7 +148,7 @@ def textdata_list(fpath, delim=" "):
     This function can be used for both node and element data.
 
     """
-    with open(fpath, 'r') as f:
+    with open(fpath, "r") as f:
         steps = []
         # Find column names
         colnames = None
@@ -141,7 +163,7 @@ def textdata_list(fpath, delim=" "):
         f.seek(0)
         stepdata = None
         for l in f:
-            if l.startswith('*'):
+            if l.startswith("*"):
                 if stepdata is not None:
                     steps.append(stepdata)
                 stepdata = None
@@ -152,7 +174,7 @@ def textdata_list(fpath, delim=" "):
                     try:
                         v = float(s)
                     except ValueError as e:
-                        v = float('nan')
+                        v = float("nan")
                     stepdata.setdefault(k, []).append(v)
         steps.append(stepdata)  # add the last step
     return steps
@@ -177,7 +199,7 @@ def textdata_table(fpath, delim=" "):
     increase sequentially with time.
 
     """
-    with open(fpath, 'r') as f:
+    with open(fpath, "r") as f:
         # Find column names
         colnames = None
         for l in f:
@@ -209,7 +231,7 @@ def textdata_table(fpath, delim=" "):
     idxs = np.where(tab["Step"].diff() < 0)[0]
     values = tab["Step"].values
     for idx in idxs:
-        values[idx:] += values[idx-1]
+        values[idx:] += values[idx - 1]
     tab["Step"] = values
     return tab
 
@@ -218,6 +240,7 @@ class FebReader:
     """Read an FEBio xml file.
 
     """
+
     def __init__(self, file):
         """Read a file path as an FEBio xml file.
 
@@ -227,12 +250,17 @@ class FebReader:
         # Remove comments so iteration over child elements doesn't get
         # tripped up
         ET.strip_tags(self.root, ET.Comment)
-        self.feb_version = self.root.attrib['version']
+        self.feb_version = self.root.attrib["version"]
         if self.root.tag != "febio_spec":
-            raise Exception("Root node is not 'febio_spec': '" +
-                            file.name + "is not an FEBio xml file.")
-        if self.feb_version not in ['2.0', '2.5']:
-            msg = 'FEBio XML version {} is not supported by febtools'.format(self.feb_version)
+            raise Exception(
+                "Root node is not 'febio_spec': '"
+                + file.name
+                + "is not an FEBio xml file."
+            )
+        if self.feb_version not in ["2.0", "2.5"]:
+            msg = "FEBio XML version {} is not supported by febtools".format(
+                self.feb_version
+            )
             raise UnsupportedFormatError(msg, file, self.feb_version)
         self._sequences = None  # memo for sequences()
 
@@ -242,20 +270,19 @@ class FebReader:
         """
         mats = {}
         mat_labels = {}
-        for m in self.root.findall('./Material/material'):
+        for m in self.root.findall("./Material/material"):
             # Read material into dictionary
             material = self._read_material(m)
-            mat_id = int(m.attrib['id']) - 1  # FEBio counts from 1
+            mat_id = int(m.attrib["id"]) - 1  # FEBio counts from 1
             material = mat_obj_from_elemd(material)
 
             # Store material in index
             mats[mat_id] = material
-            if 'name' in m.attrib:
-                mat_labels[mat_id] = m.attrib['name']
+            if "name" in m.attrib:
+                mat_labels[mat_id] = m.attrib["name"]
             else:
                 mat_labels[mat_id] = str(mat_id)
         return mats, mat_labels
-
 
     @property
     def sequences(self):
@@ -270,30 +297,31 @@ class FebReader:
         """
         if self._sequences is None:
             self._sequences = {}
-            for ord_id, e_lc in enumerate(self.root.findall('LoadData/loadcurve')):
-                pseudo_id = int(e_lc.attrib['id'])
+            for ord_id, e_lc in enumerate(self.root.findall("LoadData/loadcurve")):
+                pseudo_id = int(e_lc.attrib["id"])
+
                 def parse_pt(text):
-                    x, y = text.split(',')
+                    x, y = text.split(",")
                     return float(x), float(y)
+
                 curve = [parse_pt(a.text) for a in e_lc.getchildren()]
                 # Set extrapolation
-                if 'extend' in e_lc.attrib:
-                    extrap = e_lc.attrib['extend']
+                if "extend" in e_lc.attrib:
+                    extrap = e_lc.attrib["extend"]
                     if extrap == "extrapolate":
                         # FEBio XML uses "extrapolate" to mean linear
                         # extrapolation
                         extrap = "linear"
                 else:
-                    extrap = 'constant'  # default
+                    extrap = "constant"  # default
                 # Set interpolation
-                if 'type' in e_lc.attrib:
-                    interp = e_lc.attrib['type']
+                if "type" in e_lc.attrib:
+                    interp = e_lc.attrib["type"]
                 else:
-                    interp = 'linear'  # default
+                    interp = "linear"  # default
                 # Create and store the Sequence object
                 self._sequences[ord_id] = Sequence(curve, interp=interp, extrap=extrap)
         return self._sequences
-
 
     def _read_material(self, tag):
         """Get material properties dictionary from <material>.
@@ -306,11 +334,11 @@ class FebReader:
         # material's XML tree to a dictionary is an extra step that just
         # gets in the way.
         m = {}
-        m['material'] = tag.attrib['type']
-        m['properties'] = {}
+        m["material"] = tag.attrib["type"]
+        m["properties"] = {}
         constituents = []
         for child in tag:
-            if child.tag in ['material', 'solid']:
+            if child.tag in ["material", "solid"]:
                 # Child element is a material
                 constituents.append(self._read_material(child))
             if child.tag == "generation":
@@ -320,9 +348,9 @@ class FebReader:
                 constituents.append(self._read_material(e_mat))
             else:
                 # Child element is a property (note: this isn't always true)
-                m['properties'][child.tag] = self._read_property(child)
+                m["properties"][child.tag] = self._read_property(child)
         if constituents:
-            m['constituents'] = constituents
+            m["constituents"] = constituents
         return m
 
     def _read_property(self, tag):
@@ -344,17 +372,18 @@ class FebReader:
             if tag.text is not None:
                 v = tag.text.lstrip().rstrip()
                 if v:
-                    v = [float(a) for a in v.split(',')]
+                    v = [float(a) for a in v.split(",")]
                     if len(v) == 1:
                         v = v[0]
                     if not p:
                         return v
                     else:
-                        p['value'] = v
+                        p["value"] = v
             return p
 
-    def _read_rigid_body_element(self, model, e_rigid_body, explicit_bodies,
-                                 implicit_bodies, step_id):
+    def _read_rigid_body_element(
+        self, model, e_rigid_body, explicit_bodies, implicit_bodies, step_id
+    ):
         """Read & apply a <rigid_body> element."""
         # Each <rigid_body> element defines constraints for one rigid
         # body, identified by its material ID.  Constraints may be fixed
@@ -380,8 +409,7 @@ class FebReader:
                 relative = True
             else:
                 relative = False
-            model.apply_body_bc(body, dof, var, seq, step_id=step_id,
-                                relative=relative)
+            model.apply_body_bc(body, dof, var, seq, step_id=step_id, relative=relative)
 
     def model(self):
         """Return model.
@@ -432,8 +460,7 @@ class FebReader:
             # elements; we can't support more than one unless they are
             # all equal.
             v = _vec_from_text(e_mcs_local[0].text)  # tuple
-            equal = (_vec_from_text(e.text) == v
-                     for e in e_mcs_local)
+            equal = (_vec_from_text(e.text) == v for e in e_mcs_local)
             if not all(equal):
                 msg = f'{e_mat.base}:{e_mat.sourceline} Multiple <mat_axis type="local"> elements with unequal values are present.  febtools does not support this case.'
                 raise ValueError(msg)
@@ -495,12 +522,12 @@ class FebReader:
         for e_fix in self.root.findall("Boundary/fix"):
             # Each <fix> tag may specify multiple bc labels.  Split them
             # up and convert each to febtools naming convention.
-            if self.feb_version == '2.0':
+            if self.feb_version == "2.0":
                 # In FEBio XML 2.0, bc labels are concatenated.
-                fixed = febioxml_2_0.split_bc_names(e_fix.attrib['bc'])
-            elif self.feb_version == '2.5':
+                fixed = febioxml_2_0.split_bc_names(e_fix.attrib["bc"])
+            elif self.feb_version == "2.5":
                 # In FEBio XML 2.5, bc labels are comma-delimeted.
-                fixed = febioxml_2_5.split_bc_names(e_fix.attrib['bc'])
+                fixed = febioxml_2_5.split_bc_names(e_fix.attrib["bc"])
             # For each DoF, apply the fixed BCs to the model.
             for xml_bc in fixed:
                 dof = DOF_NAME_FROM_XML_NODE_BC[xml_bc]
@@ -513,29 +540,31 @@ class FebReader:
                     # condition is applied is listed under the <fix> tag.
                     node_ids = NodeSet()
                     for e_node in e_fix:
-                        node_ids.add(int(e_node.attrib['id']) - 1)
+                        node_ids.add(int(e_node.attrib["id"]) - 1)
                 elif self.feb_version == "2.5":
                     # In FEBio XML 2.5, the node set to which the fixed
                     # boundary condition is applied is referenced by name.
                     node_ids = model.named["node sets"].obj(e_fix.attrib["node_set"])
-                if not model.fixed['node'][(dof, var)]:
+                if not model.fixed["node"][(dof, var)]:
                     # If there is no node set assigned to this dof yet,
                     # simply re-use the node set.  This will preserve
                     # the node set's name if the model is re-exported.
-                    model.fixed['node'][(dof, var)] = node_ids
+                    model.fixed["node"][(dof, var)] = node_ids
                 else:
                     # We are changing the node set, so existing
                     # references to it may become semantically invalid.
                     # And we can't remove the node set from the name
                     # registry because then later elements won't be
                     # interpretable.  So we must create a new node set.
-                    model.fixed['node'][(dof, var)] =\
-                        NodeSet(model.fixed['node'][(dof, var)] | node_ids)
+                    model.fixed["node"][(dof, var)] = NodeSet(
+                        model.fixed["node"][(dof, var)] | node_ids
+                    )
 
         # Read global constraints on rigid bodies
         for e_rb in self.root.findall("Boundary/rigid_body"):
-            self._read_rigid_body_element(model, e_rb, explicit_bodies,
-                                          implicit_bodies, step_id=None)
+            self._read_rigid_body_element(
+                model, e_rb, explicit_bodies, implicit_bodies, step_id=None
+            )
 
         # Load curves (sequences)
         for seq_id, seq in self.sequences.items():
@@ -550,44 +579,45 @@ class FebReader:
         else:
             top_module = None
         # Read the <Step> elements
-        for step_id, e_step in enumerate(self.root.findall('Step')):
+        for step_id, e_step in enumerate(self.root.findall("Step")):
             step_name = e_step.attrib["name"] if "name" in e_step.attrib else None
             # Module
-            e_module = e_step.find('Module')
+            e_module = e_step.find("Module")
             if e_module is not None:
                 module = e_module.text
             elif top_module is not None:
                 module = top_module
             else:
                 module = "solid"  # TODO: Pick default based on
-                                  # materials
+                # materials
             # Control section
             control = {}
-            e_control = e_step.find('Control')
+            e_control = e_step.find("Control")
             for e in e_control:
                 nm = control_tagnames_from_febio[e.tag]
                 if nm == "analysis type":
-                    val = e.attrib['type']
+                    val = e.attrib["type"]
                 elif nm in control_values_from_febio:
                     val = control_values_from_febio[nm][e.text]
                 else:
                     val = _maybe_to_number(e.text)
                 control[nm] = val
             # Control/time_stepper section
-            control['time stepper'] = {}
-            e_stepper = e_control.find('time_stepper')
+            control["time stepper"] = {}
+            e_stepper = e_control.find("time_stepper")
             for e in e_stepper:
                 if e.tag in control_tagnames_from_febio:
                     k = control_tagnames_from_febio[e.tag]
-                    control['time stepper'][k] = _read_parameter(e, self.sequences)
+                    control["time stepper"][k] = _read_parameter(e, self.sequences)
             # Add the step.  Use the method to get correct defaults;
             # e.g, correct keys for missing boundary conditions.
             model.add_step(module=module, control=control, name=step_name)
             #
             # Read body loadings
             for e_rb in e_step.findall("Boundary/rigid_body"):
-                self._read_rigid_body_element(model, e_rb, explicit_bodies,
-                                              implicit_bodies, step_id=step_id)
+                self._read_rigid_body_element(
+                    model, e_rb, explicit_bodies, implicit_bodies, step_id=step_id
+                )
             # Node loadings are handled later
 
         # Read prescribed nodal conditions.
@@ -597,17 +627,21 @@ class FebReader:
         if self.feb_version == "2.5":
             for condition in febioxml_2_5.iter_node_conditions(self.root):
                 nodes = model.named["node sets"].obj(condition["node set name"])
-                seq = model.named["sequences"].obj(condition["sequence ID"],
-                                                   nametype="ordinal_id")
+                seq = model.named["sequences"].obj(
+                    condition["sequence ID"], nametype="ordinal_id"
+                )
                 # Check if we need a scaled sequence
                 if condition["scale"] != 1.0:
                     seq = ScaledSequence(seq, condition["scale"])
-                model.apply_nodal_bc(nodes, condition["dof"],
-                                     condition["variable"],
-                                     seq,
-                                     scales=condition["nodal values"],
-                                     relative=condition["relative"],
-                                     step_id=condition["step ID"])
+                model.apply_nodal_bc(
+                    nodes,
+                    condition["dof"],
+                    condition["variable"],
+                    seq,
+                    scales=condition["nodal values"],
+                    relative=condition["relative"],
+                    step_id=condition["step ID"],
+                )
 
         # Output variables
         output_variables = []
@@ -625,22 +659,24 @@ class FebReader:
             materials, mat_labels = self.materials()
         else:
             materials, mat_labels = material_info
-        nodes = np.array([[float(a) for a in b.text.split(",")]
-                          for b in self.root.findall("./Geometry/Nodes/*")])
+        nodes = np.array(
+            [
+                [float(a) for a in b.text.split(",")]
+                for b in self.root.findall("./Geometry/Nodes/*")
+            ]
+        )
         # Read elements
         elements = []  # nodal index format
         for elset in self.root.findall("./Geometry/Elements"):
             # TODO: Allow loading meshes that have no material.
-            mat_id = int(elset.attrib['mat']) - 1  # zero-index
+            mat_id = int(elset.attrib["mat"]) - 1  # zero-index
 
             # map element type strings to classes
-            cls = elem_cls_from_feb[elset.attrib['type']]
+            cls = elem_cls_from_feb[elset.attrib["type"]]
 
             for elem in elset.findall("./elem"):
                 ids = [int(a) - 1 for a in elem.text.split(",")]
-                e = cls.from_ids(ids, nodes,
-                                 mat_id=mat_id,
-                                 mat=materials[mat_id])
+                e = cls.from_ids(ids, nodes, mat_id=mat_id, mat=materials[mat_id])
                 elements.append(e)
         # Create mesh
         mesh = Mesh(nodes, elements)
@@ -652,11 +688,15 @@ class FebReader:
             try:
                 nm_eset = e_edata.attrib["elem_set"]
             except KeyError:
-                raise ValueError(f"{e_edata.base}:{e_edata.sourceline} <ElementData> is missing its required 'elem_set' attribute.")
+                raise ValueError(
+                    f"{e_edata.base}:{e_edata.sourceline} <ElementData> is missing its required 'elem_set' attribute."
+                )
             # Get the referenced element set
             e_eset = self.root.find(f"Geometry/ElementSet[@name='{nm_eset}']")
             if e_eset is None:
-                raise ValueError(f"{e_edata.base}:{e_edata.sourceline} <ElementData> references an element set named '{nm_eset}', which is not defined.")
+                raise ValueError(
+                    f"{e_edata.base}:{e_edata.sourceline} <ElementData> references an element set named '{nm_eset}', which is not defined."
+                )
             eset_elements = tuple(e_eset.iterchildren())
             for e_elem in e_edata:
                 a = _vec_from_text(e_elem.find("a").text)
@@ -678,7 +718,9 @@ def mat_obj_from_elemd(d):
     # <fiber>.  FEBio stacks these.
     # Do we even support reading this material?
     if not d["material"] in febioxml.solid_class_from_name:
-        raise ValueError(f"{d['material']} is not supported in the loading of FEBio XML.")
+        raise ValueError(
+            f"{d['material']} is not supported in the loading of FEBio XML."
+        )
 
     # Read material orientation
     #
@@ -689,7 +731,9 @@ def mat_obj_from_elemd(d):
         # FEBio's documentation says that only one could be defined, but
         # FEBio itself accepts both, with undocumented handling (e.g.,
         # precedence).  So raise an error.
-        raise ValueError(f"Found both <mat_axis> and <fiber> XML elements in {d['material']}; only one may be present.")
+        raise ValueError(
+            f"Found both <mat_axis> and <fiber> XML elements in {d['material']}; only one may be present."
+        )
     if p_mat_axis is not None:
         if p_mat_axis["type"] == "vector":
             orientation = orthonormal_basis(p_mat_axis["a"], p_mat_axis["d"])
@@ -710,9 +754,13 @@ def mat_obj_from_elemd(d):
     p_phi = d["properties"].pop("phi", None)
     # Verify that both spherical angles are present, or neither
     if p_theta is not None and p_phi is None:
-        raise ValueError(f"Found a <theta> element but no <phi> in {d['material']}; both spherical angles are required to define a material orientation.")
+        raise ValueError(
+            f"Found a <theta> element but no <phi> in {d['material']}; both spherical angles are required to define a material orientation."
+        )
     if p_theta is None and p_phi is not None:
-        raise ValueError(f"Found a <phi> element but no <theta> in {d['material']}; both spherical angles are required to define a material orientation.")
+        raise ValueError(
+            f"Found a <phi> element but no <theta> in {d['material']}; both spherical angles are required to define a material orientation."
+        )
     if p_theta is not None and p_phi is not None:
         matprop_orientation = vec_from_sph(p_theta, p_phi)
         if orientation is None:
@@ -727,7 +775,7 @@ def mat_obj_from_elemd(d):
                 # value.
                 raise NotImplementedError
 
-    ## Create material object
+    # Create material object
     cls = febioxml.solid_class_from_name[d["material"]]
     if d["material"] == "solid mixture":
         constituents = []
@@ -746,20 +794,22 @@ def mat_obj_from_elemd(d):
             # TODO: Specify which material in the error message.
             # This requires retaining material ids in the dict
             # passed to this function.
-            raise ValueError("""A porelastic solid was encountered with {len(d['constituents'])} solid constituents.  Poroelastic solids must have exactly one solid constituent.""")
+            raise ValueError(
+                """A porelastic solid was encountered with {len(d['constituents'])} solid constituents.  Poroelastic solids must have exactly one solid constituent."""
+            )
         solid = mat_obj_from_elemd(d["constituents"][0])
         solid_fraction = d["properties"]["phi0"]  # what is the default?
         # Return the Poroelastic Solid object
-        material = material_lib.PoroelasticSolid(solid, permeability,
-                                                 solid_fraction)
+        material = material_lib.PoroelasticSolid(solid, permeability, solid_fraction)
     elif d["material"] == "multigeneration":
         # Constructing materials for the list of generations works
         # just like a solid mixture
         constituents = []
         for d_child in d["constituents"]:
             constituents.append(mat_obj_from_elemd(d_child))
-        generations = ((t, mat) for t, mat in
-                       zip(d["properties"]["start times"], constituents))
+        generations = (
+            (t, mat) for t, mat in zip(d["properties"]["start times"], constituents)
+        )
         material = cls(generations)
     elif hasattr(cls, "from_feb") and callable(cls.from_feb):
         if "density" in d["properties"]:
@@ -779,12 +829,14 @@ class XpltReader:
     Obsolete.  Does not support FEBio > 2.5.
 
     """
+
     def __init__(self, f):
         """Load an .xplt file.
 
         """
-        warnings.warn("XpltReader is deprected in favor of XpltData",
-                      DeprecationWarning)
+        warnings.warn(
+            "XpltReader is deprected in favor of XpltData", DeprecationWarning
+        )
 
         def from_fobj(self, f):
             self.f = f
@@ -795,28 +847,26 @@ class XpltReader:
 
             # Find timepoints
             time = []
-            a = self._findall('state')
+            a = self._findall("state")
             self.steploc = [loc for loc, sz in a]
             for l in self.steploc:
-                a = self._findall('state header/time', l)
+                a = self._findall("state header/time", l)
                 self.f.seek(a[0][0])
                 s = self.f.read(a[0][1])
-                time.append(struct.unpack(self.endian + 'f', s)[0])
+                time.append(struct.unpack(self.endian + "f", s)[0])
             self.times = time
 
             return self
 
         if type(f) is str:
             fpath = f
-            with open(fpath, 'rb') as f:
+            with open(fpath, "rb") as f:
                 from_fobj(self, f)
         else:
             from_fobj(self, f)
 
-
     def __del__(self):
         self.f.close()
-
 
     def mesh(self):
         """Reads node and element lists.
@@ -827,54 +877,46 @@ class XpltReader:
 
         """
         if self.f.closed:
-            self.f = open(self.f.name, 'rb')
+            self.f = open(self.f.name, "rb")
         try:
             # Read nodes
             node_list = []
-            a = self._findall('root/geometry/node_section/'
-                              'node_coords')
+            a = self._findall("root/geometry/node_section/" "node_coords")
             for loc, sz in a:
                 self.f.seek(loc)
-                v = struct.unpack('f' * (sz // 4), self.f.read(sz))
+                v = struct.unpack("f" * (sz // 4), self.f.read(sz))
                 for i in range(0, len(v), 3):
-                    node_list.append(tuple(v[i:i+3]))
+                    node_list.append(tuple(v[i : i + 3]))
 
             element_list = []
-            domains = self._findall('root/geometry/domain_section/domain')
+            domains = self._findall("root/geometry/domain_section/domain")
             for loc, sz in domains:
                 # Determine element type
-                l, s = self._findall('domain_header/elem_type', loc)[0]
+                l, s = self._findall("domain_header/elem_type", loc)[0]
                 self.f.seek(l)
-                ecode = struct.unpack(self.endian
-                                      + 'I',
-                                      self.f.read(s))[0]
+                ecode = struct.unpack(self.endian + "I", self.f.read(s))[0]
                 etype = xplt.element_type_from_id[ecode]
                 if type(etype) is str:
                     msg = "`{}` element type is not implemented."
                     raise NotImplementedError(msg.format(etype))
                 # Determine material id
                 # convert 1-index to 0-index
-                l, s = self._findall('domain_header/mat_id', loc)[0]
+                l, s = self._findall("domain_header/mat_id", loc)[0]
                 self.f.seek(l)
-                mat_id = struct.unpack(self.endian
-                                       + 'I',
-                                       self.f.read(s))[0] - 1
+                mat_id = struct.unpack(self.endian + "I", self.f.read(s))[0] - 1
                 # Read elements
-                elements = self._findall('element_list/element', loc)
+                elements = self._findall("element_list/element", loc)
                 for l, s in elements:
                     self.f.seek(l)
                     data = self.f.read(s)
-                    elem_id = struct.unpack(self.endian
-                                            + 'I',
-                                            data[0:4])[0]
+                    elem_id = struct.unpack(self.endian + "I", data[0:4])[0]
                     elem_id = elem_id - 1  # 0-index
-                    node_ids = struct.unpack(self.endian
-                                             + 'I' * ((s - 1) // 4),
-                                             data[4:])
+                    node_ids = struct.unpack(
+                        self.endian + "I" * ((s - 1) // 4), data[4:]
+                    )
                     # the nodes are already 0-indexed in the binary
                     # database
-                    element = etype.from_ids(node_ids, node_list,
-                                             mat_id=mat_id)
+                    element = etype.from_ids(node_ids, node_list, mat_id=mat_id)
                     element_list.append(element)
         finally:
             self.f.close()
@@ -887,28 +929,28 @@ class XpltReader:
 
         """
         matl_index = []
-        matloc = self._findall('root/materials/material')
+        matloc = self._findall("root/materials/material")
         for loc, sz in matloc:
-            st, sz = self._findall('material_id', loc)[0]
+            st, sz = self._findall("material_id", loc)[0]
             if not sz == 4:
-                raise Exception('Expected 4 byte integer as material id; '
-                                'found {} byte sequence.'.format(sz))
+                raise Exception(
+                    "Expected 4 byte integer as material id; "
+                    "found {} byte sequence.".format(sz)
+                )
             self.f.seek(st)
-            mat_id = struct.unpack(self.endian + 'i', self.f.read(sz))[0]
-            st, sz = self._findall('material_name', loc)[0]
+            mat_id = struct.unpack(self.endian + "i", self.f.read(sz))[0]
+            st, sz = self._findall("material_name", loc)[0]
             self.f.seek(st)
             b = self.f.read(sz)
-            mat_name = b[:b.find(b'\x00')].decode()
-            matl_index.append({'material_id': mat_id,
-                              'material_name': mat_name})
+            mat_name = b[: b.find(b"\x00")].decode()
+            matl_index.append({"material_id": mat_id, "material_name": mat_name})
         return matl_index
 
     def step_index(self, time):
         """Return step index for a given time.
 
         """
-        idx, d = min(enumerate(abs(t - time) for t in self.times),
-                     key=itemgetter(1))
+        idx, d = min(enumerate(abs(t - time) for t in self.times), key=itemgetter(1))
         return idx
 
     def step_data(self, step=None, time=None):
@@ -931,20 +973,21 @@ class XpltReader:
             raise Exception("Do not specify both `step` and `time`.")
 
         var = {}
-        var['global variables'] = self._rdict('global')
-        var['material variables'] = self._rdict('material')
-        var['node variables'] = self._rdict('node')
-        var['domain variables'] = self._rdict('domain')
-        var['surface variables'] = self._rdict('surface')
+        var["global variables"] = self._rdict("global")
+        var["material variables"] = self._rdict("material")
+        var["node variables"] = self._rdict("node")
+        var["domain variables"] = self._rdict("domain")
+        var["surface variables"] = self._rdict("surface")
 
         data = {}
-        data['time'] = self.times[step]
+        data["time"] = self.times[step]
 
         steploc = self.steploc[step]
         for k, v in var.items():
             if v:
-                path = ('state data/' + k.split(' ')[0] + ' data' +
-                        '/state variable/data')
+                path = (
+                    "state data/" + k.split(" ")[0] + " data" + "/state variable/data"
+                )
                 a = self._findall(path, steploc)
                 for (loc, sz), (typ, fmt, name) in zip(a, v):
                     if sz == 0:
@@ -953,9 +996,10 @@ class XpltReader:
                     else:
                         self.f.seek(loc)
                         s = self.f.read(sz)
-                        data.setdefault(k, {})[name] = \
-                            self._unpack_variable_data(s, typ)
-        data['element variables'] = data['domain variables']
+                        data.setdefault(k, {})[name] = self._unpack_variable_data(
+                            s, typ
+                        )
+        data["element variables"] = data["domain variables"]
         # ^ for backwards compatibility
         return data
 
@@ -972,22 +1016,28 @@ class XpltReader:
         name = a textual description of the data
 
         """
-        path = 'root/dictionary/' + name + ' variables/dictionary item'
+        path = "root/dictionary/" + name + " variables/dictionary item"
         a = self._findall(path)
         typ = []
         fmt = []
         name = []
         for loc, sz in a:
             for label, data in self._children(loc - 8):
-                if label == 'item type':
-                    typ.append(xplt.item_type_from_id[
-                        struct.unpack(self.endian + 'I', data)[0]])
-                elif label == 'item format':
-                    fmt.append(xplt.value_layout_from_id[
-                        struct.unpack(self.endian + 'I', data)[0]])
-                elif label == 'item name':
-                    name.append(data[:data.find(b'\x00')].decode())
-                elif label == 'item array size':
+                if label == "item type":
+                    typ.append(
+                        xplt.item_type_from_id[
+                            struct.unpack(self.endian + "I", data)[0]
+                        ]
+                    )
+                elif label == "item format":
+                    fmt.append(
+                        xplt.value_layout_from_id[
+                            struct.unpack(self.endian + "I", data)[0]
+                        ]
+                    )
+                elif label == "item name":
+                    name.append(data[: data.find(b"\x00")].decode())
+                elif label == "item array size":
                     # Do nothing.  This tag was added around FEBio 2.7
                     # to FEBio's `DICTIONARY_ITEM` class.  It's not
                     # clear what it does, but it's apparently 0 for
@@ -1014,9 +1064,9 @@ class XpltReader:
 
         # Validity check
         if len_tot == 0:
-            raise Exception('Input data has zero length.')
-        if typ not in ['float', 'vec3f', 'mat3fs']:
-            raise Exception('Type %s  not recognized.' % (str(typ),))
+            raise Exception("Input data has zero length.")
+        if typ not in ["float", "vec3f", "mat3fs"]:
+            raise Exception("Type %s  not recognized." % (str(typ),))
 
         values = []  # list of values
 
@@ -1025,37 +1075,38 @@ class XpltReader:
         i = 0
         while i < len(s):
             # read the block
-            id, sz = struct.unpack('II', s[i:i+8])
-            data = s[i+8:i+8+sz]
+            id, sz = struct.unpack("II", s[i : i + 8])
+            data = s[i + 8 : i + 8 + sz]
             i = i + 8 + sz
             # unpack and append the values
-            if typ == 'float':
-                fmt = self.endian + 'f' * int(len(data)/4)
+            if typ == "float":
+                fmt = self.endian + "f" * int(len(data) / 4)
                 v = list(struct.unpack(fmt, data))
-            elif typ == 'vec3f':
+            elif typ == "vec3f":
                 if len(data) % 12 != 0:
-                    raise Exception('Input data cannot be '
-                                    'evenly divided '
-                                    'into vectors.')
+                    raise Exception(
+                        "Input data cannot be " "evenly divided " "into vectors."
+                    )
                 v = []
                 for j in range(0, len(data), 12):
-                    v.append(np.array(
-                            struct.unpack(self.endian + 'f' * 3,
-                                          data[j:j+12])))
-            elif typ == 'mat3fs':
+                    v.append(
+                        np.array(struct.unpack(self.endian + "f" * 3, data[j : j + 12]))
+                    )
+            elif typ == "mat3fs":
                 v = []
                 if len(data) % 24 != 0:
-                    raise Exception('Input data cannot be '
-                                    'evenly divided '
-                                    'into tensors.')
+                    raise Exception(
+                        "Input data cannot be " "evenly divided " "into tensors."
+                    )
                 for j in range(0, len(data), 24):
-                    a = struct.unpack(self.endian + 'f' * 6,
-                                      data[j:j+24])
+                    a = struct.unpack(self.endian + "f" * 6, data[j : j + 24])
                     # The FEBio database spec does not document the
                     # tensor order
-                    v.append(np.array([[a[0], a[3], a[5]],
-                                       [a[3], a[1], a[4]],
-                                       [a[5], a[4], a[2]]]))
+                    v.append(
+                        np.array(
+                            [[a[0], a[3], a[5]], [a[3], a[1], a[4]], [a[5], a[4], a[2]]]
+                        )
+                    )
             values = values + v
         return tuple(values)
 
@@ -1080,10 +1131,10 @@ class XpltReader:
         matches are listed in the same order they appear in the file.
 
         """
-        blockpath = pathstr.split('/')
+        blockpath = pathstr.split("/")
         out = []
         if self.f.closed:
-            self.f = open(self.f.name, 'rb')
+            self.f = open(self.f.name, "rb")
         self.f.seek(start)
         # Look for block(s).
         if start == 0 or start == 4:
@@ -1098,8 +1149,7 @@ class XpltReader:
             label, size = self._bprops()
             if label == tlabel:
                 if blockpath[1:]:
-                    a = self._findall('/'.join(blockpath[1:]),
-                                      self.f.tell())
+                    a = self._findall("/".join(blockpath[1:]), self.f.tell())
                     out += a
                 else:
                     loc = self.f.tell()
@@ -1114,7 +1164,7 @@ class XpltReader:
 
         """
         if self.f.closed:
-            self.f = open(self.f.name, 'rb')
+            self.f = open(self.f.name, "rb")
         self.f.seek(start)
         label, size = self._bprops()
         end = self.f.tell() + size
@@ -1129,7 +1179,7 @@ class XpltReader:
         """
         s = self.f.read(4)
         if s:
-            dword = struct.unpack(self.endian + 'I', s)[0]
+            dword = struct.unpack(self.endian + "I", s)[0]
         return dword
 
     def _bprops(self):
@@ -1144,7 +1194,7 @@ class XpltReader:
         """
         s = self.f.read(8)
         if len(s) == 8:
-            d = struct.unpack(self.endian + 'II', s)
-            return xplt.tags_table[d[0]]['name'], d[1]
+            d = struct.unpack(self.endian + "II", s)
+            return xplt.tags_table[d[0]]["name"], d[1]
         else:
             return None

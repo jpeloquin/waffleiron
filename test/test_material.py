@@ -23,10 +23,13 @@ class ExponentialFiberTest(unittest.TestCase):
     The test, therefore, is not truly independent.
 
     """
+
     def setUp(self):
-        febreader = feb.input.FebReader(os.path.join('test', 'fixtures', 'mixture_hm_exp.feb'))
+        febreader = feb.input.FebReader(
+            os.path.join("test", "fixtures", "mixture_hm_exp.feb")
+        )
         model = febreader.model()
-        with open(os.path.join('test', 'fixtures', 'mixture_hm_exp.xplt'), "rb") as f:
+        with open(os.path.join("test", "fixtures", "mixture_hm_exp.xplt"), "rb") as f:
             soln = feb.xplt.XpltData(f.read())
         model.apply_solution(soln)
         self.model = model
@@ -34,9 +37,7 @@ class ExponentialFiberTest(unittest.TestCase):
 
     def w_test(self):
         # This is a very weak test; just a sanity check.
-        matlprops = {'alpha': 65,
-                     'beta': 2,
-                     'ksi': 0.296}
+        matlprops = {"alpha": 65, "beta": 2, "ksi": 0.296}
         expfib = ExponentialFiber(matlprops)
         w = expfib.w(1.1)
         assert w > 0
@@ -46,7 +47,7 @@ class ExponentialFiberTest(unittest.TestCase):
         F = self.model.mesh.elements[0].f((0, 0, 0))
         t_try = self.model.mesh.elements[0].material.tstress(F)
         data = self.soln.step_data(-1)
-        t_true = data['domain variables']['stress'][0]
+        t_true = data["domain variables"]["stress"][0]
         npt.assert_allclose(t_try, t_true, rtol=1e-5, atol=1e-5)
 
     def sstress_test(self):
@@ -57,9 +58,8 @@ class ExponentialFiberTest(unittest.TestCase):
         elem = self.model.mesh.elements[0]
         f = elem.f(r)
         s_try = elem.material.sstress(f)
-        t_try = (1.0 / np.linalg.det(f)) \
-                * np.dot(f, np.dot(s_try, f.T))
-        t_true = self.soln.step_data(-1)['domain variables']['stress'][0]
+        t_try = (1.0 / np.linalg.det(f)) * np.dot(f, np.dot(s_try, f.T))
+        t_true = self.soln.step_data(-1)["domain variables"]["stress"][0]
         npt.assert_allclose(t_try, t_true, rtol=1e-5, atol=1e-5)
 
 
@@ -69,13 +69,14 @@ class Unit_CauchyStress_PowerLinearFiber(unittest.TestCase):
     "True" values taken from PowerLinearFiber3D calculations.
 
     """
+
     def tstress_slack_test(self):
         """Check for lack of compressive resistance"""
         material = PowerLinearFiber(52, 2.5, 1.07)
         λ = 0.95
         expected = 0
         actual = material.stress(λ)
-        assert(expected == actual)
+        assert expected == actual
 
     def tstress_origin_test(self):
         """Check for zero stress at zero strain"""
@@ -83,7 +84,7 @@ class Unit_CauchyStress_PowerLinearFiber(unittest.TestCase):
         λ = 0.95
         expected = 0
         actual = material.stress(λ)
-        assert(expected == actual)
+        assert expected == actual
 
     def tstress_toe_test(self):
         material = PowerLinearFiber(52, 2.5, 1.07)
@@ -107,73 +108,59 @@ class Unit_CauchyStress_PowerLinearFiber3D(unittest.TestCase):
     test_material.PowerLinearFiberStress.feb
 
     """
+
     def tstress_slack_test(self):
         """Check for lack of compressive resistance"""
         material = PowerLinearFiber3D(52, 2.5, 1.07)
-        F = np.array([[0.95, 0.  , 0.  ],
-                      [0.  , 1.05, 0.  ],
-                      [0.  , 0.  , 1.12]])
+        F = np.array([[0.95, 0.0, 0.0], [0.0, 1.05, 0.0], [0.0, 0.0, 1.12]])
         # febio_stress = self.model.solution.value("stress", -1, 0, 1)
-        expected = np.zeros((3,3))
+        expected = np.zeros((3, 3))
         actual = material.tstress(F)
         npt.assert_array_equal(expected, actual)
 
     def tstress_origin_test(self):
         """Check for zero stress at zero strain"""
         material = PowerLinearFiber3D(52, 2.5, 1.07)
-        F = np.array([[1.0 , 0.  , 0.  ],
-                      [0.  , 1.05, 0.  ],
-                      [0.  , 0.  , 1.12]])
-        expected = np.zeros((3,3))
+        F = np.array([[1.0, 0.0, 0.0], [0.0, 1.05, 0.0], [0.0, 0.0, 1.12]])
+        expected = np.zeros((3, 3))
         actual = material.tstress(F)
         npt.assert_array_equal(expected, actual)
 
     def tstress_toe_test(self):
-        material = PowerLinearFiber3D(52, 2.5, 1.07,
-                                    orientation=(0, 1, 0))
-        F = np.array([[0.95, 0.  , 0.  ],
-                      [0.  , 1.05, 0.  ],
-                      [0.  , 0.  , 1.12]])
+        material = PowerLinearFiber3D(52, 2.5, 1.07, orientation=(0, 1, 0))
+        F = np.array([[0.95, 0.0, 0.0], [0.0, 1.05, 0.0], [0.0, 0.0, 1.12]])
         actual = material.tstress(F)
-        expected = np.array([[0, 0, 0],
-                             [0, 1.20373, 0],
-                             [0, 0, 0]])
+        expected = np.array([[0, 0, 0], [0, 1.20373, 0], [0, 0, 0]])
         npt.assert_array_almost_equal(expected, actual, 5)
 
     def tstress_lin_test(self):
         material = PowerLinearFiber3D(52, 2.5, 1.07, orientation=(0, 0, 1))
-        F = np.array([[0.95, 0.  , 0.  ],
-                      [0.  , 1.05, 0.  ],
-                      [0.  , 0.  , 1.12]])
+        F = np.array([[0.95, 0.0, 0.0], [0.0, 1.05, 0.0], [0.0, 0.0, 1.12]])
         actual = material.tstress(F)
-        expected = np.array([[0, 0, 0],
-                             [0, 0, 0],
-                             [0, 0, 4.73799]])
+        expected = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 4.73799]])
         npt.assert_array_almost_equal(expected, actual, 5)
 
 
 class IsotropicElasticTest(unittest.TestCase):
     """Test isotropic elastic material definition"""
+
     def setUp(self):
-        elemdata = textdata_list('test/fixtures/'
-                                 'isotropic_elastic_elem_data.txt',
-                                 delim=",")
-        febreader = FebReader(open('test/fixtures/'
-                                   'isotropic_elastic.feb'))
+        elemdata = textdata_list(
+            "test/fixtures/" "isotropic_elastic_elem_data.txt", delim=","
+        )
+        febreader = FebReader(open("test/fixtures/" "isotropic_elastic.feb"))
         mats, mat_labels = febreader.materials()
         self.mat = mats[0]
-        Fxx = elemdata[-1]['Fxx'][0]
-        Fyy = elemdata[-1]['Fyy'][0]
-        Fzz = elemdata[-1]['Fzz'][0]
-        Fxy = elemdata[-1]['Fxy'][0]
-        Fxz = elemdata[-1]['Fxz'][0]
-        Fyx = elemdata[-1]['Fyx'][0]
-        Fyz = elemdata[-1]['Fyz'][0]
-        Fzx = elemdata[-1]['Fzx'][0]
-        Fzy = elemdata[-1]['Fzy'][0]
-        F = np.array([[Fxx, Fxy, Fxz],
-                      [Fyx, Fyy, Fyz],
-                      [Fzx, Fzy, Fzz]])
+        Fxx = elemdata[-1]["Fxx"][0]
+        Fyy = elemdata[-1]["Fyy"][0]
+        Fzz = elemdata[-1]["Fzz"][0]
+        Fxy = elemdata[-1]["Fxy"][0]
+        Fxz = elemdata[-1]["Fxz"][0]
+        Fyx = elemdata[-1]["Fyx"][0]
+        Fyz = elemdata[-1]["Fyz"][0]
+        Fzx = elemdata[-1]["Fzx"][0]
+        Fzy = elemdata[-1]["Fzy"][0]
+        F = np.array([[Fxx, Fxy, Fxz], [Fyx, Fyy, Fyz], [Fzx, Fzy, Fzz]])
         self.elemdata = elemdata
         self.F = F
 
@@ -184,8 +171,7 @@ class IsotropicElasticTest(unittest.TestCase):
         youngmod = 1e6
         nu = 0.4
         y, mu = to_Lamé(youngmod, nu)
-        matlprops = {'lambda': y,
-                     'mu': mu}
+        matlprops = {"lambda": y, "mu": mu}
         mat1 = IsotropicElastic(matlprops)
         mat2 = self.mat
         w_try = mat1.w(self.F)
@@ -194,35 +180,29 @@ class IsotropicElasticTest(unittest.TestCase):
 
     def w_identity_test(self):
         F = np.eye(3)
-        matprops = {'lambda': 1.0,
-                     'mu': 1.0}
+        matprops = {"lambda": 1.0, "mu": 1.0}
         mat = IsotropicElastic(matprops)
         w_try = mat.w(F)
         w_true = 0.0
         npt.assert_approx_equal(w_try, w_true)
 
     def w_test(self):
-        F = np.array([[1.1, 0.1, 0.0],
-                      [0.2, 0.9, 0.0],
-                      [-0.3, 0.0, 1.5]])
-        matprops = {'lambda': 5.8e6,
-                     'mu': 3.8e6}
+        F = np.array([[1.1, 0.1, 0.0], [0.2, 0.9, 0.0], [-0.3, 0.0, 1.5]])
+        matprops = {"lambda": 5.8e6, "mu": 3.8e6}
         mat = IsotropicElastic(matprops)
         W_try = mat.w(F)
-        W_true = 3610887.5 # calculated by hand
+        W_true = 3610887.5  # calculated by hand
         npt.assert_approx_equal(W_try, W_true)
 
     def sstress_test(self):
-        tx = self.elemdata[-1]['sx'][0]
-        ty = self.elemdata[-1]['sy'][0]
-        tz = self.elemdata[-1]['sz'][0]
-        txy = self.elemdata[-1]['sxy'][0]
-        txz = self.elemdata[-1]['sxz'][0]
-        tyz = self.elemdata[-1]['syz'][0]
-        t_true = np.array([[tx, txy, txz],
-                           [txy, ty, tyz],
-                           [txz, tyz, tz]])
-        Fdet = self.elemdata[-1]['J'][0]
+        tx = self.elemdata[-1]["sx"][0]
+        ty = self.elemdata[-1]["sy"][0]
+        tz = self.elemdata[-1]["sz"][0]
+        txy = self.elemdata[-1]["sxy"][0]
+        txz = self.elemdata[-1]["sxz"][0]
+        tyz = self.elemdata[-1]["syz"][0]
+        t_true = np.array([[tx, txy, txz], [txy, ty, tyz], [txz, tyz, tz]])
+        Fdet = self.elemdata[-1]["J"][0]
         F = self.F
         s_true = Fdet * dot(inv(F), dot(t_true, inv(F.T)))
         s_try = self.mat.sstress(F)
@@ -232,15 +212,13 @@ class IsotropicElasticTest(unittest.TestCase):
         """Compare calculated stress with that from FEBio's logfile"""
         # someday, the material properties will be read from the .feb
         # file
-        tx = self.elemdata[-1]['sx'][0]
-        ty = self.elemdata[-1]['sy'][0]
-        tz = self.elemdata[-1]['sz'][0]
-        txy = self.elemdata[-1]['sxy'][0]
-        txz = self.elemdata[-1]['sxz'][0]
-        tyz = self.elemdata[-1]['syz'][0]
-        t_true = np.array([[tx, txy, txz],
-                           [txy, ty, tyz],
-                           [txz, tyz, tz]])
+        tx = self.elemdata[-1]["sx"][0]
+        ty = self.elemdata[-1]["sy"][0]
+        tz = self.elemdata[-1]["sz"][0]
+        txy = self.elemdata[-1]["sxy"][0]
+        txz = self.elemdata[-1]["sxz"][0]
+        tyz = self.elemdata[-1]["syz"][0]
+        t_true = np.array([[tx, txy, txz], [txy, ty, tyz], [txz, tyz, tz]])
         F = self.F
         t_try = self.mat.tstress(F)
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
@@ -250,9 +228,9 @@ class HolmesMowTest(unittest.TestCase):
     """Test Holmes Mow material definition"""
 
     def setUp(self):
-        with open(os.path.join('test', 'fixtures', 'holmes_mow.xplt'), "rb") as f:
+        with open(os.path.join("test", "fixtures", "holmes_mow.xplt"), "rb") as f:
             self.soln = feb.xplt.XpltData(f.read())
-        febreader = FebReader(open(os.path.join('test', 'fixtures', 'holmes_mow.feb')))
+        febreader = FebReader(open(os.path.join("test", "fixtures", "holmes_mow.feb")))
         self.model = febreader.model()
         self.model.apply_solution(self.soln)
 
@@ -260,7 +238,7 @@ class HolmesMowTest(unittest.TestCase):
         e = self.model.mesh.elements[0]
         F = e.f((0, 0, 0))
         t_try = e.material.tstress(F)
-        t_true = self.soln.step_data(-1)['domain variables']['stress'][0]
+        t_true = self.soln.step_data(-1)["domain variables"]["stress"][0]
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
 
     def sstress_test(self):
@@ -271,9 +249,8 @@ class HolmesMowTest(unittest.TestCase):
         elem = self.model.mesh.elements[0]
         f = elem.f(r)
         s_try = elem.material.sstress(f)
-        t_try = (1.0 / np.linalg.det(f)) \
-                * np.dot(f, np.dot(s_try, f.T))
-        t_true = self.soln.step_data(-1)['domain variables']['stress'][0]
+        t_try = (1.0 / np.linalg.det(f)) * np.dot(f, np.dot(s_try, f.T))
+        t_true = self.soln.step_data(-1)["domain variables"]["stress"][0]
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
 
 
@@ -283,8 +260,10 @@ class NeoHookeanTest(unittest.TestCase):
     def setUp(self):
         # This test deliberately still uses XpltReader so at least one
         # test will still exercise it.
-        self.soln = feb.input.XpltReader(os.path.join('test', 'fixtures', 'neo_hookean.xplt'))
-        febreader = FebReader(open(os.path.join('test', 'fixtures', 'neo_hookean.feb')))
+        self.soln = feb.input.XpltReader(
+            os.path.join("test", "fixtures", "neo_hookean.xplt")
+        )
+        febreader = FebReader(open(os.path.join("test", "fixtures", "neo_hookean.feb")))
         self.model = febreader.model()
         self.model.apply_solution(self.soln)
 
@@ -293,7 +272,7 @@ class NeoHookeanTest(unittest.TestCase):
         e = self.model.mesh.elements[0]
         F = e.f((0, 0, 0))
         t_try = e.material.tstress(F)
-        t_true = self.soln.step_data()['element variables']['stress'][0]
+        t_true = self.soln.step_data()["element variables"]["stress"][0]
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
 
     def sstress_test(self):
@@ -302,9 +281,8 @@ class NeoHookeanTest(unittest.TestCase):
         elem = self.model.mesh.elements[0]
         f = elem.f(r)
         s_try = elem.material.sstress(f)
-        t_try = (1.0 / np.linalg.det(f)) \
-                * np.dot(f, np.dot(s_try, f.T))
-        t_true = self.soln.step_data()['element variables']['stress'][0]
+        t_try = (1.0 / np.linalg.det(f)) * np.dot(f, np.dot(s_try, f.T))
+        t_true = self.soln.step_data()["element variables"]["stress"][0]
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
 
     # Don't bother with 1st Piola-Kirchoff stress; it's implemented as a
@@ -315,15 +293,17 @@ class NeoHookeanTest(unittest.TestCase):
 def test_FEBio_Hex8_OrthoE():
     """E2E test of OrthotropicElastic material."""
     # Test 1: Read
-    pth_in = DIR_FIXTURES / \
-        (f"{Path(__file__).with_suffix('').name}." +\
-         "Hex8_OrthoE.feb")
+    pth_in = DIR_FIXTURES / (
+        f"{Path(__file__).with_suffix('').name}." + "Hex8_OrthoE.feb"
+    )
     model = feb.load_model(pth_in)
     #
     # Test 2: Write
-    pth_out = DIR_THIS / "output" / \
-        (f"{Path(__file__).with_suffix('').name}." +\
-         "Hex8_OrthoE.feb")
+    pth_out = (
+        DIR_THIS
+        / "output"
+        / (f"{Path(__file__).with_suffix('').name}." + "Hex8_OrthoE.feb")
+    )
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
@@ -336,17 +316,18 @@ def test_FEBio_Hex8_OrthoE():
     ## Test 4.1: Do we see the correct applied displacements?  A test
     ## failure here means that there is a defect in the code that reads
     ## or writes the model.  Or, less likely, an FEBio bug.
-    F_applied = np.array([[1.11, 0.02, 0.05],
-                          [-0.10, 0.92, 0.07],
-                          [-0.06, 0.20, 1.07]])
+    F_applied = np.array([[1.11, 0.02, 0.05], [-0.10, 0.92, 0.07], [-0.06, 0.20, 1.07]])
     F = np.mean([e.f(r) for r in e.gloc], axis=0)
     npt.assert_allclose(F, F_applied, rtol=RTOL_F)
     ##
     ## Test 4.2: Do we the correct output Cauchy stress?
-    FEBio_cauchy_stress = np.array([[ 2.0102563 , -0.87915385, -0.33581227],
-                                    [-0.87915385, -0.09515007,  1.9258928 ],
-                                    [-0.33581227,  1.9258928 ,  2.589372  ]])
+    FEBio_cauchy_stress = np.array(
+        [
+            [2.0102563, -0.87915385, -0.33581227],
+            [-0.87915385, -0.09515007, 1.9258928],
+            [-0.33581227, 1.9258928, 2.589372],
+        ]
+    )
     # FEBio_cauchy_stress = model.solution.value('stress', -1, 0, 1)
     cauchy_stress_gpt = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
-    npt.assert_allclose(cauchy_stress_gpt, FEBio_cauchy_stress,
-                        rtol=RTOL_STRESS)
+    npt.assert_allclose(cauchy_stress_gpt, FEBio_cauchy_stress, rtol=RTOL_STRESS)

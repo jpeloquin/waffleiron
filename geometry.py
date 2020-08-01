@@ -4,16 +4,22 @@ import numpy as np
 
 tol = np.finfo(float).eps
 
+
 def cross(u, v):
     """Cross product for two vectors in R3.
 
     """
-    w = np.array([u[1]*v[2] - u[2]*v[1],
-                  u[2]*v[0] - u[0]*v[2],
-                  u[0]*v[1] - u[1]*v[0]])
+    w = np.array(
+        [
+            u[1] * v[2] - u[2] * v[1],
+            u[2] * v[0] - u[0] * v[2],
+            u[0] * v[1] - u[1] * v[0],
+        ]
+    )
     return w
 
-def face_normal(face, mesh, config='reference'):
+
+def face_normal(face, mesh, config="reference"):
     """Return the face normal vector.
 
     config := only 'reference' supported right now
@@ -28,6 +34,7 @@ def face_normal(face, mesh, config='reference'):
     # compute the face normal
     normal = cross(v1, v2)
     return normal
+
 
 def inter_face_angle(f1, f2, mesh, tol=2 * np.finfo(float).eps):
     """Compute angle (radians) between two faces.
@@ -49,7 +56,7 @@ def inter_face_angle(f1, f2, mesh, tol=2 * np.finfo(float).eps):
     return angle
 
 
-def point_in_element(e, p, config='reference', dtol=tol, rtol=0.05):
+def point_in_element(e, p, config="reference", dtol=tol, rtol=0.05):
     """Return true if element encloses point.
 
     Points on the boundary of the element are considered to be inside
@@ -74,12 +81,12 @@ def point_in_element(e, p, config='reference', dtol=tol, rtol=0.05):
         return True
     else:
         r = e.to_natural(p, config=config)
-        return np.all(np.logical_and(np.greater_equal(r, -1 - rtol),
-                                     np.less_equal(r, 1 + rtol)))
+        return np.all(
+            np.logical_and(np.greater_equal(r, -1 - rtol), np.less_equal(r, 1 + rtol))
+        )
 
 
-def pt_series(line, n=None, bias='linear', minstep=None,
-              bias_direction=1):
+def pt_series(line, n=None, bias="linear", minstep=None, bias_direction=1):
     """Return a series of points on a line segment with biased spacing.
 
     `line` is a list of two points in 2-space or higher dimensions.
@@ -95,19 +102,19 @@ def pt_series(line, n=None, bias='linear', minstep=None,
     the list.  If bias_direction is -1, it is at the end.
 
     """
-    p1 = np.array(line[0]) # origin of directed line segment
+    p1 = np.array(line[0])  # origin of directed line segment
     p2 = np.array(line[1])
     v = p2 - p1
-    length = np.linalg.norm(v) # line length
+    length = np.linalg.norm(v)  # line length
     if length == 0.0:
         raise ValueError("Line has zero length.")
-    u = v / length # unit vector pointing in line direction
+    u = v / length  # unit vector pointing in line direction
 
-    if bias == 'log':
+    if bias == "log":
         fspc = biasrange_log
-    elif bias == 'linear':
+    elif bias == "linear":
         fspc = np.linspace
-    elif bias == 'sqrt':
+    elif bias == "sqrt":
         fspc = biasrange_sqrt
 
     # Figure out how many points to return
@@ -129,9 +136,11 @@ def pt_series(line, n=None, bias='linear', minstep=None,
         s = fspc(0, 1, n)
     else:
         # Both n and minstep are defined
-        raise Exception('The number of points `n` and the minimum '
-                        'distance between points `minstep` are both defined; '
-                        'only one can be defined at a time.')
+        raise Exception(
+            "The number of points `n` and the minimum "
+            "distance between points `minstep` are both defined; "
+            "only one can be defined at a time."
+        )
 
     # Compute the points
     if bias_direction == -1:

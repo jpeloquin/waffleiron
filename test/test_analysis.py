@@ -19,6 +19,7 @@ class CenterCrackHex8(TestCase):
     """Center cracked isotropic elastic plate in 3d.
 
     """
+
     def setUp(self):
         self.model, attrib = gen_model_center_crack_Hex8()
         for k in attrib:
@@ -28,40 +29,44 @@ class CenterCrackHex8(TestCase):
         """Calculate Griffith strain energy.
 
         """
-        a = 1.0e-3 # m
+        a = 1.0e-3  # m
         minima = np.min(self.model.mesh.nodes, axis=0)
         maxima = np.max(self.model.mesh.nodes, axis=0)
         width = maxima[0] - minima[0]
-        elems_up_down = [e for e in self.model.mesh.elements
-                         if (np.any(e.nodes[:,1] == minima[1]) or
-                             np.any(e.nodes[:,1] == maxima[1]))]
-        pavg = np.mean([e.material.tstress(e.f((0, 0, 0)))
-                        for e in elems_up_down], axis=0)
+        elems_up_down = [
+            e
+            for e in self.model.mesh.elements
+            if (
+                np.any(e.nodes[:, 1] == minima[1]) or np.any(e.nodes[:, 1] == maxima[1])
+            )
+        ]
+        pavg = np.mean(
+            [e.material.tstress(e.f((0, 0, 0))) for e in elems_up_down], axis=0
+        )
 
         # Define G for plane stress
-        K_I = pavg[1][1] * (pi * a * 1.0 /
-                            cos(pi * a / width))**0.5
-        G = K_I**2.0 / self.E
+        K_I = pavg[1][1] * (pi * a * 1.0 / cos(pi * a / width)) ** 0.5
+        G = K_I ** 2.0 / self.E
         return G
 
     def test_right_tip(self):
         # Calculate J
 
-        zslice = feb.select.element_slice(self.model.mesh.elements,
-                                             v=0e-3, axis=(0, 0, 1))
+        zslice = feb.select.element_slice(
+            self.model.mesh.elements, v=0e-3, axis=(0, 0, 1)
+        )
         nodes = [n for e in zslice for n in e.nodes]
         maxima = np.max(nodes, axis=0)
         minima = np.min(nodes, axis=0)
         deltaL = maxima[2] - minima[2]
 
         # define integration domain
-        domain = [e for e in zslice
-                  if self.tip_line_r.intersection(e.ids)]
+        domain = [e for e in zslice if self.tip_line_r.intersection(e.ids)]
         domain = feb.select.e_grow(domain, zslice, n=2)
-        domain = feb.analysis.apply_q_3d(domain, self.crack_faces,
-                                         self.tip_line_r,
-                                         q=[1, 0, 0])
-        #assert len(domain) == 4**2.0 * 4**2.0 * 2
+        domain = feb.analysis.apply_q_3d(
+            domain, self.crack_faces, self.tip_line_r, q=[1, 0, 0]
+        )
+        # assert len(domain) == 4**2.0 * 4**2.0 * 2
 
         jbdl = feb.analysis.jintegral(domain)
         jbar = jbdl / (0.5 * deltaL)
@@ -79,20 +84,20 @@ class CenterCrackHex8(TestCase):
         """Test if J is valid for left crack tip.
 
         """
-        zslice = feb.select.element_slice(self.model.mesh.elements,
-                                             v=0e-3, axis=(0, 0, 1))
+        zslice = feb.select.element_slice(
+            self.model.mesh.elements, v=0e-3, axis=(0, 0, 1)
+        )
         nodes = [n for e in zslice for n in e.nodes]
         maxima = np.max(nodes, axis=0)
         minima = np.min(nodes, axis=0)
         deltaL = maxima[2] - minima[2]
 
         # define integration domain
-        domain = [e for e in zslice
-                  if self.tip_line_l.intersection(e.ids)]
+        domain = [e for e in zslice if self.tip_line_l.intersection(e.ids)]
         domain = feb.select.e_grow(domain, zslice, n=2)
-        domain = feb.analysis.apply_q_3d(domain, self.crack_faces,
-                                         self.tip_line_l,
-                                         q=[-1, 0, 0])
+        domain = feb.analysis.apply_q_3d(
+            domain, self.crack_faces, self.tip_line_l, q=[-1, 0, 0]
+        )
         assert len(domain) == 6 * 6 * 2
 
         jbdl = feb.analysis.jintegral(domain)
@@ -116,30 +121,29 @@ class CenterCrackHex8(TestCase):
 
         # Create object transform (rotation matrix)
         angle = radians(30)
-        R = np.array([[cos(angle), -sin(angle), 0],
-                      [sin(angle), cos(angle), 0],
-                      [0, 0, 1]])
+        R = np.array(
+            [[cos(angle), -sin(angle), 0], [sin(angle), cos(angle), 0], [0, 0, 1]]
+        )
         # Transform nodes
         mesh.nodes = [np.dot(R, n) for n in mesh.nodes]
         mesh.update_elements()
         # Transform displacements
         for e in mesh.elements:
-            e.properties['displacement'] = \
-                np.dot(R, e.properties['displacement'].T).T
+            e.properties["displacement"] = np.dot(R, e.properties["displacement"].T).T
 
         # Calculate J
-        zslice = feb.select.element_slice(self.model.mesh.elements,
-                                             v=0e-3, axis=(0, 0, 1))
+        zslice = feb.select.element_slice(
+            self.model.mesh.elements, v=0e-3, axis=(0, 0, 1)
+        )
         nodes = [n for e in zslice for n in e.nodes]
         deltaL = np.max(nodes, axis=0)[2] - np.min(nodes, axis=0)[2]
 
         # Right tip
-        domain = [e for e in zslice
-                  if self.tip_line_r.intersection(e.ids)]
+        domain = [e for e in zslice if self.tip_line_r.intersection(e.ids)]
         domain = feb.select.e_grow(domain, zslice, n=2)
-        domain = feb.analysis.apply_q_3d(domain, self.crack_faces,
-                                         self.tip_line_r,
-                                         q=[cos(angle), sin(angle), 0])
+        domain = feb.analysis.apply_q_3d(
+            domain, self.crack_faces, self.tip_line_r, q=[cos(angle), sin(angle), 0]
+        )
         assert len(domain) == 6 * 6 * 2
 
         jbar_r = feb.analysis.jintegral(domain) / (0.5 * deltaL)
@@ -158,32 +162,31 @@ class CenterCrackHex8(TestCase):
 
         # Create object transform (rotation matrix)
         angle = radians(30)
-        R = np.array([[cos(angle), -sin(angle), 0],
-                      [sin(angle), cos(angle), 0],
-                      [0, 0, 1]])
+        R = np.array(
+            [[cos(angle), -sin(angle), 0], [sin(angle), cos(angle), 0], [0, 0, 1]]
+        )
         # Transform nodes
         mesh.nodes = [np.dot(R, n) for n in mesh.nodes]
         mesh.update_elements()
         # Transform displacements
         for e in mesh.elements:
-            e.properties['displacement'] = \
-                np.dot(R, e.properties['displacement'].T).T
+            e.properties["displacement"] = np.dot(R, e.properties["displacement"].T).T
 
         # Calculate J
-        zslice = feb.select.element_slice(self.model.mesh.elements,
-                                             v=0e-3, axis=(0, 0, 1))
+        zslice = feb.select.element_slice(
+            self.model.mesh.elements, v=0e-3, axis=(0, 0, 1)
+        )
 
         nodes = [n for e in zslice for n in e.nodes]
         deltaL = np.max(nodes, axis=0)[2] - np.min(nodes, axis=0)[2]
 
         # define integration domain
-                # Right tip
-        domain = [e for e in zslice
-                  if self.tip_line_l.intersection(e.ids)]
+        # Right tip
+        domain = [e for e in zslice if self.tip_line_l.intersection(e.ids)]
         domain = feb.select.e_grow(domain, zslice, n=2)
-        domain = feb.analysis.apply_q_3d(domain, self.crack_faces,
-                                         self.tip_line_l,
-                                         q=[-cos(angle), -sin(angle), 0])
+        domain = feb.analysis.apply_q_3d(
+            domain, self.crack_faces, self.tip_line_l, q=[-cos(angle), -sin(angle), 0]
+        )
         assert len(domain) == 6 * 6 * 2
 
         jbar_l = feb.analysis.jintegral(domain) / (0.5 * deltaL)
@@ -194,13 +197,19 @@ class CenterCrackHex8(TestCase):
 
 
 class CenterCrackQuad4(TestCase):
-
     def setUp(self):
-        reader = feb.input.FebReader(os.path.join('test', 'fixtures', 'center_crack_uniax_isotropic_elastic_quad4.feb'))
+        reader = feb.input.FebReader(
+            os.path.join(
+                "test", "fixtures", "center_crack_uniax_isotropic_elastic_quad4.feb"
+            )
+        )
         self.model = reader.model()
-        with open(os.path.join('test', 'fixtures',
-                               'center_crack_uniax_isotropic_elastic_quad4.xplt'),
-                  "rb") as f:
+        with open(
+            os.path.join(
+                "test", "fixtures", "center_crack_uniax_isotropic_elastic_quad4.xplt"
+            ),
+            "rb",
+        ) as f:
             self.soln = feb.xplt.XpltData(f.read())
         self.model.apply_solution(self.soln)
 
@@ -215,8 +224,8 @@ class CenterCrackQuad4(TestCase):
         """Test j integral for Quad4 mesh, isotropic elastic material, small strain.
 
         """
-        a = 1.0e-3 # m
-        W = 10.0e-3 # m
+        a = 1.0e-3  # m
+        W = 10.0e-3  # m
         minima = np.min(self.model.mesh.nodes, axis=0)
         maxima = np.max(self.model.mesh.nodes, axis=0)
         ymin = minima[1]
@@ -228,33 +237,35 @@ class CenterCrackQuad4(TestCase):
             """
             data = self.soln.step_data(-1)
             for i in element_ids:
-                t = data['domain variables']['stress'][i]
+                t = data["domain variables"]["stress"][i]
                 e = self.model.mesh.elements[i]
-                f = e.f((0,0))
+                f = e.f((0, 0))
                 fdet = np.linalg.det(f)
                 finv = np.linalg.inv(f)
                 P = fdet * np.dot(finv, np.dot(t, finv.T))
                 yield P
 
-        e_top = [(i, e) for i, e
-                 in enumerate(self.model.mesh.elements)
-                 if np.any(np.isclose(e.nodes[:,1], ymin))]
-        e_bot = [(i, e) for i, e
-                 in enumerate(self.model.mesh.elements)
-                 if np.any(np.isclose(e.nodes[:,1], ymax))]
+        e_top = [
+            (i, e)
+            for i, e in enumerate(self.model.mesh.elements)
+            if np.any(np.isclose(e.nodes[:, 1], ymin))
+        ]
+        e_bot = [
+            (i, e)
+            for i, e in enumerate(self.model.mesh.elements)
+            if np.any(np.isclose(e.nodes[:, 1], ymax))
+        ]
         P = list(pk1([i for i, e in e_top + e_bot]))
         Pavg = sum(P) / len(P)
         stress = Pavg[1][1]
 
         # calculate stress intensity
-        K_I = stress * (math.pi * a * 1.0 /
-                        math.cos(math.pi * a / W))**0.5
+        K_I = stress * (math.pi * a * 1.0 / math.cos(math.pi * a / W)) ** 0.5
         # Felderson; accurate to 0.3% for a/W ≤ 0.35
-        G = K_I**2.0 / self.E
+        G = K_I ** 2.0 / self.E
 
         id_crack_tip = [self.model.mesh.find_nearest_nodes(*(1e-3, 0.0, 0.0))[0]]
-        elements = apply_q_2d(self.model.mesh, id_crack_tip, n=2,
-                              q=[1, 0, 0])
+        elements = apply_q_2d(self.model.mesh, id_crack_tip, n=2, q=[1, 0, 0])
         J = jintegral(elements)
         npt.assert_allclose(J, 72.75, atol=0.01)
 
@@ -267,13 +278,12 @@ class FEBio_StrainGauge_Hex8_HolmesMow(TestCase):
     def setUp(self):
         """Create and run model"""
         mat = feb.material.HolmesMow(10, 0.3, 4)
-        model = feb.Model(feb.mesh.rectangular_prism((2, 2), (2, 2), (2, 2),
-                                                     material=mat))
+        model = feb.Model(
+            feb.mesh.rectangular_prism((2, 2), (2, 2), (2, 2), material=mat)
+        )
         seq = feb.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
         model.add_step(control=feb.control.auto_control_section(seq, 10))
-        F = np.array([[1.5, 0.5, 0],
-                      [0, 1, 0],
-                      [0, 0, 1]])
+        F = np.array([[1.5, 0.5, 0], [0, 1, 0], [0, 0, 1]])
         left = model.named["node sets"].obj("−x1 face")
         right = model.named["node sets"].obj("+x1 face")
         feb.load.prescribe_deformation(model, left, np.eye(3), seq)
@@ -287,6 +297,19 @@ class FEBio_StrainGauge_Hex8_HolmesMow(TestCase):
         left = self.solved.named["node sets"].obj("−x1 face")
         right = self.solved.named["node sets"].obj("+x1 face")
         λ = feb.analysis.strain_gauge(self.solved, left, right)
-        expected = np.array([1.0, 1.025, 1.05, 1.07500001, 1.1, 1.125,
-                             1.15000002, 1.175, 1.2, 1.22499998, 1.25])
+        expected = np.array(
+            [
+                1.0,
+                1.025,
+                1.05,
+                1.07500001,
+                1.1,
+                1.125,
+                1.15000002,
+                1.175,
+                1.2,
+                1.22499998,
+                1.25,
+            ]
+        )
         npt.assert_allclose(λ, expected, rtol=RTOL_F, atol=ATOL_F)
