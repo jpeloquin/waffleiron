@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<febio_spec version="2.0">
+<febio_spec version="2.5">
+  <Module type="solid"/>
 	<Globals>
 		<Constants>
 			<T>0</T>
@@ -173,84 +174,37 @@
 		<Elements type="hex8" mat="2" elset="Part2">
 			<elem id="41">   100,   104,   106,   102,   101,   105,   107,   103</elem>
 		</Elements>
+    <NodeSet name="fixed_end">
+      <node id="1"/>
+		  <node id="2"/>
+			<node id="3"/>
+			<node id="4"/>
+			<node id="5"/>
+			<node id="6"/>
+			<node id="7"/>
+			<node id="8"/>
+			<node id="9"/>
+    </NodeSet>
+    <NodeSet name="RigidNodeset01">
+      <node id="91"/>
+			<node id="92"/>
+			<node id="93"/>
+			<node id="94"/>
+			<node id="95"/>
+			<node id="96"/>
+			<node id="97"/>
+			<node id="98"/>
+			<node id="99"/>
+    </NodeSet>
 	</Geometry>
 	<Boundary>
-		<fix bc="z">
-			<node id="1"/>
-			<node id="2"/>
-			<node id="3"/>
-			<node id="4"/>
-			<node id="5"/>
-			<node id="6"/>
-			<node id="7"/>
-			<node id="8"/>
-			<node id="9"/>
-		</fix>
-		<fix bc="y">
-			<node id="1"/>
-			<node id="2"/>
-			<node id="3"/>
-			<node id="4"/>
-			<node id="5"/>
-			<node id="6"/>
-			<node id="7"/>
-			<node id="8"/>
-			<node id="9"/>
-		</fix>
-		<fix bc="x">
-			<node id="1"/>
-			<node id="2"/>
-			<node id="3"/>
-			<node id="4"/>
-			<node id="5"/>
-			<node id="6"/>
-			<node id="7"/>
-			<node id="8"/>
-			<node id="9"/>
-		</fix>
-	</Boundary>
-	<Contact>
-		<contact type="rigid">
-			<node id="91" rb="2"></node>
-			<node id="92" rb="2"></node>
-			<node id="93" rb="2"></node>
-			<node id="94" rb="2"></node>
-			<node id="95" rb="2"></node>
-			<node id="96" rb="2"></node>
-			<node id="97" rb="2"></node>
-			<node id="98" rb="2"></node>
-			<node id="99" rb="2"></node>
-		</contact>
-	</Contact>
-	<Constraints>
-		<rigid_body mat="2">
-			<prescribed bc="y" lc="1">0</prescribed>
-			<prescribed bc="Ry" lc="2">0</prescribed>
-			<prescribed bc="Rz" lc="3">0</prescribed>
-		</rigid_body>
-	</Constraints>
+    <fix bc="x" node_set="fixed_end"/>
+    <fix bc="y" node_set="fixed_end"/>
+		<fix bc="z" node_set="fixed_end"/>
+		<rigid name="RigidInterface01" rb="2" node_set="RigidNodeset01"/>
+  </Boundary>
 	<LoadData>
-		<loadcurve id="1" type="smooth">
-			<point>0,0</point>
-			<point>1,1</point>
-		</loadcurve>
-		<loadcurve id="2" type="smooth">
-			<point>0,0</point>
-			<point>1,1</point>
-		</loadcurve>
-		<loadcurve id="3" type="smooth">
-			<point>0,0</point>
-			<point>1,1</point>
-		</loadcurve>
-		<loadcurve id="4" type="smooth">
-			<point>0,0</point>
-			<point>1,1</point>
-		</loadcurve>
-		<loadcurve id="5" type="smooth">
-			<point>0,0</point>
-			<point>1,1</point>
-		</loadcurve>
-		<loadcurve id="6" type="smooth">
+		<loadcurve id="1" type="linear">
 			<point>0,0</point>
 			<point>1,1</point>
 		</loadcurve>
@@ -261,12 +215,11 @@
 			<var type="stress"/>
 		</plotfile>
     <logfile>
-      <element_data file="complex_loading_elem_data.txt" delim="," data="x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J"></element_data>
-      <node_data file="complex_loading_node_data.txt" delim="," data="x;y;z;ux;uy;uz"></node_data>
+      <element_data file="complex_loading_elem_data.txt" delim="," data="x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J"/>
+      <node_data file="complex_loading_node_data.txt" delim="," data="x;y;z;ux;uy;uz"/>
     </logfile>
 	</Output>
 	<Step name="Step01">
-		<Module type="solid"/>
 		<Control>
 			<time_steps>10</time_steps>
 			<step_size>0.1</step_size>
@@ -284,12 +237,25 @@
 			</time_stepper>
 			<analysis type="static"/>
 		</Control>
-		<Constraints>
+    <Boundary>
 			<rigid_body mat="2">
-				<prescribed bc="x" lc="4">2</prescribed>
-				<prescribed bc="z" lc="5">2</prescribed>
-				<prescribed bc="Rx" lc="6">3.14</prescribed>
+				<prescribed bc="x" lc="1">2</prescribed>
 			</rigid_body>
-		</Constraints>
+		  <rigid_body mat="2">
+			  <prescribed bc="y" lc="1">0</prescribed>
+		  </rigid_body>
+			<rigid_body mat="2">
+				<prescribed bc="z" lc="1">2</prescribed>
+			</rigid_body>
+			<rigid_body mat="2">
+				<prescribed bc="Rx" lc="1">3.14</prescribed>
+			</rigid_body>
+      <rigid_body mat="2">
+			  <prescribed bc="Ry" lc="1">0</prescribed>
+		  </rigid_body>
+      <rigid_body mat="2">
+			  <prescribed bc="Rz" lc="1">0</prescribed>
+		  </rigid_body>
+    </Boundary>
 	</Step>
 </febio_spec>

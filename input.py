@@ -15,6 +15,7 @@ from .math import orthonormal_basis, vec_from_sph
 from .model import Model, Mesh
 from .core import (
     Body,
+    ContactConstraint,
     ImplicitBody,
     Sequence,
     ScaledSequence,
@@ -31,6 +32,7 @@ from .febioxml import (
     control_values_from_febio,
     elem_cls_from_feb,
     normalize_xml,
+    read_contacts,
     _to_number,
     _maybe_to_number,
     _find_unique_tag,
@@ -642,6 +644,16 @@ class FebReader:
                     relative=condition["relative"],
                     step_id=condition["step ID"],
                 )
+
+        # Read contacts into steps
+        global_contacts, step_contacts = read_contacts(
+            self.root, model.named["face sets"]
+        )
+        for contact in global_contacts:
+            model.add_contact(contact)
+        for i, step_list in enumerate(step_contacts):
+            for contact in step_list:
+                model.add_contact(contact, step=i)
 
         # Output variables
         output_variables = []

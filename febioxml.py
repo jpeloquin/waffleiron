@@ -1,6 +1,6 @@
 import os
 import lxml.etree as ET
-from .core import NodeSet, FaceSet, ElementSet, _canonical_face
+from .core import ContactConstraint, NodeSet, FaceSet, ElementSet, _canonical_face
 from .element import Quad4, Tri3, Hex8, Penta6, Element
 from . import material
 from .math import orthonormal_basis
@@ -105,6 +105,15 @@ module_compat_by_mat = {
 }
 
 
+def text_to_bool(s):
+    """Convert string to boolean"""
+    if not s in ("0", "1"):
+        raise ValueError(
+            f"Cannot convert '{s}' to boolean.  FEBio boolean flags should be '0' or '1'."
+        )
+    return s == "1"
+
+
 def _to_number(s):
     """Convert numeric string to int or float as appropriate."""
     try:
@@ -146,6 +155,80 @@ def _find_unique_tag(root, path):
         raise ValueError(
             f"Multiple `{path}` tags in file `{os.path.abspath(root.base)}`"
         )
+
+
+def read_contact(e_contact: Element, named_face_sets):
+    tree = e_contact.getroottree()
+    surf_pair = e_contact.attrib["surface_pair"]
+    e_SurfacePair = _find_unique_tag(tree, f"Geometry/SurfacePair[@name='{surf_pair}']")
+    e_leader = _find_unique_tag(e_SurfacePair, "master")
+    e_follower = _find_unique_tag(e_SurfacePair, "slave")
+    leader = named_face_sets.obj(e_leader.attrib["surface"])
+    follower = named_face_sets.obj(e_follower.attrib["surface"])
+    kwargs = {}
+    # Most flags (booleans) and can be passed to ContactConstraint as-is
+    flags = (
+        "auto_penalty",
+        "augmented_lagrange",
+        "knmult",
+        "symmetric_stiffness",
+        "tension",
+        "laugon",
+    )
+    for flag in flags:
+        if (e := e_contact.find(flag)) is not None:
+            kwargs[flag] = text_to_bool(e.text)
+    # Most factors (floats) and can be passed to ContactConstraint as-is
+    factors = ("search_radius", "search_tol")
+    for factor in factors:
+        if (e := e_contact.find(factor)) is not None:
+            kwargs[factor] = float(e.text)
+    # Most counts (ints) can be passed to ContactConstraint as-is
+    counts = ("minaug", "maxaug")
+    for count in counts:
+        if (e := e_contact.find(count)) is not None:
+            kwargs[count] = int(e.text)
+    # "penalty" requires special handling
+    if (e_auto := e_contact.find("auto_penalty")) is not None:
+        kwargs["auto_penalty"] = text_to_bool(e_auto.text)
+        e_penalty = e_contact.find("penalty")
+        if kwargs["auto_penalty"]:
+            # An automatic penalty factor is used.  <penalty> is
+            # auto_penalty_scale; it is optional.
+            if e_penalty is not None:
+                kwargs["auto_penalty_scale"] = float(e_penalty.text)
+        else:
+            # A manual penalty factor is used.  <penalty> is the penalty
+            # factor; it is required.
+            if e_penalty is None:
+                raise ValueError(
+                    f"{tree.getpath(e_contact)} has <auto_penalty> set to False.  In this case a manual <penalty> value must be provided, but it is missing."
+                )
+            kwargs["penalty_factor"] = float(e_penalty.text)
+    # "two_pass" requires special handling
+    if (e_two_pass := e_contact.find("two_pass")) is not None:
+        two_pass = text_to_bool(e_two_pass.text)
+        if two_pass:
+            kwargs["passes"] = 2
+        else:
+            kwargs["passes"] = 1
+    contact = ContactConstraint(
+        leader, follower, algorithm=e_contact.attrib["type"], **kwargs
+    )
+    return contact
+
+
+def read_contacts(root, named_face_sets):
+    global_contacts = []
+    step_contacts = []
+    for e in root.findall("Contact/contact"):
+        global_contacts.append(read_contact(e, named_face_sets))
+    for e_Step in root.findall("Step"):
+        contacts = []
+        for e in e_Step.findall("Contact/contact"):
+            contacts.append(read_contact(e, named_face_sets))
+        step_contacts.append(contacts)
+    return global_contacts, step_contacts
 
 
 def read_named_sets(xml_root):
