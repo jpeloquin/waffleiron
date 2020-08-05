@@ -304,6 +304,8 @@ def test_FEBio_Hex8_OrthoE():
         / "output"
         / (f"{Path(__file__).with_suffix('').name}." + "Hex8_OrthoE.feb")
     )
+    if not pth_out.parent.exists():
+        pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?

@@ -97,6 +97,8 @@ def test_FEBio_SOHomFibAng_Hex8_ExpFiber():
         / "output"
         / (f"{Path(__file__).with_suffix('').name}." + "SOHomFibAng_Hex8_ExpFiber.feb")
     )
+    if not pth_out.parent.exists():
+        pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
@@ -150,6 +152,8 @@ def test_FEBio_MOHomMatAxVec_Hex8_LinOrtho():
         / "output"
         / (f"{Path(__file__).with_suffix('').name}." + "MOHomMatAxVec_Hex8_OrthoE.feb")
     )
+    if not pth_out.parent.exists():
+        pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
@@ -207,6 +211,8 @@ def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE():
         / "output"
         / (f"{Path(__file__).with_suffix('').name}." + "LOHetMatAxLoc_Hex8_OrthoE.feb")
     )
+    if not pth_out.parent.exists():
+        pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
@@ -286,6 +292,8 @@ orientation.
             + "LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber.feb"
         )
     )
+    if not pth_out.parent.exists():
+        pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
