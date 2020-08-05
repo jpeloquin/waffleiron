@@ -103,6 +103,10 @@ def logspaced(offset, span, n, dmin=None):
         # ^ work reversed so geomspace generates end point for n = 2.
     else:
         x = np.geomspace(offset, offset + span, n)
+    # numpy.geomspace introduces some extra floating point error, so
+    # set the endpoints to input values
+    x[0] = offset
+    x[-1] = offset + span
     return x
 
 
