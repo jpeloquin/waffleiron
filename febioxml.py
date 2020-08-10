@@ -1,5 +1,6 @@
 import os
 import lxml.etree as ET
+from lxml.etree import Element, ElementTree
 from .core import ContactConstraint, NodeSet, FaceSet, ElementSet, _canonical_face
 from .element import Quad4, Tri3, Hex8, Penta6, Element
 from . import material
@@ -146,7 +147,7 @@ def float_to_text(a):
     return f"{a:.7g}"
 
 
-def _find_unique_tag(root, path):
+def _find_unique_tag(root: Element, path):
     """Find and return a tag or an error if > 1 of same."""
     tags = root.findall(path)
     if len(tags) == 1:
@@ -159,8 +160,9 @@ def _find_unique_tag(root, path):
 
 def read_contact(e_contact: Element, named_face_sets):
     tree = e_contact.getroottree()
+    root = tree.getroot()
     surf_pair = e_contact.attrib["surface_pair"]
-    e_SurfacePair = _find_unique_tag(tree, f"Geometry/SurfacePair[@name='{surf_pair}']")
+    e_SurfacePair = _find_unique_tag(root, f"Geometry/SurfacePair[@name='{surf_pair}']")
     e_leader = _find_unique_tag(e_SurfacePair, "master")
     e_follower = _find_unique_tag(e_SurfacePair, "slave")
     leader = named_face_sets.obj(e_leader.attrib["surface"])
