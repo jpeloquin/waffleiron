@@ -281,6 +281,44 @@ def jintegral(domain, infinitessimal=False):
     return j
 
 
+def distance(model: Model, a: NodeSet, b: NodeSet):
+    """Return distance between a and b as a time series.
+
+    Inputs:
+    -------
+
+    model := febtools Model object with a solution.
+
+    a := First distance marker
+
+    b := Second distance marker
+
+    Distance is calculated from the center of one marker to the center
+    of the other marker.  The order of markers does not matter.  For
+    collective markers (e.g., node sets) the order of entities within
+    each marker does not matter.
+
+    For a node set marker, the center of the marker is the arithmetic
+    mean of the positions of all nodes in the node set.
+
+    Returns:
+    --------
+
+    scalar time series of distance values
+
+    """
+    d = np.empty(len(model.solution.step_times))
+    d[:] = np.nan  # make any indexing errors more obvious
+    for i in range(len(model.solution.step_times)):
+        δ = np.array(model.solution.step_data(i)["node variables"]["displacement"])
+        δ_a = np.mean([δ[j] for j in a], axis=0)
+        δ_b = np.mean([δ[j] for j in b], axis=0)
+        x0_a = np.mean([model.mesh.nodes[j] for j in a], axis=0)
+        x0_b = np.mean([model.mesh.nodes[j] for j in b], axis=0)
+        d[i] = np.linalg.norm((x0_a + δ_a) - (x0_b + δ_b))
+    return d
+
+
 def strain_gauge(model: Model, a: NodeSet, b: NodeSet):
     """Return strain between a and b as a time series.
 
@@ -315,7 +353,7 @@ def strain_gauge(model: Model, a: NodeSet, b: NodeSet):
         δ = np.array(model.solution.step_data(i)["node variables"]["displacement"])
         δ_a = np.mean([δ[j] for j in a], axis=0)
         δ_b = np.mean([δ[j] for j in b], axis=0)
-        x_a = np.mean([model.mesh.nodes[j] for j in a], axis=0)
-        x_b = np.mean([model.mesh.nodes[j] for j in b], axis=0)
-        λ[i] = np.linalg.norm((x_b + δ_b) - (x_a + δ_a)) / np.linalg.norm(x_b - x_a)
+        x0_a = np.mean([model.mesh.nodes[j] for j in a], axis=0)
+        x0_b = np.mean([model.mesh.nodes[j] for j in b], axis=0)
+        λ[i] = np.linalg.norm((x0_b + δ_b) - (x0_a + δ_a)) / np.linalg.norm(x0_b - x0_a)
     return λ
