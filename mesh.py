@@ -1,4 +1,4 @@
-from math import ceil
+from math import ceil, pi, cos, sin
 
 # Public repo packages
 import numpy as np
@@ -6,10 +6,202 @@ from numpy.linalg import norm
 from shapely.geometry import LineString, Point, Polygon
 
 # Febtools modules
-from .core import NodeSet
+import febtools as feb
+from .core import FaceSet, NodeSet, _DEFAULT_TOL
 from .geometry import pt_series
 from .element import Hex8, Quad4
 from .model import Mesh
+
+
+def cylinder(radius: tuple, height: tuple, nc: int, material=None):
+    """Create an FE mesh of a cylinder
+
+    radius := (length, # elements).  The number of elements must be ≥ 1.
+
+    height := (length, # elements).  The number of elements must be ≥ 1.
+
+    nc := int, number of elements along circumference.  Must be ≥ 3.
+
+    Radius is used instead of diameter because the diameter must have
+    an even number of elements, whereas the radius can have an odd or
+    even number.
+
+    Element spacing is linear.
+
+    The origin is in the center of the cylinder and the height is along the z axis.
+
+    """
+    radius, nr = radius
+    height, nh = height
+    # Create a mesh of quads, representing one radial slice in the x–z plane.  Points:
+    #
+    #  A————B  z
+    #  |    |  ↑
+    #  C————D  · → x
+    #
+    # with A and C on the central axis of the cylinder.
+    A = np.array((0, height / 2))
+    B = np.array((radius, height / 2))
+    C = np.array((0, -height / 2))
+    D = np.array((radius, -height / 2))
+    pts_AB = [A + s * (B - A) for s in feb.math.linspaced(0, 1, n=nr + 1)]
+    pts_CD = [C + s * (D - C) for s in feb.math.linspaced(0, 1, n=nr + 1)]
+    pts_AC = [A + s * (C - A) for s in feb.math.linspaced(0, 1, n=nh + 1)]
+    pts_BD = [B + s * (D - B) for s in feb.math.linspaced(0, 1, n=nh + 1)]
+    pane = quadrilateral(pts_AC, pts_BD, pts_CD, pts_AB)
+    cylinder = polar_stack_full(pane, nc)
+    if material is not None:
+        for e in cylinder.elements:
+            e.material = material
+    # Create named node sets.
+    nodes = cylinder.nodes
+    z = nodes[:, 2]
+    top_nodes = NodeSet(np.where(np.abs(z - height / 2) < _DEFAULT_TOL)[0])
+    cylinder.named["node sets"].add("top", top_nodes)
+    r = np.linalg.norm(nodes[:, 0:2], axis=1)
+    side_nodes = NodeSet(np.where(np.abs(r - radius) < _DEFAULT_TOL)[0])
+    cylinder.named["node sets"].add("side", side_nodes)
+    bottom_nodes = NodeSet(np.where(np.abs(z + height / 2) < _DEFAULT_TOL)[0])
+    cylinder.named["node sets"].add("bottom", bottom_nodes)
+    # Create named face sets.  It's annoying to have to define the same surface
+    # in terms of both nodes and faces.  Consider improving the situation later.
+    top_faces = FaceSet()
+    for e in cylinder.elements:
+        if any([i in top_nodes for i in e.ids]):
+            for f in e.faces():
+                if all([i in top_nodes for i in f]):
+                    top_faces.add(f)
+    cylinder.named["face sets"].add("top", top_faces)
+    return cylinder
+
+
+def polar_stack_full(mesh, n):
+    """Stack a planar mesh of Quad4 elements about z in a full circle
+
+    mesh := 2D mesh of Quad4 elements.  One edge of the mesh is assumed
+    to be on the x^2 + y^2 = 0 centerline.
+
+    n := number of element layers to create.
+
+    The resulting mesh has a core of Penta6 elements surrounded by Hex8 elements.
+
+    TODO: Support input meshes that do not have nodes on the centerline,
+    e.g., for creating hollow cylinders.
+
+    """
+    # Convert 2D nodes array to 3D in x–z plane
+    nodes = np.array([(n[0], 0, n[1]) for n in mesh.nodes])
+    # Divide the nodes and elements into centerline and rotating groups
+    nids = np.arange(len(nodes))
+    on_centerline = np.abs(np.array(nodes)[:, 0]) < _DEFAULT_TOL
+    center_nodes = nodes[on_centerline]
+    center_nids = nids[on_centerline]
+    rotate_nodes = nodes[np.logical_not(on_centerline)]
+    rotate_nids = nids[np.logical_not(on_centerline)]
+    center_elements = []  # use lists to preserve order
+    center_eids = set()
+    rotate_elements = []
+    center_nids_set = set(center_nids)
+    for i, element in enumerate(mesh.elements):
+        if set(element.ids) & center_nids_set:
+            center_elements.append(element)
+            center_eids.add(i)
+        else:
+            rotate_elements.append(element)
+    # Make sure nodes are ordered so their face normal will face out of
+    # the 3D element.
+    for element in mesh.elements:
+        p = nodes[element.faces()[0], :]
+        v1 = p[1] - p[0]
+        v2 = p[-1] - p[0]
+        v3 = feb.geometry.cross(v1, v2)
+        if v3[1] < 0:
+            element.ids = element.ids[::-1]
+        elif v3[2] == 0:
+            raise ValueError(
+                f"Input {type(element)} element with node IDs {element.ids} was not in x–y plane."
+            )
+    # Construct the 3D mesh
+    all_nodes = [nodes]
+    new_elements = []
+    # New nodes will have an index equal to the offset for the
+    # corresponding node in the original node layer plus the stride ×
+    # the number of element layers.
+    offset = len(nodes) - np.cumsum(on_centerline)
+    offset[on_centerline] = 0
+    # ^ centerline nodes are reused in all layers
+    stride = np.zeros(len(nodes), dtype=int)
+    stride[~on_centerline] = len(rotate_nids)
+    for ilayer in range(0, n):  # i indexes over polar element layers
+        # Construct new node layer
+        if ilayer != n - 1:
+            θ = 2 * pi * (ilayer + 1) / n
+            Q = np.array([[cos(θ), -sin(θ), 0], [sin(θ), cos(θ), 0], [0, 0, 1]])
+            new_nodes = (Q @ rotate_nodes.T).T
+            all_nodes += [new_nodes]
+        # Compute node IDs for the new layer of elements
+        for eid, element in enumerate(mesh.elements):
+            if eid in center_eids:
+                # Element is on centerline; list node IDs for Penta6.
+                # None of the Penta6 faces follow the Quad4 node
+                # ordering, so we need to rearrange nodes.  In the
+                # Penta6 elment: Put the node 1 to node 4 line on the
+                # centerline, pointing +z.  Nodes 2 and 5 will come from
+                # the old layer.
+                m = on_centerline[element.ids]
+                c_nids = element.ids[m]
+                r_nids = element.ids[~m]
+                c_nids = c_nids[np.argsort(nodes[c_nids][:, 2])]
+                r_nids = r_nids[np.argsort(nodes[r_nids][:, 2])]
+                if ilayer == 0:
+                    r_nids_last = r_nids
+                else:
+                    r_nids_last = (
+                        r_nids + offset[r_nids] + (ilayer - 1) * stride[r_nids]
+                    )
+                if ilayer == n - 1:
+                    r_nids_next = r_nids
+                else:
+                    r_nids_next = r_nids + offset[r_nids] + ilayer * stride[r_nids]
+                new_elements.append(
+                    (
+                        feb.element.Penta6,
+                        (
+                            c_nids[0],
+                            r_nids_last[0],
+                            r_nids_next[0],
+                            c_nids[1],
+                            r_nids_last[1],
+                            r_nids_next[1],
+                        ),
+                    )
+                )
+            else:
+                # Element is off centerline; list node IDs for Hex8
+                if ilayer == 0:
+                    r_nids_last = element.ids
+                else:
+                    r_nids_last = (
+                        element.ids
+                        + offset[element.ids]
+                        + (ilayer - 1) * stride[element.ids]
+                    )
+                if ilayer == n - 1:
+                    r_nids_next = element.ids
+                else:
+                    r_nids_next = (
+                        element.ids + offset[element.ids] + ilayer * stride[element.ids]
+                    )
+                new_elements.append(
+                    (feb.element.Hex8, np.hstack((r_nids_last, r_nids_next)))
+                )
+    # Construct objects for the new mesh
+    nodes = np.vstack(all_nodes)
+    elements = []
+    for cls, ids in new_elements:
+        elements.append(cls.from_ids(ids, nodes))
+    mesh = Mesh(nodes, elements)
+    return mesh
 
 
 def zstack(mesh, zcoords):
