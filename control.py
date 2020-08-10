@@ -53,7 +53,7 @@ def default_control_section(analysis_type="static"):
         "lstol": 0.9,
         "min residual": 1e-20,
         "time stepper": {"dtmin": 0.01, "dtmax": 0.1, "max retries": 5, "opt iter": 10},
-        "update method": "BFGS",  # alt: 'quasi-Newton'
+        "update method": "BFGS",  # alt: 'Broyden'
         "reform each time step": True,
         "reform on diverge": True,
         "max refs": 15,

@@ -85,7 +85,7 @@ control_tagnames_to_febio = {
     "analysis type": "analysis",
 }
 control_tagnames_from_febio = {v: k for k, v in control_tagnames_to_febio.items()}
-control_values_to_febio = {"update method": {"quasi-Newton": "1", "BFGS": "0"}}
+control_values_to_febio = {"update method": {"Broyden": "1", "BFGS": "0"}}
 control_values_from_febio = {
     k: {v_xml: v_us for v_us, v_xml in conv.items()}
     for k, conv in control_values_to_febio.items()
