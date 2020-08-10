@@ -824,6 +824,8 @@ def xml(model, version="2.5"):
     # Apply offset to load curves so they start at the same time the
     # previous step ends (global time), as required by FEBio.  In
     # `febtools`, each step has its own running time (local time).
+    #
+    # TODO: This should not mutate the model
     cumulative_time = 0.0
     for step in model.steps:
         # Gather must point curves
