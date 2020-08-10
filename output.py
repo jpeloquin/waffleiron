@@ -425,8 +425,7 @@ def choose_module(materials):
     return module
 
 
-def contact_section(contacts, model, xml_root, named_surface_pairs, named_contacts):
-    tag_geometry = xml_root.find("./Geometry")
+def contact_section(contacts, model, named_surface_pairs, named_contacts):
     tag_contact_section = ET.Element("Contact")
     tags_surfpair = []
     for contact in contacts:
@@ -449,18 +448,12 @@ def contact_section(contacts, model, xml_root, named_surface_pairs, named_contac
                 face_set,
             )
             surface_name[k] = nm
-            tag_surface = ET.SubElement(tag_geometry, "Surface", name=nm)
-            for face in face_set:
-                tag_surface.append(tag_face(face))
         # Autogenerate and add the surface pair
         name_surfpair = _get_or_create_name(
             named_surface_pairs,
             f"contact_surfaces_-_{contact.algorithm}",
             (contact.leader, contact.follower),
         )
-        tag_surfpair = ET.SubElement(tag_geometry, "SurfacePair", name=name_surfpair)
-        ET.SubElement(tag_surfpair, "master", surface=surface_name["leader"])
-        ET.SubElement(tag_surfpair, "slave", surface=surface_name["follower"])
         tag_contact.attrib["surface_pair"] = name_surfpair
         # Set compression only or tension–compression
         if contact.algorithm == "sliding-elastic":
@@ -640,15 +633,12 @@ def xml(model, version="2.5"):
             c for c in model.constraints if isinstance(c, ContactConstraint)
         ]
         tag_contact = contact_section(
-            contact_constraints, model, root, named_surface_pairs, named_contacts
+            contact_constraints, model, named_surface_pairs, named_contacts
         )
         root.append(tag_contact)
     else:
         tag_contact = febioxml_2_0.contact_section(model)
         root.append(tag_contact)
-    # The <Contact> tag must come before the first <Step> tag or FEBio
-    # will only apply the specified contact constraints to the last step
-    # (this is an FEBio bug).
     e_constraints = ET.SubElement(root, "Constraints")
     e_loaddata = ET.SubElement(root, "LoadData")
     Output = ET.SubElement(root, "Output")
@@ -1080,7 +1070,7 @@ def xml(model, version="2.5"):
             c for c in step["bc"]["contact"] if isinstance(c, ContactConstraint)
         ]
         e_Contact = contact_section(
-            contacts, model, root, named_surface_pairs, named_contacts
+            contacts, model, named_surface_pairs, named_contacts
         )
 
         # Add <Boundary>, <Contact>, and <Control> elements to <Step>, in that order
@@ -1122,12 +1112,30 @@ def xml(model, version="2.5"):
         seq = model.named["sequences"].obj(seq_id, nametype="ordinal_id")
         add_sequence(root, model, seq)
 
+    # Write named geometric entities & sets.  It is better to delay
+    # writing named entities & sets until now so we don't accidentally
+    # write the same set twice.
+    #
     # Write any named node sets that were not already written.
-    # TODO: Handle element and face sets too
     for nm, node_set in model.named["node sets"].pairs():
         e_nodeset = root.find(f"Geometry/NodeSet[@name='{nm}']")
         if e_nodeset is None:
             add_nodeset(root, nm, node_set)
+    # Write *all* named face sets ("surfaces")
+    for nm, face_set in model.named["face sets"].pairs():
+        e_surface = ET.SubElement(Geometry, "Surface", name=nm)
+        for face in face_set:
+            e_surface.append(tag_face(face))
+    # Write *all* named surface pairs
+    for nm, surf_pair in named_surface_pairs.pairs():
+        tag_surfpair = ET.SubElement(Geometry, "SurfacePair", name=nm)
+        ET.SubElement(
+            tag_surfpair, "master", surface=model.named["face sets"].name(surf_pair[0])
+        )
+        ET.SubElement(
+            tag_surfpair, "slave", surface=model.named["face sets"].name(surf_pair[1])
+        )
+    # TODO: Handle element sets too.
 
     tree = ET.ElementTree(root)
     return tree
