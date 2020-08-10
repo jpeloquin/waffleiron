@@ -110,7 +110,7 @@ class Model:
 
         """
         if control is None:
-            control = default_control_section()
+            control = default_control_section(module)
         step = {
             "name": name,
             "module": module,

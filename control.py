@@ -15,10 +15,10 @@ from .core import Sequence
 from .math import densify
 
 
-def auto_control_section(sequence, pts_per_segment=1):
+def auto_control_section(module, sequence, pts_per_segment=1):
     curve = sequence.points
     # Assign good default control settings
-    control = default_control_section()
+    control = default_control_section(module)
     duration = curve[-1][0] - curve[0][0]
     time = np.array([a for a, b in curve])
     dt = np.diff(time)
@@ -40,7 +40,6 @@ def auto_control_section(sequence, pts_per_segment=1):
     control["time steps"] = nsteps
     control["step size"] = dt_nominal
     control["time stepper"]["dtmin"] = 0.1 * dt_min
-
     return control
 
 
@@ -62,7 +61,18 @@ def default_control_section(analysis_type="static"):
         "plot level": "PLOT_MAJOR_ITRS",
     }
     if analysis_type == "biphasic":
-        default.update({"ptol": 0.01, "symmetric biphasic": True})
+        default.update(
+            {
+                "ptol": 0.01,
+                "symmetric biphasic": True,
+                # Only use full Newton iterations
+                "max ups": 0,
+                "reform each time step": True,
+                # Increase max number of reformations b/c every
+                # iteration in the full Newton method is a reformation
+                "max refs": 50,
+            }
+        )
     return default
 
 
