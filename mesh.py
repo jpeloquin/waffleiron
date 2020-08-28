@@ -13,7 +13,7 @@ from .element import Hex8, Quad4
 from .model import Mesh
 
 
-def cylinder(radius: tuple, height: tuple, nc: int, material=None):
+def cylinder(t_radius: tuple, t_height: tuple, nc: int, material=None):
     """Create an FE mesh of a cylinder
 
     radius := (length, # elements).  The number of elements must be ≥ 1.
@@ -31,8 +31,8 @@ def cylinder(radius: tuple, height: tuple, nc: int, material=None):
     The origin is in the center of the cylinder and the height is along the z axis.
 
     """
-    radius, nr = radius
-    height, nh = height
+    radius, nr = t_radius
+    height, nh = t_height
     # Create a mesh of quads, representing one radial slice in the x–z plane.  Points:
     #
     #  A————B  z
