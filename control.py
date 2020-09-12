@@ -64,7 +64,7 @@ def default_control_section(analysis_type="static"):
         default.update(
             {
                 "ptol": 0.01,
-                "symmetric biphasic": True,
+                "symmetric biphasic": False,
                 # Only use full Newton iterations
                 "max ups": 0,
                 "reform each time step": True,
