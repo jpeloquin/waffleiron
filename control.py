@@ -26,6 +26,12 @@ def auto_control_section(module, sequence, pts_per_segment=1):
     # Assign must point sequence
     control["plot level"] = "PLOT_MUST_POINTS"
     curve_must_dt = densify([(a, b) for a, b in zip(time, dt)], n=pts_per_segment)
+    # TODO: Densification should respect the curve's interpolant
+    # Recalculate dt after densification.
+    t = np.array(curve_must_dt)[:, 0]
+    dt = np.diff(t)
+    dt = np.concatenate([dt, dt[-1:]])  # len(dt) == len(time)
+    curve_must_dt = [p for p in zip(t, dt)]
     seq_dtmax = Sequence(curve_must_dt, extrap="constant", interp="linear")
     control["time stepper"]["dtmax"] = seq_dtmax
     # Calculate appropriate step size.  Need to work around FEBio bug
