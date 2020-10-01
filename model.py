@@ -38,6 +38,8 @@ class Model:
         self.mesh = mesh  # The model geometry
         self.solution = None  # The solution for the model
 
+        self.name = None  # model name, to facilitate error messages
+
         # If a sequence is assigned to dtmax in this default dictionary,
         # it will be copied when `default_control` is used to initialize a
         # control step.  This may not be desirable.

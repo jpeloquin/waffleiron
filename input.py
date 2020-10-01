@@ -136,6 +136,7 @@ def load_model(fpath):
             "Neither `{}` nor `{}` could be read.  Check that they exist "
             "and are accessible.".format(fp_feb, fp_xplt)
         )
+    model.name = fpath.stem
     return model
 
 
