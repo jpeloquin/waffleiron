@@ -140,7 +140,8 @@ class Model:
         sequence := conditions.Sequence object or 'fixed'
 
         scales := dict of integer node ID → scale.  If None, scale will
-        be set to 1 for all nodes.
+        be set to 1 for all nodes.  If you want to apply a different
+        scaling factor to all nodes, use a ScaledSequence.
 
         """
         default_scale = 1
