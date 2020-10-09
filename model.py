@@ -45,7 +45,10 @@ class Model:
         # control step.  This may not be desirable.
         self.default_control = default_control_section()
 
-        self.output = {"variables": None}
+        self.output = {"variables": []}
+        # TODO: write_feb only populates this output variable list if it
+        # is empty, which is bad if you just want to force one output
+        # variable to be included while retaining the auto-export
 
         self.environment = {"temperature": 294}  # K
         self.constants = {"R": 8.31446261815324, "F": 96485.33212}  # J/mol·K  # C/mol
