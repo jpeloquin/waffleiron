@@ -60,6 +60,7 @@ class EntitySet(set):
 
 class NodeSet(EntitySet):
     """Set of node IDs."""
+    # TODO: Set operations should return a NodeSet
 
 
 class FaceSet(EntitySet):
