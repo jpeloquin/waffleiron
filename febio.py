@@ -1,5 +1,10 @@
+import os
 from pathlib import Path
 import subprocess
+
+import psutil
+
+from .input import load_model
 
 
 class FEBioError(Exception):
@@ -12,29 +17,83 @@ class FEBioError(Exception):
     pass
 
 
-def run_febio(pth_feb):
-    if isinstance(pth_feb, str):
-        pth_feb = Path(pth_feb)
+def _run_febio(pth_feb, threads=psutil.cpu_count(logical=False)):
+    """Run FEBio and return the process object."""
+    # FEBio's error handling is interesting, in a bad way.  XML file
+    # read errors are only output to stdout.  If there is a read error,
+    # no log file is created and if an old log file exists, it is not
+    # updated to reflect the file read error.  Model summary info is
+    # only output to the log file.  Time stepper info is output to both
+    # stdout and the log file, but the verbosity of the stdout output
+    # can be adjusted by the user.  We want to ensure (1) the log file
+    # always reflects the last run and (2) all relevant error messages
+    # are written to the log file.
+    pth_feb = Path(pth_feb)
+    pth_log = pth_feb.with_suffix(".log")
+    env = os.environ.copy()
+    env.update({"OMP_NUM_THREADS": f"{threads}"})
+    # Check for the existance of the FEBio XML file ourselves, since if
+    # the file doesn't exist FEBio will act as if it was malformed.
+    if not pth_feb.exists():
+        raise ValueError(f"'{pth_feb}' does not exist or is not accessible.")
+    # TODO: Check for febio executable
     proc = subprocess.run(
         ["febio", "-i", pth_feb.name],
         # FEBio always writes xplt to current dir
-        cwd=Path(pth_feb).parent,
+        cwd=pth_feb.parent,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        env=env,
+        text=True,
     )
+    # If there specifically is a file read error, we need to write the
+    # captured stdout to the log file, because only it has information
+    # about the file read error.  Otherwise, we need to leave the log
+    # file in place, because it contains unique information.  (FEBio
+    # does return a error code of 1 on "Error Termination" and 0 on
+    # "Normal Termination"; I checked.)
     if proc.returncode != 0:
-        # FEBio truly does return an error code on "Error Termination";
-        # I checked.
-        pth_log = Path(pth_feb).with_suffix(".log")
-        with open(pth_log, "wb") as f:
-            f.write(proc.stdout)  # FEBio doesn't always write a log if it
-            # hits a error, but the content that would
-            # have been logged is always dumped to
-            # stdout.
+        for ln in proc.stdout.splitlines():
+            if ln.startswith("Reading file"):
+                if ln.endswith("SUCCESS!"):
+                    # No file read error
+                    break
+                elif ln.endswith("FAILED!"):
+                    # File read error; send it to the log file
+                    with open(pth_log, "w", encoding="utf-8") as f:
+                        f.write(proc.stdout)
+                else:
+                    raise NotImplementedError(
+                        f"febtools failed to parse FEBio file read status message '{ln}' from stdout"
+                    )
+    return proc
+
+
+def run_febio_checked(pth_feb, threads=psutil.cpu_count(logical=False)):
+    """Run FEBio, raising exception on error.
+
+    In addition, perform the following checks independent of FEBio's own
+    (mostly absent) error checking:
+
+    - In any step with PLOT_MUST_POINTS, verify that the number of time
+      points matches the number of must points.
+
+    """
+    pth_feb = Path(pth_feb)
+    proc = _run_febio(pth_feb, threads=threads)
+    if proc.returncode != 0:
         raise FEBioError(
-            f"FEBio returned an error (return code = {proc.returncode}) while running {pth_feb}; check {pth_log}."
+            f"FEBio returned error code {proc.returncode} while running {pth_feb}; check {pth_feb.with_suffix('.log')}."
         )
+    # Perform additional checks
+    model = load_model(pth_feb)
+    check_must_points(model)
     return proc.returncode
+
+
+def run_febio_unchecked(pth_feb, threads=psutil.cpu_count(logical=False)):
+    """Run FEBio and return its error code."""
+    return _run_febio(pth_feb, threads=threads).returncode
 
 
 def check_must_points(model):
