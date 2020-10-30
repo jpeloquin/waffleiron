@@ -6,9 +6,7 @@ tol = np.finfo(float).eps
 
 
 def cross(u, v):
-    """Cross product for two vectors in R3.
-
-    """
+    """Cross product for two vectors in R3."""
     w = np.array(
         [
             u[1] * v[2] - u[2] * v[1],

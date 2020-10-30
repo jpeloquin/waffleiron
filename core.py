@@ -60,6 +60,7 @@ class EntitySet(set):
 
 class NodeSet(EntitySet):
     """Set of node IDs."""
+
     # TODO: Set operations should return a NodeSet
 
 
@@ -156,9 +157,7 @@ def _canonical_face(face):
 
 
 def _e_bb(elements):
-    """Create bounding box array from element list.
-
-    """
+    """Create bounding box array from element list."""
     bb_max = np.vstack([np.max(e.nodes, axis=0) for e in elements])
     bb_min = np.vstack([np.min(e.nodes, axis=0) for e in elements])
     bb = (bb_min, bb_max)

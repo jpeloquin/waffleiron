@@ -7,9 +7,7 @@ vtk_cell_type = {Hex8: tvtk.Hexahedron().cell_type}
 
 
 def tvtk_ugrid_from_mesh(mesh):
-    """Create tvtk UnstructuredGrid object from mesh.
-
-    """
+    """Create tvtk UnstructuredGrid object from mesh."""
     points = np.array(mesh.nodes)
     cells = np.array([[len(e.ids)] + e.ids for e in mesh.elements])
     cells = cells.ravel()

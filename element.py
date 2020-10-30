@@ -71,9 +71,7 @@ class Element:
 
     @classmethod
     def from_ids(cls, ids, nodelist, mat_id=None, mat=None):
-        """Create an element from nodal indices.
-
-        """
+        """Create an element from nodal indices."""
         # TODO: Make mat_id only apply to models created from FEBio XML
         # input
         nodes = np.array([nodelist[i] for i in ids])
@@ -83,9 +81,7 @@ class Element:
         return element
 
     def apply_property(self, label, values):
-        """Apply nodal properties.
-
-        """
+        """Apply nodal properties."""
         assert len(values) == len(self.nodes)
         values = np.array(values)
         self.properties[label] = values
@@ -214,9 +210,7 @@ class Element:
         return F
 
     def j(self, r, config="reference"):
-        """Jacobian matrix (∂x_i/∂r_j) evaluated at r
-
-        """
+        """Jacobian matrix (∂x_i/∂r_j) evaluated at r"""
         ddr = self.dN(*r)
         ddr = np.vstack(self.dN(*r))
         J = np.dot(np.array(self.nodes).T, ddr)
@@ -239,9 +233,7 @@ class Element:
         )
 
     def centroid(self, config="reference"):
-        """Centroid of element.
-
-        """
+        """Centroid of element."""
         x = self.x(config)
         return self.interp((0, 0, 0), "position")
 
@@ -260,9 +252,7 @@ class Element:
         return faces
 
     def face_normals(self, config="reference"):
-        """List of face normals
-
-        """
+        """List of face normals"""
         normals = []
         # Iterate over faces
         for f in self.faces():
@@ -278,9 +268,7 @@ class Element:
         return [i for i, f in enumerate(self.face_nodes) if node_id in f]
 
     def to_natural(self, pt, config="reference"):
-        """Return natural coordinates for pt = (x, y, z)
-
-        """
+        """Return natural coordinates for pt = (x, y, z)"""
         pt = np.array(pt)
         x = self.x(config)
         x0 = np.dot(self.N(*[0] * self.r_n), x)
@@ -320,16 +308,12 @@ class Element:
 
 
 class Element3D(Element):
-    """Class for 3D elements.
-
-    """
+    """Class for 3D elements."""
 
     is_planar = False
 
     def jdet(self, r, config="reference"):
-        """Calculate determinant of the R3 → R3 jacobian.
-
-        """
+        """Calculate determinant of the R3 → R3 jacobian."""
         return np.linalg.det(self.j(r, config))
 
 
@@ -343,9 +327,7 @@ class Element2D(Element):
     is_planar = True
 
     def jdet(self, r, config="reference"):
-        """Calculate determinant of the R3 → R2 jacobian.
-
-        """
+        """Calculate determinant of the R3 → R2 jacobian."""
         j = self.j(r, config)
         n = np.cross(j[:, 0], j[:, 1])
         try:
@@ -368,9 +350,7 @@ class Element2D(Element):
         return edges
 
     def edges_with_node(self, node_id):
-        """Indices of edges that include node id.
-
-        """
+        """Indices of edges that include node id."""
         return [i for i, l in enumerate(self.edge_nodes) if node_id in l]
 
     def edge_normals(self, config="reference"):
@@ -391,9 +371,7 @@ class Element2D(Element):
 
 
 class Tri3(Element2D):
-    """Functions for tri3 elements.
-
-    """
+    """Functions for tri3 elements."""
 
     n = 3
     r_n = 2  # number of natural basis parameters
@@ -409,9 +387,7 @@ class Tri3(Element2D):
         self.properties["thickness"] = (1.0, 1.0, 1.0)
 
     def centroid(self, config="reference"):
-        """Centroid of element.
-
-        """
+        """Centroid of element."""
         x = self.x(config)
         r = (1.0 / 3.0, 1.0 / 3.0)
         c = np.dot(x.T, self.N(*r))
@@ -419,9 +395,7 @@ class Tri3(Element2D):
 
     @staticmethod
     def N(r, s, t=None):
-        """Shape functions.
-
-        """
+        """Shape functions."""
         n = [0.0] * 3
         n[0] = 1.0 - r - s
         n[1] = r
@@ -430,9 +404,7 @@ class Tri3(Element2D):
 
     @staticmethod
     def dN(r, s, t=None):
-        """Shape function 1st derivatives.
-
-        """
+        """Shape function 1st derivatives."""
         dn = [np.zeros(2) for i in range(3)]
         # d/dr
         dn[0][0] = -1.0
@@ -446,9 +418,7 @@ class Tri3(Element2D):
 
 
 class Hex8(Element3D):
-    """Functions for hex8 trilinear elements.
-
-    """
+    """Functions for hex8 trilinear elements."""
 
     n = 8  # number of vertices
     r_n = 3  # number of natural basis parameters
@@ -524,9 +494,7 @@ class Hex8(Element3D):
 
     @staticmethod
     def dN(r, s, t):
-        """Shape function 1st derivatives.
-
-        """
+        """Shape function 1st derivatives."""
         dn = [np.zeros(3) for i in range(8)]
         # dN/dr
         dn[0][0] = -0.125 * (1 - s) * (1 - t)
@@ -559,9 +527,7 @@ class Hex8(Element3D):
 
     @staticmethod
     def ddN(r, s, t):
-        """"Shape function 2nd derivatives.
-
-        """
+        """ "Shape function 2nd derivatives."""
         ddn = np.zeros((8, 3, 3))
         # dN/dr^2 = 0
         # dN / drds
@@ -624,9 +590,7 @@ class Hex8(Element3D):
 
 
 class Penta6(Element3D):
-    """Functions for penta6 linear elements.
-
-    """
+    """Functions for penta6 linear elements."""
 
     n = 6  # number of vertices
     r_n = 3  # number of natural basis parameters
@@ -686,9 +650,7 @@ class Penta6(Element3D):
 
     @staticmethod
     def dN(r, s, t):
-        """Shape function 1st derivatives.
-
-        """
+        """Shape function 1st derivatives."""
         dn = [np.zeros(3) for i in range(6)]
         # dN/dr
         dn[0][0] = -0.5 * (1 - t)
@@ -715,9 +677,7 @@ class Penta6(Element3D):
 
     @staticmethod
     def ddN(r, s, t):
-        """"Shape function 2nd derivatives.
-
-        """
+        """ "Shape function 2nd derivatives."""
         ddn = np.zeros((6, 3, 3))
         # dN/dr^2 = 0
         # dN / drds = 0
@@ -787,9 +747,7 @@ class Quad4(Element2D):
 
     @staticmethod
     def N(r, s, t=None):
-        """Shape functions.
-
-        """
+        """Shape functions."""
         n = [0.0] * 4
         n[0] = 0.25 * (1 - r) * (1 - s)
         n[1] = 0.25 * (1 + r) * (1 - s)
@@ -799,9 +757,7 @@ class Quad4(Element2D):
 
     @staticmethod
     def dN(r, s, t=None):
-        """Shape function 1st derivatives.
-
-        """
+        """Shape function 1st derivatives."""
         dn = [np.zeros(2) for i in range(4)]
         # d/dr
         dn[0][0] = -0.25 * (1 - s)
@@ -817,9 +773,7 @@ class Quad4(Element2D):
 
     @staticmethod
     def ddN(r, s, t=None):
-        """Shape function 2nd derivatives.
-
-        """
+        """Shape function 2nd derivatives."""
         ddn = np.zeros((4, 2, 2))
         # dN / dr² = 0
         # dN / drds

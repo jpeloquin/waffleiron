@@ -20,9 +20,7 @@ import gc
 
 
 def midplane_stress(soln, type="1pk"):
-    """Finds stress at z = 0 plane from MeshSolution.
-
-    """
+    """Finds stress at z = 0 plane from MeshSolution."""
     v = []
     if type == "1pk":
         s = soln.s()
@@ -68,9 +66,7 @@ def relative_stress(va, vb):
 
 
 def plot_stress(s, x, y, title, fsave, delta=50e-6, clabel=""):
-    """Shaded plot of stress.
-
-    """
+    """Shaded plot of stress."""
     # Define diverging colormap
     cdict = {
         "red": (

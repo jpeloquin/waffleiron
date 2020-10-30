@@ -132,9 +132,7 @@ def _property_to_feb(p, tag, model):
 
 
 def exponential_fiber_to_feb(mat, model):
-    """Convert ExponentialFiber material instance to FEBio XML.
-
-    """
+    """Convert ExponentialFiber material instance to FEBio XML."""
     e = ET.Element("material", type="fiber-exp-pow")
     e.append(_property_to_feb(mat.α, "alpha", model))
     e.append(_property_to_feb(mat.β, "beta", model))
@@ -152,9 +150,7 @@ def power_linear_fiber_to_feb(mat, model):
 
 
 def holmesmow_to_feb(mat, model):
-    """Convert HolmesMow material instance to FEBio XML.
-
-    """
+    """Convert HolmesMow material instance to FEBio XML."""
     e = ET.Element("material", type="Holmes-Mow")
     e.append(_property_to_feb(mat.E, "E", model))
     e.append(_property_to_feb(mat.ν, "v", model))
@@ -163,9 +159,7 @@ def holmesmow_to_feb(mat, model):
 
 
 def isotropicelastic_to_feb(mat, model):
-    """Convert IsotropicElastic material instance to FEBio XML.
-
-    """
+    """Convert IsotropicElastic material instance to FEBio XML."""
     e = ET.Element("material", type="isotropic elastic")
     E, ν = feb.material.from_Lamé(mat.y, mat.mu)
     e.append(_property_to_feb(E, "E", model))
@@ -174,9 +168,7 @@ def isotropicelastic_to_feb(mat, model):
 
 
 def orthotropic_elastic_to_feb(mat, model):
-    """Convert OrthotropicElastic material instance to FEBio XML.
-
-    """
+    """Convert OrthotropicElastic material instance to FEBio XML."""
     e = ET.Element("material", type="orthotropic elastic")
     # Material properties
     e.append(_property_to_feb(mat.E1, "E1", model))
@@ -192,9 +184,7 @@ def orthotropic_elastic_to_feb(mat, model):
 
 
 def neo_hookean_to_feb(mat, model):
-    """Convert NeoHookean material instance to FEBio XML.
-
-    """
+    """Convert NeoHookean material instance to FEBio XML."""
     e = ET.Element("material", type="neo-Hookean")
     E, ν = feb.material.from_Lamé(mat.y, mat.mu)
     e.append(_property_to_feb(E, "E", model))
@@ -238,9 +228,7 @@ def poroelastic_to_feb(mat, model):
 
 
 def solidmixture_to_feb(mat, model):
-    """Convert SolidMixture material instance to FEBio XML.
-
-    """
+    """Convert SolidMixture material instance to FEBio XML."""
     e = ET.Element("material", type="solid mixture")
     for submat in mat.materials:
         m = material_to_feb(submat, model)
@@ -265,9 +253,7 @@ def multigeneration_to_feb(mat, model):
 
 
 def rigid_body_to_feb(mat, model):
-    """Convert SolidMixture material instance to FEBio XML.
-
-    """
+    """Convert SolidMixture material instance to FEBio XML."""
     e = ET.Element("material", type="rigid body")
     if mat.density is None:
         density = 1
@@ -288,9 +274,7 @@ def donnan_to_feb(mat, model):
 
 
 def material_to_feb(mat, model):
-    """Convert a material instance to FEBio XML.
-
-    """
+    """Convert a material instance to FEBio XML."""
     if isinstance(mat, feb.material.OrientedMaterial):
         orientation = mat.orientation
         mat = mat.material

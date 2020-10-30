@@ -12,18 +12,14 @@ _DEFAULT_ORIENT_RANK2 = (np.array([1, 0, 0]), np.array([0, 1, 0]), np.array([0, 
 
 
 def to_Lamé(E, v):
-    """Convert Young's modulus & Poisson ratio to Lamé parameters.
-
-    """
+    """Convert Young's modulus & Poisson ratio to Lamé parameters."""
     y = v * E / ((1.0 + v) * (1.0 - 2.0 * v))
     mu = E / (2.0 * (1.0 + v))
     return y, mu
 
 
 def from_Lamé(y, u):
-    """Convert Lamé parameters to modulus & Poisson's ratio.
-
-    """
+    """Convert Lamé parameters to modulus & Poisson's ratio."""
     E = u / (y + u) * (2.0 * u + 3.0 * y)
     v = 0.5 * y / (y + u)
     return E, v
@@ -222,9 +218,7 @@ class SolidMixture:
 
 
 class RigidBody:
-    """Rigid body.
-
-    """
+    """Rigid body."""
 
     def __init__(self, props={}, **kwargs):
         self.density = 1
@@ -499,9 +493,7 @@ class HolmesMow:
         return w
 
     def tstress(self, F):
-        """Cauchy stress tensor.
-
-        """
+        """Cauchy stress tensor."""
         y, mu = to_Lamé(self.E, self.ν)
         J = det(F)
         B = dot(F, F.T)  # left cauchy-green
@@ -529,26 +521,20 @@ class HolmesMow:
         return t
 
     def pstress(self, F):
-        """1st Piola-Kirchoff stress.
-
-        """
+        """1st Piola-Kirchoff stress."""
         t = self.tstress(F)
         p = det(F) * dot(t, np.linalg.inv(F).T)
         return p
 
     def sstress(self, F):
-        """2nd Piola-Kirchoff stress.
-
-        """
+        """2nd Piola-Kirchoff stress."""
         t = self.tstress(F)
         s = det(F) * dot(np.linalg.inv(F), dot(t, np.linalg.inv(F).T))
         return s
 
 
 class IsotropicElastic:
-    """Isotropic elastic material definition.
-
-    """
+    """Isotropic elastic material definition."""
 
     def __init__(self, props, **kwargs):
         if "E" in props and "v" in props:
@@ -581,26 +567,20 @@ class IsotropicElastic:
         return W
 
     def tstress(self, F):
-        """Cauchy stress.
-
-        """
+        """Cauchy stress."""
         s = self.sstress(F)
         J = np.linalg.det(F)
         t = np.dot(np.dot(F, s), F.T) / J
         return t
 
     def pstress(self, F):
-        """1st Piola-Kirchoff stress.
-
-        """
+        """1st Piola-Kirchoff stress."""
         s = self.sstress(F)
         p = np.dot(s, F.T)
         return p
 
     def sstress(self, F):
-        """2nd Piola-Kirchoff stress.
-
-        """
+        """2nd Piola-Kirchoff stress."""
         y = self.y
         mu = self.mu
         E = 0.5 * (np.dot(F.T, F) - np.eye(3))
@@ -724,9 +704,7 @@ class NeoHookean:
         return w
 
     def tstress(self, F):
-        """Cauchy stress tensor.
-
-        """
+        """Cauchy stress tensor."""
         y = self.y
         mu = self.mu
         J = det(F)
@@ -735,17 +713,13 @@ class NeoHookean:
         return t
 
     def pstress(self, F):
-        """1st Piola-Kirchoff stress.
-
-        """
+        """1st Piola-Kirchoff stress."""
         s = self.sstress(F)
         p = dot(F, s)
         return p
 
     def sstress(self, F):
-        """2nd Piola-Kirchoff stress.
-
-        """
+        """2nd Piola-Kirchoff stress."""
         y = self.y
         mu = self.mu
         J = det(F)

@@ -248,9 +248,7 @@ _LOOKUP_ERROR_GENERIC = "  Note that nodes and element IDs are 0-indexed, but su
 
 
 def parse_endianness(data):
-    """Return endianness of xplt data.
-
-    """
+    """Return endianness of xplt data."""
     # Parse identifier tag
     if data[:4] == b"BEF\x00":
         endian = "<"
@@ -545,9 +543,7 @@ def unpack_block(data, tag, endian):
 
 
 def get_bdata_by_name(blocks, pth):
-    """Return a list of the contents of all blocks matching a path.
-
-    """
+    """Return a list of the contents of all blocks matching a path."""
     if not isinstance(blocks, list):
         blocks = [blocks]
     names = pth.split("/")
@@ -749,14 +745,10 @@ def _get_nodes_for_elem_ID(elem_id, mesh):
 
 
 class XpltData:
-    """In-memory storage and reading of xplt file data.
-
-    """
+    """In-memory storage and reading of xplt file data."""
 
     def __init__(self, data):
-        """Initialize XpltData object from xplt bytes data.
-
-        """
+        """Initialize XpltData object from xplt bytes data."""
         self.endian = parse_endianness(data[:4])
         blocks = parse_xplt_data(data, store_data=True)
         # Store header data

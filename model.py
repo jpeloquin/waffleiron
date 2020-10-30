@@ -27,9 +27,7 @@ sys.setrecursionlimit(10000)
 
 
 class Model:
-    """An FE model: geometry, boundary conditions, solution.
-
-    """
+    """An FE model: geometry, boundary conditions, solution."""
 
     def __init__(self, mesh):
         if type(mesh) is not Mesh:
@@ -111,9 +109,7 @@ class Model:
             self.steps[step]["bc"]["contact"].append(constraint)
 
     def add_step(self, module="solid", control=None, name=None):
-        """Add a step with default control values and no BCs.
-
-        """
+        """Add a step with default control values and no BCs."""
         if control is None:
             control = default_control_section(module)
         step = {
@@ -234,17 +230,13 @@ class Model:
             self.apply_nodal_properties(k, v)
 
     def apply_nodal_properties(self, key, values):
-        """Apply nodal properties to each element.
-
-        """
+        """Apply nodal properties to each element."""
         for e in self.mesh.elements:
             e.properties[key] = np.array([values[i] for i in e.ids])
 
 
 class Mesh:
-    """Stores a mesh geometry.
-
-    """
+    """Stores a mesh geometry."""
 
     # nodetree = kd-tree for quick lookup of nodes
     # elem_with_node = For each node, list the parent elements.
@@ -312,9 +304,7 @@ class Mesh:
         return mesh
 
     def update_elements(self):
-        """Update elements with current node coordinates.
-
-        """
+        """Update elements with current node coordinates."""
         for e in self.elements:
             nodes = np.array([self.nodes[i] for i in e.ids])
             e.nodes = nodes
@@ -365,9 +355,7 @@ class Mesh:
         return faces
 
     def clean_nodes(self):
-        """Remove any nodes that are not part of an element.
-
-        """
+        """Remove any nodes that are not part of an element."""
         refcount = self.node_connectivity()
         for i in reversed(range(len(self.nodes))):
             if refcount[i] == 0:
@@ -401,9 +389,7 @@ class Mesh:
         self.nodes = [x for i, x in enumerate(self.nodes) if i != nid_remove]
 
     def node_connectivity(self):
-        """Count how many elements each node belongs to.
-
-        """
+        """Count how many elements each node belongs to."""
         refcount = [0] * len(self.nodes)
         for e in self.elements:
             for i in e.ids:
@@ -428,9 +414,7 @@ class Mesh:
         return idx
 
     def conn_elem(self, elements):
-        """Find elements connected to elements.
-
-        """
+        """Find elements connected to elements."""
         nodes = set([i for e in elements for i in e.ids])
         elements = []
         for idx in nodes:

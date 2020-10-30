@@ -141,17 +141,13 @@ def select_elems_around_node(mesh, i, n=1):
 
 
 def corner_nodes(mesh):
-    """Return ids of corner nodes.
-
-    """
+    """Return ids of corner nodes."""
     ids = [i for i in range(len(mesh.nodes)) if len(mesh.elem_with_node[i]) == 1]
     return ids
 
 
 def surface_faces(mesh):
-    """Return surface faces.
-
-    """
+    """Return surface faces."""
     surf_faces = set()
     for body in mesh.bodies:
         # Pick a node to start. Nodes with minimum/maximum coordinate
@@ -199,9 +195,7 @@ def bisect(elements, p, v):
     # find distance from plane
 
     def on_pside(e, p=p, v=v):
-        """Returns true if element touches (or intersects) plane.
-
-        """
+        """Returns true if element touches (or intersects) plane."""
         dpv = np.dot(p, v)
         d = np.dot(e.nodes, v)
         return any(d >= dpv)
@@ -272,9 +266,7 @@ def e_grow(selection, candidates, n):
 
 
 def faces_by_normal(elements, normal, delta=default_tol):
-    """Return all faces with target normal.
-
-    """
+    """Return all faces with target normal."""
     target = 1.0 - delta
     faces = []
     for e in elements:
@@ -336,9 +328,7 @@ def adj_faces(face, mesh, mode="all"):
     """
 
     def overlap(a, b):
-        """Return the number of shared nodes between two faces.
-
-        """
+        """Return the number of shared nodes between two faces."""
         o = len(set(a) & set(b))
         return o
 

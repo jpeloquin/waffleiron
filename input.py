@@ -42,9 +42,7 @@ from .febioxml import (
 
 
 def _nstrip(string):
-    """Remove trailing nulls from string.
-
-    """
+    """Remove trailing nulls from string."""
     for i, c in enumerate(string):
         if c == "\x00":
             return string[:i]
@@ -240,14 +238,10 @@ def textdata_table(fpath, delim=" "):
 
 
 class FebReader:
-    """Read an FEBio xml file.
-
-    """
+    """Read an FEBio xml file."""
 
     def __init__(self, file):
-        """Read a file path as an FEBio xml file.
-
-        """
+        """Read a file path as an FEBio xml file."""
         self.file = file
         self.root = normalize_xml(ET.parse(self.file).getroot())
         # Remove comments so iteration over child elements doesn't get
@@ -268,9 +262,7 @@ class FebReader:
         self._sequences = None  # memo for sequences()
 
     def materials(self):
-        """Return dictionary of materials keyed by id.
-
-        """
+        """Return dictionary of materials keyed by id."""
         mats = {}
         mat_labels = {}
         for m in self.root.findall("./Material/material"):
@@ -415,9 +407,7 @@ class FebReader:
             model.apply_body_bc(body, dof, var, seq, step_id=step_id, relative=relative)
 
     def model(self):
-        """Return model.
-
-        """
+        """Return model."""
         # Get the materials dictionary so we can assign materials to
         # elements when we read the geometry
         materials_by_id, material_labels = self.materials()
@@ -665,9 +655,7 @@ class FebReader:
         return model
 
     def mesh(self, material_info=None):
-        """Return mesh.
-
-        """
+        """Return mesh."""
         if material_info is None:
             materials, mat_labels = self.materials()
         else:
@@ -844,9 +832,7 @@ class XpltReader:
     """
 
     def __init__(self, f):
-        """Load an .xplt file.
-
-        """
+        """Load an .xplt file."""
         warnings.warn(
             "XpltReader is deprected in favor of XpltData", DeprecationWarning
         )
@@ -938,9 +924,7 @@ class XpltReader:
         return mesh
 
     def material(self):
-        """Read material codes (integer -> name)
-
-        """
+        """Read material codes (integer -> name)"""
         matl_index = []
         matloc = self._findall("root/materials/material")
         for loc, sz in matloc:
@@ -960,9 +944,7 @@ class XpltReader:
         return matl_index
 
     def step_index(self, time):
-        """Return step index for a given time.
-
-        """
+        """Return step index for a given time."""
         idx, d = min(enumerate(abs(t - time) for t in self.times), key=itemgetter(1))
         return idx
 
@@ -1173,9 +1155,7 @@ class XpltReader:
         return out
 
     def _children(self, start):
-        """Generator for children of a block.
-
-        """
+        """Generator for children of a block."""
         if self.f.closed:
             self.f = open(self.f.name, "rb")
         self.f.seek(start)
@@ -1187,9 +1167,7 @@ class XpltReader:
             yield label, data
 
     def _dword(self):
-        """Reads a 4-bit integer from the file.
-
-        """
+        """Reads a 4-bit integer from the file."""
         s = self.f.read(4)
         if s:
             dword = struct.unpack(self.endian + "I", s)[0]
