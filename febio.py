@@ -7,6 +7,10 @@ import psutil
 from .input import load_model
 
 
+# Number of threads to use for each FEBio call
+FEBIO_THREADS = psutil.cpu_count(logical=False)
+
+
 class FEBioError(Exception):
     """Raised when an FEBio simulation terminates in an error.
 
@@ -17,7 +21,7 @@ class FEBioError(Exception):
     pass
 
 
-def _run_febio(pth_feb, threads=psutil.cpu_count(logical=False)):
+def _run_febio(pth_feb, threads=None):
     """Run FEBio and return the process object."""
     # FEBio's error handling is interesting, in a bad way.  XML file
     # read errors are only output to stdout.  If there is a read error,
@@ -28,6 +32,8 @@ def _run_febio(pth_feb, threads=psutil.cpu_count(logical=False)):
     # can be adjusted by the user.  We want to ensure (1) the log file
     # always reflects the last run and (2) all relevant error messages
     # are written to the log file.
+    if threads is None:
+        threads = FEBIO_THREADS
     pth_feb = Path(pth_feb)
     pth_log = pth_feb.with_suffix(".log")
     env = os.environ.copy()
@@ -69,7 +75,7 @@ def _run_febio(pth_feb, threads=psutil.cpu_count(logical=False)):
     return proc
 
 
-def run_febio_checked(pth_feb, threads=psutil.cpu_count(logical=False)):
+def run_febio_checked(pth_feb, threads=None):
     """Run FEBio, raising exception on error.
 
     In addition, perform the following checks independent of FEBio's own
@@ -79,6 +85,8 @@ def run_febio_checked(pth_feb, threads=psutil.cpu_count(logical=False)):
       points matches the number of must points.
 
     """
+    if threads is None:
+        threads = FEBIO_THREADS
     pth_feb = Path(pth_feb)
     proc = _run_febio(pth_feb, threads=threads)
     if proc.returncode != 0:
@@ -91,8 +99,10 @@ def run_febio_checked(pth_feb, threads=psutil.cpu_count(logical=False)):
     return proc.returncode
 
 
-def run_febio_unchecked(pth_feb, threads=psutil.cpu_count(logical=False)):
+def run_febio_unchecked(pth_feb, threads=None):
     """Run FEBio and return its error code."""
+    if threads is None:
+        threads = FEBIO_THREADS
     return _run_febio(pth_feb, threads=threads).returncode
 
 
