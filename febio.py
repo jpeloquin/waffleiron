@@ -7,6 +7,8 @@ import psutil
 from .input import load_model
 
 
+# Default name of FEBio executable
+FEBIO_NAME = "febio"
 # Number of threads to use for each FEBio call
 FEBIO_THREADS = psutil.cpu_count(logical=False)
 
@@ -44,7 +46,7 @@ def _run_febio(pth_feb, threads=None):
         raise ValueError(f"'{pth_feb}' does not exist or is not accessible.")
     # TODO: Check for febio executable
     proc = subprocess.run(
-        ["febio", "-i", pth_feb.name],
+        [FEBIO_NAME, "-i", pth_feb.name],
         # FEBio always writes xplt to current dir
         cwd=pth_feb.parent,
         stdout=subprocess.PIPE,
