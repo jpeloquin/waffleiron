@@ -242,6 +242,11 @@ def load_model(fpath):
     """
     if isinstance(fpath, str):
         fpath = Path(fpath)
+    # Don't try to load a model from a nonexistent file
+    if not fpath.exists():
+        raise ValueError(
+            f"{fpath} does not appear to exist.  The working directory was {os.getcwd()}."
+        )
     fp_feb = fpath.with_suffix(".feb")
     fp_xplt = fpath.with_suffix(".xplt")
     # Attempt to read the FEBio xml file

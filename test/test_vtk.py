@@ -10,7 +10,7 @@ from febtools.vtk import tvtk_ugrid_from_mesh
 class ExportVTK(unittest.TestCase):
     def setUp(self):
         fp = os.path.join(
-            "test", "fixtures", "center_crack_uniax_isotropic_elastic_hex8"
+            "test", "fixtures", "center_crack_uniax_isotropic_elastic_hex8.feb"
         )
         self.model = feb.input.load_model(fp)
 
