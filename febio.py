@@ -197,7 +197,6 @@ def check_solution_exists(model):
 
 def check_must_points(model):
     # Check if all must points were included
-    must_point_sim = True  # default assumption
     times = [0.0]
     # ^ According to Steve, t = 0 s is mandatory if must points are
     # used.  https://forums.febio.org/showthread.php?49-must-points
