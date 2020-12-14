@@ -267,13 +267,13 @@ def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE():
 
 def test_FEBio_LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber():
     """E2E test of heterogeneous local basis + homogeneous 1D submaterial
-orientation.
+    orientation.
 
-    Heterogeneous local basis given as <mat_axis type="local"> in
-    top-most material in FEBio XML.
+        Heterogeneous local basis given as <mat_axis type="local"> in
+        top-most material in FEBio XML.
 
-    Homogeneous 1D submaterial orientation given as <fiber
-    type="angles"> in FEBio XML.
+        Homogeneous 1D submaterial orientation given as <fiber
+        type="angles"> in FEBio XML.
 
     """
     # Test 1: Read

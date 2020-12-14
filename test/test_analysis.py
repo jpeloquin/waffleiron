@@ -16,9 +16,7 @@ from febtools.test.fixtures import gen_model_center_crack_Hex8, DIR_OUT, RTOL_F,
 
 
 class CenterCrackHex8(TestCase):
-    """Center cracked isotropic elastic plate in 3d.
-
-    """
+    """Center cracked isotropic elastic plate in 3d."""
 
     def setUp(self):
         self.model, attrib = gen_model_center_crack_Hex8()
@@ -26,9 +24,7 @@ class CenterCrackHex8(TestCase):
             setattr(self, k, attrib[k])
 
     def _griffith(self):
-        """Calculate Griffith strain energy.
-
-        """
+        """Calculate Griffith strain energy."""
         a = 1.0e-3  # m
         minima = np.min(self.model.mesh.nodes, axis=0)
         maxima = np.max(self.model.mesh.nodes, axis=0)
@@ -81,9 +77,7 @@ class CenterCrackHex8(TestCase):
         npt.assert_allclose(jbar, 73.33, rtol=1e-4)
 
     def test_left_tip(self):
-        """Test if J is valid for left crack tip.
-
-        """
+        """Test if J is valid for left crack tip."""
         zslice = feb.select.element_slice(
             self.model.mesh.elements, v=0e-3, axis=(0, 0, 1)
         )
@@ -113,9 +107,7 @@ class CenterCrackHex8(TestCase):
         npt.assert_allclose(jbar, 73.33, rtol=1e-4)
 
     def test_rotated_right_tip(self):
-        """Test if J is the same after a coordinate shift.
-
-        """
+        """Test if J is the same after a coordinate shift."""
         mesh = self.model.mesh
         G = self._griffith()
 
@@ -153,9 +145,7 @@ class CenterCrackHex8(TestCase):
         npt.assert_allclose(jbar_r, 76.20, rtol=1e-4)
 
     def test_rotated_left_tip(self):
-        """Test if J is the same after a coordinate shift.
-
-        """
+        """Test if J is the same after a coordinate shift."""
         mesh = self.model.mesh
         G = self._griffith()
         # Geometry (easier before rotation)
@@ -221,9 +211,7 @@ class CenterCrackQuad4(TestCase):
         self.nu = nu
 
     def test_jintegral(self):
-        """Test j integral for Quad4 mesh, isotropic elastic material, small strain.
-
-        """
+        """Test j integral for Quad4 mesh, isotropic elastic material, small strain."""
         a = 1.0e-3  # m
         W = 10.0e-3  # m
         minima = np.min(self.model.mesh.nodes, axis=0)
@@ -232,9 +220,7 @@ class CenterCrackQuad4(TestCase):
         ymax = maxima[1]
 
         def pk1(element_ids):
-            """Convert Cauchy stress in each element to 1st P-K.
-
-            """
+            """Convert Cauchy stress in each element to 1st P-K."""
             data = self.soln.step_data(-1)
             for i in element_ids:
                 t = data["domain variables"]["stress"][i]

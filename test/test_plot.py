@@ -51,18 +51,14 @@ class ScalarFieldTest(unittest.TestCase):
 
 
 class JDomainPlotTest(unittest.TestCase):
-    """Test functions for visualizing J integral domain.
-
-    """
+    """Test functions for visualizing J integral domain."""
 
     def setUp(self):
         self.model, attrib = gen_model_center_crack_Hex8()
         self.crack_line = attrib["crack_line"]
 
     def test_plot_q(self):
-        """Test 3D quiver plot of q vectors.
-
-        """
+        """Test 3D quiver plot of q vectors."""
         b = self.crack_line[1]  # right crack tip
         tip_line = [
             i

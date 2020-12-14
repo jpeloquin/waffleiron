@@ -18,9 +18,7 @@ DIR_OUTPUT = DIR_THIS / "output"
 
 
 def f_tensor_logfile(elemdata, step, eid):
-    """Return F tensor read from a logfile.
-
-    """
+    """Return F tensor read from a logfile."""
     Fxx = elemdata[step]["Fxx"][eid]
     Fyy = elemdata[step]["Fyy"][eid]
     Fzz = elemdata[step]["Fzz"][eid]
@@ -119,9 +117,7 @@ class Hex8ElementTest(unittest.TestCase):
             npt.assert_allclose(actual, desired, atol=np.spacing(1))
 
     def test_shape_fn(self):
-        """Test calculation of node positions from nat coords.
-
-        """
+        """Test calculation of node positions from nat coords."""
         nodes = self.element.x()
         for node, r in zip(nodes, self.element.vloc):
             desired = np.dot(self.element.x().T, self.element.N(*r))
@@ -129,9 +125,7 @@ class Hex8ElementTest(unittest.TestCase):
             npt.assert_allclose(actual, desired)
 
     def test_dinterp_scalar(self):
-        """Test first derivative against linear gradients.
-
-        """
+        """Test first derivative against linear gradients."""
         for r in self.element.gloc:
             pt = self.element.interp(r, prop="position")
             desired = self.dfn(pt)
@@ -161,9 +155,7 @@ class Hex8ElementTest(unittest.TestCase):
         # TODO: check value
 
     def test_dinterp_tensor(self):
-        """Check 1st derivative of stress tensor.
-
-        """
+        """Check 1st derivative of stress tensor."""
         random.seed(0)
         # Construct node-valued tensors with known gradient
         desired = np.zeros((3, 3, 3))
@@ -185,9 +177,7 @@ class Hex8ElementTest(unittest.TestCase):
         npt.assert_almost_equal(actual, desired)
 
     def test_ddinterp_tensor(self):
-        """Test 2nd derivative of tensor (Hex8).
-
-        """
+        """Test 2nd derivative of tensor (Hex8)."""
         random.seed(0)
         r_pt = (0, 0, 0)
         x_pt = self.element.interp(r_pt, prop="position")
@@ -293,9 +283,7 @@ class Quad4ElementTest(unittest.TestCase):
             npt.assert_allclose(actual, desired, atol=np.spacing(1))
 
     def test_shape_fn(self):
-        """Test calculation of node positions from nat coords.
-
-        """
+        """Test calculation of node positions from nat coords."""
         nodes = self.element.x()
         for node, r in zip(nodes, self.element.vloc):
             desired = np.dot(self.element.x().T, self.element.N(*r))
@@ -303,9 +291,7 @@ class Quad4ElementTest(unittest.TestCase):
             npt.assert_allclose(actual, desired)
 
     def test_dinterp_scalar(self):
-        """Test first derivative against linear gradients.
-
-        """
+        """Test first derivative against linear gradients."""
         for r in self.element.gloc:
             pt = self.element.interp(r, prop="position")
             desired = self.dfn(pt)
@@ -335,9 +321,7 @@ class Quad4ElementTest(unittest.TestCase):
         # TODO: check value
 
     def test_dinterp_tensor(self):
-        """Test 1st derivative of stress tensor (Quad4).
-
-        """
+        """Test 1st derivative of stress tensor (Quad4)."""
         random.seed(0)
         # Construct node-valued tensors with known gradient
         desired = np.zeros((3, 3, 3))
@@ -359,9 +343,7 @@ class Quad4ElementTest(unittest.TestCase):
         npt.assert_almost_equal(actual, desired)
 
     def test_ddinterp_tensor(self):
-        """Check 2nd derivative of stress tensor.
-
-        """
+        """Check 2nd derivative of stress tensor."""
         random.seed(0)
         r_pt = (0, 0, 0)
         x_pt = self.element.interp(r_pt, prop="position")
@@ -486,9 +468,7 @@ class FTestTri3(unittest.TestCase):
     "extensible directors not yet implemented, so shell elements will not provide the correct F tensor"
 )
 class FTestQuad4(unittest.TestCase):
-    """Test F tensor calculations for Tri3 mesh.
-
-    """
+    """Test F tensor calculations for Tri3 mesh."""
 
     def setUp(self):
         self.soln = feb.MeshSolution("test/fixtures/" "square_quad4.xplt")
@@ -516,9 +496,7 @@ def test_integration():
 
 
 def test_dinterp_2d():
-    """Test dinterp with a truly 2D element.
-
-    """
+    """Test dinterp with a truly 2D element."""
     # create square element
     nodes = ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0))
     element = feb.element.Quad4(nodes)

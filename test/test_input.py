@@ -82,9 +82,7 @@ class MeshSolutionTest(unittest.TestCase):
 
 
 class FebSolidFixedBCs(unittest.TestCase):
-    """Test read of FEBio XML file with fixed boundary conditions.
-
-    """
+    """Test read of FEBio XML file with fixed boundary conditions."""
 
     path = Path("test") / "fixtures" / "cube_hex8_n=1_solid_all_BCs_fixed.feb"
 
@@ -115,9 +113,7 @@ class FebSolidFixedBCs(unittest.TestCase):
 
 
 class FebBiphasicFixedBCs(unittest.TestCase):
-    """Test read of FEBio XML file with fixed boundary conditions.
-
-    """
+    """Test read of FEBio XML file with fixed boundary conditions."""
 
     path = Path("test") / "fixtures" / "cube_hex8_n=1_biphasic_all_BCs_fixed.feb"
 

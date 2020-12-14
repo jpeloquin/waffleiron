@@ -73,9 +73,7 @@ class FindClosestTimestep(TestCase):
 
 
 class QuadMesh(TestCase):
-    """Test selection of corners in rotated mesh.
-
-    """
+    """Test selection of corners in rotated mesh."""
 
     def setUp(self):
         reader = feb.input.FebReader(
@@ -93,17 +91,13 @@ class QuadMesh(TestCase):
         self.model.mesh.update_elements()
 
     def test_select_corners(self):
-        """Test for selection of four exterior corner nodes.
-
-        """
+        """Test for selection of four exterior corner nodes."""
         corner_nodes = feb.select.corner_nodes(self.model.mesh)
         assert not set(corner_nodes) - set([0, 100, 5554, 5454])
 
 
 class SelectionHex8Consolidated(TestCase):
-    """Test selections for hex8 mesh with center crack.
-
-    """
+    """Test selections for hex8 mesh with center crack."""
 
     # gradually move SelectionHex8 tests to here
 
@@ -116,9 +110,7 @@ class SelectionHex8Consolidated(TestCase):
         self.mesh = reader.mesh()
 
     def test_bisect_oblique_vector(self):
-        """Test bisect with an angled plane.
-
-        """
+        """Test bisect with an angled plane."""
         # p1 and p2 define the corners of a triangle on the upper
         # right of the mesh.  The mesh corner makes the third point of
         # the triangle.
@@ -137,9 +129,7 @@ class SelectionHex8Consolidated(TestCase):
 
 
 class SelectionHex8(TestCase):
-    """Test selections for a hex8 mesh with a hole.
-
-    """
+    """Test selections for a hex8 mesh with a hole."""
 
     def setUp(self):
         reader = feb.input.FebReader(
@@ -159,9 +149,7 @@ class SelectionHex8(TestCase):
         assert not any(b == self.face for b in faces)
 
     def test_edge_adjacency(self):
-        """Test edge adjacency.
-
-        """
+        """Test edge adjacency."""
         faces = adj_faces(self.face, self.mesh, mode="edge")
         assert len(faces) == 10
         # make sure the input face is not returned
@@ -182,8 +170,6 @@ class SelectionHex8(TestCase):
     ### Surface faces
 
     def test_surface_faces(self):
-        """Test selection of surface faces.
-
-        """
+        """Test selection of surface faces."""
         faces = surface_faces(self.mesh)
         assert len(faces) == 6756

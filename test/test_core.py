@@ -15,9 +15,7 @@ from febtools import Mesh
 
 
 class FaceConnectivityHex8(unittest.TestCase):
-    """Test for correct face connectivity.
-
-    """
+    """Test for correct face connectivity."""
 
     def setUp(self):
         reader = feb.input.FebReader(
@@ -35,9 +33,7 @@ class FaceConnectivityHex8(unittest.TestCase):
 
 
 class ElementContainingPointCubeHex8(unittest.TestCase):
-    """Test looking up which element contains (x,y,z)
-
-    """
+    """Test looking up which element contains (x,y,z)"""
 
     def setUp(self):
         # The cube is bounded by -1 ≤ x ≤ 1, -1 ≤ y ≤ 1, and 0 ≤ z ≤ 2
@@ -99,9 +95,7 @@ class ElementContainingPointNarrowParallelogram(unittest.TestCase):
         self.bb = feb.core._e_bb(self.mesh.elements)
 
     def test_point_in_rectangle(self):
-        """Test points that are nearest e2 nodes, but in e1.
-
-        """
+        """Test points that are nearest e2 nodes, but in e1."""
         points = [(0.5, 0.5, 0.5), (0.9, 5, 0.5)]
         for p in points:
             elems = elements_containing_point(p, self.mesh.elements, bb=self.bb)
@@ -111,9 +105,7 @@ class ElementContainingPointNarrowParallelogram(unittest.TestCase):
 
 class ElementContainingPointQuad4(unittest.TestCase):
 
-    """Test looking up with element contains a point (x, y, z)
-
-    """
+    """Test looking up with element contains a point (x, y, z)"""
 
     def setUp(self):
         # The square is bounded by x ∈ [-1, 1], y ∈ [-1, 1]

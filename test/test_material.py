@@ -51,9 +51,7 @@ class ExponentialFiberTest(unittest.TestCase):
         npt.assert_allclose(t_try, t_true, rtol=1e-5, atol=1e-5)
 
     def sstress_test(self):
-        """Check second Piola-Kirchoff stress via transform.
-
-        """
+        """Check second Piola-Kirchoff stress via transform."""
         r = (0, 0, 0)
         elem = self.model.mesh.elements[0]
         f = elem.f(r)
@@ -165,9 +163,7 @@ class IsotropicElasticTest(unittest.TestCase):
         self.F = F
 
     def props_conversion_test(self):
-        """Test IsotropicElastic creation from E and ν.
-
-        """
+        """Test IsotropicElastic creation from E and ν."""
         youngmod = 1e6
         nu = 0.4
         y, mu = to_Lamé(youngmod, nu)
@@ -242,9 +238,7 @@ class HolmesMowTest(unittest.TestCase):
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
 
     def sstress_test(self):
-        """Check second Piola-Kirchoff stress via transform.
-
-        """
+        """Check second Piola-Kirchoff stress via transform."""
         r = (0, 0, 0)
         elem = self.model.mesh.elements[0]
         f = elem.f(r)

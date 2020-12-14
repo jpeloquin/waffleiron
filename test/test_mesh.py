@@ -8,9 +8,7 @@ from copy import deepcopy
 
 class MergeTestTri2d(unittest.TestCase):
     def setUp(self):
-        """Create two meshes sharing a common boundary.
-
-        """
+        """Create two meshes sharing a common boundary."""
         nodes1 = [
             (0.0, 0.0),
             (0.3, 0.0),
@@ -25,9 +23,7 @@ class MergeTestTri2d(unittest.TestCase):
         self.mesh2 = feb.Mesh.from_ids(nodes2, elements, feb.element.Tri3)
 
     def test_mesh_merge_all(self):
-        """Test merging two meshes, merging all common nodes.
-
-        """
+        """Test merging two meshes, merging all common nodes."""
         mesh1 = deepcopy(self.mesh1)
         mesh2 = deepcopy(self.mesh2)
         mesh1.merge(mesh2)
@@ -35,7 +31,5 @@ class MergeTestTri2d(unittest.TestCase):
         assert len(mesh1.nodes) == 8
 
     def test_mesh_merge_sel(self):
-        """Test merging two meshes, merging only selected nodes.
-
-        """
+        """Test merging two meshes, merging only selected nodes."""
         pass
