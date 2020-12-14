@@ -9,11 +9,6 @@ from unittest import TestCase
 import febtools as feb
 from febtools.select import find_closest_timestep, adj_faces, surface_faces
 
-# Treat warnings as errors
-import warnings
-
-warnings.simplefilter("error")
-
 
 class FindClosestTimestep(TestCase):
     def setUp(self):
