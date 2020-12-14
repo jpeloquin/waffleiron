@@ -46,7 +46,7 @@ def test_pipeline_prescribe_deformation_singleHex8():
     for e in model.mesh.elements:
         e.material = material
     sequence = feb.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
-    model.add_step(control=auto_control_section(sequence, pts_per_segment=1))
+    model.add_step(control=auto_control_section("static", sequence, pts_per_segment=1))
 
     # Test 1: Does prescribe_deformation complete without error?
     F = np.array([[1.34, 0.18, -0.11], [-0.20, 1.14, 0.17], [-0.11, 0.20, 0.93]])
@@ -72,7 +72,7 @@ def test_pipeline_prescribe_deformation_singleHex8():
         feb.output.write_xml(tree, f)
 
     # Test 3: Can FEBio use the resulting FEBio XML file?
-    feb.febio.run_febio(pth)
+    feb.febio.run_febio_checked(pth)
 
     # Test 4: Can the FEBio solution be read by febtools?
     solved = feb.load_model(pth)
@@ -106,7 +106,7 @@ def test_FEBio_prescribe_node_pressure_Hex8():
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    feb.febio.run_febio(pth_out)
+    feb.febio.run_febio_checked(pth_out)
     #
     # Test 4: Is the output as expected?
     model = feb.load_model(pth_out)

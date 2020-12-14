@@ -11,7 +11,7 @@ import numpy.testing as npt
 import febtools as feb
 from febtools.load import prescribe_deformation
 from febtools.control import auto_control_section
-from febtools.febio import run_febio
+from febtools.febio import run_febio_checked
 from febtools.math import vec_from_sph
 from febtools.test.fixtures import (
     gen_model_single_spiky_Hex8,
@@ -76,7 +76,7 @@ def _fixture_FEBio_fiberDirectionLocal_Hex8_fiber():
     e_Output.append(e_logfile)
     with open(pth, "wb") as f:
         feb.output.write_xml(tree, f)
-    run_febio(pth)
+    run_febio_checked(pth)
 
 
 def test_FEBio_SOHomFibAng_Hex8_ExpFiber():
@@ -102,7 +102,7 @@ def test_FEBio_SOHomFibAng_Hex8_ExpFiber():
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    run_febio(pth_out)
+    run_febio_checked(pth_out)
     #
     # Test 4: Is the output as expected?
     model = feb.load_model(pth_out)
@@ -157,7 +157,7 @@ def test_FEBio_MOHomMatAxVec_Hex8_LinOrtho():
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    run_febio(pth_out)
+    run_febio_checked(pth_out)
     #
     # Test 4: Is the output as expected?
     model = feb.load_model(pth_out)
@@ -216,7 +216,7 @@ def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE():
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    run_febio(pth_out)
+    run_febio_checked(pth_out)
     #
     # Test 4: Is the output as expected?
     model = feb.load_model(pth_out)
@@ -297,7 +297,7 @@ orientation.
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    run_febio(pth_out)
+    run_febio_checked(pth_out)
     #
     # Test 4: Is the output as expected?
     model = feb.load_model(pth_out)

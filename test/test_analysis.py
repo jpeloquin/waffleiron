@@ -282,7 +282,7 @@ class FEBio_StrainGauge_Hex8_HolmesMow(TestCase):
             feb.mesh.rectangular_prism((2, 2), (2, 2), (2, 2), material=mat)
         )
         seq = feb.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
-        model.add_step(control=feb.control.auto_control_section(seq, 10))
+        model.add_step(control=feb.control.auto_control_section("solid", seq, 10))
         F = np.array([[1.5, 0.5, 0], [0, 1, 0], [0, 0, 1]])
         left = model.named["node sets"].obj("−x1 face")
         right = model.named["node sets"].obj("+x1 face")
@@ -290,7 +290,7 @@ class FEBio_StrainGauge_Hex8_HolmesMow(TestCase):
         feb.load.prescribe_deformation(model, right, F, seq)
         with open(self.path, "wb") as f:
             feb.output.write_feb(model, f)
-        feb.febio.run_febio(self.path)
+        feb.febio.run_febio_checked(self.path)
         self.solved = feb.load_model(self.path)
 
     def nodeset_nodeset_test(self):

@@ -38,7 +38,7 @@ def test_FEBio_normalizeXML_bare_Boundary():
     with open(pth_out, "wb") as f:
         feb.output.write_xml(normalized_tree, f)
     # Test 1: Can FEBio still read the normalized file?
-    feb.febio.run_febio(pth_out)
+    feb.febio.run_febio_checked(pth_out)
     # Test 2: Did the right displacements get applied?
     model = feb.load_model(pth_out)
     ## Test 2.1: Did node 0 stay fixed?
@@ -194,7 +194,9 @@ class FEBio_MatAxisLocal_Hex8(TestCase):
         # Model 1: Local basis; material axes given by <mat_axis type="local">
         localb_model = gen_model_single_spiky_Hex8(material=material)
         sequence = feb.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
-        localb_model.add_step(control=auto_control_section(sequence, pts_per_segment=1))
+        localb_model.add_step(
+            control=auto_control_section("solid", sequence, pts_per_segment=1)
+        )
         node_set = [i for i in range(len(localb_model.mesh.nodes))]
         prescribe_deformation(localb_model, node_set, F, sequence)
         self.pth_localb_model = (
@@ -209,7 +211,7 @@ class FEBio_MatAxisLocal_Hex8(TestCase):
         e_mat_axis.text = ", ".join([str(a) for a in basis_code])
         with open(self.pth_localb_model, "wb") as f:
             write_xml(tree, f)
-        feb.febio.run_febio(self.pth_localb_model)
+        feb.febio.run_febio_checked(self.pth_localb_model)
         #
         # Model 2: Global basis; material axes are x1, x2, x3
         basis = np.array(
@@ -219,7 +221,7 @@ class FEBio_MatAxisLocal_Hex8(TestCase):
         globalb_model = gen_model_single_spiky_Hex8(material=material)
         sequence = feb.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
         globalb_model.add_step(
-            control=auto_control_section(sequence, pts_per_segment=1)
+            control=auto_control_section("solid", sequence, pts_per_segment=1)
         )
         node_set = [i for i in range(len(globalb_model.mesh.nodes))]
         prescribe_deformation(globalb_model, node_set, F, sequence)
@@ -241,7 +243,7 @@ class FEBio_MatAxisLocal_Hex8(TestCase):
         e_d.text = ", ".join([str(a) for a in basis[:, 1]])
         with open(self.pth_globalb_model, "wb") as f:
             write_xml(tree, f)
-        feb.febio.run_febio(self.pth_globalb_model)
+        feb.febio.run_febio_checked(self.pth_globalb_model)
 
     def test_compare_stress(self):
         with open(self.pth_localb_model.with_suffix(".xplt"), "rb") as f:

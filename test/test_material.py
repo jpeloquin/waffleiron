@@ -309,7 +309,7 @@ def test_FEBio_Hex8_OrthoE():
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    feb.febio.run_febio(pth_out)
+    feb.febio.run_febio_checked(pth_out)
     #
     # Test 4: Is the output as expected?
     model = feb.load_model(pth_out)

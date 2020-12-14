@@ -7,7 +7,7 @@ import numpy as np
 import numpy.testing as npt
 
 import febtools as feb
-from febtools.febio import run_febio
+from febtools.febio import run_febio_checked
 
 from febtools.test.fixtures import RTOL_STRESS, ATOL_STRESS
 
@@ -426,7 +426,7 @@ def test_FEBio_intraElementHetF_Hex8():
     pth_in = DIR_FIXTURES / "test_element.intraElementHetF_Hex8.feb"
     pth_out = DIR_OUTPUT / "test_element.intraElementHetF_Hex8.feb"
     copyfile(pth_in, pth_out)
-    run_febio(pth_out)
+    run_febio_checked(pth_out)
     model = feb.load_model(pth_out)
     e = model.mesh.elements[0]
     # Does the test case actually different values for evaluation at r =
