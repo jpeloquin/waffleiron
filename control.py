@@ -70,13 +70,14 @@ def default_control_section(analysis_type="static"):
         default.update(
             {
                 "ptol": 0.01,
-                "symmetric biphasic": False,
                 # Only use full Newton iterations
                 "max ups": 0,
                 "reform each time step": True,
                 # Increase max number of reformations b/c every
                 # iteration in the full Newton method is a reformation
                 "max refs": 50,
+                # Don't include "symmetric biphasic"; FEBio 3 doesn't
+                # accept it.
             }
         )
     return default
