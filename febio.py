@@ -66,6 +66,9 @@ def _run_febio(pth_feb, threads=None):
     # file in place, because it contains unique information.  (FEBio
     # does return a error code of 1 on "Error Termination" and 0 on
     # "Normal Termination"; I checked.)
+    #
+    # With FEBio 2, a file read error prints "Reading file foo.feb
+    # ...FAILED!" to stdout as a single line.
     if proc.returncode != 0:
         for ln in proc.stdout.splitlines():
             if ln.startswith("Reading file"):
@@ -75,11 +78,15 @@ def _run_febio(pth_feb, threads=None):
                 elif ln.endswith("FAILED!"):
                     # File read error; send it to the log file
                     with open(pth_log, "w", encoding="utf-8") as f:
-                        f.write(proc.stdout)
-                else:
-                    raise NotImplementedError(
                         f"febtools failed to parse FEBio file read status message '{ln}' from stdout"
                     )
+                with open(pth_log, "w", encoding="utf-8") as f:
+                    f.write(proc.stdout)
+                break
+        else:
+            raise NotImplementedError(
+                f"febtools failed to parse FEBio file read status message '{ln}' from stdout"
+            )
     return proc
 
 
