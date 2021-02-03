@@ -68,18 +68,21 @@ def _run_febio(pth_feb, threads=None):
     # "Normal Termination"; I checked.)
     #
     # With FEBio 2, a file read error prints "Reading file foo.feb
-    # ...FAILED!" to stdout as a single line.
+    # ...FAILED!" to stdout as a single line.  With FEBio 3, there may
+    # be warnings and blank lines in between "..." and "FAILED!".
     if proc.returncode != 0:
+        reading = False
         for ln in proc.stdout.splitlines():
-            if ln.startswith("Reading file"):
-                if ln.endswith("SUCCESS!"):
-                    # No file read error
-                    break
-                elif ln.endswith("FAILED!"):
-                    # File read error; send it to the log file
-                    with open(pth_log, "w", encoding="utf-8") as f:
-                        f"febtools failed to parse FEBio file read status message '{ln}' from stdout"
-                    )
+            if ln.startswith("Reading file "):
+                reading = True
+            if reading and ln.startswith("*"):
+                # Skip warning boxes after "Reading file foo.feb ..."
+                continue
+            if ln.endswith("SUCCESS!"):
+                # No file read error
+                break
+            elif ln.endswith("FAILED!"):
+                # File read error; send it to the log file
                 with open(pth_log, "w", encoding="utf-8") as f:
                     f.write(proc.stdout)
                 break
