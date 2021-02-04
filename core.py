@@ -57,6 +57,9 @@ class EntitySet(set):
     def __hash__(self):
         return id(self) // 16
 
+    def __eq__(self, other):
+        return other is self
+
 
 class NodeSet(EntitySet):
     """Set of node IDs."""
