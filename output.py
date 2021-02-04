@@ -3,6 +3,7 @@ from collections import defaultdict
 from copy import copy, deepcopy
 from math import degrees
 from datetime import datetime
+from typing import Hashable
 
 # Public packages
 import numpy as np
@@ -341,7 +342,7 @@ def add_nodeset(xml_root, name, nodes):
         ET.SubElement(e_nodeset, "node", id=str(node_id + 1))
 
 
-def add_sequence(xml_root, model, sequence):
+def add_sequence(xml_root, model, sequence, t0=0):
     """Add a sequence (load curve) to a FEBio XML tree.
 
     So we need to sort them and ensure that the IDs are contiguous.
@@ -365,7 +366,55 @@ def add_sequence(xml_root, model, sequence):
         extrap=sequence.extrapolant,
     )
     for pt in sequence.points:
-        ET.SubElement(e_loadcurve, "point").text = ", ".join(str(x) for x in pt)
+        ET.SubElement(e_loadcurve, "point").text = f"{pt[0] + t0}, {pt[1]}"
+
+
+def sequence_time_offsets(model):
+    """Return map: sequence → global start time.
+
+    In `febtools`, each step has its own running time (step-local time),
+    and step-related time sequences are in step-local time.  But in
+    FEBio XML, all time sequences are written in global time.  This
+    function calculates and returns the time offsets that must be added
+    to each sequence to convert said sequence from local time to global
+    time.
+
+    """
+    cumulative_time = 0.0
+    seq_t0 = defaultdict(lambda: 0)  # dict: sequence → time offset
+    for step in model.steps:
+        # Gather must point curves
+        dtmax = step["control"]["time stepper"]["dtmax"]
+        if isinstance(dtmax, Sequence):
+            dtmax.points = [(cumulative_time + t, v) for t, v in dtmax.points]
+        # Gather variable boundary condition / constraint curves
+        curves_to_adjust = set([])
+        if "bc" in step:
+            for i, ax_bc in step["bc"]["node"].items():
+                for ax, d in ax_bc.items():
+                    if isinstance(d["sequence"], Sequence):
+                        curves_to_adjust.add(d["sequence"])
+                    elif isinstance(d["sequence"], ScaledSequence):
+                        curves_to_adjust.add(d["sequence"].sequence)
+        # Gather the body constraint curves
+        if "bc" in step:
+            for body, body_constraints in step["bc"]["body"].items():
+                for ax, params in body_constraints.items():
+                    # params = {'variable': variable <string>,
+                    #           'sequence': Sequence object or 'fixed',
+                    #           'scale': scale <numeric>
+                    if isinstance(params["sequence"], Sequence):
+                        curves_to_adjust.add(params["sequence"])
+                    elif isinstance(params["sequence"], ScaledSequence):
+                        curves_to_adjust.add(params["sequence"].sequence)
+                    # TODO: Add test to exercise this code
+        # Adjust the curves
+        for curve in curves_to_adjust:
+            seq_t0[curve] = cumulative_time
+        # Tally running time
+        duration = step_duration(step)
+        cumulative_time += duration
+    return seq_t0
 
 
 def _get_or_create_name(
@@ -754,6 +803,7 @@ def xml(model, version="2.5"):
             elif version_major == 2 and version_minor >= 5:
                 # Tag heirarchy: <Boundary><fix bc="x" node_set="set_name">
                 name_base = f"fixed_{dof}_autogen-nodeset"
+                nodeset = NodeSet(nodeset)  # make hashable
                 name = _get_or_create_name(model.named["node sets"], name_base, nodeset)
                 add_nodeset(root, name, nodeset)
                 # Create the tag
@@ -812,46 +862,6 @@ def xml(model, version="2.5"):
         else:
             for e in e_rb_new:
                 e_rb_existing.append(e)
-
-    # Adjust sequences used as boundary conditions or in time stepper.
-    # Apply offset to load curves so they start at the same time the
-    # previous step ends (global time), as required by FEBio.  In
-    # `febtools`, each step has its own running time (local time).
-    #
-    # TODO: This should not mutate the model
-    cumulative_time = 0.0
-    for step in model.steps:
-        # Gather must point curves
-        dtmax = step["control"]["time stepper"]["dtmax"]
-        if isinstance(dtmax, Sequence):
-            dtmax.points = [(cumulative_time + t, v) for t, v in dtmax.points]
-        # Gather variable boundary condition / constraint curves
-        curves_to_adjust = set([])
-        if "bc" in step:
-            for i, ax_bc in step["bc"]["node"].items():
-                for ax, d in ax_bc.items():
-                    if isinstance(d["sequence"], Sequence):
-                        curves_to_adjust.add(d["sequence"])
-                    elif isinstance(d["sequence"], ScaledSequence):
-                        curves_to_adjust.add(d["sequence"].sequence)
-        # Gather the body constraint curves
-        if "bc" in step:
-            for body, body_constraints in step["bc"]["body"].items():
-                for ax, params in body_constraints.items():
-                    # params = {'variable': variable <string>,
-                    #           'sequence': Sequence object or 'fixed',
-                    #           'scale': scale <numeric>
-                    if isinstance(params["sequence"], Sequence):
-                        curves_to_adjust.add(params["sequence"])
-                    elif isinstance(params["sequence"], ScaledSequence):
-                        curves_to_adjust.add(params["sequence"].sequence)
-                    # TODO: Add test to exercise this code
-        # Adjust the curves
-        for curve in curves_to_adjust:
-            curve.points = [(cumulative_time + t, v) for t, v in curve.points]
-        # Tally running time
-        duration = step_duration(step)
-        cumulative_time += duration
 
     # Output section
     plotfile = ET.SubElement(Output, "plotfile", type="febio")
@@ -1083,27 +1093,31 @@ def xml(model, version="2.5"):
                 e_bc_body_parent.append(e_rigid_body)
 
     # Write XML elements for sequences (load curves) that are in the
-    # model's named entity registry.  Re-use any ordinal ID found in the
-    # model's named entity registry.
-    #
-    # Sequences can be referenced in a lot of places, including boundary
-    # conditions, time stepper curves, and any material parameter.
-    # Therefore, instead of try to find them all here, we require that
-    # any sequence be added to the model's named entity registry when an
-    # XML element that references the sequence is added to the XML tree.
-    # Consequently, any sequence not in the named entity registry will
-    # not be in the XML output.
+    # model's named entity registry. Sequences can be referenced in a
+    # lot of places, including boundary conditions, time stepper curves,
+    # and any material parameter.  Therefore, as opposed to trying to
+    # find them all here at the time of writing, we require that
+    # whenenever an XML element that references a sequence is added to
+    # the XML tree elsewhere, said sequence is also added to the model's
+    # named entity registry (which has to be done anyway becuase FEBio
+    # XML references sequences by ID).  Here, we loop over the sequence
+    # collected in the named sequence registry and write only those
+    # sequences to the XML tree.
     #
     # FEBio ignores the ID attribute; the real ID of a load curve is its
     # ordinal position in the list of <loadcurve> elements.  So we need
     # to sort them and ensure that the IDs are contiguous.
     seq_ids = sorted(model.named["sequences"].namespace("ordinal_id"))
+    #
+    # Get local → global time offsets to adjust sequences used as
+    # boundary conditions or in time stepper.
+    seq_t0 = sequence_time_offsets(model)
     if len(seq_ids) > 0:
         assert min(seq_ids) == 0
         assert max(seq_ids) == len(seq_ids) - 1
     for seq_id in seq_ids:
         seq = model.named["sequences"].obj(seq_id, nametype="ordinal_id")
-        add_sequence(root, model, seq)
+        add_sequence(root, model, seq, seq_t0[seq])
 
     # Write named geometric entities & sets.  It is better to delay
     # writing named entities & sets until now so we don't accidentally
@@ -1123,10 +1137,14 @@ def xml(model, version="2.5"):
     for nm, surf_pair in named_surface_pairs.pairs():
         tag_surfpair = ET.SubElement(Geometry, "SurfacePair", name=nm)
         ET.SubElement(
-            tag_surfpair, "master", surface=model.named["face sets"].name(surf_pair[0])
+            tag_surfpair,
+            "master",
+            surface=model.named["face sets"].names(surf_pair[0])[0],
         )
         ET.SubElement(
-            tag_surfpair, "slave", surface=model.named["face sets"].name(surf_pair[1])
+            tag_surfpair,
+            "slave",
+            surface=model.named["face sets"].names(surf_pair[1])[0],
         )
     # TODO: Handle element sets too.
 

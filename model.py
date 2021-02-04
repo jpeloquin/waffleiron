@@ -54,11 +54,11 @@ class Model:
         # Fixed conditions
         self.fixed = {}
         self.fixed["node"] = {
-            ("x1", "displacement"): NodeSet(),
-            ("x2", "displacement"): NodeSet(),
-            ("x3", "displacement"): NodeSet(),
-            ("fluid", "pressure"): NodeSet(),
-            ("solute", "concentration"): NodeSet(),
+            ("x1", "displacement"): set(),
+            ("x2", "displacement"): set(),
+            ("x3", "displacement"): set(),
+            ("fluid", "pressure"): set(),
+            ("solute", "concentration"): set(),
         }
         self.fixed["body"] = {
             ("x1", "displacement"): set(),
