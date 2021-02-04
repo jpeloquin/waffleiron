@@ -19,11 +19,9 @@ from febtools.test.fixtures import (
     ATOL_F,
     RTOL_STRESS,
     ATOL_STRESS,
+    DIR_FIXTURES,
+    DIR_OUT,
 )
-
-
-DIR_THIS = Path(__file__).parent
-DIR_FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def _fixture_FEBio_fiberDirectionLocal_Hex8_fiber():
@@ -92,10 +90,8 @@ def test_FEBio_SOHomFibAng_Hex8_ExpFiber():
     model = feb.load_model(pth_in)
     #
     # Test 2: Write
-    pth_out = (
-        DIR_THIS
-        / "output"
-        / (f"{Path(__file__).with_suffix('').name}." + "SOHomFibAng_Hex8_ExpFiber.feb")
+    pth_out = DIR_OUT / (
+        f"{Path(__file__).with_suffix('').name}." + "SOHomFibAng_Hex8_ExpFiber.feb"
     )
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()
@@ -147,10 +143,8 @@ def test_FEBio_MOHomMatAxVec_Hex8_LinOrtho():
     model = feb.load_model(pth_in)
     #
     # Test 2: Write
-    pth_out = (
-        DIR_THIS
-        / "output"
-        / (f"{Path(__file__).with_suffix('').name}." + "MOHomMatAxVec_Hex8_OrthoE.feb")
+    pth_out = DIR_OUT / (
+        f"{Path(__file__).with_suffix('').name}." + "MOHomMatAxVec_Hex8_OrthoE.feb"
     )
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()
@@ -206,10 +200,8 @@ def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE():
     model = feb.load_model(pth_in)
     #
     # Test 2: Write
-    pth_out = (
-        DIR_THIS
-        / "output"
-        / (f"{Path(__file__).with_suffix('').name}." + "LOHetMatAxLoc_Hex8_OrthoE.feb")
+    pth_out = DIR_OUT / (
+        f"{Path(__file__).with_suffix('').name}." + "LOHetMatAxLoc_Hex8_OrthoE.feb"
     )
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()
@@ -284,13 +276,9 @@ def test_FEBio_LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber():
     model = feb.load_model(pth_in)
     #
     # Test 2: Write
-    pth_out = (
-        DIR_THIS
-        / "output"
-        / (
-            f"{Path(__file__).with_suffix('').name}."
-            + "LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber.feb"
-        )
+    pth_out = DIR_OUT / (
+        f"{Path(__file__).with_suffix('').name}."
+        + "LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber.feb"
     )
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()
