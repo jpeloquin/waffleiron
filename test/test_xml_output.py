@@ -1,6 +1,5 @@
 # Run these tests with nose
 import unittest
-import os
 from nose.tools import with_setup
 import febtools as feb
 from febtools import febioxml_2_5 as febioxml
