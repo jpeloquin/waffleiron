@@ -531,9 +531,10 @@ class FebReader:
                 if self.feb_version == "2.0":
                     # In FEBio XML 2.0, each node to which the fixed boundary
                     # condition is applied is listed under the <fix> tag.
-                    node_ids = NodeSet()
+                    node_ids = set()
                     for e_node in e_fix:
                         node_ids.add(int(e_node.attrib["id"]) - 1)
+                    node_ids = NodeSet(node_ids)
                 elif self.feb_version == "2.5":
                     # In FEBio XML 2.5, the node set to which the fixed
                     # boundary condition is applied is referenced by name.

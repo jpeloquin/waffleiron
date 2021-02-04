@@ -45,33 +45,17 @@ class Body:
         return nids, xnodes
 
 
-class EntitySet(set):
-    """Hashable set of geometry entities.
-
-    This class is designed to store sets of nodes/faces/elements such
-    that they are both hashable (can be used as dict keys) and
-    comparable.
-
-    """
-
-    def __hash__(self):
-        return id(self) // 16
-
-    def __eq__(self, other):
-        return other is self
-
-
-class NodeSet(EntitySet):
+class NodeSet(frozenset):
     """Set of node IDs."""
 
     # TODO: Set operations should return a NodeSet
 
 
-class FaceSet(EntitySet):
+class FaceSet(frozenset):
     """Set of face IDs."""
 
 
-class ElementSet(EntitySet):
+class ElementSet(frozenset):
     """Set of element IDs."""
 
 
@@ -218,28 +202,19 @@ class NameRegistry:
     """Mapping between names and objects.
 
     Provides `name + nametype → object` for all of an object's names and
-    `object → (name + nametype)s`.
+    `object → (names + nametype)s`.  An object may have multiple names
+    of the same type.
 
     """
 
     def __init__(self):
-        self._from_name = {}
-        self._from_name["canonical"] = {}
-        self._from_object = {}
+        # Don't use defaultdict because we don't want to create slots accidentally
+        self._from_name = {}  # dict: nametype → (dict: name → obj)
+        self._from_name["canonical"] = {}  # dict: name → obj
+        self._from_object = {}  # dict: obj → (dict: nametype → set of names)
 
     def add(self, name, obj, nametype="canonical"):
-        """Add a name for an object.
-
-        If an object with this name + nametype already exists, that name
-        ↔ object pairing is removed.
-
-        """
-        # Check for existing objects with this name
-        if obj in self._from_object and nametype in self._from_object[obj]:
-            oldname = self._from_object[obj][nametype]
-            # Remove the name from the name → object map. The object →
-            # names map is overwritten later by assignment.
-            del self._from_name[nametype][oldname]
+        """Add a name for an object."""
         # Add the name to the name → object map
         if nametype not in self._from_name:
             self._from_name[nametype] = {}
@@ -247,7 +222,9 @@ class NameRegistry:
         # Add the name to the object → names map
         if obj not in self._from_object:
             self._from_object[obj] = {}
-        self._from_object[obj][nametype] = name
+        if nametype not in self._from_object[obj]:
+            self._from_object[obj][nametype] = set()
+        self._from_object[obj][nametype].add(name)
 
     def remove_name(self, name, nametype="canonical"):
         """Remove a name for an object."""
@@ -255,23 +232,26 @@ class NameRegistry:
         # Remove the name from the name → object map
         del self._from_name[nametype][name]
         # Remove the name from the object → names map
-        del self._from_object[obj][nametype]
+        self._from_object[obj][nametype].remove(name)
 
     def remove_object(self, obj):
         """Remove all names for an object"""
-        names = [a for a in self._from_object[obj]]
         # Remove the object from the name → object maps
-        for nametype in names:
-            name = self._from_object[obj][nametype]
-            del self._from_name[nametype][name]
+        for nametype in self._from_object[obj]:
+            names = self._from_object[obj][nametype]
+            for name in names:
+                del self._from_name[nametype][name]
         # Remove all applicable names from the object → names map
-        for nametype in names:
-            del self._from_object[obj][nametype]
         del self._from_object[obj]
 
-    def name(self, obj, nametype="canonical"):
-        """Return canonical name for object."""
-        return self._from_object[obj][nametype]
+    def names(self, obj, nametype="canonical"):
+        """Return sorted tuple of names for object.
+
+        The tuple is sorted so that picking the first name, for example,
+        is deterministic.
+
+        """
+        return tuple(sorted(self._from_object[obj][nametype]))
 
     def obj(self, name, nametype="canonical"):
         """Return object by name (and type of name)."""
@@ -281,12 +261,8 @@ class NameRegistry:
         """Return nametypes"""
         return self._from_name.keys()
 
-    def names(self, nametype="canonical"):
-        """Return all names of nametype in registry.
-
-        This function is analogous to dict.keys().
-
-        """
+    def namespace(self, nametype="canonical"):
+        """Return names of a given nametype."""
         return self._from_name.setdefault(nametype, {}).keys()
 
     def objects(self):
@@ -310,5 +286,11 @@ class NameRegistry:
         new = type(self)()
         for nametype in self._from_name:
             new._from_name[nametype] = copy(self._from_name[nametype])
-        new._from_object = copy(self._from_object)
+        new._from_object = {
+            obj: {
+                nametype: copy(self._from_object[obj][nametype])
+                for nametype in self._from_object[obj]
+            }
+            for obj in self._from_object
+        }
         return new

@@ -66,7 +66,7 @@ def geometry_section(model, parts, material_registry):
     for part in parts:
         e_elements = ET.SubElement(e_geometry, "Elements")
         e_elements.attrib["type"] = part["element_type"].feb_name
-        mat_id = material_registry.name(part["material"], "ordinal_id")
+        mat_id = material_registry.names(part["material"], "ordinal_id")[0]
         e_elements.attrib["mat"] = str(mat_id + 1)
         for i, e in part["elements"]:
             e_element = ET.SubElement(e_elements, "elem")

@@ -65,13 +65,13 @@ def cylinder(t_radius: tuple, t_height: tuple, nc: int, material=None):
     cylinder.named["node sets"].add("bottom", bottom_nodes)
     # Create named face sets.  It's annoying to have to define the same surface
     # in terms of both nodes and faces.  Consider improving the situation later.
-    top_faces = FaceSet()
+    top_faces = set()
     for e in cylinder.elements:
         if any([i in top_nodes for i in e.ids]):
             for f in e.faces():
                 if all([i in top_nodes for i in f]):
                     top_faces.add(f)
-    cylinder.named["face sets"].add("top", top_faces)
+    cylinder.named["face sets"].add("top", FaceSet(top_faces))
     return cylinder
 
 

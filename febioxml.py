@@ -249,12 +249,12 @@ def read_named_sets(xml_root):
     # Handle items that are stored by id
     for k in ["node sets", "element sets"]:
         for e_set in xml_root.findall("./Geometry/" + tag_name[k]):
-            cls = cls_from_entity_type[k]
-            items = cls()
+            set_type = cls_from_entity_type[k]
+            items = set()
             for e_item in e_set.getchildren():
                 item_id = int(e_item.attrib["id"]) - 1
                 items.update([item_id])
-            sets[k][e_set.attrib["name"]] = items
+            sets[k][e_set.attrib["name"]] = set_type(items)
     # Handle items that are stored as themselves
     for k in ["face sets"]:
         for tag_set in xml_root.findall("./Geometry/" + tag_name[k]):
