@@ -881,8 +881,7 @@ def xml(model, version="2.5"):
 
     # Write MeshData.  Have to do this before handling boundary
     # conditions because some boundary conditions have part of their
-    # values stored in MeshData.  Why are loading conditions stored
-    # in the Geometry section?  ¯\_(ツ)_/¯
+    # values stored in MeshData.
     e_MeshData, e_ElementSet = febioxml.meshdata_section(model)
     root.insert(root.index(Geometry) + 1, e_MeshData)
     if len(e_ElementSet) != 0:
