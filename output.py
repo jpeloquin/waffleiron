@@ -677,13 +677,11 @@ def xml(model, version="2.5"):
     materials = sorted(material_registry.pairs("ordinal_id"))
     for mat_id, mat in materials:
         tag = material_to_feb(mat, model)
-        try:
-            name = material_registry.names(mat)[0]
-        except KeyError:
-            name = None
-        if name is not None:
-            tag.attrib["name"] = name
         tag.attrib["id"] = str(mat_id + 1)
+        # Name the material.  FEBio XML 3.0 requires each material to
+        # have a name; in prior FEBio XML versions this is optional.
+        name = material_registry.get_or_create_name("material", mat)
+        tag.attrib["name"] = name
         Material.append(tag)
     # Assemble a list of all implicit rigid bodies used in the model.
     # There is currently no list of rigid bodies in the model or mesh
