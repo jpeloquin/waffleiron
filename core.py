@@ -281,8 +281,8 @@ class NameRegistry:
             names = self.names(item, nametype=nametype)
         except KeyError:
             # Find the first integer not already used as a suffix for the name
-            i = 0
             while base_name + "_" + str(i) in self.namespace(nametype):
+            i = 1
                 i += 1
             # Create a name using the unused integer
             name = base_name + "_" + str(i)
