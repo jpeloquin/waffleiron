@@ -26,6 +26,7 @@ from .math import sph_from_vec
 from . import febioxml
 from . import febioxml_2_0
 from . import febioxml_2_5
+from . import febioxml_3_0
 from .febioxml import (
     bool_to_text,
     float_to_text,
@@ -624,8 +625,8 @@ def xml(model, version="2.5"):
 
     # Set solver module (analysis type)
     module = choose_module([m for m in material_registry.objects()])
-    if version_major == 2 and version_minor >= 5:
-        # In FEBio XML ≥ 2.5, <Module> must exist and be first tag
+    if version_major == 3 or (version_major == 2 and version_minor == 5):
+        # In FEBio XML 2.5 and 3.0, <Module> must exist and be first tag
         e_module = ET.SubElement(root, "Module")
         e_module.attrib["type"] = module
     # FEBio XML 2.0 sets <analysis_type> in <Control>
@@ -784,7 +785,9 @@ def xml(model, version="2.5"):
     # version.
     if version == "2.0":
         e_bc_body_parent = e_constraints
-    elif version_major == 2 and version_minor >= 5:
+    elif version_major == 2 and version_minor == 5:
+        e_bc_body_parent = e_boundary
+    elif version_major == 3:
         e_bc_body_parent = e_boundary
     # Collect rigid body boundary conditions in a more convenient
     # hierarchy

@@ -9,47 +9,13 @@ from .core import Sequence
 from .control import step_duration
 from .febioxml import *
 
-# Functions for traversing a Model in a way that facilitates XML read
-# or write.
 
+# Facts about FEBio XML 2.5
 
-def parts(model):
-    """Return list of parts.
-
-    Here, 1 part = all elements of the same type with the same material.
-
-    PreView has a notion of parts that is separate from both material
-    and element type and named element sets.  This doesn't seem to
-    matter to FEBio itself, though.  It may interfere with
-    postprocessing, in which case the definition of a "part" from the
-    perspective of febtools will have to be changed.
-
-    """
-    # TODO: Modify the definition of parts such that 1 part = all
-    # *connected* elements with the same material.
-    #
-    # Assemble elements into blocks with like type and material.
-    # Elemsets uses material instances as keys.  Each item is a
-    # dictionary using element classes as keys, with items being tuples
-    # of (element_id, element).
-    by_mat_type = {}
-    for i, elem in enumerate(model.mesh.elements):
-        subdict = by_mat_type.setdefault(elem.material, {})
-        like_elements = subdict.setdefault(elem.__class__, [])
-        like_elements.append((i, elem))
-    # Convert nested dictionaries to a list
-    parts = []
-    for mat in by_mat_type:
-        for typ in by_mat_type[mat]:
-            parts.append(
-                {
-                    "label": None,
-                    "material": mat,
-                    "element_type": typ,
-                    "elements": by_mat_type[mat][typ],
-                }
-            )
-    return parts
+BC_TYPE_TAG = {
+    "node": {"variable": "prescribe", "fixed": "fix"},
+    "body": {"variable": "prescribed", "fixed": "fixed"},
+}
 
 
 # Functions for reading XML
@@ -232,7 +198,7 @@ def node_data_xml(nodes, data, data_name, nodeset_name):
 
 
 def node_var_disp_xml(
-    model, xmlroot, nodes, scales, seq_id, dof, var, relative, step_id=0
+    model, xmlroot, nodes, scales, seq, dof, var, relative, step_id=0
 ):
     """Return XML elements for nodal variable displacement
 
@@ -241,8 +207,9 @@ def node_var_disp_xml(
     Returns tuple of (<bc> element, <NodeData> element)
 
     """
-    e_bc = ET.Element("prescribe", bc=XML_BC_FROM_DOF[(dof, var)])
-    # Use <Step><Boundary><prescribe node_set="set_name">
+    # Hierarchy: <Boundary><prescribe node_set="set_name">
+    e_bc = ET.Element(BC_TYPE_TAG["node"]["variable"], bc=XML_BC_FROM_DOF[(dof, var)])
+    seq_id = get_or_create_seq_id(model.named["sequences"], seq)
     e_sc = ET.SubElement(e_bc, "scale", lc=str(seq_id + 1))
     e_sc.text = "1.0"
     # Get or create a name for the node set

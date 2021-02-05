@@ -118,6 +118,49 @@ module_compat_by_mat = {
 }
 
 
+# Functions for traversing a Model in a way that facilitates XML read
+# or write.
+
+
+def parts(model):
+    """Return list of parts.
+
+    Here, 1 part = all elements of the same type with the same material.
+
+    PreView has a notion of parts that is separate from both material
+    and element type and named element sets.  This doesn't seem to
+    matter to FEBio itself, though.  It may interfere with
+    postprocessing, in which case the definition of a "part" from the
+    perspective of febtools will have to be changed.
+
+    """
+    # TODO: Modify the definition of parts such that 1 part = all
+    # *connected* elements with the same material.
+    #
+    # Assemble elements into blocks with like type and material.
+    # Elemsets uses material instances as keys.  Each item is a
+    # dictionary using element classes as keys, with items being tuples
+    # of (element_id, element).
+    by_mat_type = {}
+    for i, elem in enumerate(model.mesh.elements):
+        subdict = by_mat_type.setdefault(elem.material, {})
+        like_elements = subdict.setdefault(elem.__class__, [])
+        like_elements.append((i, elem))
+    # Convert nested dictionaries to a list
+    parts = []
+    for mat in by_mat_type:
+        for typ in by_mat_type[mat]:
+            parts.append(
+                {
+                    "label": None,
+                    "material": mat,
+                    "element_type": typ,
+                    "elements": by_mat_type[mat][typ],
+                }
+            )
+    return parts
+
+
 # Functions for reading FEBio XML
 
 
