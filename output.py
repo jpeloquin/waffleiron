@@ -1051,18 +1051,11 @@ def xml(model, version="2.5"):
         for face in face_set:
             e_surface.append(tag_face(face))
     # Write *all* named surface pairs
-    for nm, surf_pair in named_surface_pairs.pairs():
-        tag_surfpair = ET.SubElement(Geometry, "SurfacePair", name=nm)
-        ET.SubElement(
-            tag_surfpair,
-            "master",
-            surface=model.named["face sets"].names(surf_pair[0])[0],
+    for nm, (primary, secondary) in named_surface_pairs.pairs():
+        e_surfpair = febioxml.surface_pair_xml(
+            model.named["face sets"], primary, secondary, nm
         )
-        ET.SubElement(
-            tag_surfpair,
-            "slave",
-            surface=model.named["face sets"].names(surf_pair[1])[0],
-        )
+        Geometry.append(e_surfpair)
     # TODO: Handle element sets too.
 
     tree = ET.ElementTree(root)

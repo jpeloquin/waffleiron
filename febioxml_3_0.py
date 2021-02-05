@@ -74,3 +74,11 @@ def node_var_disp_xml(
     # Reference the node-specific boundary condition scaling factors
     e_sc.text = data_name
     return e_bc, e_NodeData
+
+
+def surface_pair_xml(faceset_registry, primary, secondary, name):
+    """Return SurfacePair XML element."""
+    e_surfpair = ET.Element("SurfacePair", name=name)
+    ET.SubElement(e_surfpair, "primary").text = faceset_registry.names(primary)[0]
+    ET.SubElement(e_surfpair, "secondary").text = faceset_registry.names(secondary)[0]
+    return e_surfpair

@@ -233,3 +233,19 @@ def node_var_disp_xml(
     # Other attributes
     ET.SubElement(e_bc, "relative").text = str(int(relative))
     return e_bc, e_NodeData
+
+
+def surface_pair_xml(faceset_registry, primary, secondary, name):
+    """Return SurfacePair XML element."""
+    e_surfpair = ET.Element("SurfacePair", name=name)
+    ET.SubElement(
+        e_surfpair,
+        "master",
+        surface=faceset_registry.names(primary)[0],
+    )
+    ET.SubElement(
+        e_surfpair,
+        "slave",
+        surface=faceset_registry.names(secondary)[0],
+    )
+    return e_surfpair
