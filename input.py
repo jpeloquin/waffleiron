@@ -517,10 +517,10 @@ class FebReader:
             # up and convert each to febtools naming convention.
             if self.feb_version == "2.0":
                 # In FEBio XML 2.0, bc labels are concatenated.
-                fixed = febioxml_2_0.split_bc_names(e_fix.attrib["bc"])
+                fixed = febioxml_2_0.split_bc_attrib(e_fix.attrib["bc"])
             elif self.feb_version == "2.5":
                 # In FEBio XML 2.5, bc labels are comma-delimeted.
-                fixed = febioxml_2_5.split_bc_names(e_fix.attrib["bc"])
+                fixed = febioxml_2_5.split_bc_attrib(e_fix.attrib["bc"])
             # For each DoF, apply the fixed BCs to the model.
             for xml_bc in fixed:
                 dof = DOF_NAME_FROM_XML_NODE_BC[xml_bc]

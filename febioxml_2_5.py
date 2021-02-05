@@ -10,7 +10,9 @@ from .control import step_duration
 from .febioxml import *
 from .febioxml import _to_number, _find_unique_tag
 
-feb_version = 2.5
+
+# Functions for traversing a Model in a way useful for XML read or
+# write.
 
 
 def parts(model):
@@ -52,27 +54,7 @@ def parts(model):
     return parts
 
 
-def geometry_section(model, parts, material_registry):
-    """Return XML tree for Geometry section."""
-    e_geometry = ET.Element("Geometry")
-    # Write <nodes>
-    e_nodes = ET.SubElement(e_geometry, "Nodes")
-    for i, x in enumerate(model.mesh.nodes):
-        feb_nid = i + 1  # 1-indexed
-        e = ET.SubElement(e_nodes, "node", id="{}".format(feb_nid))
-        e.text = vec_to_text(x)
-        e_nodes.append(e)
-    # Write <elements> for each part
-    for part in parts:
-        e_elements = ET.SubElement(e_geometry, "Elements")
-        e_elements.attrib["type"] = part["element_type"].feb_name
-        mat_id = material_registry.names(part["material"], "ordinal_id")[0]
-        e_elements.attrib["mat"] = str(mat_id + 1)
-        for i, e in part["elements"]:
-            e_element = ET.SubElement(e_elements, "elem")
-            e_element.attrib["id"] = str(i + 1)
-            e_element.text = ", ".join(str(i + 1) for i in e.ids)
-    return e_geometry
+# Functions for reading XML
 
 
 def elem_var_fiber_xml(e):
@@ -167,6 +149,32 @@ def iter_node_conditions(root):
             yield info
 
 
+# Functions for writing XML
+
+
+def geometry_section(model, parts, material_registry):
+    """Return XML tree for Geometry section."""
+    e_geometry = ET.Element("Geometry")
+    # Write <nodes>
+    e_nodes = ET.SubElement(e_geometry, "Nodes")
+    for i, x in enumerate(model.mesh.nodes):
+        feb_nid = i + 1  # 1-indexed
+        e = ET.SubElement(e_nodes, "node", id="{}".format(feb_nid))
+        e.text = vec_to_text(x)
+        e_nodes.append(e)
+    # Write <elements> for each part
+    for part in parts:
+        e_elements = ET.SubElement(e_geometry, "Elements")
+        e_elements.attrib["type"] = part["element_type"].feb_name
+        mat_id = material_registry.names(part["material"], "ordinal_id")[0]
+        e_elements.attrib["mat"] = str(mat_id + 1)
+        for i, e in part["elements"]:
+            e_element = ET.SubElement(e_elements, "elem")
+            e_element.attrib["id"] = str(i + 1)
+            e_element.text = ", ".join(str(i + 1) for i in e.ids)
+    return e_geometry
+
+
 def meshdata_section(model):
     """Return XML tree for MeshData section."""
     e_meshdata = ET.Element("MeshData")
@@ -190,7 +198,7 @@ def meshdata_section(model):
     return e_meshdata, e_elemset
 
 
-def split_bc_names(s):
+def split_bc_attrib(s):
     """Split boundary condition names.
 
     In FEBio XML 2.5, each boundary condition is separated by a comma.

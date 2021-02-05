@@ -10,7 +10,61 @@ from .output import material_to_feb
 from .control import step_duration
 from .febioxml import *
 
-feb_version = 2.0
+
+# Functions for writing XML
+
+
+def contact_section(model):
+    tag_branch = ET.Element("Contact")
+    contact_constraints = [
+        constraint
+        for constraint in model.constraints
+        if type(constraint) is ContactConstraint
+    ]
+    for contact in contact_constraints:
+        tag_contact = ET.SubElement(tag_branch, "contact", type=contact.algorithm)
+        # Set compression only or tension–compression
+        if contact.algorithm == "sliding-elastic":
+            ET.SubElement(tag_contact, "tension").text = str(int(contact.tension))
+        else:
+            if contact.tension:
+                raise ValueError(
+                    f"Only the sliding–elastic contact algorithm is known to support tension–compression contact in FEBio."
+                )
+        # Write penalty-related tags
+        ET.SubElement(tag_contact, "auto_penalty").text = (
+            "1" if contact.penalty["type"] == "auto" else "0"
+        )
+        ET.SubElement(tag_contact, "penalty").text = f"{contact.penalty['factor']}"
+        # Write algorithm modification tags
+        ET.SubElement(tag_contact, "laugon").text = (
+            "1" if contact.augmented_lagrange else "0"
+        )
+        # (two_pass would go here)
+        # Write surfaces
+        e_master = ET.SubElement(tag_contact, "surface", type="master")
+        for f in contact.leader:
+            e_master.append(tag_face(f))
+        e_follower = ET.SubElement(tag_contact, "surface", type="slave")
+        for f in contact.follower:
+            e_follower.append(tag_face(f))
+    return tag_branch
+
+
+def tag_face(face):
+    nm = {3: "tri3", 4: "quad4"}
+    tag = ET.Element(nm[len(face)])
+    tag.text = ", ".join([f"{i+1}" for i in face])
+    return tag
+
+
+def split_bc_attrib(s):
+    """Split boundary condition names.
+
+    In FEBio XML 2.0, each BC is one character.
+
+    """
+    return [c for c in s]
 
 
 def xml(model):
@@ -20,7 +74,7 @@ def xml(model):
     writing the XML to an on-disk .feb .
 
     """
-    root = ET.Element("febio_spec", version="{}".format(feb_version))
+    root = ET.Element("febio_spec", version="2.0")
     Globals = ET.SubElement(root, "Globals")
     Material = ET.SubElement(root, "Material")
     Geometry = ET.SubElement(root, "Geometry")
@@ -248,56 +302,3 @@ def xml(model):
 
     tree = ET.ElementTree(root)
     return tree
-
-
-def contact_section(model):
-    tag_branch = ET.Element("Contact")
-    contact_constraints = [
-        constraint
-        for constraint in model.constraints
-        if type(constraint) is ContactConstraint
-    ]
-    for contact in contact_constraints:
-        tag_contact = ET.SubElement(tag_branch, "contact", type=contact.algorithm)
-        # Set compression only or tension–compression
-        if contact.algorithm == "sliding-elastic":
-            ET.SubElement(tag_contact, "tension").text = str(int(contact.tension))
-        else:
-            if contact.tension:
-                raise ValueError(
-                    f"Only the sliding–elastic contact algorithm is known to support tension–compression contact in FEBio."
-                )
-        # Write penalty-related tags
-        ET.SubElement(tag_contact, "auto_penalty").text = (
-            "1" if contact.penalty["type"] == "auto" else "0"
-        )
-        ET.SubElement(tag_contact, "penalty").text = f"{contact.penalty['factor']}"
-        # Write algorithm modification tags
-        ET.SubElement(tag_contact, "laugon").text = (
-            "1" if contact.augmented_lagrange else "0"
-        )
-        # (two_pass would go here)
-        # Write surfaces
-        e_master = ET.SubElement(tag_contact, "surface", type="master")
-        for f in contact.leader:
-            e_master.append(tag_face(f))
-        e_follower = ET.SubElement(tag_contact, "surface", type="slave")
-        for f in contact.follower:
-            e_follower.append(tag_face(f))
-    return tag_branch
-
-
-def tag_face(face):
-    nm = {3: "tri3", 4: "quad4"}
-    tag = ET.Element(nm[len(face)])
-    tag.text = ", ".join([f"{i+1}" for i in face])
-    return tag
-
-
-def split_bc_names(s):
-    """Split boundary condition names.
-
-    In FEBio XML 2.0, each BC is one character.
-
-    """
-    return [c for c in s]
