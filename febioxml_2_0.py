@@ -67,6 +67,18 @@ def split_bc_attrib(s):
     return [c for c in s]
 
 
+def nodal_var_disp_xml(model, nodes, scales, scale, dof, var):
+    e_bc = ET.Element(
+        "prescribe",
+        bc=XML_BC_FROM_DOF[(dof, var)],
+    )
+    e_bc.attrib["lc"] = str(seq_id + 1)
+    # Write nodes as children of <Step><Boundary><prescribe>
+    for i, sc in zip(nodes, scales):
+        ET.SubElement(e_bc, "node", id=str(i + 1)).text = float_to_text(sc)
+    return e_bc, e_nodedata
+
+
 def xml(model):
     """Convert a model to an FEBio XML tree.
 

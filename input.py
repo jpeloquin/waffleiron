@@ -33,9 +33,9 @@ from .febioxml import (
     elem_cls_from_feb,
     normalize_xml,
     read_contacts,
-    _to_number,
-    _maybe_to_number,
-    _find_unique_tag,
+    to_number,
+    maybe_to_number,
+    find_unique_tag,
     VAR_FROM_XML_NODE_BC,
     DOF_NAME_FROM_XML_NODE_BC,
 )
@@ -62,17 +62,17 @@ def _read_parameter(e, sequence_dict):
         seq_id = int(e.attrib["lc"]) - 1
         sequence = sequence_dict[seq_id]
         if e.text is not None and e.text.strip() != "":
-            scale = _to_number(e.text)
+            scale = to_number(e.text)
             return ScaledSequence(sequence, scale)
         else:
             return sequence
     else:
         # The property is fixed
-        return _to_number(e.text)
+        return to_number(e.text)
 
 
 def _vec_from_text(s) -> tuple:
-    return tuple(_to_number(x.strip()) for x in s.split(","))
+    return tuple(to_number(x.strip()) for x in s.split(","))
 
 
 def read_febio_xml(f):
@@ -337,7 +337,7 @@ class FebReader:
                 # Child element is a material
                 constituents.append(self._read_material(child))
             if child.tag == "generation":
-                t0 = _to_number(child.find("start_time").text)
+                t0 = to_number(child.find("start_time").text)
                 m["properties"].setdefault("start times", []).append(t0)
                 e_mat = child.find("solid")
                 constituents.append(self._read_material(e_mat))
@@ -355,7 +355,7 @@ class FebReader:
             # The property is time-varying
             seq_id = int(tag.attrib["lc"]) - 1
             sequence = self.sequences[seq_id]
-            scale = _to_number(tag.text)
+            scale = to_number(tag.text)
             return ScaledSequence(sequence, scale)
         else:
             # The property is fixed
@@ -417,19 +417,19 @@ class FebReader:
 
         # Read Environment Constants
         model.environment = {}
-        e_temperature = _find_unique_tag(self.root, "Globals/Constants/T")
+        e_temperature = find_unique_tag(self.root, "Globals/Constants/T")
         if e_temperature is not None:
-            model.environment["temperature"] = _to_number(e_temperature.text)
+            model.environment["temperature"] = to_number(e_temperature.text)
 
         # Read Universal Constants.  These will eventually be superseded
         # by units support.
         model.constants = {}
-        e_R = _find_unique_tag(self.root, "Globals/Constants/R")
+        e_R = find_unique_tag(self.root, "Globals/Constants/R")
         if e_R is not None:
-            model.constants["R"] = _to_number(e_R.text)
-        e_Fc = _find_unique_tag(self.root, "Globals/Constants/Fc")
+            model.constants["R"] = to_number(e_R.text)
+        e_Fc = find_unique_tag(self.root, "Globals/Constants/Fc")
         if e_Fc is not None:
-            model.constants["F"] = _to_number(e_Fc.text)
+            model.constants["F"] = to_number(e_Fc.text)
 
         # Store the materials and their labels, now that the Model
         # object has been instantiated
@@ -594,7 +594,7 @@ class FebReader:
                 elif nm in control_values_from_febio:
                     val = control_values_from_febio[nm][e.text]
                 else:
-                    val = _maybe_to_number(e.text)
+                    val = maybe_to_number(e.text)
                 control[nm] = val
             # Control/time_stepper section
             control["time stepper"] = {}

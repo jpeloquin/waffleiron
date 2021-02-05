@@ -6,6 +6,10 @@ from .element import Quad4, Tri3, Hex8, Penta6, Element
 from . import material
 from .math import orthonormal_basis
 
+
+# Facts about FEBio XML
+
+
 # Map "bc" attribute value from <prescribe>, <prescribed>, <fix>, or
 # <fixed> element to a variable name.  This list is valid for both node
 # and rigid body conditions.  FEBio handles force conditions in other
@@ -30,6 +34,14 @@ DOF_NAME_FROM_XML_NODE_BC = {
     "Rz": "α3",
     "p": "fluid",
 }
+
+XML_BC_FROM_DOF = {
+    (dof, VAR_FROM_XML_NODE_BC[tag]): tag
+    for tag, dof in DOF_NAME_FROM_XML_NODE_BC.items()
+}
+XML_BC_FROM_DOF.update(
+    {("x1", "force"): "x", ("x2", "force"): "y", ("x3", "force"): "z"}
+)
 
 TAG_FROM_BC = {
     "node": {"variable": "prescribe", "fixed": "fix"},
@@ -106,48 +118,10 @@ module_compat_by_mat = {
 }
 
 
-def text_to_bool(s):
-    """Convert string to boolean"""
-    if not s in ("0", "1"):
-        raise ValueError(
-            f"Cannot convert '{s}' to boolean.  FEBio boolean flags should be '0' or '1'."
-        )
-    return s == "1"
+# Functions for reading FEBio XML
 
 
-def _to_number(s):
-    """Convert numeric string to int or float as appropriate."""
-    try:
-        return int(s)
-    except ValueError:
-        return float(s)
-
-
-def _maybe_to_number(s):
-    """Convert string to number if possible, otherwise return string."""
-    try:
-        return _to_number(s)
-    except ValueError:
-        return s
-
-
-def bool_to_text(v):
-    return "1" if v else "0"
-
-
-def vec_to_text(v):
-    return ", ".join(f"{a:.7e}" for a in v)
-
-
-def bvec_to_text(v):
-    return ", ".join(float_to_text(a) for a in v)
-
-
-def float_to_text(a):
-    return f"{a:.7g}"
-
-
-def _find_unique_tag(root: Element, path):
+def find_unique_tag(root: Element, path):
     """Find and return a tag or an error if > 1 of same."""
     tags = root.findall(path)
     if len(tags) == 1:
@@ -162,9 +136,9 @@ def read_contact(e_contact: Element, named_face_sets):
     tree = e_contact.getroottree()
     root = tree.getroot()
     surf_pair = e_contact.attrib["surface_pair"]
-    e_SurfacePair = _find_unique_tag(root, f"Geometry/SurfacePair[@name='{surf_pair}']")
-    e_leader = _find_unique_tag(e_SurfacePair, "master")
-    e_follower = _find_unique_tag(e_SurfacePair, "slave")
+    e_SurfacePair = find_unique_tag(root, f"Geometry/SurfacePair[@name='{surf_pair}']")
+    e_leader = find_unique_tag(e_SurfacePair, "master")
+    e_follower = find_unique_tag(e_SurfacePair, "slave")
     leader = named_face_sets.obj(e_leader.attrib["surface"])
     follower = named_face_sets.obj(e_follower.attrib["surface"])
     kwargs = {}
@@ -347,3 +321,47 @@ def normalize_xml(root):
         if len(e_rBoundary) == 0:
             root.remove(e_rBoundary)
     return root
+
+
+# Functions for writing FEBio XML
+
+
+def text_to_bool(s):
+    """Convert string to boolean"""
+    if not s in ("0", "1"):
+        raise ValueError(
+            f"Cannot convert '{s}' to boolean.  FEBio boolean flags should be '0' or '1'."
+        )
+    return s == "1"
+
+
+def to_number(s):
+    """Convert numeric string to int or float as appropriate."""
+    try:
+        return int(s)
+    except ValueError:
+        return float(s)
+
+
+def maybe_to_number(s):
+    """Convert string to number if possible, otherwise return string."""
+    try:
+        return to_number(s)
+    except ValueError:
+        return s
+
+
+def bool_to_text(v):
+    return "1" if v else "0"
+
+
+def vec_to_text(v):
+    return ", ".join(f"{a:.7e}" for a in v)
+
+
+def bvec_to_text(v):
+    return ", ".join(float_to_text(a) for a in v)
+
+
+def float_to_text(a):
+    return f"{a:.7g}"
