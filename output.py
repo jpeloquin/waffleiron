@@ -984,6 +984,8 @@ def xml(model, version="2.5"):
                         )
                         e_Boundary.append(e_bc)
                         e_MeshData.append(e_nodedata)
+                    elif kind == "fixed":
+                        raise NotImplementedError
 
         # Temporal (step-specific) contacts
         contacts = [
