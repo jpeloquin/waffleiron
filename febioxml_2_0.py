@@ -11,7 +11,13 @@ from .control import step_duration
 from .febioxml import *
 
 
-# Functions for writing XML
+# Facts about FEBio XML 2.0
+
+
+BODY_COND_PARENT = "Constraints"
+
+
+# Functions for writing FEBio XML 2.0
 
 
 def contact_section(model):

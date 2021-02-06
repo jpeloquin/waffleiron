@@ -5,12 +5,19 @@ from collections import defaultdict
 from lxml import etree as ET
 
 # Same-package modules
-from .core import Sequence
+from .core import (
+    Sequence,
+    Body,
+    ImplicitBody,
+)
 from .control import step_duration
 from .febioxml import *
 
 
 # Facts about FEBio XML 2.5
+
+
+BODY_COND_PARENT = "Boundary"
 
 BC_TYPE_TAG = {
     "node": {"variable": "prescribe", "fixed": "fix"},
@@ -18,7 +25,7 @@ BC_TYPE_TAG = {
 }
 
 
-# Functions for reading XML
+# Functions for reading FEBio XML 2.5
 
 
 def elem_var_fiber_xml(e):
@@ -114,6 +121,46 @@ def iter_node_conditions(root):
 
 
 # Functions for writing XML
+
+
+def body_constraints_xml(
+    body, constraints: dict, material_registry, implicit_rb_mats, sequence_registry
+):
+    """Return <rigid_body> element for a body's constraints.
+
+    The constrained variable can be displacement or rotation.
+
+    """
+    mat_id = body_mat_id(body, material_registry, implicit_rb_mats)
+    e_rb_bc = ET.Element("rigid_body", mat=str(mat_id + 1))
+    for dof, bc in constraints.items():
+        if bc["sequence"] == "fixed":
+            kind = "fixed"
+        else:  # bc['sequence'] is Sequence
+            kind = "variable"
+            seq = bc["sequence"]
+            v = bc["scale"]
+        # Determine which tag name to use for the specified
+        # variable: force or displacement
+        if bc["variable"] in ["displacement", "rotation"]:
+            tagname = BC_TYPE_TAG["body"][kind]
+        elif bc["variable"] == "force":
+            tagname = "force"
+            if bc["relative"]:
+                raise ValueError(
+                    f"A relative body boundary condition for {dof} {bc['variable']} was requested, but relative body boundary conditions are supported only for displacement and rotation."
+                )
+        else:
+            raise ValueError(f"Variable {bc['variable']} not supported for BCs.")
+        bc_attr = XML_BC_FROM_DOF[(dof, bc["variable"])]
+        e_bc = ET.SubElement(e_rb_bc, tagname, bc=bc_attr)
+        if kind == "variable":
+            seq_id = get_or_create_seq_id(sequence_registry, seq)
+            e_bc.attrib["lc"] = str(seq_id + 1)
+            if bc["relative"]:
+                e_bc.attrib["type"] = "relative"
+            e_bc.text = str(v)
+    return [e_rb_bc]
 
 
 def geometry_section(model, parts, material_registry):

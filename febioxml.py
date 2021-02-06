@@ -1,7 +1,17 @@
 import os
 import lxml.etree as ET
 from lxml.etree import Element, ElementTree
-from .core import ContactConstraint, NodeSet, FaceSet, ElementSet, _canonical_face
+from .core import (
+    Body,
+    ImplicitBody,
+    ContactConstraint,
+    NodeSet,
+    FaceSet,
+    ElementSet,
+    _canonical_face,
+    Sequence,
+    ScaledSequence,
+)
 from .element import Quad4, Tri3, Hex8, Penta6, Element
 from . import material
 from .math import orthonormal_basis
@@ -42,11 +52,6 @@ XML_BC_FROM_DOF = {
 XML_BC_FROM_DOF.update(
     {("x1", "force"): "x", ("x2", "force"): "y", ("x3", "force"): "z"}
 )
-
-TAG_FROM_BC = {
-    "node": {"variable": "prescribe", "fixed": "fix"},
-    "body": {"variable": "prescribed", "fixed": "fixed"},
-}
 
 elem_cls_from_feb = {"quad4": Quad4, "tri3": Tri3, "hex8": Hex8, "penta6": Penta6}
 
@@ -173,6 +178,8 @@ def find_unique_tag(root: Element, path):
         raise ValueError(
             f"Multiple `{path}` tags in file `{os.path.abspath(root.base)}`"
         )
+    else:
+        return None
 
 
 def read_contact(e_contact: Element, named_face_sets):
@@ -367,6 +374,67 @@ def normalize_xml(root):
 
 
 # Functions for writing FEBio XML
+
+
+def body_mat_id(body, material_registry, implicit_rb_mats):
+    """Return a material ID to define a rigid body in XML."""
+    # Create or find the associated materials
+    if isinstance(body, Body):
+        # If an explicit body, its elements define its
+        # materials.  We assume that the body is homogenous.
+        mat = body.elements[0].material
+        mat_id = material_registry.names(mat, nametype="ordinal_id")[0]
+    elif isinstance(body, ImplicitBody):
+        mat = implicit_rb_mat[body]
+        mat_id = material_registry.name(mat, nametype="ordinal_id")
+    else:
+        msg = (
+            f"body {k} does not have a supported type.  "
+            + "Supported body types are Body and ImplicitBody."
+        )
+        raise ValueError(msg)
+    return mat_id
+
+
+def get_or_create_item_id(registry, item):
+    """Get or create ID for an item.
+
+    Getting or creating an ID for an item is complicated because item
+    IDs must start at 0 and be sequential and contiguous.
+
+    """
+    item_ids = registry.namespace("ordinal_id")
+    if len(item_ids) == 0:
+        # Handle the trivial case of no pre-existing items
+        item_id = 0
+        # Create the ID
+        registry.add(item_id, item, "ordinal_id")
+    else:
+        # At least one item already exists.  Make sure the ID
+        # constraints have not been violated
+        assert min(item_ids) == 0
+        assert max(item_ids) == len(item_ids) - 1
+        # Check for an existing ID
+        try:
+            item_id = registry.names(item, "ordinal_id")[0]
+        except KeyError:
+            # Create an ID because the item doesn't have one
+            item_ids = registry.namespace("ordinal_id")
+            item_id = max(item_ids) + 1
+            registry.add(item_id, item, "ordinal_id")
+    return item_id
+
+
+def get_or_create_seq_id(registry, sequence):
+    """Return ID for a Sequence, creating it if needed.
+
+    The returned ID refers to the underlying Sequence object, never to a
+    ScaledSequence.
+
+    """
+    if type(sequence) is ScaledSequence:
+        sequence = sequence.sequence
+    return get_or_create_item_id(registry, sequence)
 
 
 def text_to_bool(s):

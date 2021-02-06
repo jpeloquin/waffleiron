@@ -1,5 +1,8 @@
 # Same-package modules
+from .core import Body, ImplicitBody
 from .febioxml import *
+
+# These parts work the same as in FEBio XML 2.5
 from .febioxml_2_5 import geometry_section, meshdata_section
 
 # Facts about FEBio XML 3.0
@@ -9,10 +12,77 @@ BC_TYPE_TAG = {
     "body": {"variable": "prescribe", "fixed": "fix"},
 }
 
+BODY_COND_PARENT = "Rigid"
 
-# Functions for reading XML
+BC_TYPE_TAG = {
+    "node": {"variable": "prescribe", "fixed": "fix"},
+    "body": {"variable": "prescribe", "fixed": "fix"},
+}
 
-# Functions for writing XML
+XML_RB_DOF_FROM_DOF = {
+    "x1": "Rx",
+    "x2": "Ry",
+    "x3": "Rz",
+    "α1": "Ru",
+    "α2": "Rv",
+    "α3": "Rw",
+}
+
+
+# Functions for reading FEBio XML 3.0
+
+
+# Functions for writing FEBio XML 3.0
+
+
+def body_constraints_xml(
+    body, constraints: dict, material_registry, implicit_rb_mats, sequence_registry
+):
+    """Return <rigid_constraint> element(s) for body's constraints.
+
+    The constrained variable can be displacement or rotation.
+
+    """
+    elems = []
+    mat_id = body_mat_id(body, material_registry, implicit_rb_mats)
+    # Can't put fixed and variable constraints in the same
+    # <rigid_constraint> element, so first we have to group the
+    # constraints by kind
+    fixed_constraints = []
+    variable_constraints = []
+    for dof, bc in constraints.items():
+        if bc["sequence"] == "fixed":
+            fixed_constraints.append((dof, bc))
+        else:  # bc['sequence'] is Sequence
+            variable_constraints.append((dof, bc))
+    # Create <rigid_constraint> element for fixed constraints
+    e_rb_fixed = ET.Element("rigid_constraint")
+    e_rb_fixed.attrib["type"] = BC_TYPE_TAG["body"]["fixed"]
+    ET.SubElement(e_rb_fixed, "rb").text = str(mat_id + 1)
+    ET.SubElement(e_rb_fixed, "dofs").text = ", ".join(
+        XML_RB_DOF_FROM_DOF[dof] for dof, _ in fixed_constraints
+    )
+    elems.append(e_rb_fixed)
+    # Create <rigid_constraint> element for variable constraints.  I
+    # think you must use a separate element for each degree of freedom
+    # (x, y, z, Rx, Ry, Rz).
+    for dof, bc in variable_constraints:
+        if bc["variable"] == "force":
+            # TODO: Reverse engineer force constraints on rigid bodies
+            # in FEBio XML 3.0
+            raise NotImplementedError
+        e_rb = ET.Element("rigid_constraint")
+        e_rb.attrib["type"] = BC_TYPE_TAG["body"]["variable"]
+        ET.SubElement(e_rb, "rb").text = str(mat_id + 1)
+        ET.SubElement(e_rb, "dof").text = XML_RB_DOF_FROM_DOF[dof]
+        seq = bc["sequence"]
+        seq_id = get_or_create_seq_id(sequence_registry, seq)
+        e_value = ET.SubElement(e_rb, "value")
+        e_value.attrib["lc"] = str(seq_id + 1)
+        e_value.text = str(bc["scale"])
+        ET.SubElement(e_rb, "relative").text = bool_to_text(bc["relative"])
+        elems.append(e_rb)
+    return elems
 
 
 def node_data_xml(nodes, data, data_name, nodeset_name):
