@@ -5,7 +5,7 @@ from collections import defaultdict
 from lxml import etree as ET
 
 # Same-package modules
-from .core import ContactConstraint, Sequence
+from .core import ContactConstraint, Interpolant, Extrapolant, Sequence
 from .output import material_to_feb
 from .control import step_duration
 from .febioxml import *
@@ -13,9 +13,23 @@ from .febioxml import *
 
 # Facts about FEBio XML 2.0
 
-
 BODY_COND_PARENT = "Constraints"
 
+XML_INTERP_FROM_INTERP = {
+    Interpolant.STEP: "step",
+    Interpolant.LINEAR: "linear",
+    Interpolant.SPLINE: "smooth",
+}
+INTERP_FROM_XML_INTERP = {v: k for k, v in XML_INTERP_FROM_INTERP.items()}
+
+
+XML_EXTRAP_FROM_EXTRAP = {
+    Extrapolant.CONSTANT: "constant",
+    Extrapolant.LINEAR: "extrapolate",
+    Extrapolant.REPEAT: "repeat",
+    Extrapolant.REPEAT_CONTINUOUS: "repeat offset",
+}
+EXTRAP_FROM_XML_EXTRAP = {v: k for k, v in XML_EXTRAP_FROM_EXTRAP.items()}
 
 # Functions for writing FEBio XML 2.0
 

@@ -7,6 +7,8 @@ from lxml import etree as ET
 # Same-package modules
 from .core import (
     Sequence,
+    Interpolant,
+    Extrapolant,
     Body,
     ImplicitBody,
 )
@@ -23,6 +25,23 @@ BC_TYPE_TAG = {
     "node": {"variable": "prescribe", "fixed": "fix"},
     "body": {"variable": "prescribed", "fixed": "fixed"},
 }
+
+
+XML_INTERP_FROM_INTERP = {
+    Interpolant.STEP: "step",
+    Interpolant.LINEAR: "linear",
+    Interpolant.SPLINE: "smooth",
+}
+INTERP_FROM_XML_INTERP = {v: k for k, v in XML_INTERP_FROM_INTERP.items()}
+
+
+XML_EXTRAP_FROM_EXTRAP = {
+    Extrapolant.CONSTANT: "constant",
+    Extrapolant.LINEAR: "extrapolate",
+    Extrapolant.REPEAT: "repeat",
+    Extrapolant.REPEAT_CONTINUOUS: "repeat offset",
+}
+EXTRAP_FROM_XML_EXTRAP = {v: k for k, v in XML_EXTRAP_FROM_EXTRAP.items()}
 
 
 # Functions for reading FEBio XML 2.5
@@ -280,6 +299,30 @@ def node_var_disp_xml(
     # Other attributes
     ET.SubElement(e_bc, "relative").text = str(int(relative))
     return e_bc, e_NodeData
+
+
+def sequence_xml(sequence: Sequence, sequence_id: int, t0=0.0):
+    """Return a <load_curve> XML element for a sequence.
+
+    sequence := Sequence object.
+
+    sequence_id := Integer ID (origin = 0) to use for the sequence's XML
+    element "id" attribute.  The ID will be incremented by 1 to account
+    for FEBio XML's use of 1-referenced IDs.
+
+    t0 := Time offset to apply to the sequence's time points before
+    writing them to XML.  The intended use for this is to translate from global to
+
+    """
+    e_loadcurve = ET.Element(
+        "loadcurve",
+        id=str(sequence_id + 1),
+        type=XML_INTERP_FROM_INTERP[sequence.interpolant],
+        extrap=XML_EXTRAP_FROM_EXTRAP[sequence.extrapolant],
+    )
+    for pt in sequence.points:
+        ET.SubElement(e_loadcurve, "point").text = f"{pt[0] + t0}, {pt[1]}"
+    return e_loadcurve
 
 
 def surface_pair_xml(faceset_registry, primary, secondary, name):

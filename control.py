@@ -11,7 +11,7 @@ import math
 import numpy as np
 
 # Same-package modules
-from .core import Sequence
+from .core import Sequence, Interpolant, Extrapolant
 from .math import densify
 
 
@@ -32,7 +32,9 @@ def auto_control_section(module, sequence, pts_per_segment=1):
     dt = np.diff(t)
     dt = np.concatenate([dt, dt[-1:]])  # len(dt) == len(time)
     curve_must_dt = [p for p in zip(t, dt)]
-    seq_dtmax = Sequence(curve_must_dt, extrap="constant", interp="step")
+    seq_dtmax = Sequence(
+        curve_must_dt, extrap=Extrapolant.CONSTANT, interp=Interpolant.STEP
+    )
     control["time stepper"]["dtmax"] = seq_dtmax
     # Calculate appropriate step size.  Need to work around FEBio bug
     # https://forums.febio.org/project.php?issueid=765.  FEBio skips

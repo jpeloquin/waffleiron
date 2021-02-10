@@ -1,6 +1,7 @@
 from copy import copy
+from enum import Enum
 from operator import itemgetter
-from typing import Hashable, NewType
+from typing import Hashable, NewType, Union
 from warnings import warn
 
 import numpy as np
@@ -151,6 +152,19 @@ def _e_bb(elements):
     return bb
 
 
+class Interpolant(Enum):
+    STEP = "step"
+    LINEAR = "linear"
+    SPLINE = "spline"
+
+
+class Extrapolant(Enum):
+    CONSTANT = "constant"
+    LINEAR = "linear"
+    REPEAT = "repeat"
+    REPEAT_CONTINUOUS = "repeat_continuous"
+
+
 class Sequence:
     """A basic time-varying sequence.
 
@@ -159,13 +173,27 @@ class Sequence:
 
     """
 
-    def __init__(self, seq, interp="linear", extrap="constant"):
-        # Input checking
-        if not extrap in ["constant", "linear", "repeat", "repeat continuous"]:
+    def __init__(
+        self,
+        seq,
+        interp: Union[Interpolant, str],
+        extrap: Union[Extrapolant, str],
+    ):
+        # Input checking.  Technically, mypy should detect this, but
+        # leave it in for now as mypy is not that widespread
+        # (2021-02-09).
+        if isinstance(interp, str):
+            interp = Interpolant(interp)
+        if not isinstance(interp, Interpolant):
             raise ValueError(
-                f"`extrap` may equal 'constant', 'linear', 'repeat', or 'repeat continuous'.  Received '{extrap}'"
+                f"Function argument `interp` has value `{interp}` with type `{type(interp)}`, but must have type `{Interpolant}`."
             )
-        assert interp in ["step", "linear", "smooth"]
+        if isinstance(extrap, str):
+            extrap = Extrapolant(extrap)
+        if not isinstance(extrap, Extrapolant):
+            raise ValueError(
+                f"Function argument `extrap` has value `{extrap}` with type `{type(extrap)}`, but must have type `{Extrapolant}`."
+            )
         # Parameters
         self.points = seq
         self.interpolant = interp

@@ -299,33 +299,6 @@ def add_nodeset(xml_root, name, nodes):
         ET.SubElement(e_nodeset, "node", id=str(node_id + 1))
 
 
-def add_sequence(xml_root, model, sequence, t0=0):
-    """Add a sequence (load curve) to a FEBio XML tree.
-
-    So we need to sort them and ensure that the IDs are contiguous.
-
-    xml_root !mutates! := Root object of XML tree.
-
-    sequence := Sequence object.
-
-    sequence_id := Integer ID (0-referenced) to use for the sequence
-    element's "id" attribute.  The ID will be incremented by 1 to
-    account for FEBio XML's use of 1-referenced IDs.
-
-    """
-    seq_id = model.named["sequences"].names(sequence, nametype="ordinal_id")[0]
-    e_loaddata = xml_root.find("./LoadData")
-    e_loadcurve = ET.SubElement(
-        e_loaddata,
-        "loadcurve",
-        id=str(seq_id + 1),
-        type=sequence.interpolant,
-        extrap=sequence.extrapolant,
-    )
-    for pt in sequence.points:
-        ET.SubElement(e_loadcurve, "point").text = f"{pt[0] + t0}, {pt[1]}"
-
-
 def sequence_time_offsets(model):
     """Return map: sequence → global start time.
 
@@ -901,12 +874,16 @@ def xml(model, version="2.5"):
     # Get local → global time offsets to adjust sequences used as
     # boundary conditions or in time stepper.
     seq_t0 = sequence_time_offsets(model)
+    # Sequence IDs should be consecutive and start at 0
     if len(seq_ids) > 0:
         assert min(seq_ids) == 0
         assert max(seq_ids) == len(seq_ids) - 1
+    # Add the sequences to the XML tree
+    e_seq_parent = root.find(fx.SEQUENCE_PARENT)
     for seq_id in seq_ids:
         seq = model.named["sequences"].obj(seq_id, nametype="ordinal_id")
-        add_sequence(root, model, seq, seq_t0[seq])
+        e_seq = fx.sequence_xml(seq, seq_id, t0=seq_t0[seq])
+        e_seq_parent.append(e_seq)
 
     # Write named geometric entities & sets.  It is better to delay
     # writing named entities & sets until now so we don't accidentally

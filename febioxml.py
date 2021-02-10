@@ -19,6 +19,7 @@ from .math import orthonormal_basis
 
 # Facts about FEBio XML
 
+SEQUENCE_PARENT = "LoadData"
 
 # Map "bc" attribute value from <prescribe>, <prescribed>, <fix>, or
 # <fixed> element to a variable name.  This list is valid for both node

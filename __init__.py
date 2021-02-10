@@ -3,6 +3,8 @@ from .core import (
     Body,
     ImplicitBody,
     ContactConstraint,
+    Interpolant,
+    Extrapolant,
     Sequence,
     ScaledSequence,
     _canonical_face,

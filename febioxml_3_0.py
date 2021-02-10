@@ -1,5 +1,5 @@
 # Same-package modules
-from .core import Body, ImplicitBody
+from .core import Body, ImplicitBody, Extrapolant, Interpolant
 from .febioxml import *
 
 # These parts work the same as in FEBio XML 2.5
@@ -27,6 +27,22 @@ XML_RB_DOF_FROM_DOF = {
     "α2": "Rv",
     "α3": "Rw",
 }
+
+XML_INTERP_FROM_INTERP = {
+    Interpolant.STEP: "STEP",
+    Interpolant.LINEAR: "LINEAR",
+    Interpolant.SPLINE: "SMOOTH",
+}
+INTERP_FROM_XML_INTERP = {v: k for k, v in XML_INTERP_FROM_INTERP.items()}
+
+
+XML_EXTRAP_FROM_EXTRAP = {
+    Extrapolant.CONSTANT: "CONSTANT",
+    Extrapolant.LINEAR: "EXTRAPOLATE",
+    Extrapolant.REPEAT: "REPEAT",
+    Extrapolant.REPEAT_CONTINUOUS: "REPEAT OFFSET",
+}
+EXTRAP_FROM_XML_EXTRAP = {v: k for k, v in XML_EXTRAP_FROM_EXTRAP.items()}
 
 
 # Functions for reading FEBio XML 3.0
@@ -144,6 +160,35 @@ def node_var_disp_xml(
     # Reference the node-specific boundary condition scaling factors
     e_sc.text = data_name
     return e_bc, e_NodeData
+
+
+def sequence_xml(sequence: Sequence, sequence_id: int, t0=0.0):
+    """Return a <load_controller> XML element for a sequence.
+
+    sequence := Sequence object.
+
+    sequence_id := Integer ID (origin = 0) to use for the sequence's XML
+    element "id" attribute.  The ID will be incremented by 1 to account
+    for FEBio XML's use of 1-referenced IDs.
+
+    t0 := Time offset to apply to the sequence's time points before
+    writing them to XML.  The intended use for this is to translate from
+    step-local to global simulation time.
+
+    """
+    e_loadcurve = ET.Element(
+        "load_controller", id=str(sequence_id + 1), type="loadcurve"
+    )
+    ET.SubElement(e_loadcurve, "interpolate").text = XML_INTERP_FROM_INTERP[
+        sequence.interpolant
+    ]
+    ET.SubElement(e_loadcurve, "extend").text = XML_EXTRAP_FROM_EXTRAP[
+        sequence.extrapolant
+    ]
+    e_points = ET.SubElement(e_loadcurve, "points")
+    for pt in sequence.points:
+        ET.SubElement(e_points, "point").text = f"{pt[0] + t0}, {pt[1]}"
+    return e_loadcurve
 
 
 def surface_pair_xml(faceset_registry, primary, secondary, name):

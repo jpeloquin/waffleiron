@@ -17,6 +17,8 @@ from .core import (
     Body,
     ContactConstraint,
     ImplicitBody,
+    Interpolant,
+    Extrapolant,
     Sequence,
     ScaledSequence,
     NodeSet,
@@ -259,6 +261,18 @@ class FebReader:
                 self.feb_version
             )
             raise UnsupportedFormatError(msg, file, self.feb_version)
+        # Get the correct FEBio XML module
+        version_major, version_minor = [int(a) for a in self.feb_version.split(".")]
+        if version_major == 2 and version_minor == 0:
+            self.febioxml_module = febioxml_2_0
+        elif version_major == 2 and version_minor == 5:
+            self.febioxml_module = febioxml_2_5
+        elif version_major == 3 and version_minor == 0:
+            self.febioxml_module = febioxml_3_0
+        else:
+            raise NotImplementedError(
+                f"Writing FEBio XML {version_major}.{version_minor} is not supported."
+            )
         self._sequences = None  # memo for sequences()
 
     def materials(self):
@@ -290,6 +304,7 @@ class FebReader:
         calls return the same Sequence objects.
 
         """
+        fx = self.febioxml_module
         if self._sequences is None:
             self._sequences = {}
             for ord_id, e_lc in enumerate(self.root.findall("LoadData/loadcurve")):
@@ -302,18 +317,16 @@ class FebReader:
                 curve = [parse_pt(a.text) for a in e_lc.getchildren()]
                 # Set extrapolation
                 if "extend" in e_lc.attrib:
-                    extrap = e_lc.attrib["extend"]
+                    extrap = fx.EXTRAP_FROM_XML_EXTRAP[e_lc.attrib["extend"]]
                     if extrap == "extrapolate":
-                        # FEBio XML uses "extrapolate" to mean linear
-                        # extrapolation
-                        extrap = "linear"
+                        extrap = Extrapolant.LINEAR
                 else:
-                    extrap = "constant"  # default
+                    extrap = "constant"  # FEBio's default
                 # Set interpolation
                 if "type" in e_lc.attrib:
-                    interp = e_lc.attrib["type"]
+                    interp = fx.INTERP_FROM_XML_INTERP[e_lc.attrib["type"]]
                 else:
-                    interp = "linear"  # default
+                    interp = Interpolant.LINEAR  # FEBio's default
                 # Create and store the Sequence object
                 self._sequences[ord_id] = Sequence(curve, interp=interp, extrap=extrap)
         return self._sequences
