@@ -285,12 +285,13 @@ def material_to_feb(mat, model):
     return e
 
 
-def add_nodeset(xml_root, name, nodes):
+def add_nodeset(xml_root, name, nodes, febioxml_module):
     """Add a named node set to FEBio XML."""
-    e_geometry = xml_root.find("./Geometry")
-    for existing in xml_root.xpath(f"Geometry/NodeSet[@name='{name}']"):
+    fx = febioxml_module
+    e_Mesh = xml_root.find(fx.MESH_PARENT)
+    for existing in xml_root.xpath(f"{fx.MESH_PARENT}/NodeSet[@name='{name}']"):
         existing.getparent().remove(existing)
-    e_nodeset = ET.SubElement(e_geometry, "NodeSet", name=name)
+    e_nodeset = ET.SubElement(e_Mesh, "NodeSet", name=name)
     # Sort nodes to be user-friendly (humans often read .feb files) and,
     # more importantly, so that local IDs in NodeData elements (FEBio
     # XML 2.5) or mesh_data elements (FEBio XML 3.0) have a stable
@@ -425,6 +426,34 @@ def contact_section(contacts, model, named_surface_pairs, named_contacts):
     return tag_contact_section
 
 
+def mesh_section(model, parts, material_registry, febioxml_module):
+    """Return XML tree for <Mesh> (or <Geometry>) section.
+
+    <Geometry> became <Mesh> in FEBio XML 3.0
+
+    """
+    fx = febioxml_module
+    e_geometry = ET.Element(fx.MESH_PARENT)
+    # Write <nodes>
+    e_nodes = ET.SubElement(e_geometry, "Nodes")
+    for i, x in enumerate(model.mesh.nodes):
+        feb_nid = i + 1  # 1-indexed
+        e = ET.SubElement(e_nodes, "node", id="{}".format(feb_nid))
+        e.text = vec_to_text(x)
+        e_nodes.append(e)
+    # Write <elements> for each part
+    for part in parts:
+        e_elements = ET.SubElement(e_geometry, "Elements")
+        e_elements.attrib["type"] = part["element_type"].feb_name
+        mat_id = material_registry.names(part["material"], "ordinal_id")[0]
+        e_elements.attrib["mat"] = str(mat_id + 1)
+        for i, e in part["elements"]:
+            e_element = ET.SubElement(e_elements, "elem")
+            e_element.attrib["id"] = str(i + 1)
+            e_element.text = ", ".join(str(i + 1) for i in e.ids)
+    return e_geometry
+
+
 def control_parameter_to_feb(parameter, value):
     """Return FEBio XML element for a control parameter."""
     nm_feb = control_tagnames_to_febio[parameter]
@@ -511,8 +540,8 @@ def xml(model, version="2.5"):
     Material = ET.SubElement(root, "Material")
 
     parts = fx.parts(model)
-    Geometry = fx.geometry_section(model, parts, material_registry)
-    root.append(Geometry)
+    e_Mesh = mesh_section(model, parts, material_registry, febioxml_module=fx)
+    root.append(e_Mesh)
 
     e_boundary = ET.SubElement(root, "Boundary")
     if version_major == 2 and version_minor >= 5:
@@ -615,7 +644,7 @@ def xml(model, version="2.5"):
                 name_base = f"{body_name}_interface"
                 nodeset = implicit_body.interface
                 name = model.named["node sets"].get_or_create_name(name_base, nodeset)
-            add_nodeset(root, name, implicit_body.interface)
+            add_nodeset(root, name, implicit_body.interface, febioxml_module=fx)
             ET.SubElement(e_boundary, "rigid", rb=str(mat_id + 1), node_set=name)
 
     # Write global constraints / conditions / BCs and anything that
@@ -630,7 +659,7 @@ def xml(model, version="2.5"):
             interface.rigid_body, nametype="ordinal_id"
         )[0]
         node_set_name = model.named["node sets"].name(interface.node_set)
-        add_nodeset(root, node_set_name, interface.node_set)
+        add_nodeset(root, node_set_name, interface.node_set, febioxml_module=fx)
         ET.SubElement(
             e_Boundary, "rigid", rb=str(rigid_body_id + 1), node_set=node_set_name
         )
@@ -650,7 +679,7 @@ def xml(model, version="2.5"):
                 name_base = f"fixed_{dof}_autogen-nodeset"
                 nodeset = NodeSet(nodeset)  # make hashable
                 name = model.named["node sets"].get_or_create_name(name_base, nodeset)
-                add_nodeset(root, name, nodeset)
+                add_nodeset(root, name, nodeset, febioxml_module=fx)
                 # Create the tag
                 ET.SubElement(
                     e_boundary, "fix", bc=XML_BC_FROM_DOF[(dof, var)], node_set=name
@@ -704,9 +733,9 @@ def xml(model, version="2.5"):
     # conditions because some boundary conditions have part of their
     # values stored in MeshData.
     e_MeshData, e_ElementSet = fx.meshdata_section(model)
-    root.insert(root.index(Geometry) + 1, e_MeshData)
+    root.insert(root.index(e_Mesh) + 1, e_MeshData)
     if len(e_ElementSet) != 0:
-        Geometry.append(e_ElementSet)
+        e_Mesh.append(e_ElementSet)
 
     # Step section(s)
     cumulative_time = 0.0
@@ -891,12 +920,12 @@ def xml(model, version="2.5"):
     #
     # Write any named node sets that were not already written.
     for nm, node_set in model.named["node sets"].pairs():
-        e_nodeset = root.find(f"Geometry/NodeSet[@name='{nm}']")
+        e_nodeset = root.find(f"{fx.MESH_PARENT}/NodeSet[@name='{nm}']")
         if e_nodeset is None:
-            add_nodeset(root, nm, node_set)
+            add_nodeset(root, nm, node_set, febioxml_module=fx)
     # Write *all* named face sets ("surfaces")
     for nm, face_set in model.named["face sets"].pairs():
-        e_surface = ET.SubElement(Geometry, "Surface", name=nm)
+        e_surface = ET.SubElement(e_Mesh, "Surface", name=nm)
         for face in face_set:
             e_surface.append(tag_face(face))
     # Write *all* named surface pairs
@@ -904,7 +933,7 @@ def xml(model, version="2.5"):
         e_surfpair = fx.surface_pair_xml(
             model.named["face sets"], primary, secondary, nm
         )
-        Geometry.append(e_surfpair)
+        e_Mesh.append(e_surfpair)
     # TODO: Handle element sets too.
 
     tree = ET.ElementTree(root)

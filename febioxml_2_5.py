@@ -18,8 +18,9 @@ from .febioxml import *
 
 # Facts about FEBio XML 2.5
 
-
 BODY_COND_PARENT = "Boundary"
+
+MESH_PARENT = "Geometry"
 
 BC_TYPE_TAG = {
     "node": {"variable": "prescribe", "fixed": "fix"},
@@ -180,29 +181,6 @@ def body_constraints_xml(
                 e_bc.attrib["type"] = "relative"
             e_bc.text = str(v)
     return [e_rb_bc]
-
-
-def geometry_section(model, parts, material_registry):
-    """Return XML tree for Geometry section."""
-    e_geometry = ET.Element("Geometry")
-    # Write <nodes>
-    e_nodes = ET.SubElement(e_geometry, "Nodes")
-    for i, x in enumerate(model.mesh.nodes):
-        feb_nid = i + 1  # 1-indexed
-        e = ET.SubElement(e_nodes, "node", id="{}".format(feb_nid))
-        e.text = vec_to_text(x)
-        e_nodes.append(e)
-    # Write <elements> for each part
-    for part in parts:
-        e_elements = ET.SubElement(e_geometry, "Elements")
-        e_elements.attrib["type"] = part["element_type"].feb_name
-        mat_id = material_registry.names(part["material"], "ordinal_id")[0]
-        e_elements.attrib["mat"] = str(mat_id + 1)
-        for i, e in part["elements"]:
-            e_element = ET.SubElement(e_elements, "elem")
-            e_element.attrib["id"] = str(i + 1)
-            e_element.text = ", ".join(str(i + 1) for i in e.ids)
-    return e_geometry
 
 
 def meshdata_section(model):

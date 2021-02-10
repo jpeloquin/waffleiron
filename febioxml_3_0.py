@@ -3,7 +3,7 @@ from .core import Body, ImplicitBody, Extrapolant, Interpolant
 from .febioxml import *
 
 # These parts work the same as in FEBio XML 2.5
-from .febioxml_2_5 import geometry_section, meshdata_section
+from .febioxml_2_5 import meshdata_section
 
 # Facts about FEBio XML 3.0
 
@@ -13,6 +13,8 @@ BC_TYPE_TAG = {
 }
 
 BODY_COND_PARENT = "Rigid"
+
+MESH_PARENT = "Mesh"
 
 BC_TYPE_TAG = {
     "node": {"variable": "prescribe", "fixed": "fix"},
