@@ -12,9 +12,11 @@ BC_TYPE_TAG = {
     "body": {"variable": "prescribe", "fixed": "fix"},
 }
 
+# XML element parents and names
 BODY_COND_PARENT = "Rigid"
-
 MESH_PARENT = "Mesh"
+STEP_PARENT = "Step"
+STEP_NAME = "step"
 
 BC_TYPE_TAG = {
     "node": {"variable": "prescribe", "fixed": "fix"},
@@ -159,7 +161,7 @@ def node_data_xml(nodes, data, data_name, nodeset_name):
 
 
 def node_var_disp_xml(
-    model, xmlroot, nodes, scales, seq, dof, var, relative, step_id=0
+    model, xmlroot, nodes, scales, seq, dof, var, relative, step_name
 ):
     """Return XML elements for nodal variable displacement
 
@@ -176,13 +178,13 @@ def node_var_disp_xml(
     # Other subelements
     ET.SubElement(e_bc, "relative").text = str(int(relative))
     # Get or create a name for the node set
-    nm_base = "nodal_bc_" f"step{step_id + 1}_variable_{var[0]}_seq{seq_id}_autogen"
+    nm_base = "nodal_bc_" f"step={step_name}_var={var[0]}_seq={seq_id}_autogen"
     nodeset = NodeSet(nodes)
     nodeset_name = model.named["node sets"].get_or_create_name(nm_base, nodeset)
     e_bc.attrib["node_set"] = nodeset_name
     # Generate a non-duplicate name for the Geometry/MeshData/NodeData
     # element, which will contain the node-specific scaling factors.
-    stem = "nodal_bc_" f"step{step_id + 1}_{dof}_seq{seq_id}_autogen"
+    stem = "nodal_bc_" f"step={step_name}_{dof}_seq{seq_id}_autogen"
     i = 0
     data_name = f"{stem}{i}"
     e_MeshData = find_unique_tag(xmlroot, "MeshData")
@@ -231,3 +233,11 @@ def surface_pair_xml(faceset_registry, primary, secondary, name):
     ET.SubElement(e_surfpair, "primary").text = faceset_registry.names(primary)[0]
     ET.SubElement(e_surfpair, "secondary").text = faceset_registry.names(secondary)[0]
     return e_surfpair
+
+
+def step_xml_factory():
+    """Create empty <step> XML elements"""
+    i = 1
+    while True:
+        e = ET.Element(STEP_NAME, id=str(i), name=f"Step{i}")
+        yield e

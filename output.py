@@ -728,13 +728,17 @@ def xml(model, version="2.5"):
         ET.SubElement(plotfile, "var", type=var)
 
     # Step section(s)
+    e_step_parent = root.find(fx.STEP_PARENT)
+    if e_step_parent is None:
+        e_step_parent = ET.SubElement(root, fx.STEP_PARENT)
     cumulative_time = 0.0
     visited_implicit_bodies = set()
-    for istep, step in enumerate(model.steps):
-        step_name = (
-            step["name"] if step["name"] is not None else "Step{}".format(istep + 1)
-        )
-        e_step = ET.SubElement(root, "Step", name=step_name)
+    step_factory = fx.step_xml_factory()
+    for step in model.steps:
+        e_step = next(step_factory)
+        if step["name"] is not None:
+            e_step.attrib["name"] = step["name"]
+        e_step_parent.append(e_step)
         if version == "2.0":
             ET.SubElement(e_step, "Module", type=step["module"])
         # Warn if there's an incompatibility between requested materials
@@ -842,7 +846,7 @@ def xml(model, version="2.5"):
                             dof,
                             var,
                             rel[0],
-                            istep,
+                            e_step.attrib["name"],
                         )
                         e_Boundary.append(e_bc)
                         e_MeshData.append(e_nodedata)
