@@ -659,29 +659,13 @@ def xml(model, version="2.5"):
         node_set_name = model.named["node sets"].name(interface.node_set)
         add_nodeset(root, node_set_name, interface.node_set, febioxml_module=fx)
         ET.SubElement(
-            e_Boundary, "rigid", rb=str(rigid_body_id + 1), node_set=node_set_name
+            e_boundary, "rigid", rb=str(rigid_body_id + 1), node_set=node_set_name
         )
     #
     # Write fixed nodal constraints to global <Boundary>
-    for (dof, var), nodeset in model.fixed["node"].items():
-        if nodeset:
-            if version == "2.0":
-                # Tag heirarchy: <Boundary><fix bc="x"><node id="1"> for each node
-                e_fixed_nodeset = ET.SubElement(
-                    e_boundary, "fix", bc=XML_BC_FROM_DOF[(dof, var)]
-                )
-                for i in nodeset:
-                    ET.SubElement(e_fixed_nodeset, "node", id=str(i + 1))
-            elif version_major == 2 and version_minor >= 5:
-                # Tag heirarchy: <Boundary><fix bc="x" node_set="set_name">
-                name_base = f"fixed_{dof}_autogen-nodeset"
-                nodeset = NodeSet(nodeset)  # make hashable
-                name = model.named["node sets"].get_or_create_name(name_base, nodeset)
-                add_nodeset(root, name, nodeset, febioxml_module=fx)
-                # Create the tag
-                ET.SubElement(
-                    e_boundary, "fix", bc=XML_BC_FROM_DOF[(dof, var)], node_set=name
-                )
+    e_boundary = root.find("Boundary")
+    for e in fx.node_fix_disp_xml(model.fixed["node"], model.named["node sets"]):
+        e_boundary.append(e)
     # TODO: Write time-varying nodal constraints to global <Boundary>
 
     # Write global (step-independent) fixed and variable body constraints to global

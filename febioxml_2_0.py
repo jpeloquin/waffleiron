@@ -15,6 +15,11 @@ from .febioxml import *
 
 BODY_COND_PARENT = "Constraints"
 
+BC_TYPE_TAG = {
+    "node": {"variable": "prescribe", "fixed": "fix"},
+    "body": {"variable": "prescribed", "fixed": "fixed"},
+}
+
 XML_INTERP_FROM_INTERP = {
     Interpolant.STEP: "step",
     Interpolant.LINEAR: "linear",
@@ -69,6 +74,30 @@ def contact_section(model):
         for f in contact.follower:
             e_follower.append(tag_face(f))
     return tag_branch
+
+
+def node_fix_disp_xml(fixed_conditions, nodeset_registry):
+    """Return XML elements for node fixed displacement conditions.
+
+    fixed_conditions := The data structure in model.fixed["node"]
+
+    This function may create and add new nodesets to the nodeset name
+    registry.  If generating a full XML tree, be sure to write these new
+    nodesets to the tree.
+
+    """
+    e_bcs = []
+    # Tag hierarchy: <Boundary><fix bc="x"><node id="1"> for each node
+    for (dof, var), nodeset in fixed_conditions.items():
+        if not nodeset:
+            continue
+        e_bc = ET.Element(
+            e_boundary, BC_TYPE_TAG["node"]["fixed"], bc=XML_BC_FROM_DOF[(dof, var)]
+        )
+        for i in nodeset:
+            ET.SubElement(e_bc, "node", id=str(i + 1))
+        e_bcs.append(e_bc)
+    return e_bcs
 
 
 def tag_face(face):

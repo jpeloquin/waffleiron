@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 # Same-package modules
 from .core import Body, ImplicitBody, Extrapolant, Interpolant
 from .febioxml import *
@@ -160,10 +162,44 @@ def node_data_xml(nodes, data, data_name, nodeset_name):
     return e_NodeData
 
 
+def node_fix_disp_xml(fixed_conditions, nodeset_registry):
+    """Return XML elements for node fixed displacement conditions.
+
+    fixed_conditions := The data structure in model.fixed["node"]
+
+    This function may create and add new nodesets to the nodeset name
+    registry.  If generating a full XML tree, be sure to write these new
+    nodesets to the tree.
+
+    """
+    # Tag hierarchy: <Boundary><bc type="fix" node_set="set_name">
+    e_bcs = []
+    # FEBio XML 3.0 stores the nodal BCs by node set, so we need to do
+    # some collation first.
+    by_nodeset = defaultdict(list)
+    for dofvar, nodeset in fixed_conditions.items():
+        if not nodeset:
+            continue
+        nodeset = NodeSet(nodeset)
+        by_nodeset[nodeset].append(dofvar)
+    for nodeset, dofvar_pairs in by_nodeset.items():
+        # Get or create a name for the node set
+        base = f"fixed_nodes_{','.join(dof for dof, var in dofvar_pairs)}_auto"
+        nodeset_name = nodeset_registry.get_or_create_name(base, nodeset)
+        # Create element
+        e_bc = ET.Element(
+            "bc", type=BC_TYPE_TAG["node"]["fixed"], node_set=nodeset_name
+        )
+        txt = ",".join(XML_BC_FROM_DOF[t] for t in dofvar_pairs)
+        e_dofs = ET.SubElement(e_bc, "dofs").text = txt
+        e_bcs.append(e_bc)
+    return e_bcs
+
+
 def node_var_disp_xml(
     model, xmlroot, nodes, scales, seq, dof, var, relative, step_name
 ):
-    """Return XML elements for nodal variable displacement
+    """Return XML elements for nodes variable displacement
 
     model := Model object.  Needed for the name registry.
 

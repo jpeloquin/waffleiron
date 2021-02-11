@@ -271,6 +271,32 @@ def node_data_xml(nodes, data, data_name, nodeset_name):
     return e_NodeData
 
 
+def node_fix_disp_xml(fixed_conditions, nodeset_registry):
+    """Return XML elements for node fixed displacement conditions.
+
+    fixed_conditions := The data structure in model.fixed["node"]
+
+    This function may create and add new nodesets to the nodeset name
+    registry.  If generating a full XML tree, be sure to write these new
+    nodesets to the tree.
+
+    """
+    # Tag hierarchy: <Boundary><fix bc="x" node_set="set_name">
+    e_bcs = []
+    for (dof, var), nodeset in fixed_conditions.items():
+        if not nodeset:
+            continue
+        nodeset = NodeSet(nodeset)  # make hashable
+        base = f"fixed_{dof}_autogen-nodeset"
+        name = nodeset_registry.get_or_create_name(base, nodeset)
+        # Create the tag
+        e_bc = ET.Element(
+            BC_TYPE_TAG["node"]["fixed"], bc=XML_BC_FROM_DOF[(dof, var)], node_set=name
+        )
+        e_bcs.append(e_bc)
+    return e_bcs
+
+
 def node_var_disp_xml(
     model, xmlroot, nodes, scales, seq, dof, var, relative, step_name
 ):
