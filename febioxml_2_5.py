@@ -183,6 +183,34 @@ def body_constraints_xml(
     return [e_rb_bc]
 
 
+def mesh_xml(model, domains, material_registry):
+    """Create <Geometry> XML element.
+
+    Returns a tuple because the FEBio XML 3.0 version needs to return
+    two XML elements.
+
+    """
+    e_geometry = ET.Element(MESH_PARENT)
+    # Write <nodes>
+    e_nodes = ET.SubElement(e_geometry, "Nodes")
+    for i, x in enumerate(model.mesh.nodes):
+        feb_nid = i + 1  # 1-indexed
+        e = ET.SubElement(e_nodes, "node", id="{}".format(feb_nid))
+        e.text = vec_to_text(x)
+        e_nodes.append(e)
+    # Write <Elements> for each domain
+    for i, domain in enumerate(domains):
+        e_elements = ET.SubElement(e_geometry, "Elements", name=f"Domain{i+1}")
+        e_elements.attrib["type"] = domain["element_type"].feb_name
+        mat_id = material_registry.names(domain["material"], "ordinal_id")[0]
+        e_elements.attrib["mat"] = str(mat_id + 1)
+        for i, e in domain["elements"]:
+            e_element = ET.SubElement(e_elements, "elem")
+            e_element.attrib["id"] = str(i + 1)
+            e_element.text = ", ".join(str(i + 1) for i in e.ids)
+    return (e_geometry,)
+
+
 def meshdata_section(model):
     """Return XML tree for some of MeshData section
 

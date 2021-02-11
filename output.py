@@ -426,35 +426,6 @@ def contact_section(contacts, model, named_surface_pairs, named_contacts):
     return tag_contact_section
 
 
-def mesh_section(model, parts, material_registry, febioxml_module):
-    """Return XML tree for <Mesh> (or <Geometry>) section.
-
-    <Geometry> became <Mesh> in FEBio XML 3.0
-
-    """
-    fx = febioxml_module
-    e_geometry = ET.Element(fx.MESH_PARENT)
-    # Write <nodes>
-    e_nodes = ET.SubElement(e_geometry, "Nodes")
-    for i, x in enumerate(model.mesh.nodes):
-        feb_nid = i + 1  # 1-indexed
-        e = ET.SubElement(e_nodes, "node", id="{}".format(feb_nid))
-        e.text = vec_to_text(x)
-        e_nodes.append(e)
-    # Write <Elements> for each part
-    for i, part in enumerate(parts):
-        # FEBio XML 3.0 requires a `name` attribute for <Elements>.
-        e_elements = ET.SubElement(e_geometry, "Elements", name=f"Part{i+1}")
-        e_elements.attrib["type"] = part["element_type"].feb_name
-        mat_id = material_registry.names(part["material"], "ordinal_id")[0]
-        e_elements.attrib["mat"] = str(mat_id + 1)
-        for i, e in part["elements"]:
-            e_element = ET.SubElement(e_elements, "elem")
-            e_element.attrib["id"] = str(i + 1)
-            e_element.text = ", ".join(str(i + 1) for i in e.ids)
-    return e_geometry
-
-
 def face_xml(face, face_id):
     """Return XML element for a face.
 
@@ -525,9 +496,10 @@ def xml(model, version="2.5"):
         if type(mat) is matlib.RigidBody:
             material_registry.remove_object(mat)
     _fixup_ordinal_ids(material_registry)
-    # Ensure each material has an ID
+    # Ensure each material has an ID and name
     for mat in materials_used:
         get_or_create_item_id(material_registry, mat)
+        material_registry.get_or_create_name("Material", mat)
     assert materials_used - set(material_registry.objects()) == set()
 
     root = ET.Element("febio_spec", version="{}".format(version))
@@ -556,9 +528,18 @@ def xml(model, version="2.5"):
 
     Material = ET.SubElement(root, "Material")
 
-    parts = fx.parts(model)
-    e_Mesh = mesh_section(model, parts, material_registry, febioxml_module=fx)
-    root.append(e_Mesh)
+    domains = fx.domains(model)
+    for e in fx.mesh_xml(model, domains, material_registry):
+        root.append(e)
+    e_Mesh = root.find(fx.MESH_PARENT)
+
+    # Write MeshData.  Have to do this before handling boundary
+    # conditions because some boundary conditions have part of their
+    # values stored in MeshData.
+    e_MeshData, e_ElementSet = fx.meshdata_section(model)
+    root.append(e_MeshData)
+    if len(e_ElementSet) != 0:
+        e_Mesh.append(e_ElementSet)
 
     e_boundary = ET.SubElement(root, "Boundary")
     if version_major == 2 and version_minor >= 5:
@@ -745,14 +726,6 @@ def xml(model, version="2.5"):
         output_vars = model.output["variables"]
     for var in output_vars:
         ET.SubElement(plotfile, "var", type=var)
-
-    # Write MeshData.  Have to do this before handling boundary
-    # conditions because some boundary conditions have part of their
-    # values stored in MeshData.
-    e_MeshData, e_ElementSet = fx.meshdata_section(model)
-    root.insert(root.index(e_Mesh) + 1, e_MeshData)
-    if len(e_ElementSet) != 0:
-        e_Mesh.append(e_ElementSet)
 
     # Step section(s)
     cumulative_time = 0.0

@@ -18,9 +18,8 @@ knows how to distinguish between numeric types (float, vector,
 matrix), not item formats (node, item, mult).  This will have to be
 revised at some point.
 
-For a basic mesh (one material), all the stuff in the =domain=
-dictionary is defined per element.  A =domain= is explicitly an
-element set; they are listed in =geometry/domain_section=.
+For a basic mesh (one material), all the stuff in the =domain= dictionary is defined per element.
+A =domain= is explicitly an element set; they are listed in =geometry/domain_section=.
 
 * Specification uncertainties
 

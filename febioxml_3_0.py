@@ -103,6 +103,38 @@ def body_constraints_xml(
     return elems
 
 
+def mesh_xml(model, domains, material_registry):
+    """Create <Mesh> and <MeshDomain> XML elements.
+
+    <Geometry> became <Mesh> in FEBio XML 3.0
+
+    """
+    e_geometry = ET.Element(MESH_PARENT)
+    e_meshdomains = ET.Element("MeshDomains")
+    # Write <nodes>
+    e_nodes = ET.SubElement(e_geometry, "Nodes")
+    for i, x in enumerate(model.mesh.nodes):
+        feb_nid = i + 1  # 1-indexed
+        e = ET.SubElement(e_nodes, "node", id="{}".format(feb_nid))
+        e.text = vec_to_text(x)
+        e_nodes.append(e)
+    # Write <Elements> and <SolidDomain> for each domain
+    for i, domain in enumerate(domains):
+        # <Elements>
+        e_elements = ET.SubElement(e_geometry, "Elements", name=domain["name"])
+        e_elements.attrib["type"] = domain["element_type"].feb_name
+        for i, e in domain["elements"]:
+            e_element = ET.SubElement(e_elements, "elem")
+            e_element.attrib["id"] = str(i + 1)
+            e_element.text = ", ".join(str(i + 1) for i in e.ids)
+        # <SolidDomain>
+        mat_name = material_registry.names(domain["material"], "canonical")[0]
+        e_soliddomain = ET.SubElement(
+            e_meshdomains, "SolidDomain", name=domain["name"], mat=mat_name
+        )
+    return e_geometry, e_meshdomains
+
+
 def node_data_xml(nodes, data, data_name, nodeset_name):
     """Construct NodeData XML element"""
     e_NodeData = ET.Element("NodeData")

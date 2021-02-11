@@ -128,16 +128,11 @@ module_compat_by_mat = {
 # or write.
 
 
-def parts(model):
-    """Return list of parts.
+def domains(model):
+    """Return list of domains.
 
-    Here, 1 part = all elements of the same type with the same material.
-
-    PreView has a notion of parts that is separate from both material
-    and element type and named element sets.  This doesn't seem to
-    matter to FEBio itself, though.  It may interfere with
-    postprocessing, in which case the definition of a "part" from the
-    perspective of febtools will have to be changed.
+    Here, a domain is defined as the collection of all elements of the
+    same type with the same material.
 
     """
     # TODO: Modify the definition of parts such that 1 part = all
@@ -153,18 +148,20 @@ def parts(model):
         like_elements = subdict.setdefault(elem.__class__, [])
         like_elements.append((i, elem))
     # Convert nested dictionaries to a list
-    parts = []
+    domains = []
+    i = 0
     for mat in by_mat_type:
         for typ in by_mat_type[mat]:
-            parts.append(
+            i += 1
+            domains.append(
                 {
-                    "label": None,
+                    "name": f"Domain{i}",
                     "material": mat,
                     "element_type": typ,
                     "elements": by_mat_type[mat][typ],
                 }
             )
-    return parts
+    return domains
 
 
 # Functions for reading FEBio XML
