@@ -455,6 +455,22 @@ def mesh_section(model, parts, material_registry, febioxml_module):
     return e_geometry
 
 
+def face_xml(face, face_id):
+    """Return XML element for a face.
+
+    face := tuple of ints; canonical face tuple.  Zero-origin.
+
+    face_id := integer ID to use for the face.  Face IDs should be
+    assigned in the order the faces' XML elements will be inserted into
+    the XML tree.
+
+    """
+    nm = {3: "tri3", 4: "quad4"}
+    e = ET.Element(nm[len(face)], id=str(face_id + 1))
+    e.text = " " + ", ".join(f"{i+1}" for i in face) + " "
+    return e
+
+
 def control_parameter_to_feb(parameter, value):
     """Return FEBio XML element for a control parameter."""
     nm_feb = control_tagnames_to_febio[parameter]
@@ -927,8 +943,8 @@ def xml(model, version="2.5"):
     # Write *all* named face sets ("surfaces")
     for nm, face_set in model.named["face sets"].pairs():
         e_surface = ET.SubElement(e_Mesh, "Surface", name=nm)
-        for face in face_set:
-            e_surface.append(tag_face(face))
+        for i, face in enumerate(face_set):
+            e_surface.append(face_xml(face, i))
     # Write *all* named surface pairs
     for nm, (primary, secondary) in named_surface_pairs.pairs():
         e_surfpair = fx.surface_pair_xml(
@@ -939,13 +955,6 @@ def xml(model, version="2.5"):
 
     tree = ET.ElementTree(root)
     return tree
-
-
-def tag_face(face):
-    nm = {3: "tri3", 4: "quad4"}
-    tag = ET.Element(nm[len(face)])
-    tag.text = ", ".join([f"{i+1}" for i in face])
-    return tag
 
 
 def write_xml(tree, f):
