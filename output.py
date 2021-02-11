@@ -441,9 +441,10 @@ def mesh_section(model, parts, material_registry, febioxml_module):
         e = ET.SubElement(e_nodes, "node", id="{}".format(feb_nid))
         e.text = vec_to_text(x)
         e_nodes.append(e)
-    # Write <elements> for each part
-    for part in parts:
-        e_elements = ET.SubElement(e_geometry, "Elements")
+    # Write <Elements> for each part
+    for i, part in enumerate(parts):
+        # FEBio XML 3.0 requires a `name` attribute for <Elements>.
+        e_elements = ET.SubElement(e_geometry, "Elements", name=f"Part{i+1}")
         e_elements.attrib["type"] = part["element_type"].feb_name
         mat_id = material_registry.names(part["material"], "ordinal_id")[0]
         e_elements.attrib["mat"] = str(mat_id + 1)
