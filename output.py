@@ -751,7 +751,7 @@ def xml(model, version="2.5"):
         for parameter in step["control"]:
             if parameter == "time stepper":
                 continue
-            e_param = control_parameter_to_feb(parameter, step["control"][parameter])
+            e_param = fx.control_parameter_to_feb(parameter, step["control"][parameter])
             e_Control.append(e_param)
         # Write <time_stepper> and all its children
         e_ts = ET.SubElement(e_Control, "time_stepper")
