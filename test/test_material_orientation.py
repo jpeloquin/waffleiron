@@ -9,8 +9,9 @@ import numpy.testing as npt
 
 # febtools' local modules
 import febtools as feb
+from febtools import Step
 from febtools.load import prescribe_deformation
-from febtools.control import auto_control_section
+from febtools.control import auto_ticker
 from febtools.febio import run_febio_checked
 from febtools.math import vec_from_sph
 from febtools.test.fixtures import (
@@ -50,7 +51,7 @@ def _fixture_FEBio_fiberDirectionLocal_Hex8_fiber():
     for e in model.mesh.elements:
         e.material = material
     sequence = feb.Sequence(((0, 0), (1, 1)), extrap="extrapolate", interp="linear")
-    model.add_step(control=auto_control_section(sequence, pts_per_segment=1))
+    model.add_step(Step(physics="solid", ticker=auto_ticker(sequence)))
     F = np.array([[1.14, 0.18, 0.11], [-0.20, 1.09, 0.17], [-0.11, 0.20, 1.12]])
     # ^ make all diagonal stretches large and positive to load fibers
     node_set = feb.NodeSet([i for i in range(len(model.mesh.nodes))])

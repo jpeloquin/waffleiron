@@ -20,7 +20,7 @@ from .core import (
     ScaledSequence,
     RigidInterface,
 )
-from .control import step_duration
+from .control import auto_physics
 from . import material as matlib
 from .math import sph_from_vec
 from . import febioxml
@@ -28,14 +28,15 @@ from . import febioxml_2_0
 from . import febioxml_2_5
 from . import febioxml_3_0
 from .febioxml import (
+    find_unique_tag,
     get_or_create_item_id,
     get_or_create_seq_id,
+    get_or_create_xml,
     bool_to_text,
     float_to_text,
     vec_to_text,
     bvec_to_text,
-    control_tagnames_to_febio,
-    control_values_to_febio,
+    property_to_xml,
     DOF_NAME_FROM_XML_NODE_BC,
     XML_BC_FROM_DOF,
     VAR_FROM_XML_NODE_BC,
@@ -69,48 +70,30 @@ def _fixup_ordinal_ids(registry):
         )
 
 
-def _property_to_feb(p, tag, model):
-    """Convert a fixed or variable property to FEBio XML."""
-    e = ET.Element(tag)
-    if isinstance(p, Sequence):
-        seq_id = get_or_create_item_id(model.named["sequences"], p)
-        e.attrib["lc"] = str(seq_id + 1)
-        e.text = "1"  # basic Sequences have no scale
-    elif isinstance(p, ScaledSequence):
-        # Time-varying property, scaled
-        seq_id = get_or_create_item_id(model.named["sequences"], p.sequence)
-        e.attrib["lc"] = str(seq_id + 1)
-        e.text = float_to_text(p.scale)
-    else:
-        # Fixed property
-        e.text = float_to_text(p)
-    return e
-
-
 def exponential_fiber_to_feb(mat, model):
     """Convert ExponentialFiber material instance to FEBio XML."""
     e = ET.Element("material", type="fiber-exp-pow")
-    e.append(_property_to_feb(mat.α, "alpha", model))
-    e.append(_property_to_feb(mat.β, "beta", model))
-    e.append(_property_to_feb(mat.ξ, "ksi", model))
+    e.append(property_to_xml(mat.α, "alpha", model.named["sequences"]))
+    e.append(property_to_xml(mat.β, "beta", model.named["sequences"]))
+    e.append(property_to_xml(mat.ξ, "ksi", model.named["sequences"]))
     return e
 
 
 def power_linear_fiber_to_feb(mat, model):
     """Convert PowerLinearFiber material instance to FEBio XML."""
     e = ET.Element("material", type="fiber-pow-linear")
-    e.append(_property_to_feb(mat.E, "E", model))
-    e.append(_property_to_feb(mat.β, "beta", model))
-    e.append(_property_to_feb(mat.λ0, "lam0", model))
+    e.append(property_to_xml(mat.E, "E", model.named["sequences"]))
+    e.append(property_to_xml(mat.β, "beta", model.named["sequences"]))
+    e.append(property_to_xml(mat.λ0, "lam0", model.named["sequences"]))
     return e
 
 
 def holmesmow_to_feb(mat, model):
     """Convert HolmesMow material instance to FEBio XML."""
     e = ET.Element("material", type="Holmes-Mow")
-    e.append(_property_to_feb(mat.E, "E", model))
-    e.append(_property_to_feb(mat.ν, "v", model))
-    e.append(_property_to_feb(mat.β, "beta", model))
+    e.append(property_to_xml(mat.E, "E", model.named["sequences"]))
+    e.append(property_to_xml(mat.ν, "v", model.named["sequences"]))
+    e.append(property_to_xml(mat.β, "beta", model.named["sequences"]))
     return e
 
 
@@ -118,8 +101,8 @@ def isotropicelastic_to_feb(mat, model):
     """Convert IsotropicElastic material instance to FEBio XML."""
     e = ET.Element("material", type="isotropic elastic")
     E, ν = feb.material.from_Lamé(mat.y, mat.mu)
-    e.append(_property_to_feb(E, "E", model))
-    e.append(_property_to_feb(ν, "v", model))
+    e.append(property_to_xml(E, "E", model.named["sequences"]))
+    e.append(property_to_xml(ν, "v", model.named["sequences"]))
     return e
 
 
@@ -127,15 +110,15 @@ def orthotropic_elastic_to_feb(mat, model):
     """Convert OrthotropicElastic material instance to FEBio XML."""
     e = ET.Element("material", type="orthotropic elastic")
     # Material properties
-    e.append(_property_to_feb(mat.E1, "E1", model))
-    e.append(_property_to_feb(mat.E2, "E2", model))
-    e.append(_property_to_feb(mat.E3, "E3", model))
-    e.append(_property_to_feb(mat.G12, "G12", model))
-    e.append(_property_to_feb(mat.G23, "G23", model))
-    e.append(_property_to_feb(mat.G31, "G31", model))
-    e.append(_property_to_feb(mat.v12, "v12", model))
-    e.append(_property_to_feb(mat.v23, "v23", model))
-    e.append(_property_to_feb(mat.v31, "v31", model))
+    e.append(property_to_xml(mat.E1, "E1", model.named["sequences"]))
+    e.append(property_to_xml(mat.E2, "E2", model.named["sequences"]))
+    e.append(property_to_xml(mat.E3, "E3", model.named["sequences"]))
+    e.append(property_to_xml(mat.G12, "G12", model.named["sequences"]))
+    e.append(property_to_xml(mat.G23, "G23", model.named["sequences"]))
+    e.append(property_to_xml(mat.G31, "G31", model.named["sequences"]))
+    e.append(property_to_xml(mat.v12, "v12", model.named["sequences"]))
+    e.append(property_to_xml(mat.v23, "v23", model.named["sequences"]))
+    e.append(property_to_xml(mat.v31, "v31", model.named["sequences"]))
     return e
 
 
@@ -143,31 +126,31 @@ def neo_hookean_to_feb(mat, model):
     """Convert NeoHookean material instance to FEBio XML."""
     e = ET.Element("material", type="neo-Hookean")
     E, ν = feb.material.from_Lamé(mat.y, mat.mu)
-    e.append(_property_to_feb(E, "E", model))
-    e.append(_property_to_feb(ν, "v", model))
+    e.append(property_to_xml(E, "E", model.named["sequences"]))
+    e.append(property_to_xml(ν, "v", model.named["sequences"]))
     return e
 
 
 def iso_const_perm_to_feb(mat, model):
     """Convert IsotropicConstantPermeability instance to FEBio XML"""
     e = ET.Element("permeability", type="perm-const-iso")
-    e.append(_property_to_feb(mat.k, "perm", model))
+    e.append(property_to_xml(mat.k, "perm", model.named["sequences"]))
     return e
 
 
 def iso_holmes_mow_perm_to_feb(mat, model):
     """Convert IsotropicHolmesMowPermeability instance to FEBio XML"""
     e = ET.Element("permeability", type="perm-Holmes-Mow")
-    e.append(_property_to_feb(mat.k0, "perm", model))
-    e.append(_property_to_feb(mat.M, "M", model))
-    e.append(_property_to_feb(mat.α, "alpha", model))
+    e.append(property_to_xml(mat.k0, "perm", model.named["sequences"]))
+    e.append(property_to_xml(mat.M, "M", model.named["sequences"]))
+    e.append(property_to_xml(mat.α, "alpha", model.named["sequences"]))
     return e
 
 
 def poroelastic_to_feb(mat, model):
     """Convert Poroelastic material instance to FEBio XML"""
     e = ET.Element("material", type="biphasic")
-    e.append(_property_to_feb(mat.solid_fraction, "phi0", model))
+    e.append(property_to_xml(mat.solid_fraction, "phi0", model.named["sequences"]))
     # Add solid material
     e_solid = material_to_feb(mat.solid_material, model)
     e_solid.tag = "solid"
@@ -215,17 +198,17 @@ def rigid_body_to_feb(mat, model):
         density = 1
     else:
         density = mat.density
-    e.append(_property_to_feb(density, "density", model))
+    e.append(property_to_xml(density, "density", model.named["sequences"]))
     return e
 
 
 def donnan_to_feb(mat, model):
     """Convert DonnanSwelling material instance to FEBio XML."""
     e = ET.Element("material", type="Donnan equilibrium")
-    e.append(_property_to_feb(mat.phi0_w, "phiw0", model))
-    e.append(_property_to_feb(mat.fcd0, "cF0", model))
-    e.append(_property_to_feb(mat.ext_osm, "bosm", model))
-    e.append(_property_to_feb(mat.osm_coef, "Phi", model))
+    e.append(property_to_xml(mat.phi0_w, "phiw0", model.named["sequences"]))
+    e.append(property_to_xml(mat.fcd0, "cF0", model.named["sequences"]))
+    e.append(property_to_xml(mat.ext_osm, "bosm", model.named["sequences"]))
+    e.append(property_to_xml(mat.osm_coef, "Phi", model.named["sequences"]))
     return e
 
 
@@ -313,52 +296,36 @@ def sequence_time_offsets(model):
     """
     cumulative_time = 0.0
     seq_t0 = defaultdict(lambda: 0)  # dict: sequence → time offset
-    for step in model.steps:
+    for step, name in model.steps:
         # Gather must point curves
-        dtmax = step["control"]["time stepper"]["dtmax"]
+        dtmax = step.ticker.dtmax
         if isinstance(dtmax, Sequence):
             dtmax.points = [(cumulative_time + t, v) for t, v in dtmax.points]
         # Gather variable boundary condition / constraint curves
         curves_to_adjust = set([])
-        if "bc" in step:
-            for i, ax_bc in step["bc"]["node"].items():
-                for ax, d in ax_bc.items():
-                    if isinstance(d["sequence"], Sequence):
-                        curves_to_adjust.add(d["sequence"])
-                    elif isinstance(d["sequence"], ScaledSequence):
-                        curves_to_adjust.add(d["sequence"].sequence)
+        for i, ax_bc in step.bc["node"].items():
+            for ax, d in ax_bc.items():
+                if isinstance(d["sequence"], Sequence):
+                    curves_to_adjust.add(d["sequence"])
+                elif isinstance(d["sequence"], ScaledSequence):
+                    curves_to_adjust.add(d["sequence"].sequence)
         # Gather the body constraint curves
-        if "bc" in step:
-            for body, body_constraints in step["bc"]["body"].items():
-                for ax, params in body_constraints.items():
-                    # params = {'variable': variable <string>,
-                    #           'sequence': Sequence object or 'fixed',
-                    #           'scale': scale <numeric>
-                    if isinstance(params["sequence"], Sequence):
-                        curves_to_adjust.add(params["sequence"])
-                    elif isinstance(params["sequence"], ScaledSequence):
-                        curves_to_adjust.add(params["sequence"].sequence)
-                    # TODO: Add test to exercise this code
+        for body, body_constraints in step.bc["body"].items():
+            for ax, params in body_constraints.items():
+                # params = {'variable': variable <string>,
+                #           'sequence': Sequence object or 'fixed',
+                #           'scale': scale <numeric>
+                if isinstance(params["sequence"], Sequence):
+                    curves_to_adjust.add(params["sequence"])
+                elif isinstance(params["sequence"], ScaledSequence):
+                    curves_to_adjust.add(params["sequence"].sequence)
+                # TODO: Add test to exercise this code
         # Adjust the curves
         for curve in curves_to_adjust:
             seq_t0[curve] = cumulative_time
         # Tally running time
-        duration = step_duration(step)
-        cumulative_time += duration
+        cumulative_time += step.duration
     return seq_t0
-
-
-def choose_module(materials):
-    """Determine which module should be used to run the model.
-
-    Currently only chooses between solid and biphasic.
-
-    """
-    module = "solid"
-    for m in materials:
-        if isinstance(m, feb.material.PoroelasticSolid):
-            module = "biphasic"
-    return module
 
 
 def contact_section(contacts, model, named_surface_pairs, named_contacts):
@@ -442,26 +409,6 @@ def face_xml(face, face_id):
     return e
 
 
-def control_parameter_to_feb(parameter, value):
-    """Return FEBio XML element for a control parameter."""
-    nm_feb = control_tagnames_to_febio[parameter]
-    if parameter in control_values_to_febio:
-        val_feb = control_values_to_febio[parameter][value]
-    else:
-        if isinstance(value, bool):
-            val_feb = bool_to_text(value)
-        else:
-            val_feb = str(value)
-    e = ET.Element(nm_feb)
-    if nm_feb == "analysis":
-        # For some reason, <analysis> stores its value as an attribute,
-        # whereas every other XML element stores its value as its value.
-        e.attrib["type"] = val_feb
-    else:
-        e.text = val_feb
-    return e
-
-
 def xml(model, version="2.5"):
     """Convert a model to an FEBio XML tree.
 
@@ -482,7 +429,9 @@ def xml(model, version="2.5"):
     # materials are generated fresh on export and the old ones are
     # discarded, which is not necessarily desirable, and an area for
     # future improvement.)
-    materials_used = set(e.material for e in model.mesh.elements)
+    materials_used = set(
+        e.material for e in model.mesh.elements if e.material is not None
+    )
     # Create a new dictionary of materials → material IDs.  This
     # dictionary will be updated as new materials are autogenerated
     # during model conversion to FEBio XML.  From this point on, it is
@@ -519,27 +468,43 @@ def xml(model, version="2.5"):
         )
 
     # Set solver module (analysis type)
-    module = choose_module([m for m in material_registry.objects()])
-    if version_major == 3 or (version_major == 2 and version_minor == 5):
-        # In FEBio XML 2.5 and 3.0, <Module> must exist and be first tag
-        e_module = ET.SubElement(root, "Module")
-        e_module.attrib["type"] = module
-    # FEBio XML 2.0 sets <analysis_type> in <Control>
+    physics = auto_physics([m for m in material_registry.objects()])
+    e_module = ET.SubElement(root, "Module")
+    e_module.attrib["type"] = physics.value
+    # Warn if there's an incompatibility between requested materials and
+    # physics.
+    for mat in material_registry.objects():
+        # Extract delegate material object from OrientatedMaterial
+        # so that we can check it.  TODO: This is a hack; find a
+        # cleaner solution that doesn't require special-casing the
+        # module compatibility check.
+        if isinstance(mat, matlib.OrientedMaterial):
+            checked_mat = mat.material
+        else:
+            checked_mat = mat
+        if (not type(checked_mat) in fx.physics_compat_by_mat) or (
+            physics not in fx.physics_compat_by_mat[type(checked_mat)]
+        ):
+            raise ValueError(
+                f"Material `{type(mat)}` is not listed as compatible with Module {physics}"
+            )
 
-    Material = ET.SubElement(root, "Material")
+    e_Material = ET.SubElement(root, "Material")
 
     domains = fx.domains(model)
     for e in fx.mesh_xml(model, domains, material_registry):
         root.append(e)
-    e_Mesh = root.find(fx.MESH_PARENT)
 
     # Write MeshData.  Have to do this before handling boundary
     # conditions because some boundary conditions have part of their
     # values stored in MeshData.
-    e_MeshData, e_ElementSet = fx.meshdata_section(model)
-    root.append(e_MeshData)
-    if len(e_ElementSet) != 0:
-        e_Mesh.append(e_ElementSet)
+    e_meshdata, e_elemsets = fx.meshdata_xml(model)
+    meshdata_parent = get_or_create_xml(root, fx.ELEMENTDATA_PARENT)
+    for e in e_meshdata:
+        meshdata_parent.append(e)
+    elementset_parent = get_or_create_xml(root, fx.ELEMENTSET_PARENT)
+    for e in e_elemsets:
+        elementset_parent.append(e)
 
     e_boundary = ET.SubElement(root, "Boundary")
     if version_major == 2 and version_minor >= 5:
@@ -586,7 +551,7 @@ def xml(model, version="2.5"):
         # have a name; in prior FEBio XML versions this is optional.
         name = material_registry.get_or_create_name("material", mat)
         tag.attrib["name"] = name
-        Material.append(tag)
+        e_Material.append(tag)
     # Assemble a list of all implicit rigid bodies used in the model.
     # There is currently no list of rigid bodies in the model or mesh
     # objects, so we have to search for them.  Rigid bodies may be
@@ -600,11 +565,10 @@ def xml(model, version="2.5"):
             if isinstance(body, ImplicitBody):
                 implicit_bodies_to_process.add(body)
     # Search steps' constraints for rigid bodies
-    for step in model.steps:
-        if "bc" in step:
-            for body in step["bc"]["body"]:
-                if isinstance(body, ImplicitBody):
-                    implicit_bodies_to_process.add(body)
+    for step, name in model.steps:
+        for body in step.bc["body"]:
+            if isinstance(body, ImplicitBody):
+                implicit_bodies_to_process.add(body)
     # Create FEBio rigid materials for all implicit rigid bodies and add
     # their rigid interfaces with the mesh.  That the implicit material
     # is rigid is an assumption, but an implicit deformable material in
@@ -617,11 +581,11 @@ def xml(model, version="2.5"):
         tag = material_to_feb(mat, model)
         # TODO: Support comments in reader
         # tag.append(ET.Comment("Implicit rigid body"))
-        mat_id = len(Material)
+        mat_id = len(e_Material)
         mat_name = body_name + "_psuedo-material"
         tag.attrib["id"] = str(mat_id + 1)
         tag.attrib["name"] = mat_name
-        Material.append(tag)
+        e_Material.append(tag)
         # Update material registries
         material_registry.add(mat_name, mat)
         material_registry.add(mat_id, mat, nametype="ordinal_id")
@@ -682,8 +646,9 @@ def xml(model, version="2.5"):
             # just leave out the scale and relative keys.
             body_bcs[body][dof] = {"variable": var, "sequence": "fixed"}
     # Add the variable rigid body conditions
-    for body, (dof, constraint) in model.varying["body"].items():
-        body_bcs[body][dof] = constraint
+    for body, conditions in model.varying["body"].items():
+        for dof, condition in conditions.items():
+            body_bcs[body][dof] = condition
     # Create the body condition XML elements
     for body, constraints in body_bcs.items():
         for e_body_cond in fx.body_constraints_xml(
@@ -699,7 +664,7 @@ def xml(model, version="2.5"):
     plotfile = ET.SubElement(Output, "plotfile", type="febio")
     if not model.output["variables"]:  # empty list
         output_vars = ["displacement", "stress", "relative volume"]
-        if module == "biphasic":
+        if physics == "biphasic":
             output_vars += ["effective fluid pressure", "fluid pressure", "fluid flux"]
         rigid_bodies_present = any(
             isinstance(m, feb.material.RigidBody) for m in material_registry.objects()
@@ -717,57 +682,13 @@ def xml(model, version="2.5"):
         e_step_parent = ET.SubElement(root, fx.STEP_PARENT)
     cumulative_time = 0.0
     visited_implicit_bodies = set()
-    step_factory = fx.step_xml_factory()
-    for step in model.steps:
-        e_step = next(step_factory)
-        if step["name"] is not None:
-            e_step.attrib["name"] = step["name"]
+    step_idx = 0
+    for step, step_name in model.steps:
+        step_idx += 1
+        if step_name is None:
+            step_name = f"Step{step_idx}"
+        e_step = fx.step_xml(step, step_name, model.named["sequences"], physics)
         e_step_parent.append(e_step)
-        if version == "2.0":
-            ET.SubElement(e_step, "Module", type=step["module"])
-        # Warn if there's an incompatibility between requested materials
-        # and modules.
-        for mat in material_registry.objects():
-            # Extract delegate material object from OrientatedMaterial
-            # so that we can check it.  TODO: This is a hack; find a
-            # cleaner solution that doesn't require special-casing the
-            # module compatibility check.
-            if isinstance(mat, matlib.OrientedMaterial):
-                checked_mat = mat.material
-            else:
-                checked_mat = mat
-            if ("module" in step) and (
-                (not type(checked_mat) in fx.module_compat_by_mat)
-                or (step["module"] not in fx.module_compat_by_mat[type(checked_mat)])
-            ):
-                raise ValueError(
-                    f"Material `{type(mat)}` is not listed as compatible with Module {step['module']}"
-                )
-        e_Control = ET.Element("Control")
-        if version == "2.0":
-            ET.SubElement(e_Control, "analysis", type=module)
-        # Write all the single-element Control parameters (i.e,
-        # everything but <time_stepper>
-        for parameter in step["control"]:
-            if parameter == "time stepper":
-                continue
-            e_param = fx.control_parameter_to_feb(parameter, step["control"][parameter])
-            e_Control.append(e_param)
-        # Write <time_stepper> and all its children
-        e_ts = ET.SubElement(e_Control, "time_stepper")
-        ET.SubElement(e_ts, "dtmin").text = str(
-            step["control"]["time stepper"]["dtmin"]
-        )
-        ET.SubElement(e_ts, "max_retries").text = str(
-            step["control"]["time stepper"]["max retries"]
-        )
-        ET.SubElement(e_ts, "opt_iter").text = str(
-            step["control"]["time stepper"]["opt iter"]
-        )
-        # dtmax may have an associated sequence
-        dtmax = step["control"]["time stepper"]["dtmax"]
-        e_dtmax = _property_to_feb(dtmax, "dtmax", model)
-        e_ts.append(e_dtmax)
 
         # Boundary conditions
         #
@@ -798,17 +719,16 @@ def xml(model, version="2.5"):
         # TODO: Need to split by `relative`, since each <prescribe>
         # cannot mix relative and non-relative boundary conditions.
         node_memo = defaultdict(dict)
-        if ("bc" in step) and ("node" in step["bc"]):
-            for node_id in step["bc"]["node"]:
-                for dof in step["bc"]["node"][node_id]:
-                    bc = step["bc"]["node"][node_id][dof]
-                    if bc["sequence"] == "fixed":
-                        kind = "fixed"
-                    else:  # bc['sequence'] is Sequence
-                        kind = "variable"
-                    node_memo[kind].setdefault((dof, bc["variable"]), {}).setdefault(
-                        bc["sequence"], []
-                    ).append((node_id, bc["scale"], bc["relative"]))
+        for node_id in step.bc["node"]:
+            for dof in step.bc["node"][node_id]:
+                bc = step.bc["node"][node_id][dof]
+                if bc["sequence"] == "fixed":
+                    kind = "fixed"
+                else:  # bc['sequence'] is Sequence
+                    kind = "variable"
+                node_memo[kind].setdefault((dof, bc["variable"]), {}).setdefault(
+                    bc["sequence"], []
+                ).append((node_id, bc["scale"], bc["relative"]))
         # TODO: support kind == 'fixed'.  (Does that make sense for a step?)
         for kind in node_memo:  # 'variable' or 'fixed'
             for dof_var in node_memo[kind]:  # ("x1", "displacement"), etc.
@@ -833,33 +753,31 @@ def xml(model, version="2.5"):
                             e_step.attrib["name"],
                         )
                         e_Boundary.append(e_bc)
-                        e_MeshData.append(e_nodedata)
+                        nodedata_parent = get_or_create_xml(root, fx.NODEDATA_PARENT)
+                        nodedata_parent.append(e_nodedata)
                     elif kind == "fixed":
                         raise NotImplementedError
 
         # Temporal (step-specific) contacts
-        contacts = [
-            c for c in step["bc"]["contact"] if isinstance(c, ContactConstraint)
-        ]
+        contacts = [c for c in step.bc["contact"] if isinstance(c, ContactConstraint)]
         e_Contact = contact_section(
             contacts, model, named_surface_pairs, named_contacts
         )
 
-        # Add <Boundary>, <Contact>, and <Control> elements to <Step>, in that order
+        # Add <Boundary> and <Contact> elements to <Step>.  <Control>
+        # was already added by step_xml().
         e_step.append(e_Boundary)
         e_step.append(e_Contact)
-        e_step.append(e_Control)
 
-        if ("bc" in step) and ("body" in step["bc"]):
-            for body, constraints in step["bc"]["body"].items():
-                for e_body_cond in fx.body_constraints_xml(
-                    body,
-                    constraints,
-                    material_registry,
-                    implicit_rigid_material_by_body,
-                    model.named["sequences"],
-                ):
-                    e_rb_cond_parent.append(e_body_cond)
+        for body, constraints in step.bc["body"].items():
+            for e_body_cond in fx.body_constraints_xml(
+                body,
+                constraints,
+                material_registry,
+                implicit_rigid_material_by_body,
+                model.named["sequences"],
+            ):
+                e_rb_cond_parent.append(e_body_cond)
 
     # Write XML elements for sequences (load curves) that are in the
     # model's named entity registry. Sequences can be referenced in a
@@ -902,8 +820,9 @@ def xml(model, version="2.5"):
         if e_nodeset is None:
             add_nodeset(root, nm, node_set, febioxml_module=fx)
     # Write *all* named face sets ("surfaces")
+    surface_parent = find_unique_tag(root, fx.MESH_PARENT)
     for nm, face_set in model.named["face sets"].pairs():
-        e_surface = ET.SubElement(e_Mesh, "Surface", name=nm)
+        e_surface = ET.SubElement(surface_parent, "Surface", name=nm)
         for i, face in enumerate(face_set):
             e_surface.append(face_xml(face, i))
     # Write *all* named surface pairs
@@ -911,7 +830,7 @@ def xml(model, version="2.5"):
         e_surfpair = fx.surface_pair_xml(
             model.named["face sets"], primary, secondary, nm
         )
-        e_Mesh.append(e_surfpair)
+        surface_parent.append(e_surfpair)
     # TODO: Handle element sets too.
 
     tree = ET.ElementTree(root)

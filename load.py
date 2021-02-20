@@ -4,6 +4,8 @@ import numpy as np
 
 # Same-package modules
 from .core import Sequence, NodeSet
+from .model import Model
+from .control import Step
 
 
 def apply_uniax_stretch(model, stretches, axis="x1"):
@@ -108,7 +110,9 @@ def cyclic_stretch_sequence(targets, rate, n=1, baseline=1.0):
     return sequence
 
 
-def prescribe_deformation(model, node_ids, F, sequence, **kwargs):
+def prescribe_deformation(
+    model: Model, step: Step, node_ids, F, sequence: Sequence, **kwargs
+):
     """Prescribe nodal displacements to match given F tensor."""
     # Need list of node IDs with stable order; we might have been given
     # a set
@@ -124,5 +128,6 @@ def prescribe_deformation(model, node_ids, F, sequence, **kwargs):
                 "displacement",
                 sequence=sequence,
                 scales={node_id: u[i, iax]},
+                step=step,
                 **kwargs
             )

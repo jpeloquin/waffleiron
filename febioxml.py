@@ -1,3 +1,4 @@
+from collections import namedtuple
 import os
 import lxml.etree as ET
 from lxml.etree import Element, ElementTree
@@ -12,9 +13,16 @@ from .core import (
     Sequence,
     ScaledSequence,
 )
+from .control import Physics
 from .element import Quad4, Tri3, Hex8, Penta6, Element
 from . import material
 from .math import orthonormal_basis
+
+
+# Helper classes
+
+OptParameter = namedtuple("OptParameter", ["path", "default"])
+ReqParameter = namedtuple("ReqParameter", ["path"])
 
 
 # Facts about FEBio XML
@@ -77,50 +85,18 @@ perm_class_from_name = {
 }
 perm_name_from_class = {v: k for k, v in perm_class_from_name.items()}
 
-control_tagnames_to_febio = {
-    "time steps": "time_steps",
-    "step size": "step_size",
-    "max refs": "max_refs",
-    "max ups": "max_ups",
-    "dtol": "dtol",
-    "etol": "etol",
-    "rtol": "rtol",
-    "lstol": "lstol",
-    "ptol": "ptol",
-    # ^ for biphasic analysis
-    "plot level": "plot_level",
-    "time stepper": "time_stepper",
-    "max retries": "max_retries",
-    "dtmax": "dtmax",
-    "dtmin": "dtmin",
-    "opt iter": "opt_iter",
-    "min residual": "min_residual",
-    "update method": "qnmethod",
-    "symmetric biphasic": "symmetric_biphasic",
-    # ^ for biphsaic analysis
-    "reform each time step": "reform_each_time_step",
-    # ^ for fluid analysis
-    "reform on diverge": "diverge_reform",
-    "analysis type": "analysis",
-}
-control_tagnames_from_febio = {v: k for k, v in control_tagnames_to_febio.items()}
-control_values_to_febio = {"update method": {"Broyden": "1", "BFGS": "0"}}
-control_values_from_febio = {
-    k: {v_xml: v_us for v_us, v_xml in conv.items()}
-    for k, conv in control_values_to_febio.items()
-}
-
 # TODO: Redesign the compatibility system so that compatibility can be
 # derived from the material's type.
-module_compat_by_mat = {
-    material.PoroelasticSolid: {"biphasic"},
-    material.RigidBody: {"solid", "biphasic"},
-    material.OrthotropicElastic: {"solid", "biphasic"},
-    material.IsotropicElastic: {"solid", "biphasic"},
-    material.SolidMixture: {"solid", "biphasic"},
-    material.PowerLinearFiber: {"solid", "biphasic"},
-    material.ExponentialFiber: {"solid", "biphasic"},
-    material.HolmesMow: {"solid", "biphasic"},
+physics_compat_by_mat = {
+    material.PoroelasticSolid: {Physics.BIPHASIC},
+    material.RigidBody: {Physics.SOLID, Physics.BIPHASIC},
+    material.OrthotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
+    material.IsotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
+    material.SolidMixture: {Physics.SOLID, Physics.BIPHASIC},
+    material.PowerLinearFiber: {Physics.SOLID, Physics.BIPHASIC},
+    material.ExponentialFiber: {Physics.SOLID, Physics.BIPHASIC},
+    material.HolmesMow: {Physics.SOLID, Physics.BIPHASIC},
+    material.NeoHookean: {Physics.SOLID, Physics.BIPHASIC},
 }
 
 
@@ -292,6 +268,28 @@ def read_named_sets(xml_root):
     return sets
 
 
+def read_parameter(e, sequence_registry):
+    """Read a parameter from an XML element.
+
+    The parameter may be fixed or variable.  If variable, a Sequence or
+    ScaledSequence will be returned.
+
+    """
+    # Check if this is a time-varying or fixed property
+    if "lc" in e.attrib:
+        # The property is time-varying
+        seq_id = int(e.attrib["lc"]) - 1
+        sequence = sequence_registry.obj(seq_id, "ordinal_id")
+        if e.text is not None and e.text.strip() != "":
+            scale = to_number(e.text)
+            return ScaledSequence(sequence, scale)
+        else:
+            return sequence
+    else:
+        # The property is fixed
+        return to_number(e.text)
+
+
 def basis_mat_axis_local(element: Element, local_ids=(1, 2, 4)):
     """Return element basis for FEBio XML <mat_axis type="local"> values.
 
@@ -394,6 +392,18 @@ def body_mat_id(body, material_registry, implicit_rb_mats):
     return mat_id
 
 
+def get_or_create_xml(root, path):
+    """Return XML element at path creating it if needed"""
+    parts = [p for p in path.split("/") if p != ""]
+    parent = root
+    for part in parts:
+        current = find_unique_tag(parent, part)
+        if current is None:
+            current = ET.SubElement(parent, part)
+        parent = current
+    return parent
+
+
 def get_or_create_item_id(registry, item):
     """Get or create ID for an item.
 
@@ -460,8 +470,24 @@ def maybe_to_number(s):
         return s
 
 
+def to_text(v):
+    """Serialize value to text by type"""
+    if isinstance(v, str):
+        return v
+    elif isinstance(v, bool):
+        return bool_to_text(v)
+    elif isinstance(v, int):
+        return int_to_text(v)
+    elif isinstance(v, float):
+        return float_to_text(v)
+
+
 def bool_to_text(v):
     return "1" if v else "0"
+
+
+def int_to_text(v):
+    return str(v)
 
 
 def vec_to_text(v):
@@ -474,3 +500,25 @@ def bvec_to_text(v):
 
 def float_to_text(a):
     return f"{a:.7g}"
+
+
+def property_to_xml(p, tag, seq_registry):
+    """Convert a fixed or variable property to FEBio XML.
+
+    Properties must be floating point values.
+
+    """
+    e = ET.Element(tag)
+    if isinstance(p, Sequence):
+        seq_id = get_or_create_item_id(seq_registry, p)
+        e.attrib["lc"] = str(seq_id + 1)
+        e.text = "1"  # basic Sequences have no scale
+    elif isinstance(p, ScaledSequence):
+        # Time-varying property, scaled
+        seq_id = get_or_create_item_id(seq_registry, p.sequence)
+        e.attrib["lc"] = str(seq_id + 1)
+        e.text = float_to_text(p.scale)
+    else:
+        # Fixed property
+        e.text = float_to_text(p)
+    return e

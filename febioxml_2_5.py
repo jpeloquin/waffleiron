@@ -12,7 +12,6 @@ from .core import (
     Body,
     ImplicitBody,
 )
-from .control import step_duration
 from .febioxml import *
 
 
@@ -21,6 +20,9 @@ from .febioxml import *
 # XML element parents and names
 BODY_COND_PARENT = "Boundary"
 MESH_PARENT = "Geometry"
+ELEMENTDATA_PARENT = "MeshData"
+NODEDATA_PARENT = "MeshData"
+ELEMENTSET_PARENT = "Geometry"
 STEP_PARENT = "."
 STEP_NAME = "Step"
 
@@ -29,14 +31,12 @@ BC_TYPE_TAG = {
     "body": {"variable": "prescribed", "fixed": "fixed"},
 }
 
-
 XML_INTERP_FROM_INTERP = {
     Interpolant.STEP: "step",
     Interpolant.LINEAR: "linear",
     Interpolant.SPLINE: "smooth",
 }
 INTERP_FROM_XML_INTERP = {v: k for k, v in XML_INTERP_FROM_INTERP.items()}
-
 
 XML_EXTRAP_FROM_EXTRAP = {
     Extrapolant.CONSTANT: "constant",
@@ -45,6 +45,34 @@ XML_EXTRAP_FROM_EXTRAP = {
     Extrapolant.REPEAT_CONTINUOUS: "repeat offset",
 }
 EXTRAP_FROM_XML_EXTRAP = {v: k for k, v in XML_EXTRAP_FROM_EXTRAP.items()}
+
+# Map of Ticker fields → elements relative to <Step>
+TICKER_PARAMS = {
+    "n": ReqParameter("Control/time_steps"),
+    "dtnom": ReqParameter("Control/step_size"),
+    "dtmin": ReqParameter("Control/time_stepper/dtmin"),
+    "dtmax": ReqParameter("Control/time_stepper/dtmin"),
+}
+# Map of Controller fields → elements relative to <Step>
+CONTROLLER_PARAMS = {
+    "max_retries": OptParameter("Control/time_stepper/max_retries", 5),
+    "opt_iter": OptParameter("Control/time_stepper/opt_iter", 10),
+    "save_iters": OptParameter("Control/plot_level", "PLOT_MAJOR_ITRS"),
+}
+# Map of Solver fields → elements relative to <Step>
+SOLVER_PARAMS = {
+    "dtol": OptParameter("Control/dtol", 0.001),
+    "etol": OptParameter("Control/etol", 0.01),
+    "rtol": OptParameter("Control/rtol", 0),
+    "lstol": OptParameter("Control/lstol", 0.9),
+    "ptol": OptParameter("Control/ptol", 0.01),
+    "min_residual": OptParameter("Control/min_residual", 1e-20),
+    "update_method": OptParameter("Control/qnmethod", "BFGS"),
+    "reform_each_time_step": OptParameter("Control/reform_each_time_step", True),
+    "reform_on_diverge": OptParameter("Control/diverge_reform", True),
+    "max_refs": OptParameter("Control/max_refs", 15),
+    "max_ups": OptParameter("Control/max_ups", 10),
+}
 
 
 # Functions for reading FEBio XML 2.5
@@ -89,7 +117,7 @@ def iter_node_conditions(root):
 
     """
     step_id = -1  # Curent step ID (0-indexed)
-    for e_Step in root.findall("Step"):
+    for e_Step in root.findall(f"{STEP_PARENT}/{STEP_NAME}"):
         step_id += 1
         for e_prescribe in e_Step.findall("Boundary/prescribe"):
             # Re-initialize output
@@ -132,7 +160,9 @@ def iter_node_conditions(root):
                         id_ = int(e_node.attrib["id"]) - 1
                         info["nodal values"][id_] = to_number(e_value.text)
                 else:
-                    # One value for all nodes; redundant with "scale"
+                    # One value for all nodes; redundant with "scale".
+                    # TODO: seq_scale is not defined, so if this section
+                    # is ever reached, it will raise a TypeError.
                     val_scale = to_number(e_value.text)
                     info["scale"] = seq_scale * val_scale
             e_relative = e_prescribe.find("relative")
@@ -142,7 +172,48 @@ def iter_node_conditions(root):
             yield info
 
 
-# Functions for writing XML
+def read_rigid_body_bc(model, e_rigid_body, explicit_bodies, implicit_bodies, step):
+    """Read & apply a <rigid_body> element
+
+    model := Model object.
+
+    e_rigid_body := The <rigid_body> XML element.
+
+    explicit_bodies := map of material ID → body.
+
+    implicit_bodies := map of material ID → body.
+
+    step := The step to which the rigid body boundary condition belongs.
+
+    """
+    # Each <rigid_body> element defines constraints for one rigid body,
+    # identified by its material ID.  Constraints may be fixed
+    # (atemporal) or time-varying (temporal).
+    #
+    # Get the Body object from the material id
+    mat_id = int(e_rigid_body.attrib["mat"]) - 1
+    if mat_id in explicit_bodies:
+        body = explicit_bodies[mat_id]
+    else:
+        # Assume mat_id refers to an implicit rigid body
+        body = implicit_bodies[mat_id]
+    # Read the body's constraints
+    for e_dof in e_rigid_body.findall("fixed"):
+        dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
+        var = VAR_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
+        model.fixed["body"][(dof, var)].add(body)
+    for e_dof in e_rigid_body.findall("prescribed"):
+        dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
+        var = VAR_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
+        seq = read_parameter(e_dof, model.named["sequences"])
+        if e_dof.get("type", None) == "relative":
+            relative = True
+        else:
+            relative = False
+        model.apply_body_bc(body, dof, var, seq, step, relative=relative)
+
+
+# Functions for writing XML 2.5
 
 
 def body_constraints_xml(
@@ -202,6 +273,8 @@ def mesh_xml(model, domains, material_registry):
         e_nodes.append(e)
     # Write <Elements> for each domain
     for i, domain in enumerate(domains):
+        if domain["material"] is None:
+            raise ValueError("Some elements have no material assigned.")
         e_elements = ET.SubElement(e_geometry, "Elements", name=f"Domain{i+1}")
         e_elements.attrib["type"] = domain["element_type"].feb_name
         mat_id = material_registry.names(domain["material"], "ordinal_id")[0]
@@ -213,18 +286,19 @@ def mesh_xml(model, domains, material_registry):
     return (e_geometry,)
 
 
-def meshdata_section(model):
-    """Return XML tree for some of MeshData section
+def meshdata_xml(model):
+    """Return <ElementData> and <ElementSet> XML elements
 
-    Currently this function only generates the part of the MesData
+    Currently this function only generates the part of the MeshData
     section that deals with material axis element data.
 
     """
-    e_meshdata = ET.Element("MeshData")
+    e_meshdata = []
+    e_elemsets = []
     e_edata_mat_axis = ET.Element(
         "ElementData", var="mat_axis", elem_set="autogen-mat_axis"
     )
-    e_elemset = ET.Element("ElementSet", name="autogen-mat_axis")
+    e_elemset_mat_axis = ET.Element("ElementSet", name="autogen-mat_axis")
     i_elemset = 0
     # ^ index into the extra element set we're forced to construct
     for i, e in enumerate(model.mesh.elements):
@@ -235,10 +309,11 @@ def meshdata_section(model):
             i_elemset += 1
             ET.SubElement(e_elem, "a").text = bvec_to_text(e.basis[:, 0])
             ET.SubElement(e_elem, "d").text = bvec_to_text(e.basis[:, 1])
-            ET.SubElement(e_elemset, "elem", id=str(i + 1))
+            ET.SubElement(e_elemset_mat_axis, "elem", id=str(i + 1))
     if len(e_edata_mat_axis) != 0:
         e_meshdata.append(e_edata_mat_axis)
-    return e_meshdata, e_elemset
+        e_elemsets.append(e_elemset_mat_axis)
+    return e_meshdata, e_elemsets
 
 
 def split_bc_attrib(s):
@@ -375,9 +450,37 @@ def surface_pair_xml(faceset_registry, primary, secondary, name):
     return e_surfpair
 
 
-def step_xml_factory():
-    """Create empty <Step> XML elements"""
-    i = 1
-    while True:
-        e = ET.Element(STEP_NAME, name=f"Step{i}")
-        yield e
+def step_xml(step, name, seq_registry, physics):
+    """Return <Step> XML element"""
+    # We need to know what physics are being used because FEBio accepts
+    # some parameters only for some physics.
+    ticker = step.ticker
+    solver = step.solver
+    controller = step.controller
+    e = ET.Element(STEP_NAME, name=name)
+    e_control = ET.SubElement(e, "Control")
+    ET.SubElement(e_control, "plot_level").text = controller.save_iters.value
+    ET.SubElement(e_control, "time_steps").text = to_text(ticker.n)
+    ET.SubElement(e_control, "step_size").text = to_text(ticker.dtnom)
+    ET.SubElement(e_control, "dtol").text = to_text(solver.dtol)
+    ET.SubElement(e_control, "etol").text = to_text(solver.etol)
+    if physics == "biphasic":
+        ET.SubElement(e_control, "ptol").text = to_text(solver.ptol)
+    ET.SubElement(e_control, "rtol").text = to_text(solver.rtol)
+    ET.SubElement(e_control, "lstol").text = to_text(solver.lstol)
+    ET.SubElement(e_control, "min_residual").text = to_text(solver.min_residual)
+    update_method = {"BFGS": "0", "Broyden": "1"}
+    ET.SubElement(e_control, "qnmethod").text = update_method[solver.update_method]
+    ET.SubElement(e_control, "reform_each_time_step").text = to_text(
+        solver.reform_each_time_step
+    )
+    ET.SubElement(e_control, "diverge_reform").text = to_text(solver.reform_on_diverge)
+    ET.SubElement(e_control, "max_refs").text = to_text(solver.max_refs)
+    ET.SubElement(e_control, "max_ups").text = to_text(solver.max_ups)
+    e_tstepper = ET.SubElement(e_control, "time_stepper")
+    ET.SubElement(e_tstepper, "dtmin").text = to_text(ticker.dtmin)
+    e_dtmax = property_to_xml(ticker.dtmax, "dtmax", seq_registry)
+    e_tstepper.append(e_dtmax)
+    ET.SubElement(e_tstepper, "opt_iter").text = to_text(controller.opt_iter)
+    ET.SubElement(e_tstepper, "max_retries").text = to_text(controller.max_retries)
+    return e

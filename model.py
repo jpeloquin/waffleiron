@@ -1,8 +1,9 @@
 """Module for high-level model-related classes."""
 # Built-in packages
-from copy import deepcopy
+from collections import namedtuple
 from math import inf
 import sys
+from typing import Union
 
 # Public packages
 import numpy as np
@@ -10,7 +11,7 @@ from scipy.spatial import KDTree
 from scipy.spatial.distance import cdist
 
 # Intra-package imports
-from .control import default_control_section
+from .control import Step, Ticker, IterController, Solver
 from .core import (
     _DEFAULT_TOL,
     Body,
@@ -26,6 +27,9 @@ from . import util
 sys.setrecursionlimit(10000)
 
 
+NamedStep = namedtuple("NamedStep", ["step", "name"])
+
+
 class Model:
     """An FE model: geometry, boundary conditions, solution."""
 
@@ -37,11 +41,6 @@ class Model:
         self.solution = None  # The solution for the model
 
         self.name = None  # model name, to facilitate error messages
-
-        # If a sequence is assigned to dtmax in this default dictionary,
-        # it will be copied when `default_control` is used to initialize a
-        # control step.  This may not be desirable.
-        self.default_control = default_control_section()
 
         self.output = {"variables": []}
         # TODO: write_feb only populates this output variable list if it
@@ -77,7 +76,8 @@ class Model:
         # the same format as for BCs in steps.
 
         # Global "boundary conditions" that apply to all steps.  Same
-        # format as self.steps[i]["bc"]
+        # format as self.steps[i]["bc"], which is dict[dof: str →
+        # condition: dict]
         self.varying = {"node": {}, "body": {}}
 
         # Contact
@@ -100,28 +100,28 @@ class Model:
         # lists.
         self.steps = []
 
-    def add_contact(self, constraint, step=None):
-        if step == None:
+    def add_contact(self, constraint, step_idx=None):
+        if step_idx is None:
             # Apply the contact as an atemporal constraint
             self.constraints.append(constraint)
         else:
             # Apply the contact as a step-specific constraint
-            self.steps[step]["bc"]["contact"].append(constraint)
+            self.steps[step_idx].step.bc["contact"].append(constraint)
 
-    def add_step(self, module="solid", control=None, name=None):
+    def add_step(self, step, name: Union[str, None] = None):
         """Add a step with default control values and no BCs."""
-        if control is None:
-            control = default_control_section(module)
-        step = {
-            "name": name,
-            "module": module,
-            "control": control,
-            "bc": {"node": {}, "body": {}, "contact": []},
-        }
+        step = NamedStep(step, name=name)
         self.steps.append(step)
 
     def apply_nodal_bc(
-        self, node_ids, dof, variable, sequence, scales=None, relative=False, step_id=-1
+        self,
+        node_ids,
+        dof,
+        variable,
+        sequence,
+        scales=None,
+        relative=False,
+        step: Union[Step, None] = None,
     ):
         """Apply a boundary condition to a set of nodes.
 
@@ -142,7 +142,13 @@ class Model:
         be set to 1 for all nodes.  If you want to apply a different
         scaling factor to all nodes, use a ScaledSequence.
 
+        step := The step to which the nodal boundary condition applies.
+
         """
+        if step is None:
+            raise ValueError(
+                "Applying a time-varying nodal boundary condition outside of a simulation step is not (yet) supported.  Provide a non-None value for argument 'step'."
+            )
         default_scale = 1
         _validate_dof(dof)
         if sequence == "fixed":
@@ -154,7 +160,7 @@ class Model:
             if isinstance(sequence, ScaledSequence):
                 scales = {i: sequence.scale * scales[i] for i in node_ids}
         for i in node_ids:
-            bc_node = self.steps[step_id]["bc"]["node"].setdefault(i, {})
+            bc_node = step.bc["node"].setdefault(i, {})
             bc_node[dof] = {
                 "variable": variable,
                 "sequence": sequence,
@@ -164,7 +170,7 @@ class Model:
         # TODO: Support global nodal BCs.
 
     def apply_body_bc(
-        self, body, dof, variable, sequence, scale=1, relative=False, step_id=-1
+        self, body, dof, variable, sequence, scale=1, relative=False, step=None
     ):
         """Apply a variable displacement boundary condition to a body.
 
@@ -179,21 +185,20 @@ class Model:
 
         body := Body or ImplicitBody object
 
-        step_id := int or None.  The step ID to which to apply the body
-        constraint.  If None, the body constraint will be applied to
-        model.constraints, which is sort of an initial or universal
-        step.
+        step := Step object or None.  The step to which the rigid body
+        boundary condition applies.  If None, the condition will be
+        applied globally.
 
         """
         _validate_dof(dof, body=True)
         if sequence == "fixed":
             scale = None
-        if step_id is None:
+        if step is None:
             # Setting global BC
             bc_dict = self.varying["body"]
         else:
             # Setting step-local BC
-            bc_dict = self.steps[step_id]["bc"]["body"]
+            bc_dict = self.steps[step_id].step.bc["body"]
         bc = bc_dict.setdefault(body, {})
         bc[dof] = {
             "variable": variable,

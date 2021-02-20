@@ -8,7 +8,8 @@ import numpy.testing as npt
 
 # febtools' local modules
 import febtools as feb
-from febtools.control import auto_control_section
+from febtools import Step
+from febtools.control import auto_ticker
 from febtools.element import Hex8
 from febtools.febioxml import basis_mat_axis_local
 from febtools.model import Model, Mesh
@@ -46,12 +47,13 @@ def test_pipeline_prescribe_deformation_singleHex8():
     for e in model.mesh.elements:
         e.material = material
     sequence = feb.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
-    model.add_step(control=auto_control_section("static", sequence, pts_per_segment=1))
+    step = Step(physics="solid", ticker=auto_ticker(sequence))
+    model.add_step(step)
 
     # Test 1: Does prescribe_deformation complete without error?
     F = np.array([[1.34, 0.18, -0.11], [-0.20, 1.14, 0.17], [-0.11, 0.20, 0.93]])
     node_set = feb.NodeSet([i for i in range(len(model.mesh.nodes))])
-    feb.load.prescribe_deformation(model, node_set, F, sequence)
+    feb.load.prescribe_deformation(model, step, node_set, F, sequence)
 
     # Test 2: Can the resulting model be converted to FEBio XML?
     fnm_stem = "prescribe_deformation_singleHex8"

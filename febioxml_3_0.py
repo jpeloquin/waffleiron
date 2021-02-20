@@ -5,7 +5,7 @@ from .core import Body, ImplicitBody, Extrapolant, Interpolant
 from .febioxml import *
 
 # These parts work the same as in FEBio XML 2.5
-from .febioxml_2_5 import meshdata_section
+from .febioxml_2_5 import meshdata_xml
 
 # Facts about FEBio XML 3.0
 
@@ -17,6 +17,9 @@ BC_TYPE_TAG = {
 # XML element parents and names
 BODY_COND_PARENT = "Rigid"
 MESH_PARENT = "Mesh"
+ELEMENTDATA_PARENT = "MeshData"
+NODEDATA_PARENT = "MeshData"
+ELEMENTSET_PARENT = "Mesh"
 STEP_PARENT = "Step"
 STEP_NAME = "step"
 
@@ -40,7 +43,6 @@ XML_INTERP_FROM_INTERP = {
     Interpolant.SPLINE: "SMOOTH",
 }
 INTERP_FROM_XML_INTERP = {v: k for k, v in XML_INTERP_FROM_INTERP.items()}
-
 
 XML_EXTRAP_FROM_EXTRAP = {
     Extrapolant.CONSTANT: "CONSTANT",

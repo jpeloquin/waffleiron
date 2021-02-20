@@ -1,6 +1,7 @@
-import warnings
+import dataclasses
 import os
 from pathlib import Path
+import warnings
 
 from lxml import etree as ET
 import struct
@@ -26,20 +27,30 @@ from .core import (
     ElementSet,
     RigidInterface,
 )
+from .control import (
+    Physics,
+    auto_physics,
+    Ticker,
+    IterController,
+    SaveIters,
+    Solver,
+    Step,
+)
 from . import xplt
 from . import febioxml, febioxml_2_5, febioxml_2_0
 from . import material as material_lib
 from .febioxml import (
-    control_tagnames_from_febio,
-    control_values_from_febio,
+    VAR_FROM_XML_NODE_BC,
+    DOF_NAME_FROM_XML_NODE_BC,
     elem_cls_from_feb,
     normalize_xml,
     read_contacts,
     to_number,
     maybe_to_number,
     find_unique_tag,
-    VAR_FROM_XML_NODE_BC,
-    DOF_NAME_FROM_XML_NODE_BC,
+    read_parameter,
+    OptParameter,
+    ReqParameter,
 )
 
 
@@ -49,28 +60,6 @@ def _nstrip(string):
         if c == "\x00":
             return string[:i]
     return string
-
-
-def _read_parameter(e, sequence_dict):
-    """Read a parameter from an XML element.
-
-    The parameter may be fixed or variable.  If variable, a Sequence or
-    ScaledSequence will be returned.
-
-    """
-    # Check if this is a time-varying or fixed property
-    if "lc" in e.attrib:
-        # The property is time-varying
-        seq_id = int(e.attrib["lc"]) - 1
-        sequence = sequence_dict[seq_id]
-        if e.text is not None and e.text.strip() != "":
-            scale = to_number(e.text)
-            return ScaledSequence(sequence, scale)
-        else:
-            return sequence
-    else:
-        # The property is fixed
-        return to_number(e.text)
 
 
 def _vec_from_text(s) -> tuple:
@@ -92,6 +81,72 @@ def read_febio_xml(f):
         finally:
             f.close()
     return tree
+
+
+def read_step(step_xml, model, physics, febioxml_module):
+    """Return a Step object for a <Step> XML element
+
+    If an optional control parameter are missing, it will be initialized
+    with the default value as documented in the FEBio user manual.  This
+    may differ from the default actually used by FEBio.
+
+    This function does not (yet) read conditions, only the control
+    settings (time and solver).
+
+    """
+    # The model object is required to resolve named entities (including,
+    # at least, sequences and rigid bodies) that are referenced by the
+    # simulation step.
+
+    fx = febioxml_module
+
+    step_name = step_xml.attrib["name"] if "name" in step_xml.attrib else None
+
+    # Control section
+    def get_kwargs(xml, cls, paramdict):
+        """Return kwargs for a dataclass from a <Step> element"""
+        kwargs = {}
+        for f in dataclasses.fields(cls):
+            cls = f.type
+            if not cls in (str, float, int):
+                # Complex values must be handled individually, for now
+                continue
+            p = paramdict[f.name]
+            if isinstance(f, ReqParameter):
+                e = find_unique_tag(xml, p.path)
+                kwargs[f.name] = cls(e.text)
+            else:  # Optional parameter
+                e = xml.findall(p.path)
+                if len(e) == 0:
+                    # Use default
+                    kwargs[f.name] = p.default
+                elif len(e) > 1:
+                    parentpath = e[0].getroottree().getpath(e.getparent())
+                    raise ValueError(
+                        f"{e.base}:{e.sourceline} {parentpath} has {len(e)} {e.tag} elements.  It should have at most one."
+                    )
+                else:  # len(s) == 1
+                    e = e[0]
+                    kwargs[f.name] = cls(e.text)
+        return kwargs
+
+    kwargs = get_kwargs(step_xml, Ticker, fx.TICKER_PARAMS)
+    # dtmax may be a sequence, so takes special handling
+    e = find_unique_tag(step_xml, "Control/time_stepper/dtmax")
+    kwargs["dtmax"] = read_parameter(e, model.named["sequences"])
+    ticker = Ticker(**kwargs)
+    kwargs = get_kwargs(step_xml, IterController, fx.CONTROLLER_PARAMS)
+    controller = IterController(**kwargs)
+    kwargs = get_kwargs(step_xml, Solver, fx.SOLVER_PARAMS)
+    solver = Solver(**kwargs)
+    # update_method requires custom conversion
+    update_method = {"0": "BFGS", "1": "Broyden"}
+    if not solver.update_method in ("BFGS", "Broyden"):
+        # ^ could have gotten a default value from Solver.__init__
+        solver.update_method = update_method[solver.update_method]
+    step = Step(physics=physics, ticker=ticker, solver=solver, controller=controller)
+
+    return step, step_name
 
 
 def load_model(fpath):
@@ -389,41 +444,21 @@ class FebReader:
                         p["value"] = v
             return p
 
-    def _read_rigid_body_element(
-        self, model, e_rigid_body, explicit_bodies, implicit_bodies, step_id
-    ):
-        """Read & apply a <rigid_body> element."""
-        # Each <rigid_body> element defines constraints for one rigid
-        # body, identified by its material ID.  Constraints may be fixed
-        # (atemporal) or time-varying (temporal).
-        #
-        # Get the Body object from the material id
-        mat_id = int(e_rigid_body.attrib["mat"]) - 1
-        if mat_id in explicit_bodies:
-            body = explicit_bodies[mat_id]
-        else:
-            # Assume mat_id refers to an implicit rigid body
-            body = implicit_bodies[mat_id]
-        # Read the body's constraints
-        for e_dof in e_rigid_body.findall("fixed"):
-            dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
-            var = VAR_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
-            model.fixed["body"][(dof, var)].add(body)
-        for e_dof in e_rigid_body.findall("prescribed"):
-            dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
-            var = VAR_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
-            seq = _read_parameter(e_dof, self.sequences)
-            if e_dof.get("type", None) == "relative":
-                relative = True
-            else:
-                relative = False
-            model.apply_body_bc(body, dof, var, seq, step_id=step_id, relative=relative)
-
     def model(self):
         """Return model."""
+        fx = self.febioxml_module
         # Get the materials dictionary so we can assign materials to
         # elements when we read the geometry
         materials_by_id, material_labels = self.materials()
+
+        # Find out what physics are used by the model
+        e_module = self.root.find("Module")
+        if e_module is not None:
+            physics = Physics(e_module.attrib["type"])
+        else:
+            # Deduce the appropriate physics
+            physics = auto_physics([m for m in materials_by_id.values()])
+
         # Create model geoemtry
         mesh = self.mesh((materials_by_id, material_labels))
         model = Model(mesh)
@@ -569,7 +604,7 @@ class FebReader:
 
         # Read global constraints on rigid bodies
         for e_rb in self.root.findall("Boundary/rigid_body"):
-            self._read_rigid_body_element(
+            fx.read_rigid_body_bc(
                 model, e_rb, explicit_bodies, implicit_bodies, step_id=None
             )
 
@@ -578,77 +613,43 @@ class FebReader:
             model.named["sequences"].add(seq_id, seq, nametype="ordinal_id")
 
         # Steps
-        model.steps = []
-        # Find default module defined outside <Step>
-        e_module = self.root.find("Module")
-        if e_module is not None:
-            top_module = e_module.attrib["type"]
-        else:
-            top_module = None
-        # Read the <Step> elements
-        for step_id, e_step in enumerate(self.root.findall("Step")):
-            step_name = e_step.attrib["name"] if "name" in e_step.attrib else None
-            # Module
-            e_module = e_step.find("Module")
-            if e_module is not None:
-                module = e_module.text
-            elif top_module is not None:
-                module = top_module
-            else:
-                module = "solid"  # TODO: Pick default based on
-                # materials
-            # Control section
-            control = {}
-            e_control = e_step.find("Control")
-            for e in e_control:
-                nm = control_tagnames_from_febio[e.tag]
-                if nm == "analysis type":
-                    val = e.attrib["type"]
-                elif nm in control_values_from_febio:
-                    val = control_values_from_febio[nm][e.text]
-                else:
-                    val = maybe_to_number(e.text)
-                control[nm] = val
-            # Control/time_stepper section
-            control["time stepper"] = {}
-            e_stepper = e_control.find("time_stepper")
-            for e in e_stepper:
-                if e.tag in control_tagnames_from_febio:
-                    k = control_tagnames_from_febio[e.tag]
-                    control["time stepper"][k] = _read_parameter(e, self.sequences)
-            # Add the step.  Use the method to get correct defaults;
-            # e.g, correct keys for missing boundary conditions.
-            model.add_step(module=module, control=control, name=step_name)
-            #
-            # Read body loadings
+        for e_step in self.root.findall(f"{fx.STEP_PARENT}/{fx.STEP_NAME}"):
+            step, name = read_step(e_step, model, physics, self.febioxml_module)
+            model.add_step(step, name)
+        # Rigid body boundary condtions
+        for e_step, (step, name) in zip(
+            self.root.findall(f"{fx.STEP_PARENT}/{fx.STEP_NAME}"), model.steps
+        ):
             for e_rb in e_step.findall("Boundary/rigid_body"):
-                self._read_rigid_body_element(
-                    model, e_rb, explicit_bodies, implicit_bodies, step_id=step_id
+                fx.read_rigid_body_bc(
+                    model, e_rb, explicit_bodies, implicit_bodies, step
                 )
-            # Node loadings are handled later
-
-        # Read prescribed nodal conditions.
-        #
-        # Has to go after steps are created; otherwise there are no
-        # steps to which to attach the applied conditions.
-        if self.feb_version == "2.5":
-            for condition in febioxml_2_5.iter_node_conditions(self.root):
+        # Prescribed nodal conditions.  Has to go after steps are
+        # created; otherwise there are no steps to which to attach the
+        # applied conditions.
+        for condition in fx.iter_node_conditions(self.root):
+            if condition["node set name"] is not None:
                 nodes = model.named["node sets"].obj(condition["node set name"])
-                seq = model.named["sequences"].obj(
-                    condition["sequence ID"], nametype="ordinal_id"
-                )
-                # Check if we need a scaled sequence
-                if condition["scale"] != 1.0:
-                    seq = ScaledSequence(seq, condition["scale"])
-                model.apply_nodal_bc(
-                    nodes,
-                    condition["dof"],
-                    condition["variable"],
-                    seq,
-                    scales=condition["nodal values"],
-                    relative=condition["relative"],
-                    step_id=condition["step ID"],
-                )
+            else:
+                # In some FEBio XML formats, nodal values can be set
+                # directly in the boundary condtion, without an named
+                # node set as intermediary.
+                nodes = list(condition["nodal values"].keys())
+            seq = model.named["sequences"].obj(
+                condition["sequence ID"], nametype="ordinal_id"
+            )
+            # Check if we need a scaled sequence
+            if condition["scale"] != 1.0:
+                seq = ScaledSequence(seq, condition["scale"])
+            model.apply_nodal_bc(
+                nodes,
+                condition["dof"],
+                condition["variable"],
+                seq,
+                scales=condition["nodal values"],
+                relative=condition["relative"],
+                step=model.steps[condition["step ID"]].step,
+            )
 
         # Read contacts into steps
         global_contacts, step_contacts = read_contacts(

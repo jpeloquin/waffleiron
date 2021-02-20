@@ -5,7 +5,12 @@ control sections in FEBio xml files.
 
 """
 # Base modules
+from copy import deepcopy
+import dataclasses
+from dataclasses import dataclass
+from enum import Enum
 import math
+from typing import Union
 
 # Third party modules
 import numpy as np
@@ -13,18 +18,17 @@ import numpy as np
 # Same-package modules
 from .core import Sequence, Interpolant, Extrapolant
 from .math import densify
+import febtools.material as matlib
 
 
-def auto_control_section(module, sequence, pts_per_segment=1):
-    curve = sequence.points
-    # Assign good default control settings
-    control = default_control_section(module)
-    duration = curve[-1][0] - curve[0][0]
-    time = np.array([a for a, b in curve])
+def auto_ticker(seq: Sequence, pts_per_segment: int = 1):
+    """Return a ticker with an automatic "must point" curve in dtmax"""
+    ticker = Ticker()
+    duration = seq.points[-1][0] - seq.points[0][0]
+    time = np.array([a for a, b in seq.points])
     dt = np.diff(time)
     dt = np.concatenate([dt, dt[-1:]])  # len(dt) == len(time)
     # Assign must point sequence
-    control["plot level"] = "PLOT_MUST_POINTS"
     curve_must_dt = densify([(a, b) for a, b in zip(time, dt)], n=pts_per_segment)
     # TODO: Densification should respect the curve's interpolant
     # Recalculate dt after densification.
@@ -35,7 +39,7 @@ def auto_control_section(module, sequence, pts_per_segment=1):
     seq_dtmax = Sequence(
         curve_must_dt, extrap=Extrapolant.CONSTANT, interp=Interpolant.STEP
     )
-    control["time stepper"]["dtmax"] = seq_dtmax
+    ticker.dtmax = seq_dtmax
     # Calculate appropriate step size.  Need to work around FEBio bug
     # https://forums.febio.org/project.php?issueid=765.  FEBio skips
     # must points with t < step_size, so we must set step_size to a
@@ -45,55 +49,154 @@ def auto_control_section(module, sequence, pts_per_segment=1):
     dt_min = np.min(dt_must)
     nsteps = math.ceil(duration / dt_min)
     dt_nominal = duration / nsteps
-    control["time steps"] = nsteps
-    control["step size"] = dt_nominal
-    control["time stepper"]["dtmin"] = 0.1 * dt_min
-    return control
+    ticker.n = nsteps
+    ticker.dtnom = dt_nominal
+    ticker.dtmin = 0.1 * dt_min
+    return ticker
 
 
-def default_control_section(analysis_type="static"):
-    default = {
-        "time steps": 10,
-        "step size": 0.1,
-        "dtol": 0.001,
-        "etol": 0.01,
-        "rtol": 0,
-        "lstol": 0.9,
-        "min residual": 1e-20,
-        "time stepper": {"dtmin": 0.01, "dtmax": 0.1, "max retries": 5, "opt iter": 10},
-        "update method": "BFGS",  # alt: 'Broyden'
-        "reform each time step": True,
-        "reform on diverge": True,
-        "max refs": 15,
-        "max ups": 10,
-        "plot level": "PLOT_MAJOR_ITRS",
-    }
-    if analysis_type == "biphasic":
-        default.update(
-            {
-                "ptol": 0.01,
-                # Only use full Newton iterations
-                "max ups": 0,
-                "reform each time step": True,
-                # Increase max number of reformations b/c every
-                # iteration in the full Newton method is a reformation
-                "max refs": 50,
-                # Don't include "symmetric biphasic"; FEBio 3 doesn't
-                # accept it.
-            }
-        )
-    return default
+def auto_physics(materials):
+    """Determine which module should be used to run the model.
+
+    Currently only chooses between solid and biphasic.
+
+    """
+    module = Physics("solid")
+    for m in materials:
+        if isinstance(m, matlib.PoroelasticSolid):
+            module = Physics("biphasic")
+    return module
 
 
-def step_duration(step):
-    """Calculate the duration of a step."""
-    dtmax_entry = step["control"]["time stepper"]["dtmax"]
-    if isinstance(dtmax_entry, Sequence):
-        # If there is a must point curve, use it
-        duration = dtmax_entry.points[-1][0] - dtmax_entry.points[0][0]
-    else:
-        # Calculate duration from implicit values
-        n = step["control"]["time steps"]
-        dt = step["control"]["step size"]
-        duration = n * dt
-    return duration
+class SaveIters(Enum):
+    """Values for FEBio plot_level setting
+
+    This setting controls which iterations FEBio writes to the xplt
+    file.
+
+    """
+
+    NEVER = "PLOT_NEVER"
+    MAJOR = "PLOT_MAJOR_ITRS"
+    MINOR = "PLOT_MINOR_ITRS"
+    USER = "PLOT_MUST_POINTS"
+
+
+@dataclass
+class IterController:
+    """Iteration controller settings"""
+
+    max_retries: int = 5
+    opt_iter: int = 10
+    save_iters: SaveIters = SaveIters.USER
+
+
+@dataclass
+class Solver:
+    """FE solver settings"""
+
+    dtol: float = 0.001
+    etol: float = 0.01
+    rtol: float = 0  # TODO: 0 is a magic value that means "disabled"
+    lstol: float = 0.9
+    ptol: float = 0.01  # Biphasic-specific
+    min_residual: float = 1e-20
+    update_method: str = "BFGS"  # alt: 'Broyden'
+    reform_each_time_step: bool = True
+    reform_on_diverge: bool = True
+    max_refs: int = 15
+    max_ups: int = 10
+
+    def __init__(self, physics="solid", **kwargs):
+        # Not sure if there's a better alternative to overriding
+        # __init__ to make the defaults depend on an input argument.
+        if physics == "biphasic":
+            # Only use full Newton iterations
+            self.max_ups = 0
+            self.reform_each_time_step = True
+            # Increase max number of reformations b/c every iteration in
+            # the full Newton method is a reformation
+            self.max_refs = 50
+            # Don't include "symmetric_biphasic"; FEBio 3 doesn't accept
+            # it.  And the default in FEBio 2.5 is symmetric_biphasic =
+            # False.
+        # Allow fields to be set with kwargs
+        fields = set(f.name for f in dataclasses.fields(self))
+        for k, v in kwargs.items():
+            if k in fields:
+                setattr(self, k, v)
+            else:
+                raise TypeError(f"__init__() got an unexpected keyword argument '{k}'")
+
+
+@dataclass
+class Ticker:
+    """Settings for time point ticker."""
+
+    n: int = 10
+    dtnom: float = 0.1
+    dtmin: float = 0.01
+    dtmax: Union[float, Sequence] = 0.1
+
+
+class Physics(Enum):
+    """Level of physics to simulate"""
+
+    SOLID = "solid"
+    BIPHASIC = "biphasic"
+
+
+class Step:
+    """Simulation step"""
+
+    def __init__(
+        self,
+        physics: Union[Physics, str],
+        ticker: Ticker,
+        solver: Solver = None,
+        controller: IterController = None,
+    ):
+        if isinstance(physics, str):
+            physics = Physics(physics)
+        if solver is None:
+            self.solver = Solver(physics)
+        else:
+            self.solver = solver
+        if controller is None:
+            self.controller = IterController()
+        else:
+            self.controller = controller
+        self.ticker = ticker
+        self.bc: dict = {"node": {}, "body": {}, "contact": []}
+
+    @classmethod
+    def from_template(cls, step):
+        """Return a new step that copies another step's control settings
+
+        Boundary conditions are not copied
+
+        """
+        kwargs = {
+            "solver": deepcopy(step.solver),
+            "controller": deepcopy(step.controller),
+            "ticker": deepcopy(step.tp_controller),
+        }
+        return cls(**kwargs)
+
+    @property
+    def duration(self):
+        """Return the duration of a step
+
+        In principle, the duration of a step might not be known in
+        advance.  However, FEBio does not permit variable-duration steps
+        at present.
+
+        """
+        if isinstance(self.ticker.dtmax, Sequence):
+            # If there is a must point curve, use it
+            duration = self.ticker.dtmax.points[-1][0] - self.ticker.dtmax.points[0][0]
+        else:
+            # Calculate duration from implicit values
+            dt = self.ticker.dtnom
+            duration = self.ticker.n * self.ticker.dtnom
+        return duration

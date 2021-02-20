@@ -1,4 +1,5 @@
 from .model import Model, Mesh
+from .control import Step, Ticker, IterController, Solver
 from .core import (
     Body,
     ImplicitBody,

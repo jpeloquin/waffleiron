@@ -7,13 +7,19 @@ from lxml import etree as ET
 # Same-package modules
 from .core import ContactConstraint, Interpolant, Extrapolant, Sequence
 from .output import material_to_feb
-from .control import step_duration
 from .febioxml import *
+from .febioxml_2_5 import mesh_xml
 
 
 # Facts about FEBio XML 2.0
 
 BODY_COND_PARENT = "Constraints"
+MESH_PARENT = "Geometry"
+ELEMENTDATA_PARENT = "Geometry"
+NODEDATA_PARENT = "Geometry"
+ELEMENTSET_PARENT = "Geometry"
+STEP_PARENT = "."
+STEP_NAME = "Step"
 
 BC_TYPE_TAG = {
     "node": {"variable": "prescribe", "fixed": "fix"},
@@ -35,6 +41,92 @@ XML_EXTRAP_FROM_EXTRAP = {
     Extrapolant.REPEAT_CONTINUOUS: "repeat offset",
 }
 EXTRAP_FROM_XML_EXTRAP = {v: k for k, v in XML_EXTRAP_FROM_EXTRAP.items()}
+
+# Map of Ticker fields → elements relative to <Step>
+TICKER_PARAMS = {
+    "n": ReqParameter("Control/time_steps"),
+    "dtnom": ReqParameter("Control/step_size"),
+    "dtmin": ReqParameter("Control/time_stepper/dtmin"),
+    "dtmax": ReqParameter("Control/time_stepper/dtmin"),
+}
+# Map of Controller fields → elements relative to <Step>
+CONTROLLER_PARAMS = {
+    "max_retries": OptParameter("Control/time_stepper/max_retries", 5),
+    "opt_iter": OptParameter("Control/time_stepper/opt_iter", 10),
+    "save_iters": OptParameter("Control/plot_level", "PLOT_MAJOR_ITRS"),
+}
+# Map of Solver fields → elements relative to <Step>
+SOLVER_PARAMS = {
+    "dtol": OptParameter("Control/dtol", 0.001),
+    "etol": OptParameter("Control/etol", 0.01),
+    "rtol": OptParameter("Control/rtol", 0),
+    "lstol": OptParameter("Control/lstol", 0.9),
+    "ptol": OptParameter("Control/ptol", 0.01),
+    "min_residual": OptParameter("Control/min_residual", 1e-20),
+    "update_method": OptParameter("Control/qnmethod", "BFGS"),
+    "reform_each_time_step": OptParameter("Control/reform_each_time_step", True),
+    "reform_on_diverge": OptParameter("Control/diverge_reform", True),
+    "max_refs": OptParameter("Control/max_refs", 15),
+    "max_ups": OptParameter("Control/max_ups", 10),
+}
+
+
+# Functions for reading FEBio XML 2.0
+
+
+def iter_node_conditions(root):
+    """Return generator over prescribed nodal condition info.
+
+    Returns dict of property names → values.  All properties are
+    guaranteed to be not-None, except "nodal values", which will be None
+    if the condition applies the same condition to all nodes.
+
+    All returned IDs are 0-indexed for consistency with febtools.
+
+    """
+    step_id = -1  # Curent step ID (0-indexed)
+    for e_Step in root.findall(f"{STEP_PARENT}/{STEP_NAME}"):
+        step_id += 1
+        for e_prescribe in e_Step.findall("Boundary/prescribe"):
+            # Re-initialize output
+            info = {
+                "node set name": None,
+                "axis": None,  # x1, fluid, charge, etc.
+                "variable": None,  # displacement, force, pressure, etc.
+                "sequence ID": None,
+                "scale": 0.0,  # FEBio default; it really should be 1.0
+                "relative": False,
+                "nodal values": None,
+                "step ID": None,
+            }
+            # Step ID
+            info["step ID"] = step_id
+            # Read values
+            info["dof"] = DOF_NAME_FROM_XML_NODE_BC[e_prescribe.attrib["bc"]]
+            info["variable"] = VAR_FROM_XML_NODE_BC[e_prescribe.attrib["bc"]]
+            # Node set
+            if "set" in e_prescribe.attrib:
+                info["node set name"] = e_prescribe.attrib["set"]
+            # Scale
+            if "scale" in e_prescribe.attrib:
+                info["scale"] = to_number(e_prescribe.attrib["scale"])
+            # Relative
+            if "type" in e_prescribe.attrib:
+                if e_prescribe.attrib["type"] == "relative":
+                    info["relative"] = True
+            else:
+                info["relative"] = False
+            # Time series
+            info["sequence ID"] = to_number(e_prescribe.attrib["lc"]) - 1
+            # Node-specific values
+            node_elements = e_prescribe.findall("node")
+            if len(node_elements) != 0:
+                info["nodal values"] = {}
+            for e in node_elements:
+                id_ = int(e.attrib["id"])
+                info["nodal values"][id_] = to_number(e.text)
+            yield info
+
 
 # Functions for writing FEBio XML 2.0
 
@@ -74,6 +166,31 @@ def contact_section(model):
         for f in contact.follower:
             e_follower.append(tag_face(f))
     return tag_branch
+
+
+def meshdata_xml(model):
+    """Return <ElementData> and <ElementSet> XML element(s)
+
+    Technically this function should also return <ElementSet> XML
+    elements but in FEBio XML 2.0 there is little reason to do this.
+
+    """
+    e_elementdata = ET.Element("ElementData")
+    e_meshdata = [e_elementdata]
+    for i, element in enumerate(model.mesh.elements):
+        # Write any defined element data
+        if ("thickness" in element.properties) or ("v_fiber" in element.properties):
+            e_element = ET.SubElement(e_elementdata, "element", id=str(i + 1))
+        if "thickness" in element.properties:
+            ET.SubElement(e_element, "thickness").text = ",".join(
+                str(t) for t in element.properties["thickness"]
+            )
+        if "v_fiber" in element.properties:
+            ET.SubElement(e_edata, "fiber").text = ",".join(
+                str(a) for a in element.properties["v_fiber"]
+            )
+    e_elemsets = tuple()  # For compatibility with other XML versions
+    return e_meshdata, e_elemsets
 
 
 def node_fix_disp_xml(fixed_conditions, nodeset_registry):

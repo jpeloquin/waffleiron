@@ -134,9 +134,8 @@ def check_must_points(model):
     times = [0.0]
     # ^ According to Steve, t = 0 s is mandatory if must points are
     # used.  https://forums.febio.org/showthread.php?49-must-points
-    for step in model.steps:
-        record_rule = step["control"].setdefault("plot level", None)
-        if record_rule != "PLOT_MUST_POINTS":
+    for step, name in model.steps:
+        if step.controller.save_iters != "PLOT_MUST_POINTS":
             must_point_sim = False
             break
         dtmax = step["control"]["time stepper"]["dtmax"]

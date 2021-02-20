@@ -9,8 +9,9 @@ import numpy.testing as npt
 
 # febtools' local modules
 import febtools as feb
+from febtools import Step
 from febtools.load import prescribe_deformation
-from febtools.control import auto_control_section
+from febtools.control import auto_ticker
 from febtools.febioxml import basis_mat_axis_local
 from febtools.element import Hex8
 from febtools.model import Model, Mesh
@@ -174,7 +175,7 @@ class FEBio_MatAxisLocal_Hex8(TestCase):
 
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         material = OrthotropicElastic(
             {
                 "E1": 23,
@@ -194,11 +195,10 @@ class FEBio_MatAxisLocal_Hex8(TestCase):
         # Model 1: Local basis; material axes given by <mat_axis type="local">
         localb_model = gen_model_single_spiky_Hex8(material=material)
         sequence = feb.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
-        localb_model.add_step(
-            control=auto_control_section("solid", sequence, pts_per_segment=1)
-        )
+        step = Step(physics="solid", ticker=auto_ticker(sequence))
+        localb_model.add_step(step)
         node_set = [i for i in range(len(localb_model.mesh.nodes))]
-        prescribe_deformation(localb_model, node_set, F, sequence)
+        prescribe_deformation(localb_model, step, node_set, F, sequence)
         self.pth_localb_model = (
             DIR_THIS / "output" / "FEBio_MatAxisLocal_Hex8_localb.feb"
         )
@@ -219,12 +219,11 @@ class FEBio_MatAxisLocal_Hex8(TestCase):
         )
         # ^ dim 0 over basis vectors, dim 1 over X
         globalb_model = gen_model_single_spiky_Hex8(material=material)
-        sequence = feb.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
-        globalb_model.add_step(
-            control=auto_control_section("solid", sequence, pts_per_segment=1)
-        )
+        seq = feb.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
+        step = Step("solid", ticker=auto_ticker(seq))
+        globalb_model.add_step(step)
         node_set = [i for i in range(len(globalb_model.mesh.nodes))]
-        prescribe_deformation(globalb_model, node_set, F, sequence)
+        prescribe_deformation(globalb_model, step, node_set, F, sequence)
         self.pth_globalb_model = (
             DIR_THIS / "output" / "FEBio_MatAxisLocal_Hex8_globalb.feb"
         )
