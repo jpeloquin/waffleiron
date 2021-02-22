@@ -602,15 +602,17 @@ class FebReader:
                         model.fixed["node"][(dof, var)] | node_ids
                     )
 
-        # Read global constraints on rigid bodies
-        for e_rb in self.root.findall("Boundary/rigid_body"):
-            fx.read_rigid_body_bc(
-                model, e_rb, explicit_bodies, implicit_bodies, step_id=None
-            )
-
         # Load curves (sequences)
         for seq_id, seq in self.sequences.items():
             model.named["sequences"].add(seq_id, seq, nametype="ordinal_id")
+
+        # Read global constraints on rigid bodies.  Needs to come after
+        # reading sequences, or the relevant sequences won't be in the
+        # sequence registry.
+        for e_rb in self.root.findall("Boundary/rigid_body"):
+            fx.read_rigid_body_bc(
+                model, e_rb, explicit_bodies, implicit_bodies, step=None
+            )
 
         # Steps
         for e_step in self.root.findall(f"{fx.STEP_PARENT}/{fx.STEP_NAME}"):
