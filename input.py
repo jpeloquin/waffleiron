@@ -661,7 +661,7 @@ class FebReader:
             model.add_contact(contact)
         for i, step_list in enumerate(step_contacts):
             for contact in step_list:
-                model.add_contact(contact, step=i)
+                model.add_contact(contact, step_idx=i)
 
         # Output variables
         output_variables = []
