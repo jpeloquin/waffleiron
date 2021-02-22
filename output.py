@@ -32,6 +32,7 @@ from .febioxml import (
     get_or_create_item_id,
     get_or_create_seq_id,
     get_or_create_xml,
+    get_or_create_parent,
     bool_to_text,
     float_to_text,
     vec_to_text,
@@ -409,6 +410,40 @@ def face_xml(face, face_id):
     return e
 
 
+def step_xml(step, name, seq_registry, physics, febioxml_module):
+    """Return <Step> XML element"""
+    # We need to know what physics are being used because FEBio accepts
+    # some parameters only for some physics.
+    fx = febioxml_module
+    e_step = ET.Element(fx.STEP_NAME, name=name)
+    for nm, p in fx.TICKER_PARAMS.items():
+        parent = get_or_create_parent(e_step, p.path)
+        tag = p.path.split("/")[-1]
+        e = property_to_xml(getattr(step.ticker, nm), tag, seq_registry)
+        parent.append(e)
+    for nm, p in fx.CONTROLLER_PARAMS.items():
+        parent = get_or_create_parent(e_step, p.path)
+        tag = p.path.split("/")[-1]
+        v = getattr(step.controller, nm)
+        if nm == "save_iters":
+            e = ET.SubElement(parent, tag)
+            e.text = v.value
+        else:
+            e = property_to_xml(v, tag, seq_registry)
+        parent.append(e)
+    for nm, p in fx.SOLVER_PARAMS.items():
+        parent = get_or_create_parent(e_step, p.path)
+        tag = p.path.split("/")[-1]
+        if nm == "ptol" and not physics == "biphasic":
+            continue
+        elif nm == "update_method":
+            e = fx.update_method_to_xml(getattr(step.solver, nm), tag)
+        else:
+            e = property_to_xml(getattr(step.solver, nm), tag, seq_registry)
+        parent.append(e)
+    return e_step
+
+
 def xml(model, version="2.5"):
     """Convert a model to an FEBio XML tree.
 
@@ -687,7 +722,7 @@ def xml(model, version="2.5"):
         step_idx += 1
         if step_name is None:
             step_name = f"Step{step_idx}"
-        e_step = fx.step_xml(step, step_name, model.named["sequences"], physics)
+        e_step = step_xml(step, step_name, model.named["sequences"], physics, fx)
         e_step_parent.append(e_step)
 
         # Boundary conditions

@@ -393,7 +393,7 @@ def body_mat_id(body, material_registry, implicit_rb_mats):
 
 
 def get_or_create_xml(root, path):
-    """Return XML element at path creating it if needed"""
+    """Return XML element at path, creating it if needed"""
     parts = [p for p in path.split("/") if p != ""]
     parent = root
     for part in parts:
@@ -401,7 +401,13 @@ def get_or_create_xml(root, path):
         if current is None:
             current = ET.SubElement(parent, part)
         parent = current
-    return parent
+    return current
+
+
+def get_or_create_parent(root, path):
+    """Return second-to-last XML element from path, creating it if needed"""
+    path = "/".join(path.split("/")[:-1])
+    return get_or_create_xml(root, path)
 
 
 def get_or_create_item_id(registry, item):
@@ -489,15 +495,15 @@ def int_to_text(v):
 
 
 def num_to_text(v):
-    """Serialize numeric value to text by type
-
-    """
+    """Serialize numeric value to text by type"""
     if isinstance(v, int):
         return int_to_text(v)
     elif isinstance(v, float):
         return float_to_text(v)
     else:
-        raise ValueError(f"Provided numeric value has type '{type(v).__name__}', which is not supported for conversion to XML.")
+        raise ValueError(
+            f"Provided numeric value has type '{type(v).__name__}', which is not supported for conversion to XML."
+        )
 
 
 def vec_to_text(v):
@@ -513,18 +519,33 @@ def float_to_text(a):
 
 
 def property_to_xml(value, tag, seq_registry):
-    """Convert a fixed or variable property to FEBio XML"""
-    e = ET.Element(tag)
+    """Convert a constant or variable property to FEBio XML"""
     if isinstance(value, Sequence):
+        # Time-varying property, not scaled
+        e = ET.Element(tag)
         seq_id = get_or_create_item_id(seq_registry, value)
         e.attrib["lc"] = str(seq_id + 1)
-        e.text = "1"  # basic Sequences have no scale
+        e.text = "1"  # scale factor
     elif isinstance(value, ScaledSequence):
         # Time-varying property, scaled
+        e = ET.Element(tag)
         seq_id = get_or_create_item_id(seq_registry, value.sequence)
         e.attrib["lc"] = str(seq_id + 1)
         e.text = num_to_text(value.scale)
     else:
-        # Fixed property
-        e.text = num_to_text(value)
+        # Constant property
+        e = const_property_to_xml(value, tag)
     return e
+
+
+def const_property_to_xml(value, tag):
+    """Convert a constant property to FEBio XML"""
+    e = ET.Element(tag)
+    e.text = to_text(value)
+    return e
+
+
+def update_method_to_xml(value, tag):
+    """Convert Solver.update_method to XML"""
+    conv = {"BFGS": "0", "Broyden": "1"}
+    return const_property_to_xml(conv[value], tag)

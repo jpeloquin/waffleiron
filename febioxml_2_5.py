@@ -51,8 +51,7 @@ TICKER_PARAMS = {
     "n": ReqParameter("Control/time_steps"),
     "dtnom": ReqParameter("Control/step_size"),
     "dtmin": ReqParameter("Control/time_stepper/dtmin"),
-    "dtmax": ReqParameter("Control/time_stepper/dtmin"),
-    "dtmax": ReqParameter("Control/time_stepper/dtmax),
+    "dtmax": ReqParameter("Control/time_stepper/dtmax"),
 }
 # Map of Controller fields → elements relative to <Step>
 CONTROLLER_PARAMS = {
@@ -449,39 +448,3 @@ def surface_pair_xml(faceset_registry, primary, secondary, name):
         surface=faceset_registry.names(secondary)[0],
     )
     return e_surfpair
-
-
-def step_xml(step, name, seq_registry, physics):
-    """Return <Step> XML element"""
-    # We need to know what physics are being used because FEBio accepts
-    # some parameters only for some physics.
-    ticker = step.ticker
-    solver = step.solver
-    controller = step.controller
-    e = ET.Element(STEP_NAME, name=name)
-    e_control = ET.SubElement(e, "Control")
-    ET.SubElement(e_control, "plot_level").text = controller.save_iters.value
-    ET.SubElement(e_control, "time_steps").text = to_text(ticker.n)
-    ET.SubElement(e_control, "step_size").text = to_text(ticker.dtnom)
-    ET.SubElement(e_control, "dtol").text = to_text(solver.dtol)
-    ET.SubElement(e_control, "etol").text = to_text(solver.etol)
-    if physics == "biphasic":
-        ET.SubElement(e_control, "ptol").text = to_text(solver.ptol)
-    ET.SubElement(e_control, "rtol").text = to_text(solver.rtol)
-    ET.SubElement(e_control, "lstol").text = to_text(solver.lstol)
-    ET.SubElement(e_control, "min_residual").text = to_text(solver.min_residual)
-    update_method = {"BFGS": "0", "Broyden": "1"}
-    ET.SubElement(e_control, "qnmethod").text = update_method[solver.update_method]
-    ET.SubElement(e_control, "reform_each_time_step").text = to_text(
-        solver.reform_each_time_step
-    )
-    ET.SubElement(e_control, "diverge_reform").text = to_text(solver.reform_on_diverge)
-    ET.SubElement(e_control, "max_refs").text = to_text(solver.max_refs)
-    ET.SubElement(e_control, "max_ups").text = to_text(solver.max_ups)
-    e_tstepper = ET.SubElement(e_control, "time_stepper")
-    ET.SubElement(e_tstepper, "dtmin").text = to_text(ticker.dtmin)
-    e_dtmax = property_to_xml(ticker.dtmax, "dtmax", seq_registry)
-    e_tstepper.append(e_dtmax)
-    ET.SubElement(e_tstepper, "opt_iter").text = to_text(controller.opt_iter)
-    ET.SubElement(e_tstepper, "max_retries").text = to_text(controller.max_retries)
-    return e
