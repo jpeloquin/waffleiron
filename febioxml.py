@@ -257,14 +257,14 @@ def read_named_sets(xml_root):
     for k in ["face sets"]:
         for tag_set in xml_root.findall("./Geometry/" + tag_name[k]):
             cls = cls_from_entity_type[k]
-            items = cls()
+            items = set()
             for tag_item in tag_set.getchildren():
                 items.add(
                     _canonical_face(
                         [int(s.strip()) - 1 for s in tag_item.text.split(",")]
                     )
                 )
-            sets[k][tag_set.attrib["name"]] = items
+            sets[k][tag_set.attrib["name"]] = cls(items)
     return sets
 
 
