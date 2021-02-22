@@ -52,6 +52,7 @@ TICKER_PARAMS = {
     "dtnom": ReqParameter("Control/step_size"),
     "dtmin": ReqParameter("Control/time_stepper/dtmin"),
     "dtmax": ReqParameter("Control/time_stepper/dtmin"),
+    "dtmax": ReqParameter("Control/time_stepper/dtmax),
 }
 # Map of Controller fields → elements relative to <Step>
 CONTROLLER_PARAMS = {
