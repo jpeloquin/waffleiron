@@ -52,6 +52,34 @@ XML_EXTRAP_FROM_EXTRAP = {
 }
 EXTRAP_FROM_XML_EXTRAP = {v: k for k, v in XML_EXTRAP_FROM_EXTRAP.items()}
 
+# Map of Ticker fields → elements relative to <Step>
+TICKER_PARAMS = {
+    "n": ReqParameter("Control/time_steps"),
+    "dtnom": ReqParameter("Control/step_size"),
+    "dtmin": ReqParameter("Control/time_stepper/dtmin"),
+    "dtmax": ReqParameter("Control/time_stepper/dtmax"),
+}
+# Map of Controller fields → elements relative to <Step>
+CONTROLLER_PARAMS = {
+    "max_retries": OptParameter("Control/time_stepper/max_retries", 5),
+    "opt_iter": OptParameter("Control/time_stepper/opt_iter", 10),
+    "save_iters": OptParameter("Control/plot_level", "PLOT_MAJOR_ITRS"),
+}
+# Map of Solver fields → elements relative to <Step>
+SOLVER_PARAMS = {
+    "dtol": OptParameter("Control/solver/dtol", 0.001),
+    "etol": OptParameter("Control/solver/etol", 0.01),
+    "rtol": OptParameter("Control/solver/rtol", 0),
+    "lstol": OptParameter("Control/solver/lstol", 0.9),
+    "ptol": OptParameter("Control/solver/ptol", 0.01),
+    "min_residual": OptParameter("Control/solver/min_residual", 1e-20),
+    "update_method": OptParameter("Control/solver/qnmethod", "BFGS"),
+    "reform_each_time_step": OptParameter("Control/solver/reform_each_time_step", True),
+    "reform_on_diverge": OptParameter("Control/solver/diverge_reform", True),
+    "max_refs": OptParameter("Control/solver/max_refs", 15),
+    "max_ups": OptParameter("Control/solver/max_ups", 10),
+}
+
 
 # Functions for reading FEBio XML 3.0
 
