@@ -476,10 +476,8 @@ def to_text(v):
         return v
     elif isinstance(v, bool):
         return bool_to_text(v)
-    elif isinstance(v, int):
-        return int_to_text(v)
-    elif isinstance(v, float):
-        return float_to_text(v)
+    else:
+        return num_to_text(v)
 
 
 def bool_to_text(v):
@@ -488,6 +486,18 @@ def bool_to_text(v):
 
 def int_to_text(v):
     return str(v)
+
+
+def num_to_text(v):
+    """Serialize numeric value to text by type
+
+    """
+    if isinstance(v, int):
+        return int_to_text(v)
+    elif isinstance(v, float):
+        return float_to_text(v)
+    else:
+        raise ValueError(f"Provided numeric value has type '{type(v).__name__}', which is not supported for conversion to XML.")
 
 
 def vec_to_text(v):
@@ -502,23 +512,19 @@ def float_to_text(a):
     return f"{a:.7g}"
 
 
-def property_to_xml(p, tag, seq_registry):
-    """Convert a fixed or variable property to FEBio XML.
-
-    Properties must be floating point values.
-
-    """
+def property_to_xml(value, tag, seq_registry):
+    """Convert a fixed or variable property to FEBio XML"""
     e = ET.Element(tag)
-    if isinstance(p, Sequence):
-        seq_id = get_or_create_item_id(seq_registry, p)
+    if isinstance(value, Sequence):
+        seq_id = get_or_create_item_id(seq_registry, value)
         e.attrib["lc"] = str(seq_id + 1)
         e.text = "1"  # basic Sequences have no scale
-    elif isinstance(p, ScaledSequence):
+    elif isinstance(value, ScaledSequence):
         # Time-varying property, scaled
-        seq_id = get_or_create_item_id(seq_registry, p.sequence)
+        seq_id = get_or_create_item_id(seq_registry, value.sequence)
         e.attrib["lc"] = str(seq_id + 1)
-        e.text = float_to_text(p.scale)
+        e.text = num_to_text(value.scale)
     else:
         # Fixed property
-        e.text = float_to_text(p)
+        e.text = num_to_text(value)
     return e
