@@ -32,12 +32,20 @@ tags_table = {
     16842752: {"name": "header", "leaf": False},  # 0x01010000
     16908288: {"name": "dictionary", "leaf": False},  # 0x01020000
     16973824: {"name": "materials", "leaf": False},  # 0x01030000
-    17039360: {"name": "geometry", "leaf": False},  # 0x01040000
+    # Root/Materials section tags; xplt 1.0 only.  Isomorphic to Parts
+    # in xplt 2.0.
+    16973825: {"name": "material", "leaf": False},  # 0x01030001
+    16973826: {"name": "material id", "leaf": True, "format": "int"},  # 0x01030002
+    16973827: {"name": "material name", "leaf": True, "format": "str"},  # 0x01030003
+    # Mesh (2.0) or Geometry (1.0) section
+    0x01040000: {"name": "mesh", "leaf": False},  # 17039360
     # Header section tags
     16842753: {"name": "version", "leaf": True, "format": "int"},  # 0x01010001
     16842754: {"name": "nodes", "leaf": True, "format": "int"},  # 0x01010002
     16842755: {"name": "max facet nodes", "leaf": True, "format": "int"},  # 0x01010003
-    16842756: {"name": "compression", "leaf": True},  # 16842756
+    16842756: {"name": "compression", "leaf": True},  # 0x01010004
+    0x01010005: {"name": "author", "leaf": True},
+    0x01010006: {"name": "software", "leaf": True},
     # Dictionary section tags; all optional
     16912384: {"name": "global variables", "leaf": False},  # 0x01021000
     16916480: {"name": "material variables", "leaf": False},  # 0x01022000
@@ -59,47 +67,51 @@ tags_table = {
         "singleton": True,
     },
     16908292: {"name": "item name", "leaf": True, "format": "str"},  # 0x01020004
-    0x01020005: {"name": "item array size", "leaf": True},
-    0x01020006: {"name": "item_array name", "leaf": True},
-    # Root/Materials section tags
-    16973825: {"name": "material", "leaf": False},  # 0x01030001
-    16973826: {"name": "material id", "leaf": True, "format": "int"},  # 0x01030002
-    16973827: {"name": "material name", "leaf": True, "format": "str"},  # 0x01030003
-    # Root/Geometry tags
+    0x01020005: {"name": "item array size", "leaf": True},  # 16908293
+    0x01020006: {"name": "item_array name", "leaf": True},  # 16908294
+    # Mesh (2.0) or Root/Geometry (1.0) tags
     17043456: {"name": "nodes", "leaf": False},  # 0x01041000
     17047552: {"name": "domains", "leaf": False},  # 0x01042000
     17051648: {"name": "surfaces", "leaf": False},  # 0x01043000
     17055744: {"name": "nodesets", "leaf": False},  # 0x01044000
-    # Root/Geometry/Node tags
-    17043457: {"name": "node coords", "leaf": True, "format": "float"},  # 0x01041001
-    # Root/Geometry/Domains tags
+    # Mesh/Nodes (2.0) or Root/Geometry/Nodes (1.0) tags
+    0x01041100: {"name": "node header", "leaf": False},
+    # xplt 1.0
+    0x01041001: {"name": "node coords", "leaf": True, "format": "float"},  # 17043457
+    # xplt 2.0
+    0x01041200: {"name": "node coords", "leaf": True, "format": "float"},  # 17043968
+    # Mesh/Node Header tags (2.0 only)
+    0x01041101: {"name": "size", "leaf": True},
+    0x01041102: {"name": "dimensions", "leaf": True},
+    0x01041103: {"name": "name", "leaf": True},
+    # Mesh/Domains (2.0) or Root/Geometry/Domains (1.0) tags
     17047808: {"name": "domain", "leaf": False},  # 0x01042100
-    # Root/Geometry/Domains/Domain tags
+    # Mesh/Domains/Domain tags
     17047809: {"name": "domain_header", "leaf": False},  # 0x01042101
     17048064: {"name": "element_list", "leaf": False},  # 0x01042200
-    # Root/Geometry/Domains/Domain/Domain Header tags
+    # Mesh/Domains/Domain/Domain Header tags
     17047810: {
         "name": "element_type",  # 0x01042102
         "leaf": True,
         "format": "int",
         "singleton": True,
     },
-    17047811: {
-        "name": "material ID",  # 0x01042103
+    0x01042103: {  # was material ID in 1.0, but not used for anything
+        "name": "part ID",
         "leaf": True,
         "format": "int",
         "singleton": True,
     },
     16982276: {"name": "elements", "leaf": True, "format": "int"},  # 0x01032104
     16982277: {"name": "domain name", "leaf": True, "format": "str"},  # 0x01032105
-    # Root/Geometry/Domains/Domain/Element List tags
+    # Mesh/Domains/Domain/Element List tags
     17048065: {"name": "element", "leaf": True, "format": "int"},  # 0x01042201
-    # Root/Geometry/Surfaces tags
+    # Mesh/Surfaces (2.0) or Root/Geometry/Surfaces (1.0) tags
     17051904: {"name": "surface", "leaf": False},  # 0x01043100
-    # Root/Geometry/Surfaces/Surface tags
+    # Mesh/Surfaces/Surface tags
     17051905: {"name": "surface header", "leaf": False},  # 0x01043101
     17052160: {"name": "facet list", "leaf": False},  # 0x01043200
-    # Root/Geometry/Surfaces/Surface/Surface Header tags
+    # Mesh/Surfaces/Surface/Surface Header tags
     17051906: {
         "name": "surface ID",  # 0x01043102
         "leaf": True,
@@ -108,27 +120,50 @@ tags_table = {
     },
     17051907: {"name": "facets", "leaf": True, "format": "int"},  # 0x01043103
     17051908: {"name": "surface name", "leaf": True, "format": "str"},  # 0x01043104
-    # Root/Geometry/Surfaces/Surface/Facet List tags
+    0x01043105: {"name": "max facet nodes", "leaf": True, "format": "int"},  # 17051909
+    # Mesh/Surfaces/Surface/Facet List tags
     17052161: {"name": "facet", "leaf": True, "format": "int"},  # 0x01043201
-    # Root/Geometry/Nodesets tags
+    # Mesh/Nodesets (2.0) or Root/Geometry/Nodesets (1.0) tags
     17056000: {"name": "nodeset", "leaf": False},  # 0x01044100
-    # Root/Geometry/Nodesets/Nodeset tags
+    # Mesh/Nodesets/Nodeset tags
     17056001: {"name": "nodeset header", "leaf": False},  # 0x01044101
     17056256: {"name": "node list", "leaf": True, "format": "int"},  # 0x01044200
-    # Root/Geometry/Nodesets/Nodeset Header tags
+    # Mesh/Nodesets/Nodeset Header tags
     17056002: {"name": "nodeset ID", "leaf": True, "format": "int"},  # 0x01044102
     17056004: {"name": "nodes", "leaf": True, "format": "int"},  # 0x01044104
     17056003: {"name": "nodeset name", "leaf": True, "format": "str"},  # 0x01044103
+    # Mesh/Parts; xplt 2.0 only
+    0x01045000: {"name": "parts", "leaf": False},  # 17059840
+    0x01045100: {"name": "part", "leaf": False},  # 17060096
+    0x01045101: {"name": "part ID", "leaf": True, "format": "int"},  # 17060097
+    0x01045102: {"name": "part name", "leaf": True, "format": "str"},  # 17060098
+    # Mesh/Plot Objects; xplt 2.0 only
+    0x01050000: {"name": "objects", "leaf": False},  # 17104896
+    0x01050001: {"name": "ID", "leaf": True, "format": "int"},  # 17104897
+    0x01050002: {"name": "name", "leaf": True, "format": "str"},  # 17104898
+    0x01050003: {"name": "tag", "leaf": True, "format": "bytes"},  # 17104899
+    0x01050004: {"name": "pos", "leaf": True, "format": "float"},  # 17104900
+    0x01050005: {"name": "rot", "leaf": True, "format": "float"},  # 17104901
+    0x01050006: {"name": "data", "leaf": True, "format": "bytes"},  # 17104902
+    # Mesh/Plot Objects/Point; xplt 2.0 only
+    0x01051000: {"name": "point", "leaf": False},  # 17108992
+    0x01051001: {"name": "coords", "leaf": True, "format": "bytes"},  # 17108992
+    # Mesh/Plot Objects/Line; xplt 2.0 only
+    0x01052000: {"name": "line", "leaf": False},  # 17113088
+    0x01052001: {"name": "coords", "leaf": True, "format": "bytes"},  # 17113089
     # State tags
     33619968: {"name": "state header", "leaf": False},  # 0x02010000
     33685504: {"name": "state data", "leaf": False},  # 0x02020000
     # State/State Header tags
-    33619970: {
-        "name": "time",  # 0x02010002
+    0x02010002: {  # 33619970
+        "name": "time",
         "leaf": True,
         "format": "float",
         "singleton": True,
     },
+    # State/Mesh State tags (2.0 only)
+    0x02030000: {"name": "mesh state", "leaf": False},  # 33751040
+    0x02030001: {"name": "element state", "leaf": True, "format": "bytes"},  # 33751041
     # State/State Data tags
     33685760: {"name": "global data", "leaf": False},  # 0x02020100
     33686016: {"name": "material data", "leaf": False},  # 0x02020200
@@ -145,6 +180,8 @@ tags_table = {
         "singleton": True,
     },
     33685507: {"name": "data", "leaf": True, "format": "variable"},  # 0x02020003
+    # State/Objects State
+    0x02040000: {"name": "objects state", "leaf": True, "format": "bytes"},  # 33816576
 }
 
 element_type_from_id = {
@@ -625,7 +662,7 @@ def domains(header_children):
         domain_id = i + 1
         elem_type_id = find_one(b_domain, "domain/domain_header/element_type")["data"]
         elem_type = element_type_from_id[elem_type_id]
-        material_id = find_one(b_domain, "domain/domain_header/material ID")["data"]
+        material_id = find_one(b_domain, "domain/domain_header/part ID")["data"]
         domain_name = find_all(b_domain, "domain/domain_header/domain name")
         if len(domain_name) == 0:
             # Some older plotfiles don't store domain names
@@ -858,7 +895,7 @@ class XpltData:
             i_elements = [r[1:] for r in i_elements]
             # Get material.  Note that the febio binary database
             # uses 1-indexing for element IDs.
-            i_mat = find_one(b["data"], "domain_header/material ID")["data"] - 1
+            i_mat = find_one(b["data"], "domain_header/part ID")["data"] - 1
             # Get element type
             ecode = find_one(b["data"], "domain_header/element_type")["data"]
             etype = element_type_from_id[ecode]
