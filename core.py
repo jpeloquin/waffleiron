@@ -283,6 +283,8 @@ class NameRegistry:
 
     def obj(self, name, nametype="canonical"):
         """Return object by name (and type of name)."""
+        if not nametype in self._from_name:
+            raise KeyError(f"namespace '{nametype}' does not exist")
         return self._from_name[nametype][name]
 
     def get_or_create_name(
