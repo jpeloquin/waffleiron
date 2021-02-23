@@ -9,7 +9,7 @@ from .input import load_model
 
 
 # Default name of FEBio executable
-FEBIO_NAME = "febio"
+FEBIO_CMD = "febio"
 # Number of threads to use for each FEBio call
 FEBIO_THREADS = psutil.cpu_count(logical=False)
 
@@ -24,7 +24,7 @@ class FEBioError(Exception):
     pass
 
 
-def _run_febio(pth_feb, threads=None):
+def _run_febio(pth_feb, threads=None, cmd=FEBIO_CMD):
     """Run FEBio and return the process object."""
     # FEBio's error handling is interesting, in a bad way.  XML file
     # read errors are only output to stdout.  If there is a read error,
@@ -47,7 +47,7 @@ def _run_febio(pth_feb, threads=None):
         raise ValueError(f"'{pth_feb}' does not exist or is not accessible.")
     try:
         proc = subprocess.run(
-            [FEBIO_NAME, "-i", pth_feb.name],
+            [cmd, "-i", pth_feb.name],
             # FEBio always writes xplt to current dir
             cwd=pth_feb.parent,
             stdout=subprocess.PIPE,
@@ -58,7 +58,7 @@ def _run_febio(pth_feb, threads=None):
     except OSError as e:
         if e.errno == errno.ENOENT:
             raise ValueError(
-                f"The OS could not find an executable file named {FEBIO_NAME}; ensure that an FEBio executable with that name exists on the system and is in a directory included in the system PATH variable.  Alternatively, change febtools.febio.FEBIO_NAME to the name of this system's FEBio executable."
+                f"The OS could not find an executable file named {cmd}; ensure that an FEBio executable with that name exists on the system and is in a directory included in the system PATH variable.  Alternatively, change febtools.febio.FEBIO_NAME to the name of this system's FEBio executable."
             )
     # If there specifically is a file read error, we need to write the
     # captured stdout to the log file, because only it has information
@@ -93,7 +93,7 @@ def _run_febio(pth_feb, threads=None):
     return proc
 
 
-def run_febio_checked(pth_feb, threads=None):
+def run_febio_checked(pth_feb, threads=None, cmd=FEBIO_CMD):
     """Run FEBio, raising exception on error.
 
     In addition, perform the following checks independent of FEBio's own
@@ -106,7 +106,7 @@ def run_febio_checked(pth_feb, threads=None):
     if threads is None:
         threads = FEBIO_THREADS
     pth_feb = Path(pth_feb)
-    proc = _run_febio(pth_feb, threads=threads)
+    proc = _run_febio(pth_feb, threads=threads, cmd=cmd)
     if proc.returncode != 0:
         raise FEBioError(
             f"FEBio returned error code {proc.returncode} while running {pth_feb}; check {pth_feb.with_suffix('.log')}."
@@ -117,11 +117,11 @@ def run_febio_checked(pth_feb, threads=None):
     return proc.returncode
 
 
-def run_febio_unchecked(pth_feb, threads=None):
+def run_febio_unchecked(pth_feb, threads=None, cmd=FEBIO_CMD):
     """Run FEBio and return its error code."""
     if threads is None:
         threads = FEBIO_THREADS
-    return _run_febio(pth_feb, threads=threads).returncode
+    return _run_febio(pth_feb, threads=threads, cmd=cmd).returncode
 
 
 def check_must_points(model):
