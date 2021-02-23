@@ -435,13 +435,13 @@ def parse_xplt_data(data, **kwargs):
     return parse_tree
 
 
-def pprint_blocks(f, blocks, indent=0):
+def pprint_blocks(f, blocks, parents=tuple()):
     """Pretty-print parsed XPLT blocks.
 
     `f` must support a `write` method.
 
     """
-    s_indent = " " * (indent + 2)  # For second and following lines
+    indent = 2 * len(parents)
     for i, block in enumerate(blocks):
         if i == 0:  # First block
             # Write opening braces
@@ -449,17 +449,18 @@ def pprint_blocks(f, blocks, indent=0):
         else:
             # Write the new block's indent & brace
             f.write(" " * (indent + 1) + "{")
-        f.write("'name': '{}'".format(block["name"]))
+        path = parents + (block["name"],)
+        f.write(f"'path': '{'/'.join(path)}'")
         for k in ["tag", "type", "address", "size"]:
-            f.write(",\n" + s_indent + "'{}': '{}'".format(k, block[k]))
+            f.write(",\n" + " " * (indent + 2) + "'{}': '{}'".format(k, block[k]))
 
         # Write block data/children
         if "data" in block:
             if block["type"] == "branch":
-                f.write(",\n" + s_indent + "'children':\n")
-                pprint_blocks(f, block["data"], indent=indent + 2)
+                f.write(",\n" + " " * (indent + 2) + "'children':\n")
+                pprint_blocks(f, block["data"], parents=path)
             else:  # Leaf or unknown
-                f.write(",\n" + s_indent + "'data': {}".format(block["data"]))
+                f.write(",\n" + " " * (indent + 2) + "'data': {}".format(block["data"]))
 
         if i < len(blocks) - 1:  # Before last block
             # Close the braces for the current block and write a
