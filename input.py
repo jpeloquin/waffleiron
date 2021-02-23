@@ -152,7 +152,9 @@ def read_step(step_xml, model, physics, febioxml_module):
 def load_model(fpath):
     """Loads a model (feb) and the solution (xplt) if it exists.
 
-    The following data is supported for FEBio XML 2.0 and 2.5:
+
+
+    The following data is supported for FEBio XML 2.0:
     - Materials
     - Geometry: nodes and elements
 
