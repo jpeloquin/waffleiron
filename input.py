@@ -165,10 +165,11 @@ def load_model(fpath):
         feb_ok = True
     except UnsupportedFormatError as err:
         # The .feb file is some unsupported version
-        msg = "{}.  Falling back to defining the model from the .xplt "
-        "file alone.  Values given only in the .feb file will not be "
-        "available.  Using FEBio file format 2.x is recommended."
-        msg = msg.format(err.message)
+        msg = (
+            f"{err.message}.  Falling back to defining the model from the .xplt "
+            "file alone.  Values given only in the .feb file will not be "
+            "available."
+        )
         warnings.warn(msg)
         feb_ok = False
     # Attempt to read the xplt file, if it exists

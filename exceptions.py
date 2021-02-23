@@ -20,3 +20,4 @@ class UnsupportedFormatError(ValueError):
         super(UnsupportedFormatError, self).__init__(msg)
         self.file_path = pth
         self.file_format = form
+        self.message = msg
