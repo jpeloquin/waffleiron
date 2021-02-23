@@ -107,14 +107,14 @@ class TestLogspaced(TestCase):
         offset = -1
         n = 3
         span = 1
-        with self.assertRaisesRegex(ValueError, "Offset, \S+, must be non-negative"):
+        with self.assertRaisesRegex(ValueError, "Offset, \\S+, must be non-negative"):
             feb.math.logspaced(offset, span, n)
 
     def test_negative_span_error(self):
         offset = 0
         n = 3
         span = -1
-        with self.assertRaisesRegex(ValueError, "Span, \S+, must be non-negative"):
+        with self.assertRaisesRegex(ValueError, "Span, \\S+, must be non-negative"):
             feb.math.logspaced(offset, span, n)
 
     def test_negative_n_error(self):
@@ -208,7 +208,7 @@ class TestPowerspaced(TestCase):
         n = 3
         span = 1
         power = 1
-        with self.assertRaisesRegex(ValueError, "Offset, \S+, must be non-negative"):
+        with self.assertRaisesRegex(ValueError, "Offset, \\S+, must be non-negative"):
             feb.math.powerspaced(offset, span, n, power)
 
     def test_negative_span_error(self):
@@ -216,7 +216,7 @@ class TestPowerspaced(TestCase):
         n = 3
         span = -1
         power = 1
-        with self.assertRaisesRegex(ValueError, "Span, \S+, must be non-negative"):
+        with self.assertRaisesRegex(ValueError, "Span, \\S+, must be non-negative"):
             feb.math.powerspaced(offset, span, n, power)
 
     def test_negative_n_error(self):
