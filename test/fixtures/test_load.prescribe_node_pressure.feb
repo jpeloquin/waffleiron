@@ -143,7 +143,6 @@
       <var type="effective fluid pressure"/>
       <var type="fluid pressure"/>
       <var type="fluid flux"/>
-      <var type="fixed charge density"/>
     </plotfile>
   </Output>
 </febio_spec>
