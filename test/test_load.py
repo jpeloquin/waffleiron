@@ -14,14 +14,14 @@ from febtools.element import Hex8
 from febtools.febioxml import basis_mat_axis_local
 from febtools.model import Model, Mesh
 from febtools.material import IsotropicElastic
-from febtools.test.fixtures import gen_model_single_spiky_Hex8
+from febtools.test.fixtures import DIR_OUT, febio_cmd, gen_model_single_spiky_Hex8
 
 
 DIR_THIS = Path(__file__).parent
 DIR_FIXTURES = DIR_THIS / "fixtures"
 
 
-def test_pipeline_prescribe_deformation_singleHex8():
+def test_pipeline_prescribe_deformation_singleHex8(febio_cmd):
     """Test conditions.prescribe_deformation()
 
     Test the following in the case of a displacement applied to all
@@ -69,12 +69,12 @@ def test_pipeline_prescribe_deformation_singleHex8():
     )
     e_logfile.append(e_elementdata)
     e_Output.append(e_logfile)
-    pth = DIR_THIS / "output" / f"{fnm_stem}.feb"
+    pth = DIR_OUT / f"{fnm_stem}.{febio_cmd}.feb"
     with open(pth, "wb") as f:
         feb.output.write_xml(tree, f)
 
     # Test 3: Can FEBio use the resulting FEBio XML file?
-    feb.febio.run_febio_checked(pth)
+    feb.febio.run_febio_checked(pth, cmd=febio_cmd)
 
     # Test 4: Can the FEBio solution be read by febtools?
     solved = feb.load_model(pth)
@@ -91,11 +91,11 @@ def test_pipeline_prescribe_deformation_singleHex8():
     npt.assert_array_almost_equal_nulp(F_febio, F)
 
 
-def test_FEBio_prescribe_node_pressure_Hex8():
+def test_FEBio_prescribe_node_pressure_Hex8(febio_cmd):
     """E2E test of prescribed nodal pressure boundary condition"""
     # Test 1: Read
     pth_in = DIR_FIXTURES / (
-        f"{Path(__file__).with_suffix('').name}." + "prescribe_node_pressure.feb"
+        f"{Path(__file__).with_suffix('').name}.prescribe_node_pressure.feb"
     )
     model = feb.load_model(pth_in)
     #
@@ -103,12 +103,14 @@ def test_FEBio_prescribe_node_pressure_Hex8():
     pth_out = (
         DIR_THIS
         / "output"
-        / (f"{Path(__file__).with_suffix('').name}." + "prescribe_node_pressure.feb")
+        / (
+            f"{Path(__file__).with_suffix('').name}.prescribe_node_pressure.{febio_cmd}.feb"
+        )
     )
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    feb.febio.run_febio_checked(pth_out)
+    feb.febio.run_febio_checked(pth_out, cmd=febio_cmd)
     #
     # Test 4: Is the output as expected?
     model = feb.load_model(pth_out)

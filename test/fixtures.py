@@ -5,6 +5,7 @@ from pathlib import Path
 
 # Public packages
 import numpy as np
+import pytest
 
 # febtools' local modules
 import febtools as feb
@@ -19,6 +20,15 @@ DIR_FIXTURES = Path(__file__).parent / "fixtures"
 DIR_OUT = Path(__file__).parent / "output"
 if not DIR_OUT.exists():
     DIR_OUT.mkdir()
+
+# Versions against which to test.  All tests that run FEBio should use
+# every supported FEBio version.
+FEBIO_CMDS = ("febio2", "febio3")
+
+
+@pytest.fixture(scope="session", params=FEBIO_CMDS)
+def febio_cmd(request):
+    return request.param
 
 
 def gen_model_center_crack_Hex8():

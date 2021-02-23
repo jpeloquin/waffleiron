@@ -1,11 +1,13 @@
 # Python built-ins
 from math import radians
 from pathlib import Path
+from typing import Generator
 from unittest import TestCase
 
 # Public modules
 import numpy as np
 import numpy.testing as npt
+import pytest
 
 # febtools' local modules
 import febtools as feb
@@ -17,15 +19,14 @@ from febtools.element import Hex8
 from febtools.model import Model, Mesh
 from febtools.material import IsotropicElastic, OrthotropicElastic
 from febtools.output import write_feb, write_xml
-from febtools.test.fixtures import gen_model_single_spiky_Hex8
+from febtools.test.fixtures import DIR_OUT, febio_cmd, gen_model_single_spiky_Hex8
 
 
 DIR_THIS = Path(__file__).parent
-DIR_OUTPUT = DIR_THIS / "output"
 DIR_FIXTURES = Path(__file__).parent / "fixtures"
 
 
-def test_FEBio_normalizeXML_bare_Boundary():
+def test_FEBio_normalizeXML_bare_Boundary(febio_cmd):
     """End-to-end test of Boundary/prescribe normalization."""
     pth_in = DIR_FIXTURES / (
         f"{Path(__file__).with_suffix('').name}." + "normalizeXML_bare_Boundary.feb"
@@ -33,13 +34,14 @@ def test_FEBio_normalizeXML_bare_Boundary():
     tree = feb.input.read_febio_xml(pth_in)
     normalized_root = feb.febioxml.normalize_xml(tree.getroot())
     normalized_tree = normalized_root.getroottree()
-    pth_out = DIR_OUTPUT / (
-        f"{Path(__file__).with_suffix('').name}." + "normalizeXML_bare_Boundary.feb"
+    pth_out = DIR_OUT / (
+        f"{Path(__file__).with_suffix('').name}."
+        + f"normalizeXML_bare_Boundary.{febio_cmd}.feb"
     )
     with open(pth_out, "wb") as f:
         feb.output.write_xml(normalized_tree, f)
     # Test 1: Can FEBio still read the normalized file?
-    feb.febio.run_febio_checked(pth_out)
+    feb.febio.run_febio_checked(pth_out, cmd=febio_cmd)
     # Test 2: Did the right displacements get applied?
     model = feb.load_model(pth_out)
     ## Test 2.1: Did node 0 stay fixed?
@@ -156,8 +158,9 @@ class Unit_MatAxisLocal_Hex8(TestCase):
         )
 
 
-class FEBio_MatAxisLocal_Hex8(TestCase):
-    """Test consistency of <mat_axis type="local"> interpretation with FEBio.
+@pytest.fixture(scope="module")
+def mataxis_local_global_hex8_models(febio_cmd) -> Generator:
+    """Create models with equivalent local and global element bases
 
     Create two models using the same irregularly shaped element, each
     with an orthotropic material.
@@ -169,91 +172,99 @@ class FEBio_MatAxisLocal_Hex8(TestCase):
     To model 2: Assign a global basis that matches the local element
     basis in model 1.  Apply the same deformation gradient tensor F.
 
-    Solve both models with FEBio and read the output stress.  If the
-    local element basis in model 1 was interpreted correctly, the
-    stresses in both models should match.
+    Solve both models with FEBio and return the model paths.  This
+    fixture is intended to support testing the consistency of <mat_axis
+    type="local"> and global material axes.
 
     """
+    material = OrthotropicElastic(
+        {
+            "E1": 23,
+            "E2": 81,
+            "E3": 50,
+            "G12": 15,
+            "G23": 82,
+            "G31": 5,
+            "ν12": 0.26,
+            "ν23": -0.36,
+            "ν31": 0.2,
+        }
+    )
+    F = np.array([[0.734, -0.10, -0.02], [-0.01, 0.953, 0.09], [-0.23, 0.10, 1.24]])
+    basis_code = (4, 7, 3)
+    #
+    # Model 1: Local basis; material axes given by <mat_axis type="local">
+    localb_model = gen_model_single_spiky_Hex8(material=material)
+    sequence = feb.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
+    step = Step(physics="solid", ticker=auto_ticker(sequence))
+    localb_model.add_step(step)
+    node_set = [i for i in range(len(localb_model.mesh.nodes))]
+    prescribe_deformation(localb_model, step, node_set, F, sequence)
+    pth_localb_model = (
+        DIR_OUT / f"mataxis_local_global_hex8_models.localb.{febio_cmd}.feb"
+    )
+    tree = feb.output.xml(localb_model)
+    # add <mat_axis type="local">
+    e_mat = tree.find("Material/material")
+    e_mat_axis = e_mat.makeelement("mat_axis")
+    e_mat.append(e_mat_axis)
+    e_mat_axis.attrib["type"] = "local"
+    e_mat_axis.text = ", ".join([str(a) for a in basis_code])
+    with open(pth_localb_model, "wb") as f:
+        write_xml(tree, f)
+    feb.febio.run_febio_checked(pth_localb_model, cmd=febio_cmd)
+    #
+    # Model 2: Global basis; material axes are x1, x2, x3
+    basis = np.array(basis_mat_axis_local(localb_model.mesh.elements[0], basis_code))
+    # ^ dim 0 over basis vectors, dim 1 over X
+    globalb_model = gen_model_single_spiky_Hex8(material=material)
+    seq = feb.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
+    step = Step("solid", ticker=auto_ticker(seq))
+    globalb_model.add_step(step)
+    node_set = [i for i in range(len(globalb_model.mesh.nodes))]
+    prescribe_deformation(globalb_model, step, node_set, F, sequence)
+    pth_globalb_model = (
+        DIR_OUT / f"mataxis_local_global_hex8_models.globalb.{febio_cmd}.feb"
+    )
+    tree = feb.output.xml(localb_model)
+    # add <mat_axis type="vector">
+    e_mat = tree.find("Material/material")
+    e_mat_axis = e_mat.makeelement("mat_axis")
+    e_mat_axis.attrib["type"] = "vector"
+    e_mat.append(e_mat_axis)
+    e_a = e_mat_axis.makeelement("a")
+    e_mat_axis.append(e_a)
+    e_a.text = ", ".join([str(a) for a in basis[:, 0]])
+    e_d = e_mat_axis.makeelement("d")
+    e_mat_axis.append(e_d)
+    e_d = tree.find("Material/material/mat_axis/d")
+    e_d.text = ", ".join([str(a) for a in basis[:, 1]])
+    with open(pth_globalb_model, "wb") as f:
+        write_xml(tree, f)
+    feb.febio.run_febio_checked(pth_globalb_model, cmd=febio_cmd)
 
-    def setUp(self) -> None:
-        material = OrthotropicElastic(
-            {
-                "E1": 23,
-                "E2": 81,
-                "E3": 50,
-                "G12": 15,
-                "G23": 82,
-                "G31": 5,
-                "ν12": 0.26,
-                "ν23": -0.36,
-                "ν31": 0.2,
-            }
-        )
-        F = np.array([[0.734, -0.10, -0.02], [-0.01, 0.953, 0.09], [-0.23, 0.10, 1.24]])
-        basis_code = (4, 7, 3)
-        #
-        # Model 1: Local basis; material axes given by <mat_axis type="local">
-        localb_model = gen_model_single_spiky_Hex8(material=material)
-        sequence = feb.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
-        step = Step(physics="solid", ticker=auto_ticker(sequence))
-        localb_model.add_step(step)
-        node_set = [i for i in range(len(localb_model.mesh.nodes))]
-        prescribe_deformation(localb_model, step, node_set, F, sequence)
-        self.pth_localb_model = (
-            DIR_THIS / "output" / "FEBio_MatAxisLocal_Hex8_localb.feb"
-        )
-        tree = feb.output.xml(localb_model)
-        # add <mat_axis type="local">
-        e_mat = tree.find("Material/material")
-        e_mat_axis = e_mat.makeelement("mat_axis")
-        e_mat.append(e_mat_axis)
-        e_mat_axis.attrib["type"] = "local"
-        e_mat_axis.text = ", ".join([str(a) for a in basis_code])
-        with open(self.pth_localb_model, "wb") as f:
-            write_xml(tree, f)
-        feb.febio.run_febio_checked(self.pth_localb_model)
-        #
-        # Model 2: Global basis; material axes are x1, x2, x3
-        basis = np.array(
-            basis_mat_axis_local(localb_model.mesh.elements[0], basis_code)
-        )
-        # ^ dim 0 over basis vectors, dim 1 over X
-        globalb_model = gen_model_single_spiky_Hex8(material=material)
-        seq = feb.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
-        step = Step("solid", ticker=auto_ticker(seq))
-        globalb_model.add_step(step)
-        node_set = [i for i in range(len(globalb_model.mesh.nodes))]
-        prescribe_deformation(globalb_model, step, node_set, F, sequence)
-        self.pth_globalb_model = (
-            DIR_THIS / "output" / "FEBio_MatAxisLocal_Hex8_globalb.feb"
-        )
-        tree = feb.output.xml(localb_model)
-        # add <mat_axis type="vector">
-        e_mat = tree.find("Material/material")
-        e_mat_axis = e_mat.makeelement("mat_axis")
-        e_mat_axis.attrib["type"] = "vector"
-        e_mat.append(e_mat_axis)
-        e_a = e_mat_axis.makeelement("a")
-        e_mat_axis.append(e_a)
-        e_a.text = ", ".join([str(a) for a in basis[:, 0]])
-        e_d = e_mat_axis.makeelement("d")
-        e_mat_axis.append(e_d)
-        e_d = tree.find("Material/material/mat_axis/d")
-        e_d.text = ", ".join([str(a) for a in basis[:, 1]])
-        with open(self.pth_globalb_model, "wb") as f:
-            write_xml(tree, f)
-        feb.febio.run_febio_checked(self.pth_globalb_model)
+    yield (pth_localb_model, pth_globalb_model)
 
-    def test_compare_stress(self):
-        with open(self.pth_localb_model.with_suffix(".xplt"), "rb") as f:
-            localb_result = feb.xplt.XpltData(f.read())
-        localb_stress = localb_result.step_data(-1)["domain variables"]["stress"][0]
-        with open(self.pth_globalb_model.with_suffix(".xplt"), "rb") as f:
-            globalb_result = feb.xplt.XpltData(f.read())
-        globalb_stress = globalb_result.step_data(-1)["domain variables"]["stress"][0]
-        npt.assert_array_almost_equal_nulp(globalb_stress, localb_stress)
+    # Cleanup
+    for ext in (".feb", ".log", ".xplt"):
+        pth_localb_model.with_suffix(ext).unlink()
+        pth_globalb_model.with_suffix(ext).unlink()
 
-    def tearDown(self):
-        for ext in (".feb", ".log", ".xplt"):
-            self.pth_localb_model.with_suffix(ext).unlink()
-            self.pth_globalb_model.with_suffix(ext).unlink()
+
+def test_mataxis_stress(mataxis_local_global_hex8_models) -> None:
+    """Test consistency of local and global mat_axis with FEBio.
+
+    Compare stress between two models, one with mat_axis set locally and
+    one with mat_axis set globally.  If the local element basis in model
+    1 was interpreted correctly, the stresses in both models should
+    match.
+
+    """
+    pth_localb_model, pth_globalb_model = mataxis_local_global_hex8_models
+    with open(pth_localb_model.with_suffix(".xplt"), "rb") as f:
+        localb_result = feb.xplt.XpltData(f.read())
+    localb_stress = localb_result.step_data(-1)["domain variables"]["stress"][0]
+    with open(pth_globalb_model.with_suffix(".xplt"), "rb") as f:
+        globalb_result = feb.xplt.XpltData(f.read())
+    globalb_stress = globalb_result.step_data(-1)["domain variables"]["stress"][0]
+    npt.assert_array_almost_equal_nulp(globalb_stress, localb_stress)

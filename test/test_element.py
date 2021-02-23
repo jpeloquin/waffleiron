@@ -5,16 +5,16 @@ import unittest
 
 import numpy as np
 import numpy.testing as npt
+import pytest
 
 import febtools as feb
 from febtools.febio import run_febio_checked
 
-from febtools.test.fixtures import RTOL_STRESS, ATOL_STRESS
+from febtools.test.fixtures import RTOL_STRESS, ATOL_STRESS, DIR_OUT, febio_cmd
 
 
 DIR_THIS = Path(__file__).parent
 DIR_FIXTURES = Path(__file__).parent / "fixtures"
-DIR_OUTPUT = DIR_THIS / "output"
 
 
 def f_tensor_logfile(elemdata, step, eid):
@@ -396,7 +396,7 @@ class ElementMethodsTestHex8(unittest.TestCase):
             npt.assert_almost_equal(F, F_expected, decimal=5)
 
 
-def test_FEBio_intraElementHetF_Hex8():
+def test_FEBio_intraElementHetF_Hex8(febio_cmd):
     """Test handling of intra-element F-tensor heterogeneity.
 
     FEBio evaluates element data values at the Gauss points and reports
@@ -406,9 +406,9 @@ def test_FEBio_intraElementHetF_Hex8():
 
     """
     pth_in = DIR_FIXTURES / "test_element.intraElementHetF_Hex8.feb"
-    pth_out = DIR_OUTPUT / "test_element.intraElementHetF_Hex8.feb"
+    pth_out = DIR_OUT / f"test_element.intraElementHetF_Hex8.{febio_cmd}.feb"
     copyfile(pth_in, pth_out)
-    run_febio_checked(pth_out)
+    run_febio_checked(pth_out, cmd=febio_cmd)
     model = feb.load_model(pth_out)
     e = model.mesh.elements[0]
     # Does the test case actually different values for evaluation at r =

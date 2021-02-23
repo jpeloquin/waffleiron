@@ -15,6 +15,7 @@ from febtools.control import auto_ticker
 from febtools.febio import run_febio_checked
 from febtools.math import vec_from_sph
 from febtools.test.fixtures import (
+    febio_cmd,
     gen_model_single_spiky_Hex8,
     RTOL_F,
     ATOL_F,
@@ -78,7 +79,7 @@ def _fixture_FEBio_fiberDirectionLocal_Hex8_fiber():
     run_febio_checked(pth)
 
 
-def test_FEBio_SOHomFibAng_Hex8_ExpFiber():
+def test_FEBio_SOHomFibAng_Hex8_ExpFiber(febio_cmd):
     """E2E test of 1D submaterial homogeneous orientation.
 
     Orientation given as <fiber type="angles"> in FEBio XML.
@@ -92,14 +93,15 @@ def test_FEBio_SOHomFibAng_Hex8_ExpFiber():
     #
     # Test 2: Write
     pth_out = DIR_OUT / (
-        f"{Path(__file__).with_suffix('').name}." + "SOHomFibAng_Hex8_ExpFiber.feb"
+        f"{Path(__file__).with_suffix('').name}."
+        + "SOHomFibAng_Hex8_ExpFiber.{febio_cmd}.feb"
     )
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    run_febio_checked(pth_out)
+    run_febio_checked(pth_out, cmd=febio_cmd)
     #
     # Test 4: Is the output as expected?
     model = feb.load_model(pth_out)
@@ -131,7 +133,7 @@ def test_FEBio_SOHomFibAng_Hex8_ExpFiber():
     )
 
 
-def test_FEBio_MOHomMatAxVec_Hex8_LinOrtho():
+def test_FEBio_MOHomMatAxVec_Hex8_LinOrtho(febio_cmd):
     """E2E test of 3D material homogeneous orientation
 
     Orientation given as <mat_axis type="vector"> in FEBio XML.
@@ -145,14 +147,15 @@ def test_FEBio_MOHomMatAxVec_Hex8_LinOrtho():
     #
     # Test 2: Write
     pth_out = DIR_OUT / (
-        f"{Path(__file__).with_suffix('').name}." + "MOHomMatAxVec_Hex8_OrthoE.feb"
+        f"{Path(__file__).with_suffix('').name}."
+        + f"MOHomMatAxVec_Hex8_OrthoE.{febio_cmd}.feb"
     )
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    run_febio_checked(pth_out)
+    run_febio_checked(pth_out, cmd=febio_cmd)
     #
     # Test 4: Is the output as expected?
     model = feb.load_model(pth_out)
@@ -187,7 +190,7 @@ def test_FEBio_MOHomMatAxVec_Hex8_LinOrtho():
     )
 
 
-def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE():
+def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE(febio_cmd):
     """E2E test of heterogeneous local basis.
 
     Heterogeneous local basis given as <mat_axis type="local"> in
@@ -202,14 +205,15 @@ def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE():
     #
     # Test 2: Write
     pth_out = DIR_OUT / (
-        f"{Path(__file__).with_suffix('').name}." + "LOHetMatAxLoc_Hex8_OrthoE.feb"
+        f"{Path(__file__).with_suffix('').name}."
+        + f"LOHetMatAxLoc_Hex8_OrthoE.{febio_cmd}.feb"
     )
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    run_febio_checked(pth_out)
+    run_febio_checked(pth_out, cmd=febio_cmd)
     #
     # Test 4: Is the output as expected?
     model = feb.load_model(pth_out)
@@ -258,7 +262,7 @@ def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE():
         npt.assert_allclose(σ, σ_FEBio, rtol=RTOL_STRESS, atol=ATOL_STRESS)
 
 
-def test_FEBio_LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber():
+def test_FEBio_LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber(febio_cmd):
     """E2E test of heterogeneous local basis + homogeneous 1D submaterial
     orientation.
 
@@ -279,14 +283,14 @@ def test_FEBio_LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber():
     # Test 2: Write
     pth_out = DIR_OUT / (
         f"{Path(__file__).with_suffix('').name}."
-        + "LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber.feb"
+        + f"LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber.{febio_cmd}.feb"
     )
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    run_febio_checked(pth_out)
+    run_febio_checked(pth_out, cmd=febio_cmd)
     #
     # Test 4: Is the output as expected?
     model = feb.load_model(pth_out)

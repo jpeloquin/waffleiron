@@ -10,6 +10,7 @@ import os
 from febtools.material import *
 from febtools.test.fixtures import RTOL_F, RTOL_STRESS
 from febtools.input import FebReader, textdata_list
+from febtools.test.fixtures import febio_cmd
 
 
 DIR_THIS = Path(__file__).parent
@@ -284,7 +285,7 @@ class NeoHookeanTest(unittest.TestCase):
     # implementation.
 
 
-def test_FEBio_Hex8_OrthoE():
+def test_FEBio_Hex8_OrthoE(febio_cmd):
     """E2E test of OrthotropicElastic material."""
     # Test 1: Read
     pth_in = DIR_FIXTURES / (
@@ -296,14 +297,14 @@ def test_FEBio_Hex8_OrthoE():
     pth_out = (
         DIR_THIS
         / "output"
-        / (f"{Path(__file__).with_suffix('').name}." + "Hex8_OrthoE.feb")
+        / (f"{Path(__file__).with_suffix('').name}." + f"Hex8_OrthoE.{febio_cmd}.feb")
     )
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
         feb.output.write_feb(model, f)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    feb.febio.run_febio_checked(pth_out)
+    feb.febio.run_febio_checked(pth_out, cmd=febio_cmd)
     #
     # Test 4: Is the output as expected?
     model = feb.load_model(pth_out)

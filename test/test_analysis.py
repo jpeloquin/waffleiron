@@ -4,16 +4,25 @@ from unittest import TestCase
 import os
 import itertools, math
 from math import pi, radians, cos, sin
+from typing import Generator
+
 import numpy.testing as npt
 import numpy as np
+import pytest
 
 import febtools as feb
-from febtools.control import Step,  auto_ticker
+from febtools.control import Step, auto_ticker
 from febtools.input import FebReader
 from febtools.material import from_Lamé, to_Lamé
 from febtools.analysis import *
 from febtools import material
-from febtools.test.fixtures import gen_model_center_crack_Hex8, DIR_OUT, RTOL_F, ATOL_F
+from febtools.test.fixtures import (
+    febio_cmd,
+    gen_model_center_crack_Hex8,
+    DIR_OUT,
+    RTOL_F,
+    ATOL_F,
+)
 
 
 class CenterCrackHex8(TestCase):
@@ -257,47 +266,52 @@ class CenterCrackQuad4(TestCase):
         npt.assert_allclose(J, 72.75, atol=0.01)
 
 
-class FEBio_StrainGauge_Hex8_HolmesMow(TestCase):
-    """Test strain_gauge with Hex8 elements"""
+@pytest.fixture(scope="module")
+def complex_strain_hex8_model(febio_cmd) -> Generator:
+    """Return path to cube undergoing complex deformation
 
-    path = DIR_OUT / "test_analysis.StrainGauge_Hex8_HolmesMow.feb"
+    Intended for checking strain gauge functions.
 
-    def setUp(self):
-        """Create and run model"""
-        mat = feb.material.HolmesMow(10, 0.3, 4)
-        model = feb.Model(
-            feb.mesh.rectangular_prism((2, 2), (2, 2), (2, 2), material=mat)
-        )
-        seq = feb.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
-        step = Step("solid", ticker=auto_ticker(seq, 10))
-        model.add_step(step)
-        F = np.array([[1.5, 0.5, 0], [0, 1, 0], [0, 0, 1]])
-        left = model.named["node sets"].obj("−x1 face")
-        right = model.named["node sets"].obj("+x1 face")
-        feb.load.prescribe_deformation(model, step, left, np.eye(3), seq)
-        feb.load.prescribe_deformation(model, step, right, F, seq)
-        with open(self.path, "wb") as f:
-            feb.output.write_feb(model, f)
-        feb.febio.run_febio_checked(self.path)
-        self.solved = feb.load_model(self.path)
+    """
+    path = DIR_OUT / f"test_analysis.complex_strain_hex8_model.{febio_cmd}.feb"
+    mat = feb.material.HolmesMow(10, 0.3, 4)
+    model = feb.Model(feb.mesh.rectangular_prism((2, 2), (2, 2), (2, 2), material=mat))
+    seq = feb.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
+    step = Step("solid", ticker=auto_ticker(seq, 10))
+    model.add_step(step)
+    F = np.array([[1.5, 0.5, 0], [0, 1, 0], [0, 0, 1]])
+    left = model.named["node sets"].obj("−x1 face")
+    right = model.named["node sets"].obj("+x1 face")
+    feb.load.prescribe_deformation(model, step, left, np.eye(3), seq)
+    feb.load.prescribe_deformation(model, step, right, F, seq)
+    with open(path, "wb") as f:
+        feb.output.write_feb(model, f)
+    feb.febio.run_febio_checked(path, cmd=febio_cmd)
+    solved = feb.load_model(path)
+    yield solved
 
-    def test_nodeset_nodeset(self):
-        left = self.solved.named["node sets"].obj("−x1 face")
-        right = self.solved.named["node sets"].obj("+x1 face")
-        λ = feb.analysis.strain_gauge(self.solved, left, right)
-        expected = np.array(
-            [
-                1.0,
-                1.025,
-                1.05,
-                1.07500001,
-                1.1,
-                1.125,
-                1.15000002,
-                1.175,
-                1.2,
-                1.22499998,
-                1.25,
-            ]
-        )
-        npt.assert_allclose(λ, expected, rtol=RTOL_F, atol=ATOL_F)
+    # Cleanup
+    path.unlink()
+
+
+def test_strain_gauge_nodesets(complex_strain_hex8_model):
+    model = complex_strain_hex8_model
+    left = model.named["node sets"].obj("−x1 face")
+    right = model.named["node sets"].obj("+x1 face")
+    λ = feb.analysis.strain_gauge(model, left, right)
+    expected = np.array(
+        [
+            1.0,
+            1.025,
+            1.05,
+            1.07500001,
+            1.1,
+            1.125,
+            1.15000002,
+            1.175,
+            1.2,
+            1.22499998,
+            1.25,
+        ]
+    )
+    npt.assert_allclose(λ, expected, rtol=RTOL_F, atol=ATOL_F)
