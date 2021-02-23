@@ -8,6 +8,7 @@ import numpy.testing as npt
 import numpy as np
 
 import febtools as feb
+from febtools.control import Step,  auto_ticker
 from febtools.input import FebReader
 from febtools.material import from_Lamé, to_Lamé
 from febtools.analysis import *
@@ -268,18 +269,19 @@ class FEBio_StrainGauge_Hex8_HolmesMow(TestCase):
             feb.mesh.rectangular_prism((2, 2), (2, 2), (2, 2), material=mat)
         )
         seq = feb.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
-        model.add_step(control=feb.control.auto_control_section("solid", seq, 10))
+        step = Step("solid", ticker=auto_ticker(seq, 10))
+        model.add_step(step)
         F = np.array([[1.5, 0.5, 0], [0, 1, 0], [0, 0, 1]])
         left = model.named["node sets"].obj("−x1 face")
         right = model.named["node sets"].obj("+x1 face")
-        feb.load.prescribe_deformation(model, left, np.eye(3), seq)
-        feb.load.prescribe_deformation(model, right, F, seq)
+        feb.load.prescribe_deformation(model, step, left, np.eye(3), seq)
+        feb.load.prescribe_deformation(model, step, right, F, seq)
         with open(self.path, "wb") as f:
             feb.output.write_feb(model, f)
         feb.febio.run_febio_checked(self.path)
         self.solved = feb.load_model(self.path)
 
-    def nodeset_nodeset_test(self):
+    def test_nodeset_nodeset(self):
         left = self.solved.named["node sets"].obj("−x1 face")
         right = self.solved.named["node sets"].obj("+x1 face")
         λ = feb.analysis.strain_gauge(self.solved, left, right)
