@@ -8,7 +8,7 @@ from lxml import etree as ET
 from .core import ContactConstraint, Interpolant, Extrapolant, Sequence
 from .output import material_to_feb
 from .febioxml import *
-from .febioxml_2_5 import mesh_xml
+from .febioxml_2_5 import mesh_xml, sequences
 
 
 # Facts about FEBio XML 2.0

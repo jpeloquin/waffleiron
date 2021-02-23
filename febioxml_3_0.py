@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import Dict
 
 # Same-package modules
 from .core import Body, ImplicitBody, Extrapolant, Interpolant
@@ -37,21 +38,6 @@ XML_RB_DOF_FROM_DOF = {
     "α3": "Rw",
 }
 
-XML_INTERP_FROM_INTERP = {
-    Interpolant.STEP: "STEP",
-    Interpolant.LINEAR: "LINEAR",
-    Interpolant.SPLINE: "SMOOTH",
-}
-INTERP_FROM_XML_INTERP = {v: k for k, v in XML_INTERP_FROM_INTERP.items()}
-
-XML_EXTRAP_FROM_EXTRAP = {
-    Extrapolant.CONSTANT: "CONSTANT",
-    Extrapolant.LINEAR: "EXTRAPOLATE",
-    Extrapolant.REPEAT: "REPEAT",
-    Extrapolant.REPEAT_CONTINUOUS: "REPEAT OFFSET",
-}
-EXTRAP_FROM_XML_EXTRAP = {v: k for k, v in XML_EXTRAP_FROM_EXTRAP.items()}
-
 # Map of Ticker fields → elements relative to <Step>
 TICKER_PARAMS = {
     "n": ReqParameter("Control/time_steps"),
@@ -82,6 +68,36 @@ SOLVER_PARAMS = {
 
 
 # Functions for reading FEBio XML 3.0
+
+
+def sequences(root: Element) -> Dict[int, Sequence]:
+    """Return dictionary of sequence ID → sequence from FEBio XML 3.0"""
+    sequences = {}
+    for ord_id, e_lc in enumerate(root.findall("LoadData/load_controller")):
+        if e_lc.attrib["type"] != "loadcurve":
+            raise NotImplementedError(
+                f"{e_lc.base}:{e_lc.sourceline} <load_controller> element of type '{e_lc.attrib['type']}' is not yet supported."
+            )
+        fake_id = int(e_lc.attrib["id"])
+        e_points = find_unique_tag(e_lc, "points")
+        curve = [read_point(e.text) for e in e_points]
+        # Set extrapolation
+        e_extend = find_unique_tag(e_lc, "extend")
+        if e_extend is None:
+            # FEBio default
+            extrap = Extrapolant.CONSTANT
+        else:
+            extrap = EXTRAP_FROM_XML_EXTRAP[e_extend.text.lower()]
+        # Set interpolation
+        e_interp = find_unique_tag(e_lc, "interpolate")
+        if e_interp is None:
+            # FEBio default
+            interp = Interpolant.LINEAR
+        else:
+            interp = INTERP_FROM_XML_INTERP[e_interp.text.lower()]
+        # Create and store the Sequence object
+        sequences[ord_id] = Sequence(curve, interp=interp, extrap=extrap)
+    return sequences
 
 
 # Functions for writing FEBio XML 3.0

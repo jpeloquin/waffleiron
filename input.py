@@ -363,29 +363,7 @@ class FebReader:
         """
         fx = self.febioxml_module
         if self._sequences is None:
-            self._sequences = {}
-            for ord_id, e_lc in enumerate(self.root.findall("LoadData/loadcurve")):
-                pseudo_id = int(e_lc.attrib["id"])
-
-                def parse_pt(text):
-                    x, y = text.split(",")
-                    return float(x), float(y)
-
-                curve = [parse_pt(a.text) for a in e_lc.getchildren()]
-                # Set extrapolation
-                if "extend" in e_lc.attrib:
-                    extrap = fx.EXTRAP_FROM_XML_EXTRAP[e_lc.attrib["extend"]]
-                    if extrap == "extrapolate":
-                        extrap = Extrapolant.LINEAR
-                else:
-                    extrap = "constant"  # FEBio's default
-                # Set interpolation
-                if "type" in e_lc.attrib:
-                    interp = fx.INTERP_FROM_XML_INTERP[e_lc.attrib["type"]]
-                else:
-                    interp = Interpolant.LINEAR  # FEBio's default
-                # Create and store the Sequence object
-                self._sequences[ord_id] = Sequence(curve, interp=interp, extrap=extrap)
+            self._sequences = fx.sequences(self.root)
         return self._sequences
 
     def _read_material(self, tag):

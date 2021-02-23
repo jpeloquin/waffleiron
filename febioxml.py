@@ -12,6 +12,8 @@ from .core import (
     _canonical_face,
     Sequence,
     ScaledSequence,
+    Interpolant,
+    Extrapolant,
 )
 from .control import Physics
 from .element import Quad4, Tri3, Hex8, Penta6, Element
@@ -63,6 +65,21 @@ XML_BC_FROM_DOF = {
 XML_BC_FROM_DOF.update(
     {("x1", "force"): "x", ("x2", "force"): "y", ("x3", "force"): "z"}
 )
+
+XML_INTERP_FROM_INTERP = {
+    Interpolant.STEP: "step",
+    Interpolant.LINEAR: "linear",
+    Interpolant.SPLINE: "smooth",
+}
+INTERP_FROM_XML_INTERP = {v: k for k, v in XML_INTERP_FROM_INTERP.items()}
+
+XML_EXTRAP_FROM_EXTRAP = {
+    Extrapolant.CONSTANT: "constant",
+    Extrapolant.LINEAR: "extrapolate",
+    Extrapolant.REPEAT: "repeat",
+    Extrapolant.REPEAT_CONTINUOUS: "repeat offset",
+}
+EXTRAP_FROM_XML_EXTRAP = {v: k for k, v in XML_EXTRAP_FROM_EXTRAP.items()}
 
 elem_cls_from_feb = {"quad4": Quad4, "tri3": Tri3, "hex8": Hex8, "penta6": Penta6}
 
@@ -290,6 +307,11 @@ def read_parameter(e, sequence_registry):
     else:
         # The property is fixed
         return to_number(e.text)
+
+
+def read_point(text):
+    x, y = text.split(",")
+    return to_number(x), to_number(y)
 
 
 def basis_mat_axis_local(element: Element, local_ids=(1, 2, 4)):

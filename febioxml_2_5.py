@@ -1,5 +1,6 @@
 # Base packages
 from collections import defaultdict
+from typing import Dict
 
 # System packages
 from lxml import etree as ET
@@ -30,21 +31,6 @@ BC_TYPE_TAG = {
     "node": {"variable": "prescribe", "fixed": "fix"},
     "body": {"variable": "prescribed", "fixed": "fixed"},
 }
-
-XML_INTERP_FROM_INTERP = {
-    Interpolant.STEP: "step",
-    Interpolant.LINEAR: "linear",
-    Interpolant.SPLINE: "smooth",
-}
-INTERP_FROM_XML_INTERP = {v: k for k, v in XML_INTERP_FROM_INTERP.items()}
-
-XML_EXTRAP_FROM_EXTRAP = {
-    Extrapolant.CONSTANT: "constant",
-    Extrapolant.LINEAR: "extrapolate",
-    Extrapolant.REPEAT: "repeat",
-    Extrapolant.REPEAT_CONTINUOUS: "repeat offset",
-}
-EXTRAP_FROM_XML_EXTRAP = {v: k for k, v in XML_EXTRAP_FROM_EXTRAP.items()}
 
 # Map of Ticker fields → elements relative to <Step>
 TICKER_PARAMS = {
@@ -170,6 +156,29 @@ def iter_node_conditions(root):
                 info["relative"] = True
             info["step ID"] = step_id
             yield info
+
+
+def sequences(root: Element) -> Dict[int, Sequence]:
+    """Return dictionary of sequence ID → sequence from FEBio XML 2.5"""
+    sequences = {}
+    for ord_id, e_lc in enumerate(root.findall("LoadData/loadcurve")):
+        fake_id = int(e_lc.attrib["id"])
+        curve = [read_point(a.text) for a in e_lc.getchildren()]
+        # Set extrapolation
+        if "extend" in e_lc.attrib:
+            extrap = EXTRAP_FROM_XML_EXTRAP[e_lc.attrib["extend"]]
+            if extrap == "extrapolate":
+                extrap = Extrapolant.LINEAR
+        else:
+            extrap = Extrapolant.CONSTANT  # FEBio's default
+        # Set interpolation
+        if "type" in e_lc.attrib:
+            interp = INTERP_FROM_XML_INTERP[e_lc.attrib["type"]]
+        else:
+            interp = Interpolant.LINEAR  # FEBio's default
+        # Create and store the Sequence object
+        sequences[ord_id] = Sequence(curve, interp=interp, extrap=extrap)
+    return sequences
 
 
 def read_rigid_body_bc(model, e_rigid_body, explicit_bodies, implicit_bodies, step):
