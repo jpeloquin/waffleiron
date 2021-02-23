@@ -13,7 +13,7 @@ import febtools as feb
 class MeshSolutionTest(unittest.TestCase):
     """Tests `MeshSolution.f`
 
-    This test also depends on `textdata_list` and `Xpltreader`
+    This test also depends on `textdata_list` and `XpltReader`
     functioning correctly.  Results from an FEBio simulation are read
     from the text log and the binary file.  F tensors are computed for
     each element based on the binary file data and compared to those
