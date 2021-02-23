@@ -184,6 +184,11 @@ tags_table = {
     0x02040000: {"name": "objects state", "leaf": True, "format": "bytes"},  # 33816576
 }
 
+# map of xplt version → path for mesh (2.0) or geometry (1.0) block
+MESH_PATH = {2: "root/mesh", 5: "root/mesh", 48: "mesh"}
+# map of xplt version → path for parts (2.0) or materials (1.0) block
+PARTS_PATH = {2: "root/materials", 5: "root/materials", 48: "mesh/parts"}
+
 element_type_from_id = {
     0: element.Hex8,
     1: element.Penta6,
@@ -647,7 +652,7 @@ def find_first(blocks, pth):
     return find_all(blocks, pth)[0]
 
 
-def domains(header_children):
+def domains(blocks, version):
     """Return a dictionary of mesh domains.
 
     Domain IDs are 1-indexed, both in the plotfile and in the returned
@@ -658,7 +663,7 @@ def domains(header_children):
 
     """
     domain_dict = {}
-    b_domains = find_all(header_children, "geometry/domains/domain")
+    b_domains = find_all(blocks, f"{MESH_PATH[version]}/domains/domain")
     for i, b_domain in enumerate(b_domains):
         domain_id = i + 1
         elem_type_id = find_one(b_domain, "domain/domain_header/element_type")["data"]
@@ -684,7 +689,7 @@ def domains(header_children):
     return domain_dict
 
 
-def surfaces(header_children):
+def surfaces(blocks, version):
     """Return a dictionary of mesh surfaces.
 
     Surface IDs are 1-indexed, both in the plotfile and in the returned
@@ -696,7 +701,7 @@ def surfaces(header_children):
 
     """
     surface_dict = {}
-    b_surfaces = find_all(header_children, "geometry/surfaces/surface")
+    b_surfaces = find_all(blocks, f"{MESH_PATH[version]}/surfaces/surface")
     for b_surface in b_surfaces:
         surface_name = find_one(b_surface["data"], "surface header/surface name")[
             "data"
@@ -712,12 +717,12 @@ def surfaces(header_children):
     return surface_dict
 
 
-def variables(header_children):
+def variables(blocks):
     """Return a dictionary of variable metadata."""
     vars_mdata = {}
     for region_type in ("node", "surface", "domain"):
         b_variables = find_all(
-            header_children, f"dictionary/{region_type} variables/dictionary item"
+            blocks, f"root/dictionary/{region_type} variables/dictionary item"
         )
         for i, b_variable in enumerate(b_variables):
             layout = value_layout_from_id[
@@ -740,7 +745,7 @@ def variables(header_children):
     return vars_mdata
 
 
-def _raw_variables(header_children):
+def _raw_variables(blocks):
     """Return a dictionary of raw variable metadata.
 
     Keys are "{region_type} variables" (where region_type is node,
@@ -755,7 +760,7 @@ def _raw_variables(header_children):
     `variables()` instead.
 
     """
-    b_data_dictionary = get_bdata_by_name(header_children, "dictionary")
+    b_data_dictionary = get_bdata_by_name(blocks, "root/dictionary")
     data_dictionary = {}
     for b_cat in b_data_dictionary:
         for b_var in b_cat["data"]:
@@ -788,12 +793,11 @@ class XpltData:
     def __init__(self, data):
         """Initialize XpltData object from xplt bytes data."""
         self.endian = parse_endianness(data[:4])
-        blocks = parse_xplt_data(data, store_data=True)
-        # Store header data
-        self.header_blocks = blocks[0]["data"]
+        self.blocks = parse_xplt_data(data, store_data=True)
+        self.version = find_one(self.blocks, "root/header/version")["data"][0]
         self.regions = {
-            "surface": surfaces(self.header_blocks),
-            "domain": domains(self.header_blocks),
+            "surface": surfaces(self.blocks, self.version),
+            "domain": domains(self.blocks, self.version),
         }
 
         # Compute map: entity → index in region
@@ -844,14 +848,14 @@ class XpltData:
                     traversed_nodes.update(node_ids)
 
         # Store step data
-        self.step_blocks = blocks[1:]
+        self.step_blocks = find_all(self.blocks, "state")
         # Step times
         self.step_times = []
         for b in self.step_blocks:
             t = get_bdata_by_name(b["data"], "state header/time")[0]
             self.step_times.append(t)
         # Metadata for variables
-        self.variables = variables(self.header_blocks)
+        self.variables = variables(self.blocks)
         # Add to the metadata dictionary for each variable will a
         # "regions" key pointing to a tuple of region IDs for which the
         # varible is defined, and a "_region_idx" dictionary of region
@@ -878,12 +882,12 @@ class XpltData:
         # Get list of nodes as spatial coordinates.  According to the
         # FEBio binary database spec, there is only one `node coords`
         # section.
-        node_data = get_bdata_by_name(self.header_blocks, "geometry/nodes/node coords")[
-            0
-        ]
+        node_data = get_bdata_by_name(
+            self.blocks, f"{MESH_PATH[self.version]}/nodes/node coords"
+        )[0]
         x_nodes = [node_data[3 * i : 3 * i + 3] for i in range(len(node_data) // 3)]
         # Get list of elements for each domain.
-        b_domains = get_bdata_by_name(self.header_blocks, "geometry/domains")
+        b_domains = get_bdata_by_name(self.blocks, f"{MESH_PATH[self.version]}/domains")
         elements = []
         for b in b_domains:
             # Get list of elements as tuples of node ids.  Note that the
@@ -1145,7 +1149,7 @@ class XpltData:
                     var[b["name"]] = b["data"]
                 # Unpack variable data
                 var_id = var["variable ID"] - 1  # to 0-index
-                entry = _raw_variables(self.header_blocks)[cat_name][var_id]
+                entry = _raw_variables(self.blocks)[cat_name][var_id]
                 # FEBio breaks from its documented tag format for
                 # variable_data tags.  The data payload consists of, for
                 # each region, a region ID (int; 4 bytes), the size of
