@@ -27,6 +27,8 @@ ReqParameter = namedtuple("ReqParameter", ["path"])
 
 # Facts about FEBio XML
 
+SUPPORTED_FEBIO_XML_VERS = ("2.0", "2.5", "3.0")
+
 SEQUENCE_PARENT = "LoadData"
 
 # Map "bc" attribute value from <prescribe>, <prescribed>, <fix>, or

@@ -37,11 +37,12 @@ from .control import (
     Step,
 )
 from . import xplt
-from . import febioxml, febioxml_2_5, febioxml_2_0
+from . import febioxml, febioxml_2_0, febioxml_2_5, febioxml_3_0
 from . import material as material_lib
 from .febioxml import (
     VAR_FROM_XML_NODE_BC,
     DOF_NAME_FROM_XML_NODE_BC,
+    SUPPORTED_FEBIO_XML_VERS,
     elem_cls_from_feb,
     normalize_xml,
     read_contacts,
@@ -314,10 +315,8 @@ class FebReader:
                 + file.name
                 + "is not an FEBio xml file."
             )
-        if self.feb_version not in ["2.0", "2.5"]:
-            msg = "FEBio XML version {} is not supported by febtools".format(
-                self.feb_version
-            )
+        if self.feb_version not in SUPPORTED_FEBIO_XML_VERS:
+            msg = f"FEBio XML version {self.feb_version} is not supported by febtools"
             raise UnsupportedFormatError(msg, file, self.feb_version)
         # Get the correct FEBio XML module
         version_major, version_minor = [int(a) for a in self.feb_version.split(".")]
