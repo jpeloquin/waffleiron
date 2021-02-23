@@ -17,6 +17,8 @@ RTOL_STRESS = 5e-7
 ATOL_STRESS = 5e-7
 DIR_FIXTURES = Path(__file__).parent / "fixtures"
 DIR_OUT = Path(__file__).parent / "output"
+if not DIR_OUT.exists():
+    DIR_OUT.mkdir()
 
 
 def gen_model_center_crack_Hex8():
