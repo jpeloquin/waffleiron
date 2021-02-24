@@ -904,9 +904,12 @@ class XpltData:
             # Get element type
             ecode = find_one(b["data"], "domain_header/element_type")["data"]
             etype = element_type_from_id[ecode]
-            # Create list of element objects
+            # Create list of element objects.  TODO: storing the ordinal
+            # ID as the material is non-standard; figure out a better
+            # way to handle the material information available in the
+            # xplt.  Such as returning a list of domains.
             elements += [
-                etype.from_ids(i_element, x_nodes, mat_id=i_mat)
+                etype.from_ids(i_element, x_nodes, mat=i_mat)
                 for i_element in i_elements
             ]
         mesh = Mesh(x_nodes, elements)

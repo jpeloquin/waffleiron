@@ -70,14 +70,11 @@ class Element:
         assert self.nodes.shape[1] >= 2
 
     @classmethod
-    def from_ids(cls, ids, nodelist, mat_id=None, mat=None):
+    def from_ids(cls, ids, nodelist, mat=None):
         """Create an element from nodal indices."""
-        # TODO: Make mat_id only apply to models created from FEBio XML
-        # input
         nodes = np.array([nodelist[i] for i in ids])
         element = cls(nodes, mat)
         element.ids = ids
-        element.mat_id = mat_id
         return element
 
     def apply_property(self, label, values):

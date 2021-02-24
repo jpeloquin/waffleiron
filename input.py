@@ -674,7 +674,7 @@ class FebReader:
 
             for elem in elset.findall("./elem"):
                 ids = [int(a) - 1 for a in elem.text.split(",")]
-                e = cls.from_ids(ids, nodes, mat_id=mat_id, mat=materials[mat_id])
+                e = cls.from_ids(ids, nodes, mat=materials[mat_id])
                 elements.append(e)
         # Create mesh
         mesh = Mesh(nodes, elements)
