@@ -15,18 +15,18 @@ from febtools.control import auto_ticker
 from febtools.febio import run_febio_checked
 from febtools.math import vec_from_sph
 from febtools.test.fixtures import (
-    febio_cmd,
-    gen_model_single_spiky_Hex8,
     RTOL_F,
     ATOL_F,
     RTOL_STRESS,
     ATOL_STRESS,
     DIR_FIXTURES,
     DIR_OUT,
+    febio_cmd_xml,
+    gen_model_single_spiky_Hex8,
 )
 
 
-def _fixture_FEBio_fiberDirectionLocal_Hex8_fiber():
+def _fixture_FEBio_fiberDirectionLocal_Hex8_fiber(xml_version):
     """Create fixture for FEBio_fiberDirectionLocal_Hex8_fiber test
 
     The choice of materials is inspired by the Elliott lab's
@@ -58,9 +58,11 @@ def _fixture_FEBio_fiberDirectionLocal_Hex8_fiber():
     node_set = feb.NodeSet([i for i in range(len(model.mesh.nodes))])
     prescribe_deformation(model, node_set, F, sequence)
     # Write model to FEBio XML
-    tree = feb.output.xml(model)
+    tree = feb.output.xml(model, version=xml_version)
     pth = DIR_FIXTURES / (
-        f"{Path(__file__).with_suffix('').name}." + "fiberDirectionLocal_Hex8_fiber.feb"
+        f"{Path(__file__).with_suffix('').name}."
+        + "fiberDirectionLocal_Hex8_fiber"
+        + f".xml{xml_version}.feb"
     )
     ## Add logfile output
     ##
@@ -79,12 +81,13 @@ def _fixture_FEBio_fiberDirectionLocal_Hex8_fiber():
     run_febio_checked(pth)
 
 
-def test_FEBio_SOHomFibAng_Hex8_ExpFiber(febio_cmd):
+def test_FEBio_SOHomFibAng_Hex8_ExpFiber(febio_cmd_xml):
     """E2E test of 1D submaterial homogeneous orientation.
 
     Orientation given as <fiber type="angles"> in FEBio XML.
 
     """
+    febio_cmd, xml_version = febio_cmd_xml
     # Test 1: Read
     pth_in = DIR_FIXTURES / (
         f"{Path(__file__).with_suffix('').name}." + "SOHomFibAng_Hex8_ExpFiber.feb"
@@ -94,12 +97,12 @@ def test_FEBio_SOHomFibAng_Hex8_ExpFiber(febio_cmd):
     # Test 2: Write
     pth_out = DIR_OUT / (
         f"{Path(__file__).with_suffix('').name}."
-        + "SOHomFibAng_Hex8_ExpFiber.{febio_cmd}.feb"
+        + f"SOHomFibAng_Hex8_ExpFiber.{febio_cmd}.xml{xml_version}.feb"
     )
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
-        feb.output.write_feb(model, f)
+        feb.output.write_feb(model, f, version=xml_version)
     # Test 3: Solve: Can FEBio use the roundtripped file?
     run_febio_checked(pth_out, cmd=febio_cmd)
     #
@@ -133,12 +136,13 @@ def test_FEBio_SOHomFibAng_Hex8_ExpFiber(febio_cmd):
     )
 
 
-def test_FEBio_MOHomMatAxVec_Hex8_LinOrtho(febio_cmd):
+def test_FEBio_MOHomMatAxVec_Hex8_LinOrtho(febio_cmd_xml):
     """E2E test of 3D material homogeneous orientation
 
     Orientation given as <mat_axis type="vector"> in FEBio XML.
 
     """
+    febio_cmd, xml_version = febio_cmd_xml
     # Test 1: Read
     pth_in = DIR_FIXTURES / (
         f"{Path(__file__).with_suffix('').name}." + "MOHomMatAxVec_Hex8_OrthoE.feb"
@@ -148,12 +152,12 @@ def test_FEBio_MOHomMatAxVec_Hex8_LinOrtho(febio_cmd):
     # Test 2: Write
     pth_out = DIR_OUT / (
         f"{Path(__file__).with_suffix('').name}."
-        + f"MOHomMatAxVec_Hex8_OrthoE.{febio_cmd}.feb"
+        + f"MOHomMatAxVec_Hex8_OrthoE.{febio_cmd}.xml{xml_version}.feb"
     )
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
-        feb.output.write_feb(model, f)
+        feb.output.write_feb(model, f, version=xml_version)
     # Test 3: Solve: Can FEBio use the roundtripped file?
     run_febio_checked(pth_out, cmd=febio_cmd)
     #
@@ -190,13 +194,14 @@ def test_FEBio_MOHomMatAxVec_Hex8_LinOrtho(febio_cmd):
     )
 
 
-def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE(febio_cmd):
+def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE(febio_cmd_xml):
     """E2E test of heterogeneous local basis.
 
     Heterogeneous local basis given as <mat_axis type="local"> in
     top-most material in FEBio XML.
 
     """
+    febio_cmd, xml_version = febio_cmd_xml
     # Test 1: Read
     pth_in = DIR_FIXTURES / (
         f"{Path(__file__).with_suffix('').name}." + "LOHetMatAxLoc_Hex8_OrthoE.feb"
@@ -206,12 +211,12 @@ def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE(febio_cmd):
     # Test 2: Write
     pth_out = DIR_OUT / (
         f"{Path(__file__).with_suffix('').name}."
-        + f"LOHetMatAxLoc_Hex8_OrthoE.{febio_cmd}.feb"
+        + f"LOHetMatAxLoc_Hex8_OrthoE.{febio_cmd}.xml{xml_version}.feb"
     )
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
-        feb.output.write_feb(model, f)
+        feb.output.write_feb(model, f, version=xml_version)
     # Test 3: Solve: Can FEBio use the roundtripped file?
     run_febio_checked(pth_out, cmd=febio_cmd)
     #
@@ -262,7 +267,7 @@ def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE(febio_cmd):
         npt.assert_allclose(σ, σ_FEBio, rtol=RTOL_STRESS, atol=ATOL_STRESS)
 
 
-def test_FEBio_LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber(febio_cmd):
+def test_FEBio_LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber(febio_cmd_xml):
     """E2E test of heterogeneous local basis + homogeneous 1D submaterial
     orientation.
 
@@ -273,6 +278,7 @@ def test_FEBio_LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber(febio_cmd):
         type="angles"> in FEBio XML.
 
     """
+    febio_cmd, xml_version = febio_cmd_xml
     # Test 1: Read
     pth_in = DIR_FIXTURES / (
         f"{Path(__file__).with_suffix('').name}."
@@ -283,12 +289,13 @@ def test_FEBio_LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber(febio_cmd):
     # Test 2: Write
     pth_out = DIR_OUT / (
         f"{Path(__file__).with_suffix('').name}."
-        + f"LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber.{febio_cmd}.feb"
+        + f"LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber"
+        + f".{febio_cmd}.xml{xml_version}.feb"
     )
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
-        feb.output.write_feb(model, f)
+        feb.output.write_feb(model, f, version=xml_version)
     # Test 3: Solve: Can FEBio use the roundtripped file?
     run_febio_checked(pth_out, cmd=febio_cmd)
     #

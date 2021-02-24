@@ -17,11 +17,11 @@ from febtools.material import from_Lamé, to_Lamé
 from febtools.analysis import *
 from febtools import material
 from febtools.test.fixtures import (
-    febio_cmd,
-    gen_model_center_crack_Hex8,
     DIR_OUT,
     RTOL_F,
     ATOL_F,
+    febio_cmd_xml,
+    gen_model_center_crack_Hex8,
 )
 
 
@@ -267,13 +267,17 @@ class CenterCrackQuad4(TestCase):
 
 
 @pytest.fixture(scope="module")
-def complex_strain_hex8_model(febio_cmd) -> Generator:
+def complex_strain_hex8_model(febio_cmd_xml) -> Generator:
     """Return path to cube undergoing complex deformation
 
     Intended for checking strain gauge functions.
 
     """
-    path = DIR_OUT / f"test_analysis.complex_strain_hex8_model.{febio_cmd}.feb"
+    febio_cmd, xml_version = febio_cmd_xml
+    path = (
+        DIR_OUT
+        / f"test_analysis.complex_strain_hex8_model.{febio_cmd}.xml{xml_version}.feb"
+    )
     mat = feb.material.HolmesMow(10, 0.3, 4)
     model = feb.Model(feb.mesh.rectangular_prism((2, 2), (2, 2), (2, 2), material=mat))
     seq = feb.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
@@ -285,7 +289,7 @@ def complex_strain_hex8_model(febio_cmd) -> Generator:
     feb.load.prescribe_deformation(model, step, left, np.eye(3), seq)
     feb.load.prescribe_deformation(model, step, right, F, seq)
     with open(path, "wb") as f:
-        feb.output.write_feb(model, f)
+        feb.output.write_feb(model, f, version=xml_version)
     feb.febio.run_febio_checked(path, cmd=febio_cmd)
     solved = feb.load_model(path)
     yield solved

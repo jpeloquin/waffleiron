@@ -877,7 +877,7 @@ def write_xml(tree, f):
     tree.write(f, pretty_print=True, xml_declaration=True, encoding="utf-8")
 
 
-def write_feb(model, f, version="2.5"):
+def write_feb(model, f, version="3.0"):
     """Write model's FEBio XML representation to a file object.
 
     Inputs

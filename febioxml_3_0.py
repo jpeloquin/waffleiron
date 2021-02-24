@@ -2,7 +2,7 @@ from collections import defaultdict
 from typing import Dict
 
 # Same-package modules
-from .core import Body, ImplicitBody, Extrapolant, Interpolant
+from .core import ZeroIdxID, OneIdxID, Body, ImplicitBody, Extrapolant, Interpolant
 from .febioxml import *
 
 # These parts work the same as in FEBio XML 2.5
@@ -21,6 +21,7 @@ MESH_PARENT = "Mesh"
 ELEMENTDATA_PARENT = "MeshData"
 NODEDATA_PARENT = "MeshData"
 ELEMENTSET_PARENT = "Mesh"
+NODESET_PARENT = "Mesh"
 STEP_PARENT = "Step"
 STEP_NAME = "step"
 
@@ -68,6 +69,95 @@ SOLVER_PARAMS = {
 
 
 # Functions for reading FEBio XML 3.0
+
+
+def iter_node_conditions(root):
+    """Return generator over prescribed nodal condition info.
+
+    Returns dict of property names → values.  All properties are
+    not-None except the following:
+
+    (1) "nodal values" will be None if the condition applies the same
+    condition to all nodes.
+
+    (2) "name" will be None if the boundary condition is not named.
+
+    (3) "scale" will be None if the condition is heterogeneous, as FEBio
+    XML 3.0 does not include a scale in this case.
+
+    """
+    step_id = -1  # Curent step ID (0-indexed)
+    for e_Step in root.findall(f"{STEP_PARENT}/{STEP_NAME}"):
+        step_id += 1
+        for e_prescribe in e_Step.findall("Boundary/bc[@type='prescribe']"):
+            # Re-initialize output
+            info = {
+                "name": None,
+                "node set name": None,
+                "axis": None,  # x1, fluid, charge, etc.
+                "variable": None,  # displacement, force, pressure, etc.
+                "sequence ID": None,
+                "scale": None,  # not required in FEBio XML 3.0
+                "relative": False,
+                "nodal values": None,
+                "step ID": None,
+            }
+            # Read values
+            if "name" in e_prescribe.attrib:
+                info["name"] = e_prescribe.attrib["name"]
+            info["node set name"] = e_prescribe.attrib["node_set"]
+            e_dof = find_unique_tag(e_prescribe, "dof")
+            info["dof"] = DOF_NAME_FROM_XML_NODE_BC[e_dof.text]
+            info["variable"] = VAR_FROM_XML_NODE_BC[e_dof.text]
+            e_scale = find_unique_tag(e_prescribe, "scale")
+            # ^ <scale> is required because it stores the load curve ID
+            info["sequence ID"] = to_number(e_scale.attrib["lc"]) - 1
+            if ("type" in e_scale.attrib) and (e_scale.attrib["type"] == "map"):
+                # Heterogeneous condition
+                e_NodeData = find_unique_tag(
+                    root, f"{NODEDATA_PARENT}/NodeData[@name='{e_scale.text}']"
+                )
+                nm_nodeset = e_NodeData.attrib["node_set"]
+                e_NodeSet = find_unique_tag(
+                    root, f"{NODESET_PARENT}/NodeSet[@name='{nm_nodeset}']"
+                )
+                # The semantics of the lid attributes in <NodeData> are
+                # unclear.  I am interpreting them as indices into the
+                # <NodeSet> list.
+                values = {}
+                node_ids = [int(e.attrib["id"]) - 1 for e in e_NodeSet.findall("node")]
+                info["nodal values"] = {
+                    node_ids[int(e.attrib["lid"]) - 1]: to_number(e.text)
+                    for e in e_NodeData.findall("node")
+                }
+            else:
+                # Homogeneous condition
+                info["scale"] = to_number(e_value.text)
+            e_relative = e_prescribe.find("relative")
+            if e_relative is not None:
+                info["relative"] = True
+            info["step ID"] = step_id
+            yield info
+
+
+def read_domains(root: ET.Element):
+    """Return list of domains"""
+    domains = []
+    e_domains = find_unique_tag(root, "MeshDomains")
+    for e in e_domains:
+        name = e.attrib["name"]
+        material = e.attrib["mat"]
+        e_domain = find_unique_tag(root, f"{MESH_PARENT}/Elements[@name='{name}']")
+        elements = [
+            ZeroIdxID(int(e.attrib["id"]) - 1) for e in e_domain.findall("elem")
+        ]
+        domain = {
+            "name": name,
+            "material": ("canonical", material),
+            "elements": elements,
+        }
+        domains.append(domain)
+    return domains
 
 
 def sequences(root: Element) -> Dict[int, Sequence]:

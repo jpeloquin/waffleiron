@@ -14,14 +14,14 @@ from febtools.element import Hex8
 from febtools.febioxml import basis_mat_axis_local
 from febtools.model import Model, Mesh
 from febtools.material import IsotropicElastic
-from febtools.test.fixtures import DIR_OUT, febio_cmd, gen_model_single_spiky_Hex8
+from febtools.test.fixtures import DIR_OUT, febio_cmd_xml, gen_model_single_spiky_Hex8
 
 
 DIR_THIS = Path(__file__).parent
 DIR_FIXTURES = DIR_THIS / "fixtures"
 
 
-def test_pipeline_prescribe_deformation_singleHex8(febio_cmd):
+def test_pipeline_prescribe_deformation_singleHex8(febio_cmd_xml):
     """Test conditions.prescribe_deformation()
 
     Test the following in the case of a displacement applied to all
@@ -41,6 +41,7 @@ def test_pipeline_prescribe_deformation_singleHex8(febio_cmd):
     single function because it tests the entire pipeline.
 
     """
+    febio_cmd, xml_version = febio_cmd_xml
     # Setup
     model = gen_model_single_spiky_Hex8()
     material = IsotropicElastic({"E": 10, "v": 0})
@@ -58,7 +59,7 @@ def test_pipeline_prescribe_deformation_singleHex8(febio_cmd):
     # Test 2: Can the resulting model be converted to FEBio XML?
     fnm_stem = "prescribe_deformation_singleHex8"
     fnm_textdata = f"{fnm_stem}_-_element_data.txt"
-    tree = feb.output.xml(model)
+    tree = feb.output.xml(model, version=xml_version)
     e_Output = tree.find("Output")
     e_logfile = e_Output.makeelement("logfile")
     e_elementdata = e_logfile.makeelement(
@@ -69,7 +70,7 @@ def test_pipeline_prescribe_deformation_singleHex8(febio_cmd):
     )
     e_logfile.append(e_elementdata)
     e_Output.append(e_logfile)
-    pth = DIR_OUT / f"{fnm_stem}.{febio_cmd}.feb"
+    pth = DIR_OUT / f"{fnm_stem}.{febio_cmd}.xml{xml_version}.feb"
     with open(pth, "wb") as f:
         feb.output.write_xml(tree, f)
 
@@ -91,8 +92,9 @@ def test_pipeline_prescribe_deformation_singleHex8(febio_cmd):
     npt.assert_array_almost_equal_nulp(F_febio, F)
 
 
-def test_FEBio_prescribe_node_pressure_Hex8(febio_cmd):
+def test_FEBio_prescribe_node_pressure_Hex8(febio_cmd_xml):
     """E2E test of prescribed nodal pressure boundary condition"""
+    febio_cmd, xml_version = febio_cmd_xml
     # Test 1: Read
     pth_in = DIR_FIXTURES / (
         f"{Path(__file__).with_suffix('').name}.prescribe_node_pressure.feb"
@@ -104,11 +106,12 @@ def test_FEBio_prescribe_node_pressure_Hex8(febio_cmd):
         DIR_THIS
         / "output"
         / (
-            f"{Path(__file__).with_suffix('').name}.prescribe_node_pressure.{febio_cmd}.feb"
+            f"{Path(__file__).with_suffix('').name}.prescribe_node_pressure"
+            + f".{febio_cmd}.xml{xml_version}.feb"
         )
     )
     with open(pth_out, "wb") as f:
-        feb.output.write_feb(model, f)
+        feb.output.write_feb(model, f, version=xml_version)
     # Test 3: Solve: Can FEBio use the roundtripped file?
     feb.febio.run_febio_checked(pth_out, cmd=febio_cmd)
     #

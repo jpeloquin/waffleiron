@@ -21,14 +21,45 @@ DIR_OUT = Path(__file__).parent / "output"
 if not DIR_OUT.exists():
     DIR_OUT.mkdir()
 
-# Versions against which to test.  All tests that run FEBio should use
-# every supported FEBio version.
+
+# Versions against which to test.
+
+# All tests that run FEBio should use every supported FEBio version.
 FEBIO_CMDS = ("febio2", "febio3")
 
 
 @pytest.fixture(scope="session", params=FEBIO_CMDS)
 def febio_cmd(request):
+    """Run test with all supported FEBio versions"""
     return request.param
+
+
+# All tests that write FEBio XML should use every supported FEBio XML
+# version.
+FEBIO_XMLVERS = ("2.5", "3.0")
+
+
+@pytest.fixture(scope="session", params=FEBIO_XMLVERS)
+def xml_version(request):
+    """Run test with all supported FEBio XML versions"""
+    return request.param
+
+
+# Tests that both write FEBio XML *and* run FEBio should use these
+# combinations of of FEBio version and FEBio XML version, as FEBio 2
+# cannot read FEBio XML 3.0.
+FEBIO_CMDS_XMLVERS = (("febio2", "2.5"), ("febio3", "2.5"), ("febio3", "3.0"))
+
+
+@pytest.fixture(
+    scope="session",
+    params=FEBIO_CMDS_XMLVERS,
+    ids=(f"{c},xml{v}" for c, v in FEBIO_CMDS_XMLVERS),
+)
+def febio_cmd_xml(request):
+    """Run test with all supported combinations of FEBio and FEBio XML"""
+    cmd, xml_version = request.param
+    return cmd, xml_version
 
 
 def gen_model_center_crack_Hex8():

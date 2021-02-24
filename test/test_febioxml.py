@@ -19,7 +19,12 @@ from febtools.element import Hex8
 from febtools.model import Model, Mesh
 from febtools.material import IsotropicElastic, OrthotropicElastic
 from febtools.output import write_feb, write_xml
-from febtools.test.fixtures import DIR_OUT, febio_cmd, gen_model_single_spiky_Hex8
+from febtools.test.fixtures import (
+    DIR_OUT,
+    febio_cmd,
+    febio_cmd_xml,
+    gen_model_single_spiky_Hex8,
+)
 
 
 DIR_THIS = Path(__file__).parent
@@ -159,7 +164,7 @@ class Unit_MatAxisLocal_Hex8(TestCase):
 
 
 @pytest.fixture(scope="module")
-def mataxis_local_global_hex8_models(febio_cmd) -> Generator:
+def mataxis_local_global_hex8_models(febio_cmd_xml) -> Generator:
     """Create models with equivalent local and global element bases
 
     Create two models using the same irregularly shaped element, each
@@ -177,6 +182,7 @@ def mataxis_local_global_hex8_models(febio_cmd) -> Generator:
     type="local"> and global material axes.
 
     """
+    febio_cmd, xml_version = febio_cmd_xml
     material = OrthotropicElastic(
         {
             "E1": 23,
@@ -201,9 +207,10 @@ def mataxis_local_global_hex8_models(febio_cmd) -> Generator:
     node_set = [i for i in range(len(localb_model.mesh.nodes))]
     prescribe_deformation(localb_model, step, node_set, F, sequence)
     pth_localb_model = (
-        DIR_OUT / f"mataxis_local_global_hex8_models.localb.{febio_cmd}.feb"
+        DIR_OUT
+        / f"mataxis_local_global_hex8_models.localb.{febio_cmd}.xml{xml_version}.feb"
     )
-    tree = feb.output.xml(localb_model)
+    tree = feb.output.xml(localb_model, version=xml_version)
     # add <mat_axis type="local">
     e_mat = tree.find("Material/material")
     e_mat_axis = e_mat.makeelement("mat_axis")
@@ -224,9 +231,10 @@ def mataxis_local_global_hex8_models(febio_cmd) -> Generator:
     node_set = [i for i in range(len(globalb_model.mesh.nodes))]
     prescribe_deformation(globalb_model, step, node_set, F, sequence)
     pth_globalb_model = (
-        DIR_OUT / f"mataxis_local_global_hex8_models.globalb.{febio_cmd}.feb"
+        DIR_OUT
+        / f"mataxis_local_global_hex8_models.globalb.{febio_cmd}.xml{xml_version}..feb"
     )
-    tree = feb.output.xml(localb_model)
+    tree = feb.output.xml(localb_model, version=xml_version)
     # add <mat_axis type="vector">
     e_mat = tree.find("Material/material")
     e_mat_axis = e_mat.makeelement("mat_axis")

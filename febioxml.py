@@ -250,43 +250,6 @@ def read_contacts(root, named_face_sets):
     return global_contacts, step_contacts
 
 
-def read_named_sets(xml_root):
-    """Read nodesets, etc., and apply them to a model."""
-    sets = {"node sets": {}, "face sets": {}, "element sets": {}}
-    tag_name = {
-        "node sets": "NodeSet",
-        "face sets": "Surface",
-        "element sets": "ElementSet",
-    }
-    cls_from_entity_type = {
-        "node sets": NodeSet,
-        "face sets": FaceSet,
-        "element sets": ElementSet,
-    }
-    # Handle items that are stored by id
-    for k in ["node sets", "element sets"]:
-        for e_set in xml_root.findall("./Geometry/" + tag_name[k]):
-            set_type = cls_from_entity_type[k]
-            items = set()
-            for e_item in e_set.getchildren():
-                item_id = int(e_item.attrib["id"]) - 1
-                items.update([item_id])
-            sets[k][e_set.attrib["name"]] = set_type(items)
-    # Handle items that are stored as themselves
-    for k in ["face sets"]:
-        for tag_set in xml_root.findall("./Geometry/" + tag_name[k]):
-            cls = cls_from_entity_type[k]
-            items = set()
-            for tag_item in tag_set.getchildren():
-                items.add(
-                    _canonical_face(
-                        [int(s.strip()) - 1 for s in tag_item.text.split(",")]
-                    )
-                )
-            sets[k][tag_set.attrib["name"]] = cls(items)
-    return sets
-
-
 def read_parameter(e, sequence_registry):
     """Read a parameter from an XML element.
 

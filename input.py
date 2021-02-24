@@ -1,11 +1,13 @@
 import dataclasses
 import os
 from pathlib import Path
+from typing import Any, Union, Dict, Tuple
 import warnings
 
 from lxml import etree as ET
 import struct
 import numpy as np
+from numpy import array
 import pandas as pd
 
 import febtools.element
@@ -15,6 +17,9 @@ from operator import itemgetter
 from .math import orthonormal_basis, vec_from_sph
 from .model import Model, Mesh
 from .core import (
+    _canonical_face,
+    ZeroIdxID,
+    OneIdxID,
     Body,
     ContactConstraint,
     ImplicitBody,
@@ -36,6 +41,7 @@ from .control import (
     Solver,
     Step,
 )
+from .element import Element
 from . import xplt
 from . import febioxml, febioxml_2_0, febioxml_2_5, febioxml_3_0
 from . import material as material_lib
@@ -82,6 +88,62 @@ def read_febio_xml(f):
         finally:
             f.close()
     return tree
+
+
+def read_mesh(root: ET.Element, febioxml_module) -> Tuple[array, array]:
+    """Return lists of nodes and elements
+
+    Materials will *not* be assigned.
+
+    """
+    fx = febioxml_module
+    # Read nodes
+    nodes = np.array(
+        [
+            [float(a) for a in b.text.split(",")]
+            for b in root.findall(f"./{fx.MESH_PARENT}/Nodes/*")
+        ]
+    )
+    # Read elements
+    elements = []  # nodal index format
+    for elset in root.findall(f"./{fx.MESH_PARENT}/Elements"):
+        # map element type strings to classes
+        cls = elem_cls_from_feb[elset.attrib["type"]]
+        for elem in elset.findall("./elem"):
+            ids = [ZeroIdxID(int(a) - 1) for a in elem.text.split(",")]
+            e = cls.from_ids(ids, nodes)  # type: ignore
+            elements.append(e)
+    return nodes, elements
+
+
+def read_named_sets(root: ET.Element, febioxml_module) -> Dict[str, Dict[str, list]]:
+    """Read nodesets, etc., and apply them to a model."""
+    fx = febioxml_module
+    sets: Dict[str, dict] = {"node sets": {}, "face sets": {}, "element sets": {}}
+    tag_name = {
+        "node sets": "NodeSet",
+        "face sets": "Surface",
+        "element sets": "ElementSet",
+    }
+    # Handle items that are stored by id
+    for k in ["node sets", "element sets"]:
+        for e_set in root.findall(f"./{fx.MESH_PARENT}/{tag_name[k]}"):
+            items = [
+                ZeroIdxID(int(e_item.attrib["id"]) - 1)
+                for e_item in e_set.getchildren()
+            ]
+            sets[k][e_set.attrib["name"]] = items
+    # Handle items that are stored as themselves
+    for k in ["face sets"]:
+        for tag_set in root.findall(f"./{fx.MESH_PARENT}/{tag_name[k]}"):
+            items = [
+                _canonical_face(
+                    [ZeroIdxID(int(s.strip()) - 1) for s in tag_item.text.split(",")]
+                )
+                for tag_item in tag_set.getchildren()
+            ]
+            sets[k][tag_set.attrib["name"]] = items
+    return sets
 
 
 def read_step(step_xml, model, physics, febioxml_module):
@@ -427,27 +489,13 @@ class FebReader:
     def model(self):
         """Return model."""
         fx = self.febioxml_module
-        # Get the materials dictionary so we can assign materials to
-        # elements when we read the geometry
-        materials_by_id, material_labels = self.materials()
 
-        # Find out what physics are used by the model
-        e_module = self.root.find("Module")
-        if e_module is not None:
-            physics = Physics(e_module.attrib["type"])
-        else:
-            # Deduce the appropriate physics
-            physics = auto_physics([m for m in materials_by_id.values()])
+        # Read stuff that doesn't depend on other stuff.
 
-        # Create model geoemtry
-        mesh = self.mesh((materials_by_id, material_labels))
+        # Create model geometry.
+        mesh = self.mesh()
         model = Model(mesh)
-
-        # Read Environment Constants
-        model.environment = {}
-        e_temperature = find_unique_tag(self.root, "Globals/Constants/T")
-        if e_temperature is not None:
-            model.environment["temperature"] = to_number(e_temperature.text)
+        domains = fx.read_domains(self.root)
 
         # Read Universal Constants.  These will eventually be superseded
         # by units support.
@@ -459,19 +507,96 @@ class FebReader:
         if e_Fc is not None:
             model.constants["F"] = to_number(e_Fc.text)
 
-        # Store the materials and their labels, now that the Model
-        # object has been instantiated
+        # Load curves (sequences)
+        for seq_id, seq in self.sequences.items():
+            model.named["sequences"].add(seq_id, seq, nametype="ordinal_id")
+
+        # Read named sets of geometric entities (node sets, element
+        # sets, face sets) as *ordered lists*.  FEBio XML sometimes
+        # makes references into an entity sets using the positional
+        # index of its constituent entitites, so order must be preserved
+        # while we are reading the XML file.
+        named_sets = read_named_sets(self.root, self.febioxml_module)
+        cls_from_entity_type = {
+            "node sets": NodeSet,
+            "face sets": FaceSet,
+            "element sets": ElementSet,
+        }
+        for entity_type in named_sets:
+            cls = cls_from_entity_type[entity_type]
+            for name in named_sets[entity_type]:
+                ordered = named_sets[entity_type][name]
+                unordered = cls(ordered)
+                model.named[entity_type].add(name, unordered)
+
+        # Read stuff that might depend on other stuff.
+
+        # Materials.  May include time-varying parameters and hence may
+        # depend on sequences.
+        materials_by_id, material_labels = self.materials()
         for ord_id, material in materials_by_id.items():
             name = material_labels[ord_id]
             model.named["materials"].add(name, material)
             model.named["materials"].add(ord_id, material, nametype="ordinal_id")
-        materials_used = set(e.material for e in model.mesh.elements)
-        # Read and store named sets of geometry
-        named_sets = febioxml.read_named_sets(self.root)
-        for entity_type in named_sets:
-            for name in named_sets[entity_type]:
-                obj = named_sets[entity_type][name]
-                model.named[entity_type].add(name, obj)
+        # Apply materials to elements, keeping track of which materials
+        # were used this way
+        materials_used = set()
+        for domain in domains:
+            nametype, name = domain["material"]
+            material = model.named["materials"].obj(name, nametype)
+            materials_used.add(material)
+            for i in domain["elements"]:
+                model.mesh.elements[i].material = material
+
+        # Element data: material axes
+        for e_edata in self.root.findall(
+            f"{fx.ELEMENTDATA_PARENT}/ElementData[@var='mat_axis']"
+        ):
+            try:
+                nm_eset = e_edata.attrib["elem_set"]
+            except KeyError:
+                raise ValueError(
+                    f"{e_edata.base}:{e_edata.sourceline} <ElementData> is missing its required 'elem_set' attribute."
+                )
+            elementsets = named_sets["element sets"]
+            try:
+                elementset = elementsets[nm_eset]
+            except KeyError:
+                raise ValueError(
+                    f"{e_edata.base}:{e_edata.sourceline} <ElementData> references an element set named '{nm_eset}', which is not defined."
+                )
+            for e in e_edata.findall("elem"):
+                a = _vec_from_text(e.find("a").text)
+                d = _vec_from_text(e.find("d").text)
+                basis = orthonormal_basis(a, d)
+                idx = ZeroIdxID(int(e.attrib["lid"]) - 1)
+                # ^ positional index in element set list
+                id_ = elementset[idx]
+                # Who thought this much indirection in a data file
+                # format was a good idea?
+                mesh.elements[id_].basis = basis
+
+        # Find out what physics are used by the model.  This is a
+        # required attribute in FEBio XML 3.0, both as documented and in
+        # practice.  FEBio 2 ignored a missing <Module> element though,
+        # so in practice it may be missing.  In this case we deduce the
+        # appropriate physics instead of failing, which requires the
+        # materials list (and possibly, in the future, other
+        # information).
+        e_module = self.root.find("Module")
+        if e_module is not None:
+            physics = Physics(e_module.attrib["type"])
+        else:
+            # Deduce the implied physics
+            physics = auto_physics([m for m in materials_by_id.values()])
+
+        # Read Environment Constants.  These could, in principle be
+        # time-varying (depend on a sequence), despite the name
+        # "constant".
+        model.environment = {}
+        e_temperature = find_unique_tag(self.root, "Globals/Constants/T")
+        if e_temperature is not None:
+            model.environment["temperature"] = to_number(e_temperature.text)
 
         # From <Materials>, read heterogeneous local basis encoded using
         # local node IDs.
@@ -502,20 +627,22 @@ class FebReader:
         # Read explicit rigid bodies.  Create a Body object for each
         # rigid body "material" in the XML with explicit geometry.
         explicit_bodies = {}
-        for e_elements in self.root.findall("Geometry/Elements"):
-            mat_id = int(e_elements.attrib["mat"]) - 1
-            mat = model.named["materials"].obj(mat_id, nametype="ordinal_id")
-            if isinstance(mat, material_lib.RigidBody):
+        for domain in domains:
+            nametype, name = domain["material"]
+            material = model.named["materials"].obj(name, nametype)
+            ids = model.named["materials"].names(material, "ordinal_id")
+            assert (len(ids)) == 1
+            mat_id = ids[0]
+            if isinstance(material, material_lib.RigidBody):
                 elements = []
-                for e_elem in e_elements:
-                    eid = int(e_elem.attrib["id"]) - 1
-                    elements.append(model.mesh.elements[eid])
+                for i in domain["elements"]:
+                    elements.append(model.mesh.elements[i])
                 explicit_bodies[mat_id] = Body(elements)
 
         # Read (1) implicit rigid bodies and (2) rigid body ↔ node set
         # rigid interfaces.
         implicit_bodies = {}
-        for e_impbod in self.root.findall("Boundary/rigid"):
+        for e_impbod in self.root.findall(f"{fx.BODY_COND_PARENT}/rigid"):
             # <rigid> elements may refer to implicit rigid bodies or to
             # rigid interfaces.  If the rigid "material" referenced by
             # the <rigid> element is assigned to elements, the element
@@ -582,14 +709,10 @@ class FebReader:
                         model.fixed["node"][(dof, var)] | node_ids
                     )
 
-        # Load curves (sequences)
-        for seq_id, seq in self.sequences.items():
-            model.named["sequences"].add(seq_id, seq, nametype="ordinal_id")
-
         # Read global constraints on rigid bodies.  Needs to come after
         # reading sequences, or the relevant sequences won't be in the
         # sequence registry.
-        for e_rb in self.root.findall("Boundary/rigid_body"):
+        for e_rb in self.root.findall(f"{fx.BODY_COND_PARENT}/rigid_body"):
             fx.read_rigid_body_bc(
                 model, e_rb, explicit_bodies, implicit_bodies, step=None
             )
@@ -602,7 +725,7 @@ class FebReader:
         for e_step, (step, name) in zip(
             self.root.findall(f"{fx.STEP_PARENT}/{fx.STEP_NAME}"), model.steps
         ):
-            for e_rb in e_step.findall("Boundary/rigid_body"):
+            for e_rb in e_step.findall(f"{fx.BODY_COND_PARENT}/rigid_body"):
                 fx.read_rigid_body_bc(
                     model, e_rb, explicit_bodies, implicit_bodies, step
                 )
@@ -621,7 +744,7 @@ class FebReader:
                 condition["sequence ID"], nametype="ordinal_id"
             )
             # Check if we need a scaled sequence
-            if condition["scale"] != 1.0:
+            if condition["scale"] is not None:
                 seq = ScaledSequence(seq, condition["scale"])
             model.apply_nodal_bc(
                 nodes,
@@ -651,60 +774,11 @@ class FebReader:
 
         return model
 
-    def mesh(self, material_info=None):
+    def mesh(self):
         """Return mesh."""
-        if material_info is None:
-            materials, mat_labels = self.materials()
-        else:
-            materials, mat_labels = material_info
-        nodes = np.array(
-            [
-                [float(a) for a in b.text.split(",")]
-                for b in self.root.findall("./Geometry/Nodes/*")
-            ]
-        )
-        # Read elements
-        elements = []  # nodal index format
-        for elset in self.root.findall("./Geometry/Elements"):
-            # TODO: Allow loading meshes that have no material.
-            mat_id = int(elset.attrib["mat"]) - 1  # zero-index
-
-            # map element type strings to classes
-            cls = elem_cls_from_feb[elset.attrib["type"]]
-
-            for elem in elset.findall("./elem"):
-                ids = [int(a) - 1 for a in elem.text.split(",")]
-                e = cls.from_ids(ids, nodes, mat=materials[mat_id])
-                elements.append(e)
-        # Create mesh
+        fx = self.febioxml_module
+        nodes, elements = read_mesh(self.root, fx)
         mesh = Mesh(nodes, elements)
-        #
-        # Read <MeshData> (partial support; just for ElementData with
-        # var="mat_axis")
-        for e_edata in self.root.findall("MeshData/ElementData[@var='mat_axis']"):
-            # Get the name of the referenced element set
-            try:
-                nm_eset = e_edata.attrib["elem_set"]
-            except KeyError:
-                raise ValueError(
-                    f"{e_edata.base}:{e_edata.sourceline} <ElementData> is missing its required 'elem_set' attribute."
-                )
-            # Get the referenced element set
-            e_eset = self.root.find(f"Geometry/ElementSet[@name='{nm_eset}']")
-            if e_eset is None:
-                raise ValueError(
-                    f"{e_edata.base}:{e_edata.sourceline} <ElementData> references an element set named '{nm_eset}', which is not defined."
-                )
-            eset_elements = tuple(e_eset.iterchildren())
-            for e_elem in e_edata:
-                a = _vec_from_text(e_elem.find("a").text)
-                d = _vec_from_text(e_elem.find("d").text)
-                basis = orthonormal_basis(a, d)
-                leid = int(e_elem.attrib["lid"]) - 1
-                eid = int(eset_elements[leid].attrib["id"]) - 1
-                # Who thought this much indirection in a data file
-                # format was a good idea?
-                mesh.elements[eid].basis = basis
         return mesh
 
 

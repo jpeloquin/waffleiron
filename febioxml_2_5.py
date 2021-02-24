@@ -7,6 +7,8 @@ from lxml import etree as ET
 
 # Same-package modules
 from .core import (
+    ZeroIdxID,
+    OneIdxID,
     Sequence,
     Interpolant,
     Extrapolant,
@@ -96,23 +98,31 @@ def iter_node_conditions(root):
     """Return generator over prescribed nodal condition info.
 
     Returns dict of property names → values.  All properties are
-    guaranteed to be not-None, except "nodal values", which will be None
-    if the condition applies the same condition to all nodes.
+    not-None except the following:
 
-    All returned IDs are 0-indexed for consistency with febtools.
+    (1) "nodal values" will be None if the condition applies the same condition to all nodes.
+
+    (2) "name" is always None because it was introduced in FEBio XML
+    3.0.
+
+    (3) "scale" will be None if the condition is heterogeneous, as FEBio
+    XML 3.0 does not include a scale in this case.
 
     """
     step_id = -1  # Curent step ID (0-indexed)
     for e_Step in root.findall(f"{STEP_PARENT}/{STEP_NAME}"):
         step_id += 1
-        for e_prescribe in e_Step.findall("Boundary/prescribe"):
+        for e_prescribe in e_Step.findall(
+            f"Boundary/{BC_TYPE_TAG['node']['variable']}"
+        ):
             # Re-initialize output
             info = {
+                "name": None,
                 "node set name": None,
                 "axis": None,  # x1, fluid, charge, etc.
                 "variable": None,  # displacement, force, pressure, etc.
                 "sequence ID": None,
-                "scale": 0.0,  # FEBio default; it really should be 1.0
+                "scale": None,  # For consistency with FEBio XML 3.0
                 "relative": False,
                 "nodal values": None,
                 "step ID": None,
@@ -155,6 +165,24 @@ def iter_node_conditions(root):
                 info["relative"] = True
             info["step ID"] = step_id
             yield info
+
+
+def read_domains(root: ET.Element):
+    """Return list of domains"""
+    domains = []
+    e_domains = root.findall(f"{MESH_PARENT}/Elements")
+    for e_domain in e_domains:
+        name = e_domain.attrib.get("name", None)
+        elements = [
+            ZeroIdxID(int(e.attrib["id"]) - 1) for e in e_domain.findall("elem")
+        ]
+        domain = {
+            "name": name,
+            "material": ("ordinal_id", ZeroIdxID(int(e_domain.attrib["mat"]) - 1)),
+            "elements": elements,
+        }
+        domains.append(domain)
+    return domains
 
 
 def sequences(root: Element) -> Dict[int, Sequence]:
