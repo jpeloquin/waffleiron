@@ -129,7 +129,7 @@ def iter_node_conditions(root):
             e_value = e_prescribe.find("value")
             if e_value is not None:
                 if "node_data" in e_value.attrib:
-                    # Node-specific data; look up the data in MeshData
+                    # Heterogeneous nodal boundary condition
                     e_NodeSet = find_unique_tag(
                         root, "Geometry/NodeSet[@name='" + info["node set name"] + "']"
                     )
@@ -146,9 +146,8 @@ def iter_node_conditions(root):
                         id_ = int(e_node.attrib["id"]) - 1
                         info["nodal values"][id_] = to_number(e_value.text)
                 else:
-                    # One value for all nodes; redundant with "scale".
-                    # TODO: seq_scale is not defined, so if this section
-                    # is ever reached, it will raise a TypeError.
+                    # Homogeneous nodal boundary condition
+                    seq_scale = info["scale"]
                     val_scale = to_number(e_value.text)
                     info["scale"] = seq_scale * val_scale
             e_relative = e_prescribe.find("relative")
