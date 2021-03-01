@@ -249,7 +249,9 @@ def body_constraints_xml(
             ET.SubElement(e_rb, "relative").text = bool_to_text(bc["relative"])
         elif bc["relative"]:
             # Most likely: bc['variable'] == "force"
-            raise ValueError(f"FEBio XML does not permit relative {bc['variable']} conditions for bodies.")
+            raise ValueError(
+                f"FEBio XML does not permit relative {bc['variable']} conditions for bodies."
+            )
         elems.append(e_rb)
     return elems
 

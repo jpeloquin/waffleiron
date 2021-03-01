@@ -81,9 +81,9 @@ tags_table = {
     # xplt 2.0
     0x01041200: {"name": "node coords", "leaf": True, "format": "float"},  # 17043968
     # Mesh/Node Header tags (2.0 only)
-    0x01041101: {"name": "size", "leaf": True},
-    0x01041102: {"name": "dimensions", "leaf": True},
-    0x01041103: {"name": "name", "leaf": True},
+    0x01041101: {"name": "size", "leaf": True, "format": "int"},
+    0x01041102: {"name": "dimensions", "leaf": True, "format": "int"},
+    0x01041103: {"name": "name", "leaf": True, "format": "str"},
     # Mesh/Domains (2.0) or Root/Geometry/Domains (1.0) tags
     17047808: {"name": "domain", "leaf": False},  # 0x01042100
     # Mesh/Domains/Domain tags
