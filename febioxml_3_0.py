@@ -27,7 +27,11 @@ STEP_NAME = "step"
 
 BC_TYPE_TAG = {
     "node": {"variable": "prescribe", "fixed": "fix"},
-    "body": {"variable": "prescribe", "fixed": "fix"},
+    "body": {
+        ("variable", "displacement"): "prescribe",
+        ("fixed", "displacement"): "fix",
+        ("variable", "force"): "force",
+    },
 }
 
 XML_RB_DOF_FROM_DOF = {
@@ -215,7 +219,7 @@ def body_constraints_xml(
             variable_constraints.append((dof, bc))
     # Create <rigid_constraint> element for fixed constraints
     e_rb_fixed = ET.Element("rigid_constraint")
-    e_rb_fixed.attrib["type"] = BC_TYPE_TAG["body"]["fixed"]
+    e_rb_fixed.attrib["type"] = BC_TYPE_TAG["body"][("fixed", "displacement")]
     ET.SubElement(e_rb_fixed, "rb").text = str(mat_id + 1)
     ET.SubElement(e_rb_fixed, "dofs").text = ",".join(
         XML_RB_DOF_FROM_DOF[dof] for dof, _ in fixed_constraints
@@ -225,12 +229,9 @@ def body_constraints_xml(
     # think you must use a separate element for each degree of freedom
     # (x, y, z, Rx, Ry, Rz).
     for dof, bc in variable_constraints:
-        if bc["variable"] == "force":
-            # TODO: Reverse engineer force constraints on rigid bodies
-            # in FEBio XML 3.0
-            raise NotImplementedError
         e_rb = ET.Element("rigid_constraint")
-        e_rb.attrib["type"] = BC_TYPE_TAG["body"]["variable"]
+        k = ("variable", bc["variable"])
+        e_rb.attrib["type"] = BC_TYPE_TAG["body"][k]
         ET.SubElement(e_rb, "rb").text = str(mat_id + 1)
         ET.SubElement(e_rb, "dof").text = XML_RB_DOF_FROM_DOF[dof]
         seq = bc["sequence"]
@@ -238,7 +239,17 @@ def body_constraints_xml(
         e_value = ET.SubElement(e_rb, "value")
         e_value.attrib["lc"] = str(seq_id + 1)
         e_value.text = str(bc["scale"])
-        ET.SubElement(e_rb, "relative").text = bool_to_text(bc["relative"])
+        if bc["variable"] == "force":
+            ET.SubElement(e_rb, "load_type").text = "0"
+            # ^ semantics of this are unclear, but this is what FEBio
+            # Studio 1.3 exports
+        #
+        # FEBio only supports relative constraints for displacement
+        if bc["variable"] == "displacement":
+            ET.SubElement(e_rb, "relative").text = bool_to_text(bc["relative"])
+        elif bc["relative"]:
+            # Most likely: bc['variable'] == "force"
+            raise ValueError(f"FEBio XML does not permit relative {bc['variable']} conditions for bodies.")
         elems.append(e_rb)
     return elems
 
