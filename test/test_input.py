@@ -5,9 +5,11 @@ from pathlib import Path
 import subprocess
 import numpy.testing as npt
 import numpy as np
-from nose.tools import with_setup
+import pytest
 
 import febtools as feb
+from febtools.febio import run_febio_checked
+from febtools.test.fixtures import febio_cmd
 
 
 class MeshSolutionTest(unittest.TestCase):
@@ -81,66 +83,65 @@ class MeshSolutionTest(unittest.TestCase):
         self.cmp_f(2, 1, "Fzy")
 
 
-class FebSolidFixedBCs(unittest.TestCase):
-    """Test read of FEBio XML file with fixed boundary conditions."""
-
-    path = Path("test") / "fixtures" / "cube_hex8_n=1_solid_all_BCs_fixed.feb"
-
-    def setUp(self):
-        subprocess.run(["febio", "-silent", "-i", str(self.path)])
-
-    def test_load_model(self):
-        model = feb.load_model(str(self.path))
-
-    def test_read_mesh_from_xplt(self):
-        pth_xplt = self.path.parent / f"{self.path.stem}.xplt"
-        with open(str(pth_xplt), "rb") as f:
-            xplt = feb.xplt.XpltData(f.read())
-        # xplt = feb.input.XpltReader(str(pth_xplt))
-        mesh = xplt.mesh()
-        # Check node values
-        assert len(mesh.nodes) == 8
-        assert np.array(mesh.nodes).shape[1] == 3
-        npt.assert_almost_equal(mesh.nodes[3], [-0.5, 0.5, 0.0])
-        # Check element values
-        assert len(mesh.elements) == 1
-        npt.assert_equal(mesh.elements[0].nodes, mesh.nodes)
-
-    def tearDown(self):
-        # Delete FEBio-generated output
-        (self.path.parent / f"{self.path.stem}.log").unlink()
-        (self.path.parent / f"{self.path.stem}.xplt").unlink()
+@pytest.fixture(scope="module")
+def FixedNodeBC_Solid_Model(febio_cmd):
+    """Solve solid model with fixed nodal boundary conditions"""
+    pth = Path("test") / "fixtures" / "cube_hex8_n=1_solid_all_BCs_fixed.feb"
+    run_febio_checked(pth, cmd=febio_cmd)
+    yield pth
+    # Delete FEBio-generated output
+    pth.with_suffix(".log").unlink()
+    pth.with_suffix(".xplt").unlink()
 
 
-class FebBiphasicFixedBCs(unittest.TestCase):
-    """Test read of FEBio XML file with fixed boundary conditions."""
+def test_FEBio_FixedNodeBC_Solid(FixedNodeBC_Solid_Model):
+    """Test read of FEBio XML and XPLT files with fixed boundary conditions."""
+    pth = FixedNodeBC_Solid_Model
+    # Test 1: Read XML?
+    model = feb.load_model(pth)
+    # Test 2: Read XPLT?
+    pth_xplt = pth.with_suffix(".xplt")
+    with open(pth_xplt, "rb") as f:
+        xplt = feb.xplt.XpltData(f.read())
+    # Test 3: Read mesh from XPLT?
+    mesh = xplt.mesh()
+    # Check node values
+    assert len(mesh.nodes) == 8
+    assert np.array(mesh.nodes).shape[1] == 3
+    npt.assert_almost_equal(mesh.nodes[3], [-0.5, 0.5, 0.0])
+    # Check element values
+    assert len(mesh.elements) == 1
+    npt.assert_equal(mesh.elements[0].nodes, mesh.nodes)
 
-    path = Path("test") / "fixtures" / "cube_hex8_n=1_biphasic_all_BCs_fixed.feb"
 
-    def setUp(self):
-        subprocess.run(["febio", "-silent", "-i", str(self.path)])
+@pytest.fixture(scope="module")
+def FixedNodeBC_Biphasic_Model(febio_cmd):
+    """Solve biphasic model with fixed nodal boundary conditions"""
+    pth = Path("test") / "fixtures" / "cube_hex8_n=1_biphasic_all_BCs_fixed.feb"
+    run_febio_checked(pth, cmd=febio_cmd)
+    yield pth
+    # Delete FEBio-generated output
+    pth.with_suffix(".log").unlink()
+    pth.with_suffix(".xplt").unlink()
 
-    def test_load_model(self):
-        model = feb.load_model(str(self.path))
 
-    def test_read_mesh_from_xplt(self):
-        pth_xplt = self.path.parent / f"{self.path.stem}.xplt"
-        with open(str(pth_xplt), "rb") as f:
-            xplt = feb.xplt.XpltData(f.read())
-        # xplt = feb.input.XpltReader(str(pth_xplt))
-        mesh = xplt.mesh()
-        # Check node values
-        assert len(mesh.nodes) == 8
-        assert np.array(mesh.nodes).shape[1] == 3
-        npt.assert_almost_equal(mesh.nodes[3], [-0.5, 0.5, 0.0])
-        # Check element values
-        assert len(mesh.elements) == 1
-        npt.assert_equal(mesh.elements[0].nodes, mesh.nodes)
-
-    def tearDown(self):
-        # Delete FEBio-generated output
-        (self.path.parent / f"{self.path.stem}.log").unlink()
-        (self.path.parent / f"{self.path.stem}.xplt").unlink()
+def test_FEBio_Fixed_NodeBC_Biphasic(FixedNodeBC_Biphasic_Model):
+    pth = FixedNodeBC_Biphasic_Model
+    # Test 1: Read XML?
+    model = feb.load_model(pth)
+    # Test 2: Read XPLT?
+    pth_xplt = pth.with_suffix(".xplt")
+    with open(str(pth_xplt), "rb") as f:
+        xplt = feb.xplt.XpltData(f.read())
+    # Test 3: Read mesh from XPLT?
+    mesh = xplt.mesh()
+    # Check node values
+    assert len(mesh.nodes) == 8
+    assert np.array(mesh.nodes).shape[1] == 3
+    npt.assert_almost_equal(mesh.nodes[3], [-0.5, 0.5, 0.0])
+    # Check element values
+    assert len(mesh.elements) == 1
+    npt.assert_equal(mesh.elements[0].nodes, mesh.nodes)
 
 
 class EnvironmentConstants(unittest.TestCase):

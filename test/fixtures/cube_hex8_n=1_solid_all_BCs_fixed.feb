@@ -41,8 +41,10 @@
 				<E>10</E>
 				<beta>4</beta>
 				<lam0>1.02</lam0>
-				<theta>45</theta>
-				<phi>90</phi>
+        <fiber type="angles">
+				  <theta>45</theta>
+				  <phi>90</phi>
+        </fiber>
 			</solid>
 		</material>
 	</Material>

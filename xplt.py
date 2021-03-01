@@ -78,8 +78,8 @@ tags_table = {
     0x01041100: {"name": "node header", "leaf": False},
     # xplt 1.0
     0x01041001: {"name": "node coords", "leaf": True, "format": "float"},  # 17043457
-    # xplt 2.0
-    0x01041200: {"name": "node coords", "leaf": True, "format": "float"},  # 17043968
+    # xplt 2.0; mixed integer IDs and floating point positions
+    0x01041200: {"name": "node coords", "leaf": True, "format": "bytes"},  # 17043968
     # Mesh/Node Header tags (2.0 only)
     0x01041101: {"name": "size", "leaf": True, "format": "int"},
     0x01041102: {"name": "dimensions", "leaf": True, "format": "int"},
@@ -885,7 +885,18 @@ class XpltData:
         node_data = get_bdata_by_name(
             self.blocks, f"{MESH_PATH[self.version]}/nodes/node coords"
         )[0]
-        x_nodes = [node_data[3 * i : 3 * i + 3] for i in range(len(node_data) // 3)]
+        if self.version < 48:
+            # XPLT 1.0
+            x_nodes = [node_data[3 * i : 3 * i + 3] for i in range(len(node_data) // 3)]
+        else:
+            # XPLT 2.0
+            n = get_bdata_by_name(
+                self.blocks, f"{MESH_PATH[self.version]}/nodes/node header/size"
+            )[0][0]
+            values = struct.unpack(self.endian + n * "Ifff", node_data)
+            node_ids = [values[i] for i in range(0, 4 * n, 4)]
+            assert np.all(np.diff(node_ids) == 1)
+            x_nodes = [values[i + 1 : i + 4] for i in range(0, 4 * n, 4)]
         # Get list of elements for each domain.
         b_domains = get_bdata_by_name(self.blocks, f"{MESH_PATH[self.version]}/domains")
         elements = []
