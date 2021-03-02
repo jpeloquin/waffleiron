@@ -463,7 +463,7 @@ def sequence_xml(sequence: Sequence, sequence_id: int, t0=0.0):
         "loadcurve",
         id=str(sequence_id + 1),
         type=XML_INTERP_FROM_INTERP[sequence.interpolant],
-        extrap=XML_EXTRAP_FROM_EXTRAP[sequence.extrapolant],
+        extend=XML_EXTRAP_FROM_EXTRAP[sequence.extrapolant],
     )
     for pt in sequence.points:
         ET.SubElement(e_loadcurve, "point").text = f"{pt[0] + t0}, {pt[1]}"
