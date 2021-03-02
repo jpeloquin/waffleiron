@@ -295,16 +295,19 @@ def sequence_time_offsets(model):
     to each sequence to convert said sequence from local time to global
     time.
 
+    This function assumes that curves are not re-used across steps.
+    TODO: Figure out some way of enforcing this.
+
     """
     cumulative_time = 0.0
     seq_t0 = defaultdict(lambda: 0)  # dict: sequence → time offset
     for step, name in model.steps:
+        curves_to_adjust = set([])
         # Gather must point curves
         dtmax = step.ticker.dtmax
-        if isinstance(dtmax, Sequence):
-            dtmax.points = [(cumulative_time + t, v) for t, v in dtmax.points]
+        if isinstance(dtmax, Sequence) or isinstance(dtmax, ScaledSequence):
+            curves_to_adjust.add(dtmax)
         # Gather variable boundary condition / constraint curves
-        curves_to_adjust = set([])
         for i, ax_bc in step.bc["node"].items():
             for ax, d in ax_bc.items():
                 if isinstance(d["sequence"], Sequence):
