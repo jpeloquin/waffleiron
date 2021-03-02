@@ -445,7 +445,7 @@ def step_xml(step, name, seq_registry, physics, febioxml_module):
     return e_step
 
 
-def xml(model, version="2.5"):
+def xml(model, version="3.0"):
     """Convert a model to an FEBio XML tree.
 
     Creating an FEBio XML tree from a model is useful because it allows
