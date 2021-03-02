@@ -198,7 +198,7 @@ class Model:
             bc_dict = self.varying["body"]
         else:
             # Setting step-local BC
-            bc_dict = self.steps[step_id].step.bc["body"]
+            bc_dict = step.bc["body"]
         bc = bc_dict.setdefault(body, {})
         bc[dof] = {
             "variable": variable,
