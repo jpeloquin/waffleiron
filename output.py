@@ -670,9 +670,7 @@ def xml(model, version="2.5"):
 
     # Write global (step-independent) fixed and variable body constraints to global
     # <Boundary> or <Rigid> sections.
-    e_rb_cond_parent = fx.find_unique_tag(root, fx.BODY_COND_PARENT)
-    if e_rb_cond_parent is None:
-        e_rb_cond_parent = ET.SubElement(root, fx.BODY_COND_PARENT)
+    e_rb_cond_parent = fx.get_or_create_xml(root, fx.BODY_COND_PARENT)
     # Group fixed rigid body conditions by body, since we'll need to
     # write an XML element for each body.
     body_bcs = defaultdict(dict)
@@ -805,6 +803,8 @@ def xml(model, version="2.5"):
         e_step.append(e_Boundary)
         e_step.append(e_Contact)
 
+        # Add rigid body conditions to <Step>
+        e_rb_cond_parent = fx.get_or_create_xml(e_step, fx.BODY_COND_PARENT)
         for body, constraints in step.bc["body"].items():
             for e_body_cond in fx.body_constraints_xml(
                 body,

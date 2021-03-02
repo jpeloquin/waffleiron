@@ -246,7 +246,7 @@ def read_rigid_body_bc(model, e_rigid_body, explicit_bodies, implicit_bodies, st
             relative = True
         else:
             relative = False
-        model.apply_body_bc(body, dof, var, seq, step, relative=relative)
+        model.apply_body_bc(body, dof, var, seq, step, relative=relative, step=step)
 
 
 # Functions for writing XML 2.5
