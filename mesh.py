@@ -63,6 +63,8 @@ def cylinder(t_radius: tuple, t_height: tuple, nc: int, material=None):
     cylinder.named["node sets"].add("side", side_nodes)
     bottom_nodes = NodeSet(np.where(np.abs(z + height / 2) < _DEFAULT_TOL)[0])
     cylinder.named["node sets"].add("bottom", bottom_nodes)
+    exterior_nodes = NodeSet(top_nodes | side_nodes | bottom_nodes)
+    cylinder.named["node sets"].add("exterior", exterior_nodes)
     # Create named face sets.  It's annoying to have to define the same surface
     # in terms of both nodes and faces.  Consider improving the situation later.
     top_faces = set()
