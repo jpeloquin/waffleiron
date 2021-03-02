@@ -20,7 +20,8 @@ from .core import (
     ScaledSequence,
     RigidInterface,
 )
-from .control import auto_physics
+from .control import auto_physics, Physics
+
 from . import material as matlib
 from .math import sph_from_vec
 from . import febioxml
@@ -434,7 +435,7 @@ def step_xml(step, name, seq_registry, physics, febioxml_module):
     for nm, p in fx.SOLVER_PARAMS.items():
         parent = get_or_create_parent(e_step, p.path)
         tag = p.path.split("/")[-1]
-        if nm == "ptol" and not physics == "biphasic":
+        if nm == "ptol" and not physics == Physics.BIPHASIC:
             continue
         elif nm == "update_method":
             e = fx.update_method_to_xml(getattr(step.solver, nm), tag)
@@ -699,7 +700,7 @@ def xml(model, version="2.5"):
     plotfile = ET.SubElement(Output, "plotfile", type="febio")
     if not model.output["variables"]:  # empty list
         output_vars = ["displacement", "stress", "relative volume"]
-        if physics == "biphasic":
+        if physics == Physics.BIPHASIC:
             output_vars += ["effective fluid pressure", "fluid pressure", "fluid flux"]
         rigid_bodies_present = any(
             isinstance(m, feb.material.RigidBody) for m in material_registry.objects()
