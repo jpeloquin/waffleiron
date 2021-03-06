@@ -61,11 +61,11 @@ def _run_febio(pth_feb, threads=None, cmd=FEBIO_CMD):
                 f"The OS could not find an executable file named {cmd}; ensure that an FEBio executable with that name exists on the system and is in a directory included in the system PATH variable.  Alternatively, change febtools.febio.FEBIO_NAME to the name of this system's FEBio executable."
             )
     # If there specifically is a file read error, we need to write the
-    # captured stdout to the log file, because only it has information
-    # about the file read error.  Otherwise, we need to leave the log
-    # file in place, because it contains unique information.  (FEBio
-    # does return a error code of 1 on "Error Termination" and 0 on
-    # "Normal Termination"; I checked.)
+    # captured stdout to the log file, because only stdout has
+    # information about the file read error.  Otherwise, we need to
+    # leave the log file in place, because it contains unique
+    # information.  (FEBio does return a error code of 1 on "Error
+    # Termination" and 0 on "Normal Termination"; I checked.)
     #
     # With FEBio 2, a file read error prints "Reading file foo.feb
     # ...FAILED!" to stdout as a single line.  With FEBio 3, there may
@@ -154,3 +154,35 @@ def check_must_points(model):
             raise FEBioError(
                 f'FEBio wrote {n_actual} time points when simulating {model.name}, but {n_expected} time points ("must points") were requested.  This may be caused by a bug in FEBio\'s time stepper or must point controller, or by requesting invalid time points that were silently ignored by FEBio.'
             )
+
+
+def read_log(pth):
+    """Attempt to read an FEBio log file
+
+    This function only has partial support for reading the FEBio log
+    file.  Even if the implementation were "complete", the FEBio log
+    format is undocumented and there is no guarantee it will remain the
+    same between FEBio versions.  Expect some things in the log file to
+    be missed.
+
+    read_log is meant to read the following items from the log file:
+
+    - Errors boxed in asterisks, starting with a centered ERROR line.
+
+    """
+    # It's not clear which encoding FEBio uses for it's log files.
+    errors = []
+    with open(pth, "r") as f:
+        for ln in f:
+            if ln.startswith(" *") and "ERROR" in ln:
+                # Found a boxed error.
+                msg = []
+                ln = f.readline()  # skip blank line after ERROR
+                while not ln.startswith(" **********"):
+                    ln = f.readline()
+                    s = ln.strip("* \n\r\t")
+                    msg.append(s)
+                # skip end blank line + end asterisk border
+                msg = msg[:-2]
+                errors.append("\n".join(msg))
+    return errors
