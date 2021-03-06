@@ -218,13 +218,14 @@ def body_constraints_xml(
         else:  # bc['sequence'] is Sequence
             variable_constraints.append((dof, bc))
     # Create <rigid_constraint> element for fixed constraints
-    e_rb_fixed = ET.Element("rigid_constraint")
-    e_rb_fixed.attrib["type"] = BC_TYPE_TAG["body"][("fixed", "displacement")]
-    ET.SubElement(e_rb_fixed, "rb").text = str(mat_id + 1)
-    ET.SubElement(e_rb_fixed, "dofs").text = ",".join(
-        XML_RB_DOF_FROM_DOF[dof] for dof, _ in fixed_constraints
-    )
-    elems.append(e_rb_fixed)
+    if fixed_constraints:
+        e_rb_fixed = ET.Element("rigid_constraint")
+        e_rb_fixed.attrib["type"] = BC_TYPE_TAG["body"][("fixed", "displacement")]
+        ET.SubElement(e_rb_fixed, "rb").text = str(mat_id + 1)
+        ET.SubElement(e_rb_fixed, "dofs").text = ",".join(
+            XML_RB_DOF_FROM_DOF[dof] for dof, _ in fixed_constraints
+        )
+        elems.append(e_rb_fixed)
     # Create <rigid_constraint> element for variable constraints.  I
     # think you must use a separate element for each degree of freedom
     # (x, y, z, Rx, Ry, Rz).
