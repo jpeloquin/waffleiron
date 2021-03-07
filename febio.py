@@ -9,7 +9,8 @@ from .input import load_model
 
 
 # Default name of FEBio executable
-FEBIO_CMD = "febio"
+FEBIO_CMD = os.environ.get("FEBIO_CMD", "febio")
+
 # Number of threads to use for each FEBio call
 FEBIO_THREADS = psutil.cpu_count(logical=False)
 
