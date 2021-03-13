@@ -10,11 +10,6 @@ from .febioxml_2_5 import meshdata_xml
 
 # Facts about FEBio XML 3.0
 
-BC_TYPE_TAG = {
-    "node": {"variable": "prescribe", "fixed": "fix"},
-    "body": {"variable": "prescribe", "fixed": "fix"},
-}
-
 # XML element parents and names
 BODY_COND_PARENT = "Rigid"
 MESH_PARENT = "Mesh"
