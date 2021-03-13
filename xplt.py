@@ -854,27 +854,25 @@ class XpltData:
         for b in self.step_blocks:
             t = get_bdata_by_name(b["data"], "state header/time")[0]
             self.step_times.append(t)
-        # Metadata for variables
+        # Get the metadata for each variable.  Do this here rather
+        # than in the `variables` function because this involves
+        # unpacking additional values that were not unpacked during
+        # the initial call to `parse_xplt_data`, so we need the
+        # endiannes of the file.  When this module is modified to use
+        # arrays instead of bytes, `parse_xplt_data` should be
+        # modified to parse the (region ID, size, region data)
+        # sections in the step data.
         self.variables = variables(self.blocks)
-        # Add to the metadata dictionary for each variable will a
-        # "regions" key pointing to a tuple of region IDs for which the
-        # varible is defined, and a "_region_idx" dictionary of region
-        # ID → byte offset to its region data within the state data.
-        # The "regions" key is meant to help the user; the "_region_idx"
-        # key is to help other functions lookup values for specific
-        # entities.
-        #
-        # Do this here rather than in the `variables` function because
-        # this involves unpacking additional values that were not
-        # unpacked during the initial call to `parse_xplt_data`, so we
-        # need the endiannes of the file.  When this module is modified
-        # to use arrays instead of bytes, `parse_xplt_data` should be
-        # modified to parse the (region ID, size, region data) sections
-        # in the step data.
         for var, mdata in self.variables.items():
             sdata = _get_var_sdata(self.step_blocks[0], mdata)
             region_idxs = _regions_in_sdata(sdata, self.endian)
+            # regions: tuple of region IDs for which the variable is
+            # defined.  This is meant to assist the user in browsing
+            # variables.
             mdata["regions"] = tuple(region_idxs.keys())
+            # _region_idx: dictionary mapping region ID → byte offset
+            # of its region data within the state data.   This is to
+            # enable other functions to look up values by region.
             mdata["_region_idx"] = region_idxs
 
     def mesh(self):
