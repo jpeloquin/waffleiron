@@ -1,5 +1,7 @@
 from collections import namedtuple
 import os
+from pathlib import Path
+
 import lxml.etree as ET
 from lxml.etree import Element, ElementTree
 from .core import (
@@ -294,6 +296,28 @@ def basis_mat_axis_local(element: Element, local_ids=(1, 2, 4)):
     d = element.nodes[local_ids[2] - 1] - element.nodes[local_ids[0] - 1]
     basis = orthonormal_basis(a, d)
     return basis
+
+
+def logfile_name(root) -> Path:
+    """Return logfile path from FEBio XML"""
+    paths = [
+        e.attrib["file"] for e in root.findall("Output/logfile") if "file" in e.attrib
+    ]
+    if len(paths) == 0:
+        # The default log file name is based on the FEBio XML file
+        # name.   If the XML has not yet been written to disk,
+        # there is no valid default.
+        if root.base is None:
+            raise TypeError(
+                f"The FEBio XML tree has no file name associated with it, so the default log file name is undefined.  (The XML tree was probably created without reading from a file.)"
+            )
+        return Path(root.base).with_suffix(".log")
+    elif len(paths) == 1:
+        return paths[0]
+    else:  # len(paths) > 1
+        raise ValueError(
+            f"{root} (root.base) has more than one `<logfile>` element with a `file` attribute, making the logfile name ambiguous."
+        )
 
 
 def normalize_xml(root):
