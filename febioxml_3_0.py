@@ -20,7 +20,7 @@ NODESET_PARENT = "Mesh"
 STEP_PARENT = "Step"
 STEP_NAME = "step"
 
-BC_TYPE_TAG = {
+BC_TYPE_TAG: Dict[str, dict] = {
     "node": {"variable": "prescribe", "fixed": "fix"},
     "body": {
         ("variable", "displacement"): "prescribe",
