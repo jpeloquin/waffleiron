@@ -3,9 +3,11 @@ import os
 from pathlib import Path
 import subprocess
 
+from lxml import etree
 import psutil
 
 from .input import load_model
+from .febioxml import logfile_name
 
 
 # Default name of FEBio executable
@@ -26,7 +28,16 @@ class FEBioError(Exception):
 
 
 def _run_febio(pth_feb, threads=None, cmd=FEBIO_CMD):
-    """Run FEBio and return the process object."""
+    """Run FEBio and return the process object.
+
+    This function runs FEBio and captures its output, in particular
+    its self-reported error status.  Some workarounds are applied to
+    consistently and comprehensively report FEBio's error status,
+    but there are no additional error checks or safeguards beyond
+    what FEBio provides.  `run_febio_checked`, in contrast,
+    runs FEBio with added safeguards.
+
+    """
     # FEBio's error handling is interesting, in a bad way.  XML file
     # read errors are only output to stdout.  If there is a read error,
     # no log file is created and if an old log file exists, it is not
@@ -107,6 +118,25 @@ def run_febio_checked(pth_feb, threads=None, cmd=FEBIO_CMD):
     if threads is None:
         threads = FEBIO_THREADS
     pth_feb = Path(pth_feb)
+    dir_feb = pth_feb.parent
+    with open(pth_feb, "rb") as f:
+        tree = etree.parse(f)
+    root = tree.getroot()
+    # Delete any existing log file and xplt file because we will
+    # later check for the existence of an xplt to determine if the
+    # simulation even started.   Also it is potentially confusing to
+    # have old output still visible even after re-running the
+    # simulation.
+    pth_xplt = pth_feb.with_suffix(".xplt")
+    try:
+        pth_xplt.unlink()
+    except FileNotFoundError:
+        pass
+    pth_log = logfile_name(root)
+    try:
+        pth_log.unlink()
+    except FileNotFoundError:
+        pass
     proc = _run_febio(pth_feb, threads=threads, cmd=cmd)
     if proc.returncode != 0:
         raise FEBioError(
