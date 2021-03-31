@@ -53,7 +53,7 @@ class IncorrectTimePoints(CheckError):
     pass
 
 
-def _run_febio(pth_feb, threads=None, cmd=FEBIO_CMD):
+def run_febio_unchecked(pth_feb, threads=None, cmd=FEBIO_CMD):
     """Run FEBio and return the process object.
 
     This function runs FEBio and captures its output, in particular
@@ -163,7 +163,7 @@ def run_febio_checked(pth_feb, threads=None, cmd=FEBIO_CMD):
         pth_log.unlink()
     except FileNotFoundError:
         pass
-    proc = _run_febio(pth_feb, threads=threads, cmd=cmd)
+    proc = run_febio_unchecked(pth_feb, threads=threads, cmd=cmd)
     if proc.returncode != 0:
         msg = f"FEBio returned error code {proc.returncode} while running {pth_feb}; check {pth_feb.with_suffix('.log')}."
         if not pth_xplt.exists():
@@ -175,13 +175,6 @@ def run_febio_checked(pth_feb, threads=None, cmd=FEBIO_CMD):
     check_solution_exists(model)
     check_must_points(model)
     return proc.returncode
-
-
-def run_febio_unchecked(pth_feb, threads=None, cmd=FEBIO_CMD):
-    """Run FEBio and return its error code."""
-    if threads is None:
-        threads = FEBIO_THREADS
-    return _run_febio(pth_feb, threads=threads, cmd=cmd).returncode
 
 
 def check_solution_exists(model):
