@@ -18,11 +18,37 @@ FEBIO_THREADS = psutil.cpu_count(logical=False)
 
 
 class FEBioError(Exception):
-    """Raised when an FEBio simulation terminates in an error.
+    """Raise when an FEBio simulation terminates in an error.
 
     Even when FEBio doesn't realize it terminated in an error.
 
     """
+
+    pass
+
+
+class NoSolutionError(FEBioError):
+    """Raise when a solution is expected but none is found"""
+
+    pass
+
+
+class IncompleteSolutionError(FEBioError):
+    """Raise when FEBio produces an incomplete solution"""
+
+
+class CheckError(Exception):
+    """Raise when simulation output fails a check
+
+    Subclass CheckError to define specifically which check failed.
+
+    """
+
+    pass
+
+
+class IncorrectTimePoints(CheckError):
+    """Raise when FEBio emits extra, missing, or offset time points"""
 
     pass
 
@@ -139,11 +165,14 @@ def run_febio_checked(pth_feb, threads=None, cmd=FEBIO_CMD):
         pass
     proc = _run_febio(pth_feb, threads=threads, cmd=cmd)
     if proc.returncode != 0:
-        raise FEBioError(
-            f"FEBio returned error code {proc.returncode} while running {pth_feb}; check {pth_feb.with_suffix('.log')}."
-        )
+        msg = f"FEBio returned error code {proc.returncode} while running {pth_feb}; check {pth_feb.with_suffix('.log')}."
+        if not pth_xplt.exists():
+            raise NoSolutionError(msg)
+        else:
+            raise IncompleteSolutionError(msg)
     # Perform additional checks
     model = load_model(pth_feb)
+    check_solution_exists(model)
     check_must_points(model)
     return proc.returncode
 
@@ -155,11 +184,15 @@ def run_febio_unchecked(pth_feb, threads=None, cmd=FEBIO_CMD):
     return _run_febio(pth_feb, threads=threads, cmd=cmd).returncode
 
 
-def check_must_points(model):
+def check_solution_exists(model):
+    """Check if a solution exists"""
     if model.solution is None:
-        raise ValueError(
-            f"{model.name} has no accompanying plotfile; the solution's time points cannot be checked if the solution does not exist."
+        raise NoSolutionError(
+            f"{model.name} has no accompanying plotfile, or febtools could not recognize it as a plotfile."
         )
+
+
+def check_must_points(model):
     # Check if all must points were included
     must_point_sim = True  # default assumption
     times = [0.0]
@@ -182,7 +215,7 @@ def check_must_points(model):
         n_expected = len(times)
         n_actual = len(model.solution.step_times)
         if n_expected != n_actual:
-            raise FEBioError(
+            raise IncorrectTimePoints(
                 f'FEBio wrote {n_actual} time points when simulating {model.name}, but {n_expected} time points ("must points") were requested.  This may be caused by a bug in FEBio\'s time stepper or must point controller, or by requesting invalid time points that were silently ignored by FEBio.'
             )
 
