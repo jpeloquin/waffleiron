@@ -96,7 +96,7 @@ def _run_febio(pth_feb, threads=None, cmd=FEBIO_CMD):
     except OSError as e:
         if e.errno == errno.ENOENT:
             raise ValueError(
-                f"The OS could not find an executable file named {cmd}; ensure that an FEBio executable with that name exists on the system and is in a directory included in the system PATH variable.  Alternatively, change febtools.febio.FEBIO_NAME to the name of this system's FEBio executable."
+                f"The OS could not find an executable file named {cmd}; ensure that an FEBio executable with that name exists on the system and is in a directory included in the system PATH variable.  Alternatively, set the environment variable FEBIO_CMD to the command used to run FEBio on your system."
             )
     # If there specifically is a file read error, we need to write the
     # captured stdout to the log file, because only stdout has
