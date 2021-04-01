@@ -1,10 +1,32 @@
 # Run these tests with nose
 import hashlib
 from pathlib import Path
+
 from nose.tools import with_setup
+
 import febtools as feb
 from febtools import febioxml_2_5 as febioxml
 from febtools.test.fixtures import DIR_FIXTURES, DIR_OUT, xml_version
+
+
+# Basic XML output.
+
+
+def test_write_feb(xml_version):
+    mat = feb.material.NeoHookean({"E": 1.1, "v": 0.3})
+    mesh = feb.mesh.rectangular_prism((1, 2), (1, 2), (1, 2), material=mat)
+    model = feb.Model(mesh)
+    basename = Path(__file__).with_suffix("").stem
+    pth = DIR_OUT / f"{basename}_xmlver={xml_version}.feb"
+    with open(pth, "wb") as f:
+        feb.output.write_feb(model, f, version=xml_version)
+    pth.unlink()
+
+
+def test_write_feb2p0():
+    # This function is special because XML 2.0 is tested, which is not
+    # the case for other test functions.
+    test_write_feb("2.0")
 
 
 # Environmental constants
