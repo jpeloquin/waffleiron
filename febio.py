@@ -2,6 +2,7 @@ import errno
 import os
 from pathlib import Path
 import subprocess
+from typing import Sequence
 
 from lxml import etree
 import psutil
@@ -137,6 +138,9 @@ def run_febio_checked(pth_feb, threads=None, cmd=FEBIO_CMD):
     In addition, perform the following checks independent of FEBio's own
     (mostly absent) error checking:
 
+    - Verify that the solution file (xplt file) actually exists and can be read by
+    febtools.
+
     - In any step with PLOT_MUST_POINTS, verify that the number of time
       points matches the number of must points.
 
@@ -172,9 +176,10 @@ def run_febio_checked(pth_feb, threads=None, cmd=FEBIO_CMD):
             raise IncompleteSolutionError(msg)
     # Perform additional checks
     model = load_model(pth_feb)
+    # Default checks
     check_solution_exists(model)
     check_must_points(model)
-    return proc.returncode
+    return proc
 
 
 def check_solution_exists(model):
