@@ -122,6 +122,10 @@ def test_FEBio_prescribe_rigid_body_displacement(febio_cmd_xml):
     solved = feb.load_model(pth_out)
     δz = solved.solution.values("displacement", 0)["displacement"][-1][2]
     npt.assert_almost_equal(δz, 0.43)
+    δx = solved.solution.values("displacement", 0)["displacement"][-1][0]
+    npt.assert_almost_equal(δx, 0)
+    δy = solved.solution.values("displacement", 0)["displacement"][-1][1]
+    npt.assert_almost_equal(δy, 0)
 
 
 def test_FEBio_prescribe_node_pressure_Hex8(febio_cmd_xml):
