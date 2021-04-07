@@ -112,6 +112,16 @@ def test_FEBio_prescribe_rigid_body_displacement(febio_cmd_xml):
         assert len(model.fixed["body"][(dof, var)]) == 1
     # Verify that step-specific rigid body prescribed constraints were picked up
     assert len(model.steps[0].step.bc["body"]) == 1
+    # Test 2: Write
+    pth_out = DIR_THIS / "output" / f"{pth_in.stem}.{febio_cmd}.xml{xml_version}.feb"
+    with open(pth_out, "wb") as f:
+        feb.output.write_feb(model, f, version=xml_version)
+    # Test 3: Solve - Can FEBio use the roundtripped file?
+    feb.febio.run_febio_checked(pth_out, cmd=febio_cmd)
+    # Test 4: Is the output as expected?
+    solved = feb.load_model(pth_out)
+    δz = solved.solution.values("displacement", 0)["displacement"][-1][2]
+    npt.assert_almost_equal(δz, 0.43)
 
 
 def test_FEBio_prescribe_node_pressure_Hex8(febio_cmd_xml):

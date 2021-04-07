@@ -292,7 +292,10 @@ def body_constraints_xml(
         seq_id = get_or_create_seq_id(sequence_registry, seq)
         e_value = ET.SubElement(e_rb, "value")
         e_value.attrib["lc"] = str(seq_id + 1)
-        e_value.text = str(bc["scale"])
+        v = bc["scale"]
+        if isinstance(bc["sequence"], ScaledSequence):
+            v = v * bc["sequence"].scale
+        e_value.text = str(v)
         if bc["variable"] == "force":
             ET.SubElement(e_rb, "load_type").text = "0"
             # ^ semantics of this are unclear, but this is what FEBio

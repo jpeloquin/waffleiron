@@ -266,10 +266,12 @@ def body_constraints_xml(
     for dof, bc in constraints.items():
         if bc["sequence"] == "fixed":
             kind = "fixed"
-        else:  # bc['sequence'] is Sequence
+        elif bc["sequence"]:  # bc['sequence'] is a Sequence
             kind = "variable"
             seq = bc["sequence"]
             v = bc["scale"]
+            if isinstance(bc["sequence"], ScaledSequence):
+                v = v * bc["sequence"].scale
         # Determine which tag name to use for the specified
         # variable: force or displacement
         if bc["variable"] in ["displacement", "rotation"]:
