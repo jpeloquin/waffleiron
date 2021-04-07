@@ -118,14 +118,12 @@ def test_FEBio_prescribe_node_pressure_Hex8(febio_cmd_xml):
     # Test 4: Is the output as expected?
     model = feb.load_model(pth_out)
     e = model.mesh.elements[0]
-    ##
-    ## Test 4.1: Do we see the correct resultant fluid pressure?
+    # Test 4.1: Do we see the correct resultant fluid pressure?
     p_FEBio_1 = model.solution.value("fluid pressure", step=1, entity_id=0, region_id=1)
     npt.assert_almost_equal(p_FEBio_1, 50.0)
     p_FEBio_2 = model.solution.value("fluid pressure", step=2, entity_id=0, region_id=1)
     npt.assert_almost_equal(p_FEBio_2, 100.0)
-    ##
-    ## Test 4.2: Do we see the correct resultant fluid flux?
+    # Test 4.2: Do we see the correct resultant fluid flux?
     j_FEBio_1 = model.solution.value("fluid flux", step=1, entity_id=0, region_id=1)[0]
     j_FEBio_2 = model.solution.value("fluid flux", step=2, entity_id=0, region_id=1)[0]
     npt.assert_almost_equal(j_FEBio_1, 2.5)
