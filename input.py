@@ -175,7 +175,7 @@ def read_step(step_xml, model, physics, febioxml_module):
                 # Complex values must be handled individually, for now
                 continue
             p = paramdict[f.name]
-            if isinstance(f, ReqParameter):
+            if isinstance(p, ReqParameter):
                 e = find_unique_tag(xml, p.path)
                 kwargs[f.name] = cls(e.text)
             else:  # Optional parameter
