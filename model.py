@@ -191,8 +191,6 @@ class Model:
 
         """
         _validate_dof(dof, body=True)
-        if sequence == "fixed":
-            scale = None
         if step is None:
             # Setting global BC
             bc_dict = self.varying["body"]
