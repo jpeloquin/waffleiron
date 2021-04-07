@@ -198,18 +198,19 @@ def read_step(step_xml, model, physics, febioxml_module):
                     kwargs[f.name] = cls(e.text)
         return kwargs
 
-    kwargs = get_kwargs(step_xml, Ticker, fx.TICKER_PARAMS)
-    # dtmax may be a sequence, so takes special handling
+    ticker_kwargs = get_kwargs(step_xml, Ticker, fx.TICKER_PARAMS)
+    solver_kwargs = get_kwargs(step_xml, Solver, fx.SOLVER_PARAMS)
+    controller_kwargs = get_kwargs(step_xml, IterController, fx.CONTROLLER_PARAMS)
+    # Must points, and hence dtmax, take special handling
     e = find_unique_tag(step_xml, "Control/time_stepper/dtmax")
     if e is not None:
-        kwargs["dtmax"] = read_parameter(e, model.named["sequences"])
+        ticker_kwargs["dtmax"] = read_parameter(e, model.named["sequences"])
     else:
-        kwargs["dtmax"] = fx.TICKER_PARAMS["dtmax"].default
-    ticker = Ticker(**kwargs)
-    kwargs = get_kwargs(step_xml, IterController, fx.CONTROLLER_PARAMS)
-    controller = IterController(**kwargs)
-    kwargs = get_kwargs(step_xml, Solver, fx.SOLVER_PARAMS)
-    solver = Solver(**kwargs)
+        ticker_kwargs["dtmax"] = fx.TICKER_PARAMS["dtmax"].default
+        controller_kwargs["save_iters"] = SaveIters.MAJOR  # FEBio default
+    ticker = Ticker(**ticker_kwargs)
+    controller = IterController(**controller_kwargs)
+    solver = Solver(**solver_kwargs)
     # update_method requires custom conversion
     update_method = {"0": "BFGS", "1": "Broyden"}
     if not solver.update_method in ("BFGS", "Broyden"):
