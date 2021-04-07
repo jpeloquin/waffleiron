@@ -14,6 +14,7 @@ from .febioxml_2_5 import mesh_xml, sequences, read_domains
 # Facts about FEBio XML 2.0
 
 BODY_COND_PARENT = "Constraints"
+BODY_COND_NAME = "rigid_body"
 MESH_PARENT = "Geometry"
 ELEMENTDATA_PARENT = "Geometry"
 NODEDATA_PARENT = "Geometry"

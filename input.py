@@ -721,10 +721,8 @@ class FebReader:
         # Read global constraints on rigid bodies.  Needs to come after
         # reading sequences, or the relevant sequences won't be in the
         # sequence registry.
-        for e_rb in self.root.findall(f"{fx.BODY_COND_PARENT}/rigid_body"):
-            fx.read_rigid_body_bc(
-                model, e_rb, explicit_bodies, implicit_bodies, step=None
-            )
+        for e_rb in self.root.findall(f"{fx.BODY_COND_PARENT}/{fx.BODY_COND_NAME}"):
+            fx.apply_body_bc(model, e_rb, explicit_bodies, implicit_bodies, step=None)
 
         # Steps
         for e_step in self.root.findall(f"{fx.STEP_PARENT}/{fx.STEP_NAME}"):
@@ -734,10 +732,8 @@ class FebReader:
         for e_step, (step, name) in zip(
             self.root.findall(f"{fx.STEP_PARENT}/{fx.STEP_NAME}"), model.steps
         ):
-            for e_rb in e_step.findall(f"{fx.BODY_COND_PARENT}/rigid_body"):
-                fx.read_rigid_body_bc(
-                    model, e_rb, explicit_bodies, implicit_bodies, step
-                )
+            for e_rb in e_step.findall(f"{fx.BODY_COND_PARENT}/{fx.BODY_COND_NAME}"):
+                fx.apply_body_bc(model, e_rb, explicit_bodies, implicit_bodies, step)
         # Prescribed nodal conditions.  Has to go after steps are
         # created; otherwise there are no steps to which to attach the
         # applied conditions.

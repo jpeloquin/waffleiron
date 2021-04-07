@@ -12,6 +12,7 @@ from .febioxml_2_5 import meshdata_xml
 
 # XML element parents and names
 BODY_COND_PARENT = "Rigid"
+BODY_COND_NAME = "rigid_constraint"
 MESH_PARENT = "Mesh"
 ELEMENTDATA_PARENT = "MeshData"
 NODEDATA_PARENT = "MeshData"
@@ -36,6 +37,15 @@ XML_RB_DOF_FROM_DOF = {
     "α1": "Ru",
     "α2": "Rv",
     "α3": "Rw",
+}
+DOF_FROM_XML_RB_DOF = {v: k for k, v in XML_RB_DOF_FROM_DOF.items()}
+VAR_FROM_XML_RB_DOF = {
+    "Rx": "displacement",
+    "Ry": "displacement",
+    "Rz": "displacement",
+    "Ru": "rotation",
+    "Rv": "rotation",
+    "Rw": "rotation",
 }
 
 # Map of Ticker fields → elements relative to <Step>
@@ -159,6 +169,54 @@ def read_domains(root: ET.Element):
     return domains
 
 
+def apply_body_bc(model, e_rbc, explicit_bodies, implicit_bodies, step):
+    """Read & apply a <rigid_constraint> element
+
+    model := Model object.
+
+    e_rigid_body := The <rigid_constraint> XML element.
+
+    explicit_bodies := map of material ID → body.
+
+    implicit_bodies := map of material ID → body.
+
+    step := The step to which the rigid body boundary condition belongs.
+
+    """
+    # Each <rigid_body> element defines constraints for one rigid body,
+    # identified by its material ID.  Constraints may be fixed
+    # (atemporal) or time-varying (temporal).
+    #
+    # Get the Body object from the material id
+    mat_id = int(find_unique_tag(e_rbc, "rb").text) - 1
+    if mat_id in explicit_bodies:
+        body = explicit_bodies[mat_id]
+    else:
+        # Assume mat_id refers to an implicit rigid body
+        body = implicit_bodies[mat_id]
+    # Variable displacement case:
+    if e_rbc.attrib["type"] == BC_TYPE_TAG["body"][("variable", "displacement")]:
+        var = "displacement"
+        dof = DOF_FROM_XML_RB_DOF[find_unique_tag(e_rbc, "dof").text]
+        e_seq = find_unique_tag(e_rbc, "value")
+        seq = read_parameter(e_seq, model.named["sequences"])
+        # Relative?
+        e_relative = find_unique_tag(e_rbc, "relative")
+        if e_relative is None:
+            relative = False
+        else:
+            relative = text_to_bool(e_relative.text)
+        model.apply_body_bc(body, dof, var, seq, relative=relative, step=step)
+    # Fixed displacement case:
+    elif e_rbc.attrib["type"] == BC_TYPE_TAG["body"][("fixed", "displacement")]:
+        xml_dofs = (s.strip() for s in find_unique_tag(e_rbc, "dofs").text.split(","))
+        for xml_dof in xml_dofs:
+            dof = DOF_FROM_XML_RB_DOF[xml_dof]
+            var = VAR_FROM_XML_RB_DOF[xml_dof]
+            model.fixed["body"][(dof, var)].add(body)
+    # TODO: variable force
+
+
 def sequences(root: Element) -> Dict[int, Sequence]:
     """Return dictionary of sequence ID → sequence from FEBio XML 3.0"""
     sequences = {}
@@ -214,7 +272,7 @@ def body_constraints_xml(
             variable_constraints.append((dof, bc))
     # Create <rigid_constraint> element for fixed constraints
     if fixed_constraints:
-        e_rb_fixed = ET.Element("rigid_constraint")
+        e_rb_fixed = ET.Element(BODY_COND_NAME)
         e_rb_fixed.attrib["type"] = BC_TYPE_TAG["body"][("fixed", "displacement")]
         ET.SubElement(e_rb_fixed, "rb").text = str(mat_id + 1)
         ET.SubElement(e_rb_fixed, "dofs").text = ",".join(
@@ -225,7 +283,7 @@ def body_constraints_xml(
     # think you must use a separate element for each degree of freedom
     # (x, y, z, Rx, Ry, Rz).
     for dof, bc in variable_constraints:
-        e_rb = ET.Element("rigid_constraint")
+        e_rb = ET.Element(BODY_COND_NAME)
         k = ("variable", bc["variable"])
         e_rb.attrib["type"] = BC_TYPE_TAG["body"][k]
         ET.SubElement(e_rb, "rb").text = str(mat_id + 1)

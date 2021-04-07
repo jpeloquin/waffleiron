@@ -92,6 +92,28 @@ def test_pipeline_prescribe_deformation_singleHex8(febio_cmd_xml):
     npt.assert_array_almost_equal_nulp(F_febio, F)
 
 
+def test_FEBio_prescribe_rigid_body_displacement(febio_cmd_xml):
+    """E2E test of prescribed rigid body displacement boundary condition"""
+    febio_cmd, xml_version = febio_cmd_xml
+    # Test 1: Read
+    pth_in = (
+        DIR_FIXTURES
+        / f"{Path(__file__).with_suffix('').name}.prescribe_rigid_body_displacement.feb"
+    )
+    model = feb.load_model(pth_in)
+    # Verify that global rigid body fixed constraints were picked up
+    for dof, var in [
+        ("x1", "displacement"),
+        ("x2", "displacement"),
+        ("α1", "rotation"),
+        ("α2", "rotation"),
+        ("α3", "rotation"),
+    ]:
+        assert len(model.fixed["body"][(dof, var)]) == 1
+    # Verify that step-specific rigid body prescribed constraints were picked up
+    assert len(model.steps[0].step.bc["body"]) == 1
+
+
 def test_FEBio_prescribe_node_pressure_Hex8(febio_cmd_xml):
     """E2E test of prescribed nodal pressure boundary condition"""
     febio_cmd, xml_version = febio_cmd_xml

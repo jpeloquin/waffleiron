@@ -22,6 +22,7 @@ from .febioxml import *
 
 # XML element parents and names
 BODY_COND_PARENT = "Boundary"
+BODY_COND_NAME = "rigid_body"
 MESH_PARENT = "Geometry"
 ELEMENTDATA_PARENT = "MeshData"
 NODEDATA_PARENT = "MeshData"
@@ -208,7 +209,7 @@ def sequences(root: Element) -> Dict[int, Sequence]:
     return sequences
 
 
-def read_rigid_body_bc(model, e_rigid_body, explicit_bodies, implicit_bodies, step):
+def apply_body_bc(model, e_rigid_body, explicit_bodies, implicit_bodies, step):
     """Read & apply a <rigid_body> element
 
     model := Model object.
@@ -234,11 +235,11 @@ def read_rigid_body_bc(model, e_rigid_body, explicit_bodies, implicit_bodies, st
         # Assume mat_id refers to an implicit rigid body
         body = implicit_bodies[mat_id]
     # Read the body's constraints
-    for e_dof in e_rigid_body.findall("fixed"):
+    for e_dof in e_rigid_body.findall(BC_TYPE_TAG["body"]["fixed"]):
         dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
         var = VAR_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
         model.fixed["body"][(dof, var)].add(body)
-    for e_dof in e_rigid_body.findall("prescribed"):
+    for e_dof in e_rigid_body.findall(BC_TYPE_TAG["body"]["variable"]):
         dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
         var = VAR_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
         seq = read_parameter(e_dof, model.named["sequences"])
@@ -246,7 +247,7 @@ def read_rigid_body_bc(model, e_rigid_body, explicit_bodies, implicit_bodies, st
             relative = True
         else:
             relative = False
-        model.apply_body_bc(body, dof, var, seq, step, relative=relative, step=step)
+        model.apply_body_bc(body, dof, var, seq, relative=relative, step=step)
 
 
 # Functions for writing XML 2.5
