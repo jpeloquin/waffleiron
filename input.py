@@ -177,6 +177,11 @@ def read_step(step_xml, model, physics, febioxml_module):
             p = paramdict[f.name]
             if isinstance(p, ReqParameter):
                 e = find_unique_tag(xml, p.path)
+                if e is None:
+                    fullpath = "/".join((xml.getroottree().getpath(xml), p.path))
+                    raise ValueError(
+                        f"Required XML element '{fullpath}' was not found in '{xml.base}'."
+                    )
                 kwargs[f.name] = cls(e.text)
             else:  # Optional parameter
                 e = xml.findall(p.path)
@@ -196,7 +201,10 @@ def read_step(step_xml, model, physics, febioxml_module):
     kwargs = get_kwargs(step_xml, Ticker, fx.TICKER_PARAMS)
     # dtmax may be a sequence, so takes special handling
     e = find_unique_tag(step_xml, "Control/time_stepper/dtmax")
-    kwargs["dtmax"] = read_parameter(e, model.named["sequences"])
+    if e is not None:
+        kwargs["dtmax"] = read_parameter(e, model.named["sequences"])
+    else:
+        kwargs["dtmax"] = fx.TICKER_PARAMS["dtmax"].default
     ticker = Ticker(**kwargs)
     kwargs = get_kwargs(step_xml, IterController, fx.CONTROLLER_PARAMS)
     controller = IterController(**kwargs)

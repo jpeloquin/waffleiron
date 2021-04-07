@@ -42,8 +42,8 @@ XML_RB_DOF_FROM_DOF = {
 TICKER_PARAMS = {
     "n": ReqParameter("Control/time_steps"),
     "dtnom": ReqParameter("Control/step_size"),
-    "dtmin": ReqParameter("Control/time_stepper/dtmin"),
-    "dtmax": ReqParameter("Control/time_stepper/dtmax"),
+    "dtmin": OptParameter("Control/time_stepper/dtmin", 0),  # undocumented default
+    "dtmax": OptParameter("Control/time_stepper/dtmax", 0.05),  # undocumented default
 }
 # Map of Controller fields → elements relative to <Step>
 CONTROLLER_PARAMS = {
