@@ -131,7 +131,7 @@ def iter_node_conditions(root):
                 }
             else:
                 # Homogeneous condition
-                info["scale"] = to_number(e_value.text)
+                info["scale"] = to_number(e_scale.text)
             e_relative = e_prescribe.find("relative")
             if e_relative is not None:
                 info["relative"] = True
