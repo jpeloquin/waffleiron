@@ -103,14 +103,15 @@ def test_FEBio_prescribe_rigid_body_displacement(febio_cmd_xml):
     model = feb.load_model(pth_in)
     # Verify that global rigid body fixed constraints were picked up
     for dof, var in [
-        ("x1", "displacement"),
         ("x2", "displacement"),
         ("α1", "rotation"),
         ("α2", "rotation"),
         ("α3", "rotation"),
     ]:
         assert len(model.fixed["body"][(dof, var)]) == 1
-    # Verify that step-specific rigid body prescribed constraints were picked up
+    # Verify that global variable body displacement constraints were picked up
+    assert len(model.varying["body"]) == 1
+    # Verify that step-specific rigid body prescribed constraints were picked up.
     assert len(model.steps[0].step.bc["body"]) == 1
     # Test 2: Write
     pth_out = DIR_THIS / "output" / f"{pth_in.stem}.{febio_cmd}.xml{xml_version}.feb"
@@ -123,7 +124,7 @@ def test_FEBio_prescribe_rigid_body_displacement(febio_cmd_xml):
     δz = solved.solution.values("displacement", 0)["displacement"][-1][2]
     npt.assert_almost_equal(δz, 0.43)
     δx = solved.solution.values("displacement", 0)["displacement"][-1][0]
-    npt.assert_almost_equal(δx, 0)
+    npt.assert_almost_equal(δx, 0.19)
     δy = solved.solution.values("displacement", 0)["displacement"][-1][1]
     npt.assert_almost_equal(δy, 0)
 

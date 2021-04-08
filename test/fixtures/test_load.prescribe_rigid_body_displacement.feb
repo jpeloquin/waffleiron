@@ -22,9 +22,17 @@
     <ShellDomain name="rigid_plane" mat="rigid"/>
   </MeshDomains>
   <Rigid>
+    <!-- Test constant body displacement defined in global section -->
     <rigid_constraint name="fixed_axes" type="fix">
       <rb>1</rb>
-      <dofs>Rx,Ry,Ru,Rv,Rw</dofs>
+      <dofs>Ry,Ru,Rv,Rw</dofs>
+    </rigid_constraint>
+    <!-- Test variable body displacement defined in global section -->
+    <rigid_constraint name="variable global" type="prescribe">
+      <rb>1</rb>
+      <dof>Rx</dof>
+      <value lc="1">0.19</value>
+      <relative>0</relative>
     </rigid_constraint>
   </Rigid>
   <LoadData>
@@ -60,12 +68,17 @@
         </solver>
       </Control>
       <Rigid>
+        <!-- Test variable body displacement defined in step section -->
         <rigid_constraint name="z-displacement" type="prescribe">
           <rb>1</rb>
           <dof>Rz</dof>
           <value lc="1">0.43</value>
           <relative>0</relative>
         </rigid_constraint>
+        <!-- Don't test constant body displacement defined in step
+             section; in FEBio, constant constraints in a simulation
+             step is not recommended because they may not be applied
+             correctly. -->
       </Rigid>
     </step>
   </Step>
