@@ -67,7 +67,7 @@ def test_write_Faraday_constant(xml_version):
 
 def test_repeated_write_gives_same_output(xml_version):
     """Test repeated write of same model file"""
-    pth_in = DIR_FIXTURES / "uniaxial_testion_implicit_rb_grips_biphasic.feb"
+    pth_in = DIR_FIXTURES / "uniaxial_tension_implicit_rb_grips_biphasic.feb"
     model = feb.load_model(pth_in)
     # First write
     print("Write 1")
