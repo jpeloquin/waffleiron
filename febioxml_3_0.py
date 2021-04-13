@@ -1,12 +1,14 @@
+# Base packages
 from collections import defaultdict
 from typing import Dict
 
 # Same-package modules
 from .core import ZeroIdxID, OneIdxID, Body, ImplicitBody, Extrapolant, Interpolant
+from .control import SaveIters
 from .febioxml import *
 
 # These parts work the same as in FEBio XML 2.5
-from .febioxml_2_5 import meshdata_xml
+from .febioxml_2_5 import contact_bare_xml, meshdata_xml
 
 # Facts about FEBio XML 3.0
 
@@ -18,6 +20,8 @@ ELEMENTDATA_PARENT = "MeshData"
 NODEDATA_PARENT = "MeshData"
 ELEMENTSET_PARENT = "Mesh"
 NODESET_PARENT = "Mesh"
+SURFACEPAIR_LEADER_NAME = "primary"
+SURFACEPAIR_FOLLOWER_NAME = "secondary"
 STEP_PARENT = "Step"
 STEP_NAME = "step"
 
@@ -50,32 +54,39 @@ VAR_FROM_XML_RB_DOF = {
 
 # Map of Ticker fields → elements relative to <Step>
 TICKER_PARAMS = {
-    "n": ReqParameter("Control/time_steps"),
-    "dtnom": ReqParameter("Control/step_size"),
-    "dtmin": OptParameter("Control/time_stepper/dtmin", 0),  # undocumented default
-    "dtmax": OptParameter("Control/time_stepper/dtmax", 0.05),  # undocumented default
+    "n": ReqParameter("Control/time_steps", int),
+    "dtnom": ReqParameter("Control/step_size", to_number),
+    "dtmin": OptParameter(
+        "Control/time_stepper/dtmin", to_number, 0
+    ),  # undocumented default
+    "dtmax": OptParameter(
+        "Control/time_stepper/dtmax", to_number, 0.05
+    ),  # undocumented default
 }
 # Map of Controller fields → elements relative to <Step>
 CONTROLLER_PARAMS = {
-    "max_retries": OptParameter("Control/time_stepper/max_retries", 5),
-    "opt_iter": OptParameter("Control/time_stepper/opt_iter", 10),
-    "save_iters": OptParameter("Control/plot_level", "PLOT_MAJOR_ITRS"),
+    "max_retries": OptParameter("Control/time_stepper/max_retries", int, 5),
+    "opt_iter": OptParameter("Control/time_stepper/opt_iter", int, 10),
+    "save_iters": OptParameter("Control/plot_level", SaveIters, SaveIters.MAJOR),
 }
 # Map of Solver fields → elements relative to <Step>
 SOLVER_PARAMS = {
-    "dtol": OptParameter("Control/solver/dtol", 0.001),
-    "etol": OptParameter("Control/solver/etol", 0.01),
-    "rtol": OptParameter("Control/solver/rtol", 0),
-    "lstol": OptParameter("Control/solver/lstol", 0.9),
-    "ptol": OptParameter("Control/solver/ptol", 0.01),
-    "min_residual": OptParameter("Control/solver/min_residual", 1e-20),
-    "update_method": OptParameter("Control/solver/qnmethod", "BFGS"),
-    "reform_each_time_step": OptParameter("Control/solver/reform_each_time_step", True),
-    "reform_on_diverge": OptParameter("Control/solver/diverge_reform", True),
-    "max_refs": OptParameter("Control/solver/max_refs", 15),
-    "max_ups": OptParameter("Control/solver/max_ups", 10),
+    "dtol": OptParameter("Control/solver/dtol", to_number, 0.001),
+    "etol": OptParameter("Control/solver/etol", to_number, 0.01),
+    "rtol": OptParameter("Control/solver/rtol", to_number, 0),
+    "lstol": OptParameter("Control/solver/lstol", to_number, 0.9),
+    "ptol": OptParameter("Control/solver/ptol", to_number, 0.01),
+    "min_residual": OptParameter("Control/solver/min_residual", to_number, 1e-20),
+    "update_method": OptParameter("Control/solver/qnmethod", str, "BFGS"),
+    "reform_each_time_step": OptParameter(
+        "Control/solver/reform_each_time_step", text_to_bool, True
+    ),
+    "reform_on_diverge": OptParameter(
+        "Control/solver/diverge_reform", text_to_bool, True
+    ),
+    "max_refs": OptParameter("Control/solver/max_refs", int, 15),
+    "max_ups": OptParameter("Control/solver/max_ups", int, 10),
 }
-
 
 # Functions for reading FEBio XML 3.0
 
@@ -217,6 +228,17 @@ def apply_body_bc(model, e_rbc, explicit_bodies, implicit_bodies, step):
     # TODO: variable force
 
 
+def get_surface_name(surfacepair_subelement):
+    """Return surface name for subelement of SurfacePair
+
+    For example, return "surface1" for the element <primary>surface1</primary>.
+
+    This function exists because the surface name was an attribute in FEBio XML 2.5.
+
+    """
+    return surfacepair_subelement.text
+
+
 def sequences(root: Element) -> Dict[int, Sequence]:
     """Return dictionary of sequence ID → sequence from FEBio XML 3.0"""
     sequences = {}
@@ -311,6 +333,9 @@ def body_constraints_xml(
             )
         elems.append(e_rb)
     return elems
+
+
+# contact_bare_xml is provided by febioxml_2_5
 
 
 def mesh_xml(model, domains, material_registry):
@@ -470,7 +495,12 @@ def sequence_xml(sequence: Sequence, sequence_id: int, t0=0.0):
 
 
 def surface_pair_xml(faceset_registry, primary, secondary, name):
-    """Return SurfacePair XML element."""
+    """Return SurfacePair XML element.
+
+    The surfaces (face sets) involved in the surface pair must already have names in
+    `faceset_registry`.
+
+    """
     e_surfpair = ET.Element("SurfacePair", name=name)
     ET.SubElement(e_surfpair, "primary").text = faceset_registry.names(primary)[0]
     ET.SubElement(e_surfpair, "secondary").text = faceset_registry.names(secondary)[0]

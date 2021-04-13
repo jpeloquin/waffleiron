@@ -1,7 +1,10 @@
+import dataclasses
 from copy import copy
+from dataclasses import dataclass
 from enum import Enum
+from numbers import Number
 from operator import itemgetter
-from typing import Hashable, NewType, Union
+from typing import Hashable, NewType, Union, Optional
 from warnings import warn
 
 import numpy as np
@@ -91,44 +94,51 @@ class RigidInterface:
         self.node_set = node_set
 
 
+@dataclass
 class ContactConstraint:
     """A constraint defining contact between two surfaces."""
 
+    leader: FaceSet
+    follower: FaceSet
+    algorithm: str
+    search_scale: Number
+    projection_tol: Number
+    augmented_lagrange_rtol: Number
+    augmented_lagrange_gapnorm_atol: Optional[Number]
+    tension: bool = False
+    penalty_factor: Number = 1
+    auto_adjust_penalty: bool = False
+    use_augmented_lagrange: bool = False
+    passes: int = 1
+    symmetric_stiffness: bool = False
+    augmented_lagrange_minaug: int = 0
+    augmented_lagrange_maxaug: int = 10
+
     def __init__(
         self,
-        leader,
-        follower,
-        algorithm=None,
-        auto_penalty=True,
-        auto_penalty_scale=1,
-        penalty_factor=None,
-        augmented_lagrange=False,
-        passes=1,
-        symmetric_stiffness=False,
-        tension=False,
+        leader: FaceSet,
+        follower: FaceSet,
         **kwargs,
     ):
         self.leader = leader
         self.follower = follower
-        self.algorithm = algorithm
-        self.tension = tension
-        self.augmented_lagrange = augmented_lagrange
-        self.symmetric_stiffness = symmetric_stiffness
-        self.passes = passes
-        if auto_penalty:
-            self.penalty = {"type": "auto", "factor": auto_penalty_scale}
-            if penalty_factor is not None:
-                warn(
-                    "A value for `penalty_factor` was provided, but automatic penalty factor calculation was also requested.  The `penalty_factor` value will not be used.  You may want to set `auto_penalty_scale` instead."
-                )
-        else:
-            assert penalty_factor is not None
-            self.penalty = {"type": "manual", "factor": penalty_factor}
-        self.other_params = {}
+        # Set optional parameters
+        fields = set(f.name for f in dataclasses.fields(self))
         for k, v in kwargs.items():
-            self.other_params[k] = v
+            if k in fields:
+                setattr(self, k, v)
+            else:
+                raise TypeError(f"__init__() got an unexpected keyword argument '{k}'")
         # TODO: Warn if two passes are specified and at least one of the
         # surfaces belongs to a rigid body.
+
+    def __hash__(self):
+        """Return object identifier
+
+        Implemented so ContactConstraint can be used as a key in dictionaries.
+
+        """
+        return id(self) // 16
 
 
 def _canonical_face(face):

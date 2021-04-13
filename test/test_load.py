@@ -19,6 +19,7 @@ from febtools.test.fixtures import DIR_OUT, febio_cmd_xml, gen_model_single_spik
 
 DIR_THIS = Path(__file__).parent
 DIR_FIXTURES = DIR_THIS / "fixtures"
+DIR_OUTPUT = DIR_THIS / "output"
 
 
 def test_pipeline_prescribe_deformation_singleHex8(febio_cmd_xml):
@@ -90,6 +91,39 @@ def test_pipeline_prescribe_deformation_singleHex8(febio_cmd_xml):
         ]
     )
     npt.assert_array_almost_equal_nulp(F_febio, F)
+
+
+def test_FEBio_tied_elastic_contact(febio_cmd_xml):
+    """E2E test of FEBio tied elastic contact"""
+    febio_cmd, xml_version = febio_cmd_xml
+    # Test 1: Read
+    mod = Path(__file__).with_suffix("").name
+    pth_in = DIR_FIXTURES / f"{mod}.tied_elastic_contact.feb"
+    model = feb.load_model(pth_in)
+    # Verify that contact exists
+    assert len(model.constraints) == 1
+    # Test 2: Write
+    pth_out = DIR_OUTPUT / f"{pth_in.stem}.{febio_cmd}.xml{xml_version}.feb"
+    with open(pth_out, "wb") as f:
+        feb.output.write_feb(model, f, xml_version)
+    # Test 3: Solve - Can FEBio use the roundtripped file?
+    feb.febio.run_febio_checked(pth_out, cmd=febio_cmd)
+    # Test 4: Is the output as expected?
+    solved = feb.load_model(pth_out)
+    # Test 4.0: Did the nodes of the rigid indenter move down?
+    rigid_nodes = [i for face in model.named["face sets"].obj("indenter") for i in face]
+    for idx in rigid_nodes:
+        δz = solved.solution.values("displacement", idx)["displacement"][-1][2]
+        npt.assert_almost_equal(δz, -0.11)
+    # Test 4.1: Did the top nodes of the deformable solid move down?
+    top_nodes = [i for face in model.named["face sets"].obj("top") for i in face]
+    for idx in top_nodes:
+        δz = solved.solution.values("displacement", idx)["displacement"][-1][2]
+        npt.assert_almost_equal(δz, -0.11)
+    # Test 4.2: Was the correct strain produced?
+    e_solid = [e for e in solved.mesh.elements if isinstance(e, feb.element.Hex8)][0]
+    F = e_solid.f((0, 0, 0))
+    npt.assert_almost_equal(F[2, 2], (0.3 - 0.11) / 0.3)
 
 
 def test_FEBio_prescribe_rigid_body_displacement(febio_cmd_xml):

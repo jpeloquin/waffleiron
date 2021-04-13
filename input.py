@@ -51,13 +51,14 @@ from .febioxml import (
     SUPPORTED_FEBIO_XML_VERS,
     elem_cls_from_feb,
     normalize_xml,
-    read_contacts,
     to_number,
     maybe_to_number,
     find_unique_tag,
     read_parameter,
+    read_parameters,
     OptParameter,
     ReqParameter,
+    text_to_bool,
 )
 
 
@@ -71,6 +72,46 @@ def _nstrip(string):
 
 def _vec_from_text(s) -> tuple:
     return tuple(to_number(x.strip()) for x in s.split(","))
+
+
+def read_contacts(root, named_face_sets, febioxml_module):
+    global_contacts = []
+    step_contacts = []
+    for e in root.findall("Contact/contact"):
+        global_contacts.append(read_contact(e, named_face_sets, febioxml_module))
+    for e_Step in root.findall("Step"):
+        contacts = []
+        for e in e_Step.findall("Contact/contact"):
+            contacts.append(read_contact(e, named_face_sets, febioxml_module))
+        step_contacts.append(contacts)
+    return global_contacts, step_contacts
+
+
+def read_contact(e_contact: Element, named_face_sets, febioxml_module):
+    fx = febioxml_module
+    tree = e_contact.getroottree()
+    root = tree.getroot()
+    surf_pair = e_contact.attrib["surface_pair"]
+    e_SurfacePair = find_unique_tag(
+        root, f"{fx.MESH_PARENT}/SurfacePair[@name='{surf_pair}']"
+    )
+    e_leader = find_unique_tag(e_SurfacePair, fx.SURFACEPAIR_LEADER_NAME)
+    e_follower = find_unique_tag(e_SurfacePair, fx.SURFACEPAIR_FOLLOWER_NAME)
+    leader = named_face_sets.obj(fx.get_surface_name(e_leader))
+    follower = named_face_sets.obj(fx.get_surface_name(e_follower))
+    # Read simple parameters
+    kwargs = read_parameters(e_contact, fx.CONTACT_PARAMS)
+    # "two_pass" requires special handling
+    if (e_two_pass := e_contact.find("two_pass")) is not None:
+        two_pass = text_to_bool(e_two_pass.text)
+        if two_pass:
+            kwargs["passes"] = 2
+        else:
+            kwargs["passes"] = 1
+    contact = ContactConstraint(
+        leader, follower, algorithm=e_contact.attrib["type"], **kwargs
+    )
+    return contact
 
 
 def read_febio_xml(f):
@@ -165,42 +206,9 @@ def read_step(step_xml, model, physics, febioxml_module):
 
     step_name = step_xml.attrib["name"] if "name" in step_xml.attrib else None
 
-    # Control section
-    def get_kwargs(xml, cls, paramdict):
-        """Return kwargs for a dataclass from a <Step> element"""
-        kwargs = {}
-        for f in dataclasses.fields(cls):
-            cls = f.type
-            if not cls in (str, float, int):
-                # Complex values must be handled individually, for now
-                continue
-            p = paramdict[f.name]
-            if isinstance(p, ReqParameter):
-                e = find_unique_tag(xml, p.path)
-                if e is None:
-                    fullpath = "/".join((xml.getroottree().getpath(xml), p.path))
-                    raise ValueError(
-                        f"Required XML element '{fullpath}' was not found in '{xml.base}'."
-                    )
-                kwargs[f.name] = cls(e.text)
-            else:  # Optional parameter
-                e = xml.findall(p.path)
-                if len(e) == 0:
-                    # Use default
-                    kwargs[f.name] = p.default
-                elif len(e) > 1:
-                    parentpath = e[0].getroottree().getpath(e.getparent())
-                    raise ValueError(
-                        f"{e.base}:{e.sourceline} {parentpath} has {len(e)} {e.tag} elements.  It should have at most one."
-                    )
-                else:  # len(s) == 1
-                    e = e[0]
-                    kwargs[f.name] = cls(e.text)
-        return kwargs
-
-    ticker_kwargs = get_kwargs(step_xml, Ticker, fx.TICKER_PARAMS)
-    solver_kwargs = get_kwargs(step_xml, Solver, fx.SOLVER_PARAMS)
-    controller_kwargs = get_kwargs(step_xml, IterController, fx.CONTROLLER_PARAMS)
+    ticker_kwargs = read_parameters(step_xml, fx.TICKER_PARAMS)
+    solver_kwargs = read_parameters(step_xml, fx.SOLVER_PARAMS)
+    controller_kwargs = read_parameters(step_xml, fx.CONTROLLER_PARAMS)
     # Must points, and hence dtmax, take special handling
     e = find_unique_tag(step_xml, "Control/time_stepper/dtmax")
     if e is not None:
@@ -763,7 +771,7 @@ class FebReader:
 
         # Read contacts into steps
         global_contacts, step_contacts = read_contacts(
-            self.root, model.named["face sets"]
+            self.root, model.named["face sets"], fx
         )
         for contact in global_contacts:
             model.add_contact(contact)

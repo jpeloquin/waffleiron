@@ -2,7 +2,7 @@
 from collections import defaultdict
 from typing import Dict
 
-# System packages
+# Public packages
 from lxml import etree as ET
 
 # Same-package modules
@@ -15,6 +15,7 @@ from .core import (
     Body,
     ImplicitBody,
 )
+from .control import SaveIters
 from .febioxml import *
 
 
@@ -29,6 +30,8 @@ NODEDATA_PARENT = "MeshData"
 ELEMENTSET_PARENT = "Geometry"
 STEP_PARENT = "."
 STEP_NAME = "Step"
+SURFACEPAIR_LEADER_NAME = "master"
+SURFACEPAIR_FOLLOWER_NAME = "slave"
 
 BC_TYPE_TAG = {
     "node": {"variable": "prescribe", "fixed": "fix"},
@@ -37,30 +40,36 @@ BC_TYPE_TAG = {
 
 # Map of Ticker fields → elements relative to <Step>
 TICKER_PARAMS = {
-    "n": ReqParameter("Control/time_steps"),
-    "dtnom": ReqParameter("Control/step_size"),
-    "dtmin": OptParameter("Control/time_stepper/dtmin", 0),  # undocumented default
-    "dtmax": OptParameter("Control/time_stepper/dtmax", 0.05),  # undocumented default
+    "n": ReqParameter("Control/time_steps", int),
+    "dtnom": ReqParameter("Control/step_size", to_number),
+    "dtmin": OptParameter(
+        "Control/time_stepper/dtmin", to_number, 0
+    ),  # undocumented default
+    "dtmax": OptParameter(
+        "Control/time_stepper/dtmax", to_number, 0.05
+    ),  # undocumented default
 }
 # Map of Controller fields → elements relative to <Step>
 CONTROLLER_PARAMS = {
-    "max_retries": OptParameter("Control/time_stepper/max_retries", 5),
-    "opt_iter": OptParameter("Control/time_stepper/opt_iter", 10),
-    "save_iters": OptParameter("Control/plot_level", "PLOT_MAJOR_ITRS"),
+    "max_retries": OptParameter("Control/time_stepper/max_retries", int, 5),
+    "opt_iter": OptParameter("Control/time_stepper/opt_iter", int, 10),
+    "save_iters": OptParameter("Control/plot_level", SaveIters, SaveIters.MAJOR),
 }
 # Map of Solver fields → elements relative to <Step>
 SOLVER_PARAMS = {
-    "dtol": OptParameter("Control/dtol", 0.001),
-    "etol": OptParameter("Control/etol", 0.01),
-    "rtol": OptParameter("Control/rtol", 0),
-    "lstol": OptParameter("Control/lstol", 0.9),
-    "ptol": OptParameter("Control/ptol", 0.01),
-    "min_residual": OptParameter("Control/min_residual", 1e-20),
-    "update_method": OptParameter("Control/qnmethod", "BFGS"),
-    "reform_each_time_step": OptParameter("Control/reform_each_time_step", True),
-    "reform_on_diverge": OptParameter("Control/diverge_reform", True),
-    "max_refs": OptParameter("Control/max_refs", 15),
-    "max_ups": OptParameter("Control/max_ups", 10),
+    "dtol": OptParameter("Control/dtol", to_number, 0.001),
+    "etol": OptParameter("Control/etol", to_number, 0.01),
+    "rtol": OptParameter("Control/rtol", to_number, 0),
+    "lstol": OptParameter("Control/lstol", to_number, 0.9),
+    "ptol": OptParameter("Control/ptol", to_number, 0.01),
+    "min_residual": OptParameter("Control/min_residual", to_number, 1e-20),
+    "update_method": OptParameter("Control/qnmethod", str, "BFGS"),
+    "reform_each_time_step": OptParameter(
+        "Control/reform_each_time_step", text_to_bool, True
+    ),
+    "reform_on_diverge": OptParameter("Control/diverge_reform", text_to_bool, True),
+    "max_refs": OptParameter("Control/max_refs", int, 15),
+    "max_ups": OptParameter("Control/max_ups", int, 10),
 }
 
 
@@ -166,6 +175,18 @@ def iter_node_conditions(root):
                 info["relative"] = True
             info["step ID"] = step_id
             yield info
+
+
+def get_surface_name(surfacepair_subelement):
+    """Return surface name for subelement of SurfacePair
+
+    For example, return "surface1" for the element <primary surface="surface1"/>.
+
+    This function exists because the surface name changed to element content in FEBio
+    XML 3.0.
+
+    """
+    return surfacepair_subelement.attrib["surface"]
 
 
 def read_domains(root: ET.Element):
@@ -293,6 +314,37 @@ def body_constraints_xml(
                 e_bc.attrib["type"] = "relative"
             e_bc.text = str(v)
     return [e_rb_bc]
+
+
+def contact_bare_xml(contact, model, named_surface_pairs, contact_name=None):
+    """Return <contact> element specifying type and surfaces
+
+    In FEBio XML 2.5, the surfaces involved in a contact are written as a reference
+    to a named surface pair.
+
+    """
+    e_contact = ET.Element("contact", type=contact.algorithm)
+    # Contact name
+    if contact_name is not None:
+        e_contact.attrib["name"] = str(contact_name)
+    # Autogenerate names for the "surfaces" (face sets) in the contact.  This doesn't
+    # have a direct impact on the <contact> element; the point of doing this is the
+    # side effect of naming the face sets involved in the contact.
+    surface_name = {"leader": "", "follower": ""}
+    for k in surface_name:
+        face_set = getattr(contact, k)
+        nm = model.named["face sets"].get_or_create_name(
+            f"contact_surface_-_{contact.algorithm}",
+            face_set,
+        )
+        surface_name[k] = nm
+    # Contact surface (face set) pair
+    nm_surfpair = named_surface_pairs.get_or_create_name(
+        f"contact_surfaces_-_{contact.algorithm}",
+        (contact.leader, contact.follower),
+    )
+    e_contact.attrib["surface_pair"] = nm_surfpair
+    return e_contact
 
 
 def mesh_xml(model, domains, material_registry):

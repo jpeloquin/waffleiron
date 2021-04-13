@@ -25,100 +25,8 @@ from .math import orthonormal_basis
 
 # Helper classes
 
-OptParameter = namedtuple("OptParameter", ["path", "default"])
-ReqParameter = namedtuple("ReqParameter", ["path"])
-
-
-# Facts about FEBio XML
-
-SUPPORTED_FEBIO_XML_VERS = ("2.0", "2.5", "3.0")
-
-SEQUENCE_PARENT = "LoadData"
-
-# Map "bc" attribute value from <prescribe>, <prescribed>, <fix>, or
-# <fixed> element to a variable name.  This list is valid for both node
-# and rigid body conditions.  FEBio handles force conditions in other
-# XML elements: for rigid bodies, <force>, and for nodes, <nodal_load>.
-VAR_FROM_XML_NODE_BC = {
-    "x": "displacement",
-    "y": "displacement",
-    "z": "displacement",
-    "Rx": "rotation",
-    "Ry": "rotation",
-    "Rz": "rotation",
-    "p": "pressure",
-}
-# Map "bc" attribute value from <prescribe>, <prescribed>,
-# <fix>, or <fixed> element to a degree of freedom.
-DOF_NAME_FROM_XML_NODE_BC = {
-    "x": "x1",
-    "y": "x2",
-    "z": "x3",
-    "Rx": "α1",
-    "Ry": "α2",
-    "Rz": "α3",
-    "p": "fluid",
-}
-
-XML_BC_FROM_DOF = {
-    (dof, VAR_FROM_XML_NODE_BC[tag]): tag
-    for tag, dof in DOF_NAME_FROM_XML_NODE_BC.items()
-}
-XML_BC_FROM_DOF.update(
-    {("x1", "force"): "x", ("x2", "force"): "y", ("x3", "force"): "z"}
-)
-
-XML_INTERP_FROM_INTERP = {
-    Interpolant.STEP: "step",
-    Interpolant.LINEAR: "linear",
-    Interpolant.SPLINE: "smooth",
-}
-INTERP_FROM_XML_INTERP = {v: k for k, v in XML_INTERP_FROM_INTERP.items()}
-
-XML_EXTRAP_FROM_EXTRAP = {
-    Extrapolant.CONSTANT: "constant",
-    Extrapolant.LINEAR: "extrapolate",
-    Extrapolant.REPEAT: "repeat",
-    Extrapolant.REPEAT_CONTINUOUS: "repeat offset",
-}
-EXTRAP_FROM_XML_EXTRAP = {v: k for k, v in XML_EXTRAP_FROM_EXTRAP.items()}
-
-elem_cls_from_feb = {"quad4": Quad4, "tri3": Tri3, "hex8": Hex8, "penta6": Penta6}
-
-solid_class_from_name = {
-    "isotropic elastic": material.IsotropicElastic,
-    "Holmes-Mow": material.HolmesMow,
-    "fiber-exp-pow": material.ExponentialFiber,
-    "fiber-pow-linear": material.PowerLinearFiber,
-    "neo-Hookean": material.NeoHookean,
-    "solid mixture": material.SolidMixture,
-    "rigid body": material.RigidBody,
-    "biphasic": material.PoroelasticSolid,
-    "Donnan equilibrium": material.DonnanSwelling,
-    "multigeneration": material.Multigeneration,
-    "orthotropic elastic": material.OrthotropicElastic,
-}
-solid_name_from_class = {v: k for k, v in solid_class_from_name.items()}
-
-perm_class_from_name = {
-    "perm-Holmes-Mow": material.IsotropicHolmesMowPermeability,
-    "perm-const-iso": material.IsotropicConstantPermeability,
-}
-perm_name_from_class = {v: k for k, v in perm_class_from_name.items()}
-
-# TODO: Redesign the compatibility system so that compatibility can be
-# derived from the material's type.
-physics_compat_by_mat = {
-    material.PoroelasticSolid: {Physics.BIPHASIC},
-    material.RigidBody: {Physics.SOLID, Physics.BIPHASIC},
-    material.OrthotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
-    material.IsotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
-    material.SolidMixture: {Physics.SOLID, Physics.BIPHASIC},
-    material.PowerLinearFiber: {Physics.SOLID, Physics.BIPHASIC},
-    material.ExponentialFiber: {Physics.SOLID, Physics.BIPHASIC},
-    material.HolmesMow: {Physics.SOLID, Physics.BIPHASIC},
-    material.NeoHookean: {Physics.SOLID, Physics.BIPHASIC},
-}
+OptParameter = namedtuple("OptParameter", ["path", "fun", "default"])
+ReqParameter = namedtuple("ReqParameter", ["path", "fun"])
 
 
 # Functions for traversing a Model in a way that facilitates XML read
@@ -177,81 +85,6 @@ def find_unique_tag(root: Element, path):
         return None
 
 
-def read_contact(e_contact: Element, named_face_sets):
-    tree = e_contact.getroottree()
-    root = tree.getroot()
-    surf_pair = e_contact.attrib["surface_pair"]
-    e_SurfacePair = find_unique_tag(root, f"Geometry/SurfacePair[@name='{surf_pair}']")
-    e_leader = find_unique_tag(e_SurfacePair, "master")
-    e_follower = find_unique_tag(e_SurfacePair, "slave")
-    leader = named_face_sets.obj(e_leader.attrib["surface"])
-    follower = named_face_sets.obj(e_follower.attrib["surface"])
-    kwargs = {}
-    # Most flags (booleans) and can be passed to ContactConstraint as-is
-    flags = (
-        "auto_penalty",
-        "augmented_lagrange",
-        "knmult",
-        "symmetric_stiffness",
-        "tension",
-        "laugon",
-    )
-    for flag in flags:
-        if (e := e_contact.find(flag)) is not None:
-            kwargs[flag] = text_to_bool(e.text)
-    # Most factors (floats) and can be passed to ContactConstraint as-is
-    factors = ("search_radius", "search_tol")
-    for factor in factors:
-        if (e := e_contact.find(factor)) is not None:
-            kwargs[factor] = float(e.text)
-    # Most counts (ints) can be passed to ContactConstraint as-is
-    counts = ("minaug", "maxaug")
-    for count in counts:
-        if (e := e_contact.find(count)) is not None:
-            kwargs[count] = int(e.text)
-    # "penalty" requires special handling
-    if (e_auto := e_contact.find("auto_penalty")) is not None:
-        kwargs["auto_penalty"] = text_to_bool(e_auto.text)
-        e_penalty = e_contact.find("penalty")
-        if kwargs["auto_penalty"]:
-            # An automatic penalty factor is used.  <penalty> is
-            # auto_penalty_scale; it is optional.
-            if e_penalty is not None:
-                kwargs["auto_penalty_scale"] = float(e_penalty.text)
-        else:
-            # A manual penalty factor is used.  <penalty> is the penalty
-            # factor; it is required.
-            if e_penalty is None:
-                raise ValueError(
-                    f"{tree.getpath(e_contact)} has <auto_penalty> set to False.  In this case a manual <penalty> value must be provided, but it is missing."
-                )
-            kwargs["penalty_factor"] = float(e_penalty.text)
-    # "two_pass" requires special handling
-    if (e_two_pass := e_contact.find("two_pass")) is not None:
-        two_pass = text_to_bool(e_two_pass.text)
-        if two_pass:
-            kwargs["passes"] = 2
-        else:
-            kwargs["passes"] = 1
-    contact = ContactConstraint(
-        leader, follower, algorithm=e_contact.attrib["type"], **kwargs
-    )
-    return contact
-
-
-def read_contacts(root, named_face_sets):
-    global_contacts = []
-    step_contacts = []
-    for e in root.findall("Contact/contact"):
-        global_contacts.append(read_contact(e, named_face_sets))
-    for e_Step in root.findall("Step"):
-        contacts = []
-        for e in e_Step.findall("Contact/contact"):
-            contacts.append(read_contact(e, named_face_sets))
-        step_contacts.append(contacts)
-    return global_contacts, step_contacts
-
-
 def read_parameter(e, sequence_registry):
     """Read a parameter from an XML element.
 
@@ -272,6 +105,34 @@ def read_parameter(e, sequence_registry):
     else:
         # The property is fixed
         return to_number(e.text)
+
+
+def read_parameters(xml, paramdict):
+    """Return parameters for a dataclass's fields from an XML element"""
+    params = {}
+    for k, p in paramdict.items():
+        if isinstance(p, ReqParameter):
+            e = find_unique_tag(xml, p.path)
+            if e is None:
+                fullpath = "/".join((xml.getroottree().getpath(e), p.path))
+                raise ValueError(
+                    f"Required XML element '{fullpath}' was not found in '{xml.base}'."
+                )
+            params[k] = p.fun(e.text)
+        else:  # Optional parameter
+            e = xml.findall(p.path)
+            if len(e) == 0:
+                # Use default
+                params[k] = p.default
+            elif len(e) > 1:
+                parentpath = xml.getroottree().getpath(e.getparent())
+                raise ValueError(
+                    f"{xml.base}:{xml.sourceline} {parentpath} has {len(e)} {e.tag} elements.  It should have at most one."
+                )
+            else:  # len(s) == 1
+                e = e[0]
+                params[k] = p.fun(e.text)
+    return params
 
 
 def read_point(text):
@@ -560,3 +421,111 @@ def update_method_to_xml(value, tag):
     """Convert Solver.update_method to XML"""
     conv = {"BFGS": "0", "Broyden": "1"}
     return const_property_to_xml(conv[value], tag)
+
+
+# Facts about FEBio XML.  Define this after the function definitions so
+# that the functions can be referenced here.
+
+SUPPORTED_FEBIO_XML_VERS = ("2.0", "2.5", "3.0")
+
+SEQUENCE_PARENT = "LoadData"
+
+# Map "bc" attribute value from <prescribe>, <prescribed>, <fix>, or
+# <fixed> element to a variable name.  This list is valid for both node
+# and rigid body conditions.  FEBio handles force conditions in other
+# XML elements: for rigid bodies, <force>, and for nodes, <nodal_load>.
+VAR_FROM_XML_NODE_BC = {
+    "x": "displacement",
+    "y": "displacement",
+    "z": "displacement",
+    "Rx": "rotation",
+    "Ry": "rotation",
+    "Rz": "rotation",
+    "p": "pressure",
+}
+# Map "bc" attribute value from <prescribe>, <prescribed>,
+# <fix>, or <fixed> element to a degree of freedom.
+DOF_NAME_FROM_XML_NODE_BC = {
+    "x": "x1",
+    "y": "x2",
+    "z": "x3",
+    "Rx": "α1",
+    "Ry": "α2",
+    "Rz": "α3",
+    "p": "fluid",
+}
+
+XML_BC_FROM_DOF = {
+    (dof, VAR_FROM_XML_NODE_BC[tag]): tag
+    for tag, dof in DOF_NAME_FROM_XML_NODE_BC.items()
+}
+XML_BC_FROM_DOF.update(
+    {("x1", "force"): "x", ("x2", "force"): "y", ("x3", "force"): "z"}
+)
+
+XML_INTERP_FROM_INTERP = {
+    Interpolant.STEP: "step",
+    Interpolant.LINEAR: "linear",
+    Interpolant.SPLINE: "smooth",
+}
+INTERP_FROM_XML_INTERP = {v: k for k, v in XML_INTERP_FROM_INTERP.items()}
+
+XML_EXTRAP_FROM_EXTRAP = {
+    Extrapolant.CONSTANT: "constant",
+    Extrapolant.LINEAR: "extrapolate",
+    Extrapolant.REPEAT: "repeat",
+    Extrapolant.REPEAT_CONTINUOUS: "repeat offset",
+}
+EXTRAP_FROM_XML_EXTRAP = {v: k for k, v in XML_EXTRAP_FROM_EXTRAP.items()}
+
+elem_cls_from_feb = {"quad4": Quad4, "tri3": Tri3, "hex8": Hex8, "penta6": Penta6}
+
+solid_class_from_name = {
+    "isotropic elastic": material.IsotropicElastic,
+    "Holmes-Mow": material.HolmesMow,
+    "fiber-exp-pow": material.ExponentialFiber,
+    "fiber-pow-linear": material.PowerLinearFiber,
+    "neo-Hookean": material.NeoHookean,
+    "solid mixture": material.SolidMixture,
+    "rigid body": material.RigidBody,
+    "biphasic": material.PoroelasticSolid,
+    "Donnan equilibrium": material.DonnanSwelling,
+    "multigeneration": material.Multigeneration,
+    "orthotropic elastic": material.OrthotropicElastic,
+}
+solid_name_from_class = {v: k for k, v in solid_class_from_name.items()}
+
+perm_class_from_name = {
+    "perm-Holmes-Mow": material.IsotropicHolmesMowPermeability,
+    "perm-const-iso": material.IsotropicConstantPermeability,
+}
+perm_name_from_class = {v: k for k, v in perm_class_from_name.items()}
+
+# TODO: Redesign the compatibility system so that compatibility can be
+# derived from the material's type.
+physics_compat_by_mat = {
+    material.PoroelasticSolid: {Physics.BIPHASIC},
+    material.RigidBody: {Physics.SOLID, Physics.BIPHASIC},
+    material.OrthotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
+    material.IsotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
+    material.SolidMixture: {Physics.SOLID, Physics.BIPHASIC},
+    material.PowerLinearFiber: {Physics.SOLID, Physics.BIPHASIC},
+    material.ExponentialFiber: {Physics.SOLID, Physics.BIPHASIC},
+    material.HolmesMow: {Physics.SOLID, Physics.BIPHASIC},
+    material.NeoHookean: {Physics.SOLID, Physics.BIPHASIC},
+}
+
+# Map of ContactConstraint fields → elements relative to <contact>
+CONTACT_PARAMS = {
+    "tension": OptParameter("tension", text_to_bool, False),
+    "penalty_factor": OptParameter("penalty", to_number, 1),
+    "auto_adjust_penalty": OptParameter("auto_penalty", text_to_bool, False),
+    "symmetric_stiffness": OptParameter("symmetric_stiffness", text_to_bool, False),
+    "use_augmented_lagrange": OptParameter("laugon", text_to_bool, False),
+    "augmented_lagrange_rtol": OptParameter("tolerance", to_number, 1.0),
+    "augmented_lagrange_gapnorm_atol": OptParameter("gaptol", maybe_to_number, 0.0),
+    "augmented_lagrange_minaug": OptParameter("minaug", int, 0),
+    "augmented_lagrange_maxaug": OptParameter("maxaug", int, 10),
+    "search_scale": OptParameter("search_radius", to_number, 1.0),
+    "projection_tol": OptParameter("search_tol", to_number, 0.01),
+}

@@ -7,6 +7,7 @@ from lxml import etree as ET
 # Same-package modules
 from .core import ContactConstraint, Interpolant, Extrapolant, Sequence
 from .output import material_to_feb
+from .control import SaveIters
 from .febioxml import *
 from .febioxml_2_5 import mesh_xml, sequences, read_domains
 
@@ -45,30 +46,36 @@ EXTRAP_FROM_XML_EXTRAP = {v: k for k, v in XML_EXTRAP_FROM_EXTRAP.items()}
 
 # Map of Ticker fields → elements relative to <Step>
 TICKER_PARAMS = {
-    "n": ReqParameter("Control/time_steps"),
-    "dtnom": ReqParameter("Control/step_size"),
-    "dtmin": OptParameter("Control/time_stepper/dtmin", 0),  # undocumented default
-    "dtmax": OptParameter("Control/time_stepper/dtmax", 0.05),  # undocumented default
+    "n": ReqParameter("Control/time_steps", int),
+    "dtnom": ReqParameter("Control/step_size", to_number),
+    "dtmin": OptParameter(
+        "Control/time_stepper/dtmin", to_number, 0
+    ),  # undocumented default
+    "dtmax": OptParameter(
+        "Control/time_stepper/dtmax", to_number, 0.05
+    ),  # undocumented default
 }
 # Map of Controller fields → elements relative to <Step>
 CONTROLLER_PARAMS = {
-    "max_retries": OptParameter("Control/time_stepper/max_retries", 5),
-    "opt_iter": OptParameter("Control/time_stepper/opt_iter", 10),
-    "save_iters": OptParameter("Control/plot_level", "PLOT_MAJOR_ITRS"),
+    "max_retries": OptParameter("Control/time_stepper/max_retries", int, 5),
+    "opt_iter": OptParameter("Control/time_stepper/opt_iter", int, 10),
+    "save_iters": OptParameter("Control/plot_level", SaveIters, SaveIters.MAJOR),
 }
 # Map of Solver fields → elements relative to <Step>
 SOLVER_PARAMS = {
-    "dtol": OptParameter("Control/dtol", 0.001),
-    "etol": OptParameter("Control/etol", 0.01),
-    "rtol": OptParameter("Control/rtol", 0),
-    "lstol": OptParameter("Control/lstol", 0.9),
-    "ptol": OptParameter("Control/ptol", 0.01),
-    "min_residual": OptParameter("Control/min_residual", 1e-20),
-    "update_method": OptParameter("Control/qnmethod", "BFGS"),
-    "reform_each_time_step": OptParameter("Control/reform_each_time_step", True),
-    "reform_on_diverge": OptParameter("Control/diverge_reform", True),
-    "max_refs": OptParameter("Control/max_refs", 15),
-    "max_ups": OptParameter("Control/max_ups", 10),
+    "dtol": OptParameter("Control/dtol", to_number, 0.001),
+    "etol": OptParameter("Control/etol", to_number, 0.01),
+    "rtol": OptParameter("Control/rtol", to_number, 0),
+    "lstol": OptParameter("Control/lstol", to_number, 0.9),
+    "ptol": OptParameter("Control/ptol", to_number, 0.01),
+    "min_residual": OptParameter("Control/min_residual", to_number, 1e-20),
+    "update_method": OptParameter("Control/qnmethod", str, "BFGS"),
+    "reform_each_time_step": OptParameter(
+        "Control/reform_each_time_step", text_to_bool, True
+    ),
+    "reform_on_diverge": OptParameter("Control/diverge_reform", text_to_bool, True),
+    "max_refs": OptParameter("Control/max_refs", int, 15),
+    "max_ups": OptParameter("Control/max_ups", int, 10),
 }
 
 
@@ -132,41 +139,25 @@ def iter_node_conditions(root):
 # Functions for writing FEBio XML 2.0
 
 
-def contact_section(model):
-    tag_branch = ET.Element("Contact")
-    contact_constraints = [
-        constraint
-        for constraint in model.constraints
-        if type(constraint) is ContactConstraint
-    ]
-    for contact in contact_constraints:
-        tag_contact = ET.SubElement(tag_branch, "contact", type=contact.algorithm)
-        # Set compression only or tension–compression
-        if contact.algorithm == "sliding-elastic":
-            ET.SubElement(tag_contact, "tension").text = str(int(contact.tension))
-        else:
-            if contact.tension:
-                raise ValueError(
-                    f"Only the sliding–elastic contact algorithm is known to support tension–compression contact in FEBio."
-                )
-        # Write penalty-related tags
-        ET.SubElement(tag_contact, "auto_penalty").text = (
-            "1" if contact.penalty["type"] == "auto" else "0"
-        )
-        ET.SubElement(tag_contact, "penalty").text = f"{contact.penalty['factor']}"
-        # Write algorithm modification tags
-        ET.SubElement(tag_contact, "laugon").text = (
-            "1" if contact.augmented_lagrange else "0"
-        )
-        # (two_pass would go here)
-        # Write surfaces
-        e_master = ET.SubElement(tag_contact, "surface", type="master")
-        for f in contact.leader:
-            e_master.append(tag_face(f))
-        e_follower = ET.SubElement(tag_contact, "surface", type="slave")
-        for f in contact.follower:
-            e_follower.append(tag_face(f))
-    return tag_branch
+def contact_bare_xml(contact, contact_name=None):
+    """Return <contact> element specifying type and surfaces
+
+    In FEBio XML 2.0, the surfaces involved in a contact are written as children of
+    the <contact> element.
+
+    """
+    e_contact = ET.Element("contact", type=contact.algorithm)
+    # Contact name
+    if contact_name is not None:
+        e_contact.attrib["name"] = str(contact_name)
+    # Contact surfaces
+    e_leader = ET.SubElement(e_contact, "surface", type="master")
+    for f in contact.leader:
+        e_leader.append(tag_face(f))
+    e_follower = ET.SubElement(e_contact, "surface", type="slave")
+    for f in contact.follower:
+        e_follower.append(tag_face(f))
+    return e_contact
 
 
 def meshdata_xml(model):

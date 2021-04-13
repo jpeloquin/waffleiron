@@ -42,6 +42,7 @@ from .febioxml import (
     DOF_NAME_FROM_XML_NODE_BC,
     XML_BC_FROM_DOF,
     VAR_FROM_XML_NODE_BC,
+    num_to_text,
 )
 
 # ^ The intent here is to eventually be able to switch between FEBio XML
@@ -333,69 +334,56 @@ def sequence_time_offsets(model):
     return seq_t0
 
 
-def contact_section(contacts, model, named_surface_pairs, named_contacts):
-    tag_contact_section = ET.Element("Contact")
-    tags_surfpair = []
+def contact_section(
+    contacts, model, named_surface_pairs, named_contacts, febioxml_module
+):
+    fx = febioxml_module
+    e_contact_section = ET.Element("Contact")
     for contact in contacts:
-        tag_contact = ET.SubElement(
-            tag_contact_section, "contact", type=contact.algorithm
-        )
-        # Name the contact to match its surface pair so someone reading
-        # the XML can match them more easily
-        tag_contact.attrib["name"] = named_contacts.get_or_create_name(
+        contact_name = named_contacts.get_or_create_name(
             f"contact_-_{contact.algorithm}", contact
         )
-        # Autogenerate names for the face sets in the contact
-        surface_name = {"leader": "", "follower": ""}
-        for k, face_set in zip(
-            ("leader", "follower"), (contact.leader, contact.follower)
-        ):
-            nm = model.named["face sets"].get_or_create_name(
-                f"contact_surface_-_{contact.algorithm}",
-                face_set,
-            )
-            surface_name[k] = nm
-        # Autogenerate and add the surface pair
-        name_surfpair = named_surface_pairs.get_or_create_name(
-            f"contact_surfaces_-_{contact.algorithm}",
-            (contact.leader, contact.follower),
+        # Create the bar <contact> XML element in a version-specific manner
+        e_contact = fx.contact_bare_xml(
+            contact, model, named_surface_pairs, contact_name=contact_name
         )
-        tag_contact.attrib["surface_pair"] = name_surfpair
-        # Set compression only or tension–compression
+        e_contact_section.append(e_contact)
+        # Fill in the contact parameters (not currently known to be version-specific)
+        #
+        # Currently only the sliding-elastic contact algorithm is known to support
+        # tension.  The tied-elastic algorithm /should/ support tension, but I tested
+        # it in FEBio 3.2 and it does not.
         if contact.algorithm == "sliding-elastic":
-            ET.SubElement(tag_contact, "tension").text = str(int(contact.tension))
+            ET.SubElement(e_contact, "tension").text = str(int(contact.tension))
         else:
             if contact.tension:
                 raise ValueError(
-                    f"Only the sliding–elastic contact algorithm is known to support tension–compression contact in FEBio."
+                    f"tension = True, but only the sliding-elastic contact algorithm "
+                    f"is known to support tension–compression contact in FEBio. "
                 )
         # Write penalty-related tags
-        ET.SubElement(tag_contact, "auto_penalty").text = (
-            "1" if contact.penalty["type"] == "auto" else "0"
+        ET.SubElement(e_contact, "penalty").text = num_to_text(contact.penalty_factor)
+        ET.SubElement(e_contact, "auto_penalty").text = bool_to_text(
+            contact.auto_adjust_penalty
         )
-        ET.SubElement(tag_contact, "penalty").text = f"{contact.penalty['factor']}"
         # Write algorithm modification tags
-        ET.SubElement(tag_contact, "laugon").text = bool_to_text(
-            contact.augmented_lagrange
+        ET.SubElement(e_contact, "laugon").text = bool_to_text(
+            contact.use_augmented_lagrange
         )
-        ET.SubElement(tag_contact, "symmetric_stiffness").text = bool_to_text(
+        ET.SubElement(e_contact, "symmetric_stiffness").text = bool_to_text(
             contact.symmetric_stiffness
         )
-        e_two_pass = ET.SubElement(tag_contact, "two_pass")
+        e_two_pass = ET.SubElement(e_contact, "two_pass")
         if contact.passes == 2:
             e_two_pass.text = "1"
         elif contact.passes == 1:
             e_two_pass.text = "0"
         else:
             raise ValueError(
-                f"{contact.passes} passes requested in a contact constraint; FEBio supports either 0 or 1."
+                f"{contact.passes} passes requested in a contact constraint; FEBio "
+                f"supports either 1 or 2 passes. "
             )
-        # Write other parameters.  The FEBio manual is a bit spotty, so
-        # extra contact parameters are stuffed in a dictionary.  Write
-        # them out as-is, only casting them to strings.
-        for k, v in contact.other_params.items():
-            ET.SubElement(tag_contact, k).text = f"{v}"
-    return tag_contact_section
+    return e_contact_section
 
 
 def face_xml(face, face_id):
@@ -546,19 +534,20 @@ def xml(model, version="3.0"):
         elementset_parent.append(e)
 
     e_boundary = ET.SubElement(root, "Boundary")
-    if version_major == 2 and version_minor >= 5:
-        contact_constraints = [
-            c for c in model.constraints if isinstance(c, ContactConstraint)
-        ]
-        tag_contact = contact_section(
-            contact_constraints, model, named_surface_pairs, named_contacts
-        )
-        root.append(tag_contact)
-    else:
-        tag_contact = febioxml_2_0.contact_section(model)
-        root.append(tag_contact)
+
+    # Write contact constraints
+    contact_constraints = [
+        c for c in model.constraints if isinstance(c, ContactConstraint)
+    ]
+    e_Contact = contact_section(
+        contact_constraints, model, named_surface_pairs, named_contacts, fx
+    )
+    root.append(e_Contact)
+
     e_constraints = ET.SubElement(root, "Constraints")
+
     e_loaddata = ET.SubElement(root, "LoadData")
+
     Output = ET.SubElement(root, "Output")
 
     # Typical MKS constants
@@ -798,7 +787,7 @@ def xml(model, version="3.0"):
         # Temporal (step-specific) contacts
         contacts = [c for c in step.bc["contact"] if isinstance(c, ContactConstraint)]
         e_Contact = contact_section(
-            contacts, model, named_surface_pairs, named_contacts
+            contacts, model, named_surface_pairs, named_contacts, fx
         )
 
         # Add <Boundary> and <Contact> elements to <Step>.  <Control>
