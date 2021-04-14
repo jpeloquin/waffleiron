@@ -33,6 +33,8 @@ DIR_FIXTURES = Path(__file__).parent / "fixtures"
 
 def test_FEBio_normalizeXML_bare_Boundary(febio_cmd):
     """End-to-end test of Boundary/prescribe normalization."""
+    # This is an FEBio XML 2.5 file, so normalization of FEBio XML 3.0
+    # is not tested
     pth_in = DIR_FIXTURES / (
         f"{Path(__file__).with_suffix('').name}." + "normalizeXML_bare_Boundary.feb"
     )
