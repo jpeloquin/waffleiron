@@ -136,6 +136,42 @@ def iter_node_conditions(root):
             yield info
 
 
+def read_fixed_node_bcs(root: Element, model):
+    """Return nodesets with fixed degrees of freedom
+
+    :param root: <febio_spec> Element
+    :param nodesets: Map of nodeset name → nodeset
+    :return: Map of (dof, var) → NodeSet
+
+    In FEBio XML 2.0, the parent XML element is Boundary/fix.  The fixed DoFs are
+    stored in an attribute as a concatenate string, like:
+
+    <fix bc="xyz" set="nodeset_name"/>
+
+    """
+    bcs = {}
+    for e_fix in root.findall(f"Boundary/{BC_TYPE_TAG['node']['fixed']}"):
+        fx_kws = [char for char in e_fix.attrib["bc"].strip()]
+        for k in fx_kws:
+            dof = DOF_NAME_FROM_XML_NODE_BC[k]
+            var = VAR_FROM_XML_NODE_BC[k]
+            # In FEBio XML 2.0, each node to which the fixed boundary
+            # condition is applied is listed under the <fix> tag.
+            node_ids = set()
+            for e_node in e_fix:
+                node_ids.add(int(e_node.attrib["id"]) - 1)
+            # Preserve fixed conditions for this DoF and variable for other nodes. There
+            # may be multiple <bc> elements with overlapping DoFs and variables but
+            # different node lists.  Note also that since nodesets are implemented as
+            # immutable frozen sets a name for an equal nodeset will also apply to this
+            # nodeset.  Therefore,  if the nodeset is named in an FEBio XML 2.0 file and
+            # read into febtools, its original name should be used when it is exported to
+            # name-oriented formats like FEBio XML 2.5.
+            nodeset = NodeSet(model.fixed["node"][(dof, var)]) | node_ids
+            bcs[(dof, var)] = nodeset
+    return bcs
+
+
 # Functions for writing FEBio XML 2.0
 
 
@@ -214,15 +250,6 @@ def tag_face(face):
     tag = ET.Element(nm[len(face)])
     tag.text = ", ".join([f"{i+1}" for i in face])
     return tag
-
-
-def split_bc_attrib(s):
-    """Split boundary condition names.
-
-    In FEBio XML 2.0, each BC is one character.
-
-    """
-    return [c for c in s]
 
 
 def nodal_var_disp_xml(model, nodes, scales, scale, dof, var):

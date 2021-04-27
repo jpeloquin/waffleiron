@@ -189,7 +189,7 @@ def get_surface_name(surfacepair_subelement):
     return surfacepair_subelement.attrib["surface"]
 
 
-def read_domains(root: ET.Element):
+def read_domains(root: Element):
     """Return list of domains"""
     domains = []
     e_domains = root.findall(f"{MESH_PARENT}/Elements")
@@ -228,6 +228,34 @@ def sequences(root: Element) -> Dict[int, Sequence]:
         # Create and store the Sequence object
         sequences[ord_id] = Sequence(curve, interp=interp, extrap=extrap)
     return sequences
+
+
+def read_fixed_node_bcs(root: Element, model):
+    """Return nodesets with fixed degrees of freedom
+
+    :param root: <febio_spec> Element
+    :param nodesets: Map of nodeset name → nodeset.  All nodesets referenced by the
+    fixed BC XML elements must have names stored in this parameter.
+    :return: Map of (dof, var) → NodeSet
+
+    In FEBio XML 2.5, the parent XML element is Boundary/fix.  The fixed DoFs are
+    stored in an attribute as a comma-separated string, like:
+
+    <fix bc="x,y,z" set="nodeset_name"/>
+
+    """
+    bcs = {}
+    for e_fix in root.findall(f"Boundary/{BC_TYPE_TAG['node']['fixed']}"):
+        fx_kws = [kw.strip() for kw in e_fix.attrib["bc"].split(",")]
+        for k in fx_kws:
+            dof = DOF_NAME_FROM_XML_NODE_BC[k]
+            var = VAR_FROM_XML_NODE_BC[k]
+            # In FEBio XML 2.5, the node set to which the fixed boundary condition is
+            # applied is referenced by name.  The name must already be present in the
+            # model's name registry.
+            nodeset = model.named["node sets"].obj(e_fix.attrib["node_set"])
+            bcs[(dof, var)] = nodeset
+    return bcs
 
 
 def apply_body_bc(model, e_rigid_body, explicit_bodies, implicit_bodies, step):
@@ -405,15 +433,6 @@ def meshdata_xml(model):
         e_meshdata.append(e_edata_mat_axis)
         e_elemsets.append(e_elemset_mat_axis)
     return e_meshdata, e_elemsets
-
-
-def split_bc_attrib(s):
-    """Split boundary condition names.
-
-    In FEBio XML 2.5, each boundary condition is separated by a comma.
-
-    """
-    return [bc.strip() for bc in s.split(",")]
 
 
 def node_data_xml(nodes, data, data_name, nodeset_name):

@@ -355,6 +355,10 @@ class NameRegistry:
         """
         return self._from_name.setdefault(nametype, {}).items()
 
+    def map(self, nametype="canonical"):
+        """Return name → obj map (dict) for nametype."""
+        return self._from_name.setdefault(nametype, {})
+
     def __copy__(self):
         """Copy dicts but not named objects."""
         new = type(self)()

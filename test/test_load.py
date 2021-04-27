@@ -114,16 +114,18 @@ def test_FEBio_tied_elastic_contact(febio_cmd_xml):
     rigid_nodes = [i for face in model.named["face sets"].obj("indenter") for i in face]
     for idx in rigid_nodes:
         δz = solved.solution.values("displacement", idx)["displacement"][-1][2]
-        npt.assert_almost_equal(δz, -0.11)
+        # Use loose tolerance b/c contact is imprecise
+        npt.assert_allclose(δz, -0.11, rtol=5e-5)
     # Test 4.1: Did the top nodes of the deformable solid move down?
     top_nodes = [i for face in model.named["face sets"].obj("top") for i in face]
     for idx in top_nodes:
         δz = solved.solution.values("displacement", idx)["displacement"][-1][2]
-        npt.assert_almost_equal(δz, -0.11)
+        # Use loose tolerance b/c contact is imprecise
+        npt.assert_allclose(δz, -0.11, rtol=5e-5)
     # Test 4.2: Was the correct strain produced?
     e_solid = [e for e in solved.mesh.elements if isinstance(e, feb.element.Hex8)][0]
     F = e_solid.f((0, 0, 0))
-    npt.assert_almost_equal(F[2, 2], (0.3 - 0.11) / 0.3)
+    npt.assert_allclose(F[2, 2], (0.3 - 0.11) / 0.3, rtol=5e-5)
 
 
 def test_FEBio_prescribe_rigid_body_displacement(febio_cmd_xml):

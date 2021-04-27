@@ -239,6 +239,37 @@ def get_surface_name(surfacepair_subelement):
     return surfacepair_subelement.text
 
 
+def read_fixed_node_bcs(root: Element, model):
+    """Return nodesets with fixed degrees of freedom
+
+    :param root: <febio_spec> Element
+    :param nodesets: Map of nodeset name → nodeset.  All nodesets referenced by the
+    fixed BC XML elements must have names stored in this parameter.
+    :return: Map of (dof, var) → NodeSet
+
+    In FEBio XML 3.0, the parent XML element is Boundary.  The fixed DoFs are stored
+    in the text content of a child element <dofs> as a comma-separated string, like:
+
+    <bc type="fix" set="nodeset_name">
+      <dofs>x,y,z</dofs>
+    </bc>
+
+    """
+    bcs = {}
+    for e_fix in root.findall(f"Boundary/bc[@type='{BC_TYPE_TAG['node']['fixed']}']"):
+        e_dofs = find_unique_tag(e_fix, "dofs")
+        fx_kws = [kw.strip() for kw in e_dofs.text.split(",")]
+        for k in fx_kws:
+            dof = DOF_NAME_FROM_XML_NODE_BC[k]
+            var = VAR_FROM_XML_NODE_BC[k]
+            # In FEBio XML 3.0, the node set to which the fixed boundary condition is
+            # applied is referenced by name.  The name must already be present in the
+            # model's name registry.
+            nodeset = model.named["node sets"].obj(e_fix.attrib["node_set"])
+            bcs[(dof, var)] = nodeset
+    return bcs
+
+
 def sequences(root: Element) -> Dict[int, Sequence]:
     """Return dictionary of sequence ID → sequence from FEBio XML 3.0"""
     sequences = {}

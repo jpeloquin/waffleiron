@@ -88,7 +88,7 @@
       <laugon>0</laugon>
       <tolerance>0.2</tolerance>
       <gaptol>0</gaptol>
-      <penalty>10000.0</penalty>
+      <penalty>100000.0</penalty>
       <auto_penalty>0</auto_penalty>
       <two_pass>0</two_pass>
       <knmult>1</knmult>

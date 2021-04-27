@@ -685,48 +685,10 @@ class FebReader:
         # febtools.  An `xml` prefix means it's named as in FEBio XML.
         #
         # Read fixed constraints on node sets:
-        for e_fix in self.root.findall("Boundary/fix"):
-            # Each <fix> tag may specify multiple bc labels.  Split them
-            # up and convert each to febtools naming convention.
-            if self.feb_version == "2.0":
-                # In FEBio XML 2.0, bc labels are concatenated.
-                fixed = febioxml_2_0.split_bc_attrib(e_fix.attrib["bc"])
-            elif self.feb_version == "2.5":
-                # In FEBio XML 2.5, bc labels are comma-delimeted.
-                fixed = febioxml_2_5.split_bc_attrib(e_fix.attrib["bc"])
-            # For each DoF, apply the fixed BCs to the model.
-            for xml_bc in fixed:
-                dof = DOF_NAME_FROM_XML_NODE_BC[xml_bc]
-                # ^ `dof` is 'x1', 'x2', 'x3', 'α1', 'fluid', etc.
-                var = VAR_FROM_XML_NODE_BC[xml_bc]
-                # ^ `var` is 'displacement', 'rotation', 'pressure', etc.
-                # Get the nodeset that is constrained
-                if self.feb_version == "2.0":
-                    # In FEBio XML 2.0, each node to which the fixed boundary
-                    # condition is applied is listed under the <fix> tag.
-                    node_ids = set()
-                    for e_node in e_fix:
-                        node_ids.add(int(e_node.attrib["id"]) - 1)
-                    node_ids = NodeSet(node_ids)
-                elif self.feb_version == "2.5":
-                    # In FEBio XML 2.5, the node set to which the fixed
-                    # boundary condition is applied is referenced by name.
-                    node_ids = model.named["node sets"].obj(e_fix.attrib["node_set"])
-                if not model.fixed["node"][(dof, var)]:
-                    # If there is no node set assigned to this dof yet,
-                    # simply re-use the node set.  This will preserve
-                    # the node set's name if the model is re-exported.
-                    model.fixed["node"][(dof, var)] = node_ids
-                else:
-                    # We are changing the node set, so existing
-                    # references to it may become semantically invalid.
-                    # And we can't remove the node set from the name
-                    # registry because then later elements won't be
-                    # interpretable.  So we must create a new node set.
-                    model.fixed["node"][(dof, var)] = NodeSet(
-                        model.fixed["node"][(dof, var)] | node_ids
-                    )
-
+        fixed_node_bcs = fx.read_fixed_node_bcs(self.root, model)
+        for (dof, var), nodeset in fixed_node_bcs.items():
+            model.fixed["node"][(dof, var)] = nodeset
+        #
         # Read global constraints on rigid bodies.  Needs to come after
         # reading sequences, or the relevant sequences won't be in the
         # sequence registry.
