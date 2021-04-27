@@ -241,9 +241,11 @@ def load_model(fpath):
     """
     if isinstance(fpath, str):
         fpath = Path(fpath)
+    fp_feb = fpath.with_suffix(".feb")
+    fp_xplt = fpath.with_suffix(".xplt")
     # Attempt to read the FEBio xml file
     try:
-        model = FebReader(str(fpath.with_suffix(".feb"))).model()
+        model = FebReader(str(fp_feb)).model()
         feb_ok = True
     except UnsupportedFormatError as err:
         # The .feb file is some unsupported version
@@ -255,7 +257,6 @@ def load_model(fpath):
         warnings.warn(msg)
         feb_ok = False
     # Attempt to read the xplt file, if it exists
-    fp_xplt = fpath.with_suffix(".xplt")
     if os.path.exists(fp_xplt):
         with open(fp_xplt, "rb") as f:
             soln = xplt.XpltData(f.read())
