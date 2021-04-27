@@ -1,6 +1,6 @@
 """Tests of core data structures.
 
-Run these tests with nose.
+Run these tests with pytest.
 
 """
 import unittest, os

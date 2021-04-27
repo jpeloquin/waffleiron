@@ -1,4 +1,4 @@
-# Run these tests with nose
+# Run these tests with pytest
 import unittest
 import febtools as feb
 from copy import deepcopy

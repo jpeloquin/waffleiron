@@ -1,5 +1,4 @@
-# Run these tests with nose
-from nose.tools import with_setup
+# Run these tests with pytest
 from unittest import TestCase
 import os
 import itertools, math
