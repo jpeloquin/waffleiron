@@ -626,7 +626,7 @@ class FebReader:
             v = _vec_from_text(e_mcs_local[0].text)  # tuple
             equal = (_vec_from_text(e.text) == v for e in e_mcs_local)
             if not all(equal):
-                msg = f'{e_mat.base}:{e_mat.sourceline} Multiple <mat_axis type="local"> elements with unequal values are present.  febtools does not support this case.'
+                msg = f'{e_mcs_local.base}:{e_mcs_local.sourceline} Multiple <mat_axis type="local"> elements with unequal values are present.  febtools does not support this case.'
                 raise ValueError(msg)
             # Convert the node ID encoded local basis to an explicit
             # basis for each finite element.  We can use the first
