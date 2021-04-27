@@ -73,7 +73,7 @@ def test_repeated_write_gives_same_output(xml_version):
     print("Write 1")
     pth_out1 = DIR_OUT / (
         f"{Path(__file__).with_suffix('').name}."
-        "repeated_write_gives_same_output_-_write=1.xml{xml_version}.feb"
+        f"repeated_write_gives_same_output_-_write=1.xml{xml_version}.feb"
     )
     with open(pth_out1, "wb") as f:
         feb.output.write_feb(model, f, version=xml_version)
@@ -85,7 +85,7 @@ def test_repeated_write_gives_same_output(xml_version):
     print("Write 2")
     pth_out2 = DIR_OUT / (
         f"{Path(__file__).with_suffix('').name}."
-        "repeated_write_gives_same_output_-_write=2.xml{xml_version}.feb"
+        f"repeated_write_gives_same_output_-_write=2.xml{xml_version}.feb"
     )
     with open(pth_out2, "wb") as f:
         feb.output.write_feb(model, f, version=xml_version)
