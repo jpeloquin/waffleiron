@@ -699,7 +699,7 @@ class FebReader:
         for e_step in self.root.findall(f"{fx.STEP_PARENT}/{fx.STEP_NAME}"):
             step, name = read_step(e_step, model, physics, self.febioxml_module)
             model.add_step(step, name)
-        # Rigid body boundary condtions
+        # Rigid body boundary conditions
         for e_step, (step, name) in zip(
             self.root.findall(f"{fx.STEP_PARENT}/{fx.STEP_NAME}"), model.steps
         ):
