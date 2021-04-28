@@ -251,6 +251,9 @@ class NameRegistry:
         self._from_name["canonical"] = {}  # dict: name → obj
         self._from_object = {}  # dict: obj → (dict: nametype → set of names)
 
+    def __repr__(self):
+        return str(self._from_name)
+
     def add(self, name, obj, nametype="canonical"):
         """Add a name for an object."""
         # Add the name to the name → object map
