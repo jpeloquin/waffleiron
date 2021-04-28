@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<febio_spec version="3.0">
+  <Module type="solid"/>
+  <Material>
+    <material id="1" name="deformable" type="neo-Hookean">
+      <E>0.5</E>
+      <v>0.2</v>
+    </material>
+    <material id="2" name="rigid" type="rigid body"/>
+  </Material>
+  <Mesh>
+    <Nodes name="rigid_plane">
+      <node id="1">-0.5,-0.5,0.5</node>
+      <node id="2">-0.5,0.5,0.5</node>
+      <node id="3">0.5,-0.5,0.5</node>
+      <node id="4">0.5,0.5,0.5</node>
+    </Nodes>
+    <Nodes name="deformable_prism">
+      <node id="5">-0.45,-0.45,0</node>
+      <node id="6">-0.45,-0.45,0.3</node>
+      <node id="7">-0.45,0.45,0</node>
+      <node id="8">-0.45,0.45,0.3</node>
+      <node id="9">0.45,-0.45,0</node>
+      <node id="10">0.45,-0.45,0.3</node>
+      <node id="11">0.45,0.45,0</node>
+      <node id="12">0.45,0.45,0.3</node>
+    </Nodes>
+    <Elements type="quad4" name="rigid_domain">
+      <elem id="1">1,2,4,3</elem>
+    </Elements>
+    <Elements type="hex8" name="deformable_domain">
+      <elem id="2">5,9,11,7,6,10,12,8</elem>
+    </Elements>
+    <NodeSet name="fixed-x">
+      <node id="5"/>
+      <node id="6"/>
+      <node id="7"/>
+      <node id="8"/>
+      <node id="9"/>
+      <node id="10"/>
+      <node id="11"/>
+      <node id="12"/>
+    </NodeSet>
+    <NodeSet name="fixed-y">
+      <node id="5"/>
+      <node id="6"/>
+      <node id="7"/>
+      <node id="8"/>
+      <node id="9"/>
+      <node id="10"/>
+      <node id="11"/>
+      <node id="12"/>
+    </NodeSet>
+    <NodeSet name="fixed-z">
+      <node id="5"/>
+      <node id="7"/>
+      <node id="9"/>
+      <node id="11"/>
+    </NodeSet>
+    <Surface name="top">
+      <quad4 id="1">6,10,12,8</quad4>
+    </Surface>
+    <Surface name="indenter">
+      <quad4 id="1">1,2,4,3</quad4>
+    </Surface>
+    <SurfacePair name="tied_contact">
+      <primary>top</primary>
+      <secondary>indenter</secondary>
+    </SurfacePair>
+  </Mesh>
+  <MeshDomains>
+    <ShellDomain name="rigid_domain" mat="rigid"/>
+    <SolidDomain name="deformable_domain" mat="deformable"/>
+  </MeshDomains>
+  <Boundary>
+    <bc name="fixed-x" type="fix" node_set="fixed-x">
+      <dofs>x</dofs>
+    </bc>
+    <bc name="fixed-y" type="fix" node_set="fixed-y">
+      <dofs>y</dofs>
+    </bc>
+    <bc name="fixed-z" type="fix" node_set="fixed-z">
+      <dofs>z</dofs>
+    </bc>
+  </Boundary>
+  <Contact/>
+  <Constraints/>
+  <LoadData>
+    <load_controller id="1" type="loadcurve">
+      <interpolate>LINEAR</interpolate>
+      <extend>CONSTANT</extend>
+      <points>
+        <point>0,0</point>
+        <point>1,1</point>
+        <point>2,1</point>
+      </points>
+    </load_controller>
+    <load_controller id="2" type="loadcurve">
+      <interpolate>LINEAR</interpolate>
+      <extend>CONSTANT</extend>
+      <points>
+        <point>0,0</point>
+        <point>1,0</point>
+        <point>2,1</point>
+      </points>
+    </load_controller>
+    <load_controller id="3" type="loadcurve">
+      <interpolate>LINEAR</interpolate>
+      <extend>CONSTANT</extend>
+      <points>
+        <point>0.0, 0.2</point>
+        <point>0.2, 0.2</point>
+        <point>0.4, 0.2</point>
+        <point>0.6, 0.2</point>
+        <point>0.8, 0.2</point>
+        <point>1.0, 0.2</point>
+        <point>1.2, 0.2</point>
+        <point>1.4, 0.2</point>
+        <point>1.6, 0.2</point>
+        <point>1.8, 0.2</point>
+        <point>2.0, 0.2</point>
+      </points>
+    </load_controller>
+  </LoadData>
+  <Rigid>
+    <rigid_constraint name="fixed_axes" type="fix">
+      <rb>2</rb>
+      <dofs>Rx,Ry,Ru,Rv,Rw</dofs>
+    </rigid_constraint>
+  </Rigid>
+  <Step>
+    <step name="move_to_contact">
+      <Control>
+        <time_steps>10</time_steps>
+        <step_size>0.1</step_size>
+        <time_stepper>
+          <dtmax lc="3">1</dtmax>
+        </time_stepper>
+        <plot_level>PLOT_MUST_POINTS</plot_level>
+        <solver>
+          <max_refs>15</max_refs>
+          <max_ups>10</max_ups>
+          <diverge_reform>1</diverge_reform>
+          <reform_each_time_step>1</reform_each_time_step>
+          <dtol>0.001</dtol>
+          <etol>0.01</etol>
+          <rtol>0</rtol>
+          <lstol>0.9</lstol>
+          <min_residual>1e-20</min_residual>
+          <qnmethod>BFGS</qnmethod>
+          <rhoi>0</rhoi>
+        </solver>
+      </Control>
+      <Rigid>
+        <rigid_constraint name="z-displacement" type="prescribe">
+          <rb>2</rb>
+          <dof>Rz</dof>
+          <value lc="1">-0.2</value>
+        </rigid_constraint>
+      </Rigid>
+    </step>
+  </Step>
+  <Step>
+    <step name="compression">
+      <Control>
+        <time_steps>10</time_steps>
+        <step_size>0.1</step_size>
+        <time_stepper>
+          <dtmax lc="3">1</dtmax>
+        </time_stepper>
+        <plot_level>PLOT_MUST_POINTS</plot_level>
+        <solver>
+          <max_refs>15</max_refs>
+          <max_ups>10</max_ups>
+          <diverge_reform>1</diverge_reform>
+          <reform_each_time_step>1</reform_each_time_step>
+          <dtol>0.001</dtol>
+          <etol>0.01</etol>
+          <rtol>0</rtol>
+          <lstol>0.9</lstol>
+          <min_residual>1e-20</min_residual>
+          <qnmethod>BFGS</qnmethod>
+          <rhoi>0</rhoi>
+        </solver>
+      </Control>
+      <Contact>
+        <contact type="tied-elastic" name="contact" surface_pair="tied_contact">
+          <laugon>0</laugon>
+          <tolerance>0.2</tolerance>
+          <gaptol>0</gaptol>
+          <penalty>100000.0</penalty>
+          <auto_penalty>0</auto_penalty>
+          <two_pass>0</two_pass>
+          <knmult>1</knmult>
+          <search_radius>0.1</search_radius>
+          <search_tol>0.01</search_tol>
+          <symmetric_stiffness>0</symmetric_stiffness>
+          <minaug>0</minaug>
+          <maxaug>10</maxaug>
+        </contact>
+      </Contact>
+      <Rigid>
+        <rigid_constraint name="z-displacement" type="prescribe">
+          <rb>2</rb>
+          <dof>Rz</dof>
+          <value lc="2">-0.11</value>
+          <relative>1</relative>
+        </rigid_constraint>
+      </Rigid>
+    </step>
+  </Step>
+  <Output>
+    <plotfile type="febio">
+      <var type="displacement"/>
+      <var type="stress"/>
+      <var type="contact gap"/>
+      <var type="reaction forces"/>
+    </plotfile>
+  </Output>
+</febio_spec>
