@@ -296,7 +296,9 @@ def sequences(root: Element) -> Dict[int, Sequence]:
         else:
             interp = INTERP_FROM_XML_INTERP[e_interp.text.lower()]
         # Create and store the Sequence object
-        sequences[ord_id] = Sequence(curve, interp=interp, extrap=extrap)
+        sequences[ord_id] = Sequence(
+            curve, interp=interp, extrap=extrap, steplocal=False
+        )
     return sequences
 
 

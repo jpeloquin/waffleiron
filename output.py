@@ -835,7 +835,12 @@ def xml(model, version="3.0"):
     e_seq_parent = root.find(fx.SEQUENCE_PARENT)
     for seq_id in seq_ids:
         seq = model.named["sequences"].obj(seq_id, nametype="ordinal_id")
-        e_seq = fx.sequence_xml(seq, seq_id, t0=seq_t0[seq])
+        # Apply offset to convert from step-local to global time, if required
+        if seq.steplocal:
+            t0 = seq_t0[seq]
+        else:
+            t0 = 0.0
+        e_seq = fx.sequence_xml(seq, seq_id, t0=t0)
         e_seq_parent.append(e_seq)
 
     # Write named geometric entities & sets.  It is better to delay

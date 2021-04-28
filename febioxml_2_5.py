@@ -226,7 +226,9 @@ def sequences(root: Element) -> Dict[int, Sequence]:
         else:
             interp = Interpolant.LINEAR  # FEBio's default
         # Create and store the Sequence object
-        sequences[ord_id] = Sequence(curve, interp=interp, extrap=extrap)
+        sequences[ord_id] = Sequence(
+            curve, interp=interp, extrap=extrap, steplocal=False
+        )
     return sequences
 
 

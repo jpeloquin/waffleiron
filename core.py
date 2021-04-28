@@ -188,6 +188,7 @@ class Sequence:
         seq,
         interp: Union[Interpolant, str],
         extrap: Union[Extrapolant, str],
+        steplocal: bool = True,
     ):
         # Input checking.  Technically, mypy should detect this, but
         # leave it in for now as mypy is not that widespread
@@ -208,6 +209,7 @@ class Sequence:
         self.points = seq
         self.interpolant = interp
         self.extrapolant = extrap
+        self.steplocal = steplocal
 
 
 class ScaledSequence:
