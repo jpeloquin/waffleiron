@@ -1104,6 +1104,9 @@ class XpltData:
         self, var, entity_id, region_id=None, parent_id=None, step_bounds=(0, inf)
     ):
         """Return time series values for a variable & selected entity."""
+        # TODO: The representation of the time series should not require the user to
+        #  type the variable name twice to get the variable's values.  This is not
+        #  good: self.values("displacement", id_)["displacement"]
         vmd = self.variables[var]  # variable metadata dictionary
         #
         # TODO: Check for sufficient selectors for this variable
