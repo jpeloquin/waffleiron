@@ -75,11 +75,12 @@ def _vec_from_text(s) -> tuple:
 
 
 def read_contacts(root, named_face_sets, febioxml_module):
+    fx = febioxml_module
     global_contacts = []
     step_contacts = []
     for e in root.findall("Contact/contact"):
         global_contacts.append(read_contact(e, named_face_sets, febioxml_module))
-    for e_Step in root.findall("Step"):
+    for e_Step in root.findall(f"{fx.STEP_PARENT}/{fx.STEP_NAME}"):
         contacts = []
         for e in e_Step.findall("Contact/contact"):
             contacts.append(read_contact(e, named_face_sets, febioxml_module))
