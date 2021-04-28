@@ -812,9 +812,9 @@ def xml(model, version="3.0"):
     # lot of places, including boundary conditions, time stepper curves,
     # and any material parameter.  Therefore, as opposed to trying to
     # find them all here at the time of writing, we require that
-    # whenenever an XML element that references a sequence is added to
+    # whenever an XML element that references a sequence is added to
     # the XML tree elsewhere, said sequence is also added to the model's
-    # named entity registry (which has to be done anyway becuase FEBio
+    # named entity registry (which has to be done anyway because FEBio
     # XML references sequences by ID).  Here, we loop over the sequence
     # collected in the named sequence registry and write only those
     # sequences to the XML tree.
