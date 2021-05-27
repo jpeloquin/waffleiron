@@ -186,9 +186,14 @@ tags_table = {
 
 SUPPORTED_XPLT_VERSIONS = {2, 5, 48}
 # map of xplt version → path for mesh (2.0) or geometry (1.0) block
-MESH_PATH = {2: "root/mesh", 5: "root/mesh", 48: "mesh"}
+MESH_PATH = {2: "root/mesh", 5: "root/mesh", 48: "mesh", 49: "mesh"}
 # map of xplt version → path for parts (2.0) or materials (1.0) block
-PARTS_PATH = {2: "root/materials", 5: "root/materials", 48: "mesh/parts"}
+PARTS_PATH = {
+    2: "root/materials",
+    5: "root/materials",
+    48: "mesh/parts",
+    49: "mesh/parts",
+}
 
 element_type_from_id = {
     0: element.Hex8,
