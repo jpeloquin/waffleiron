@@ -95,10 +95,15 @@ def run_febio_unchecked(pth_feb, threads=None, cmd=FEBIO_CMD):
             text=True,
         )
     except OSError as e:
+        # TODO: Windows, or at least WSL, seems to use different error
+        # codes for files that do not exist.  Saw Errno 13 permission
+        # denied errors for wrong command.
         if e.errno == errno.ENOENT:
             raise ValueError(
                 f"The OS could not find an executable file named {cmd}; ensure that an FEBio executable with that name exists on the system and is in a directory included in the system PATH variable.  Alternatively, set the environment variable FEBIO_CMD to the command used to run FEBio on your system."
             )
+        else:
+            raise e
     # If there specifically is a file read error, we need to write the
     # captured stdout to the log file, because only stdout has
     # information about the file read error.  Otherwise, we need to
