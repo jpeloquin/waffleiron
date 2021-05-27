@@ -102,7 +102,7 @@ class ContactConstraint:
     follower: FaceSet
     algorithm: str
     search_scale: Number
-    projection_tol: Number
+    projection_tol: Number  # search_tol in FEBio XML
     augmented_lagrange_rtol: Number
     augmented_lagrange_gapnorm_atol: Optional[Number]
     tension: bool = False
