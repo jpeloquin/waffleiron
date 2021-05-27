@@ -184,6 +184,7 @@ tags_table = {
     0x02040000: {"name": "objects state", "leaf": True, "format": "bytes"},  # 33816576
 }
 
+SUPPORTED_XPLT_VERSIONS = {2, 5, 48}
 # map of xplt version → path for mesh (2.0) or geometry (1.0) block
 MESH_PATH = {2: "root/mesh", 5: "root/mesh", 48: "mesh"}
 # map of xplt version → path for parts (2.0) or materials (1.0) block
@@ -795,6 +796,11 @@ class XpltData:
         self.endian = parse_endianness(data[:4])
         self.blocks = parse_xplt_data(data, store_data=True)
         self.version = find_one(self.blocks, "root/header/version")["data"][0]
+        if self.version not in SUPPORTED_XPLT_VERSIONS:
+            warn(
+                f"Xplt version tag = {self.version}, which is not known to be supported by febtools.  Proceeding regardless.  Subsequent errors may be due to unaddressed changes in FEBio's xplt format."
+            )
+
         self.regions = {
             "surface": surfaces(self.blocks, self.version),
             "domain": domains(self.blocks, self.version),
