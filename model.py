@@ -119,9 +119,9 @@ class Model:
         dof,
         variable,
         sequence,
+        step: Step,
         scales=None,
         relative=False,
-        step: Union[Step, None] = None,
     ):
         """Apply a boundary condition to a set of nodes.
 
@@ -138,17 +138,16 @@ class Model:
 
         sequence := conditions.Sequence object or 'fixed'
 
+        step := The step to which the nodal boundary condition applies.
+        This is a required argument because a time-varying nodal
+        boundary condition cannot (yet) be defined outside of a
+        simulation step.
+
         scales := dict of integer node ID → scale.  If None, scale will
         be set to 1 for all nodes.  If you want to apply a different
         scaling factor to all nodes, use a ScaledSequence.
 
-        step := The step to which the nodal boundary condition applies.
-
         """
-        if step is None:
-            raise ValueError(
-                "Applying a time-varying nodal boundary condition outside of a simulation step is not (yet) supported.  Provide a non-None value for argument 'step'."
-            )
         default_scale = 1
         _validate_dof(dof)
         if sequence == "fixed":
