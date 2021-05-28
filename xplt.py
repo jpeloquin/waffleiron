@@ -161,6 +161,12 @@ tags_table = {
         "format": "float",
         "singleton": True,
     },
+    0x02010003: {  # 33619971
+        "name": "status",
+        "leaf": True,
+        "format": "int",
+        "singleton": True,
+    },
     # State/Mesh State tags (2.0 only)
     0x02030000: {"name": "mesh state", "leaf": False},  # 33751040
     0x02030001: {"name": "element state", "leaf": True, "format": "bytes"},  # 33751041
