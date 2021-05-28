@@ -103,7 +103,7 @@ tags_table = {
         "singleton": True,
     },
     16982276: {"name": "elements", "leaf": True, "format": "int"},  # 0x01032104
-    16982277: {"name": "domain name", "leaf": True, "format": "str"},  # 0x01032105
+    16982277: {"name": "domain name", "leaf": True, "format": "end_str"},  # 0x01032105
     # Mesh/Domains/Domain/Element List tags
     17048065: {"name": "element", "leaf": True, "format": "int"},  # 0x01042201
     # Mesh/Surfaces (2.0) or Root/Geometry/Surfaces (1.0) tags
@@ -140,7 +140,7 @@ tags_table = {
     # Mesh/Plot Objects; xplt 2.0 only
     0x01050000: {"name": "objects", "leaf": False},  # 17104896
     0x01050001: {"name": "ID", "leaf": True, "format": "int"},  # 17104897
-    0x01050002: {"name": "name", "leaf": True, "format": "str"},  # 17104898
+    0x01050002: {"name": "name", "leaf": True, "format": "end_str"},  # 17104898
     0x01050003: {"name": "tag", "leaf": True, "format": "bytes"},  # 17104899
     0x01050004: {"name": "pos", "leaf": True, "format": "float"},  # 17104900
     0x01050005: {"name": "rot", "leaf": True, "format": "float"},  # 17104901
@@ -526,6 +526,10 @@ def unpack_data(data, val_type, endian):
         # FEBio uses null-terminated strings.  Strip the null byte and
         # everything after it, and decode from bytes to text.
         v = data[0 : data.find(b"\x00")].decode()
+    elif val_type == "end_str":
+        # FEBio sometimes uses null-prefixed strings.  Read from the
+        # last null byte to the end of the data payload.
+        v = data[data.rfind(b"\x00") + 1 :].decode()
     else:
         # Pass through unrecognized values.
         v = data
