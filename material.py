@@ -679,20 +679,15 @@ class NeoHookean:
 
     """
 
-    def __init__(self, props, **kwargs):
-        if "E" in props and "v" in props:
-            y, mu = to_Lamé(props["E"], props["v"])
-        elif "lambda" in props and "mu" in props:
-            y = props["lambda"]
-            mu = props["lambda"]
-        else:
-            raise Exception(
-                "The combination of material properties "
-                "in " + str(props) + " is not yet "
-                "implemented."
-            )
+    def __init__(self, E, ν):
+        y, mu = to_Lamé(E, ν)
         self.mu = mu
         self.y = y
+
+    @classmethod
+    def from_feb(cls, E, v):
+        """Return instance from FEBio XML-style argument names"""
+        return cls(E, v)
 
     def w(self, F):
         y = self.y

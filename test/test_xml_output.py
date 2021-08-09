@@ -11,7 +11,7 @@ from febtools.test.fixtures import DIR_FIXTURES, DIR_OUT, xml_version
 
 
 def test_write_feb(xml_version):
-    mat = feb.material.NeoHookean({"E": 1.1, "v": 0.3})
+    mat = feb.material.NeoHookean(E=1.1, ν=0.3)
     mesh = feb.mesh.rectangular_prism((1, 2), (1, 2), (1, 2), material=mat)
     model = feb.Model(mesh)
     basename = Path(__file__).with_suffix("").stem
