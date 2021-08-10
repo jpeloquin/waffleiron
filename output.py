@@ -216,7 +216,14 @@ def donnan_to_feb(mat, model):
 
 
 def material_to_feb(mat, model):
-    """Convert a material instance to FEBio XML."""
+    """Convert a material instance to FEBio XML.
+
+    The model argument is need so that time-dependent material
+    parameters, if any, can be given the right FEBio XML load curve ID.
+
+    TODO: Write a version that works without a model object.
+
+    """
     if isinstance(mat, feb.material.OrientedMaterial):
         orientation = mat.orientation
         mat = mat.material
