@@ -221,7 +221,7 @@ def read_step(step_xml, model, physics, febioxml_module):
     controller = IterController(**controller_kwargs)
     solver = Solver(**solver_kwargs)
     # update_method requires custom conversion
-    update_method = {"0": "BFGS", "1": "Broyden"}
+    update_method = {"0": "BFGS", "1": "Broyden", "BFGS": "BFGS", "BROYDEN": "Broyden"}
     if not solver.update_method in ("BFGS", "Broyden"):
         # ^ could have gotten a default value from Solver.__init__
         solver.update_method = update_method[solver.update_method]
