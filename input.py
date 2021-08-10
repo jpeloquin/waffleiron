@@ -88,7 +88,7 @@ def read_contacts(root, named_face_sets, febioxml_module):
     return global_contacts, step_contacts
 
 
-def read_contact(e_contact: Element, named_face_sets, febioxml_module):
+def read_contact(e_contact: ET.Element, named_face_sets, febioxml_module):
     fx = febioxml_module
     tree = e_contact.getroottree()
     root = tree.getroot()
