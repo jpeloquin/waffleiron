@@ -122,16 +122,20 @@ def read_parameters(xml, paramdict):
         else:  # Optional parameter
             e = xml.findall(p.path)
             if len(e) == 0:
-                # Use default
+                # XML element does not exist; use default
                 params[k] = p.default
             elif len(e) > 1:
                 parentpath = xml.getroottree().getpath(e.getparent())
                 raise ValueError(
                     f"{xml.base}:{xml.sourceline} {parentpath} has {len(e)} {e.tag} elements.  It should have at most one."
                 )
-            else:  # len(s) == 1
+            else:  # len(s) == 1; one XML element exists
                 e = e[0]
-                params[k] = p.fun(e.text)
+                if e.text is None:
+                    # Use default
+                    params[k] = p.default
+                else:
+                    params[k] = p.fun(e.text)
     return params
 
 

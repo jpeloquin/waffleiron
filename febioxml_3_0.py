@@ -58,10 +58,16 @@ TICKER_PARAMS = {
     "dtnom": ReqParameter("Control/step_size", to_number),
     "dtmin": OptParameter(
         "Control/time_stepper/dtmin", to_number, 0
-    ),  # undocumented default
+    ),  # Undocumented default, but zero makes sense as a minimum time
+    # step, as no smaller value is allowed.
     "dtmax": OptParameter(
-        "Control/time_stepper/dtmax", to_number, 0.05
-    ),  # undocumented default
+        "Control/time_stepper/dtmax", to_number, 1
+    ),  # Undocumented default.  FEBio 3 uses 0 if the value is missing
+    # (but doesn't enforce it for the first time step), which is
+    # broken in multiple ways.  But if a load curve is provided the
+    # scale appears to be ignored.  If a load curve is given without
+    # a value (scale) is given, the default should probably be 1.  I
+    # think FEBio 2 used 0.05 as the default.
 }
 # Map of Controller fields → elements relative to <Step>
 CONTROLLER_PARAMS = {
