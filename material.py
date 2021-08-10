@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import numpy as np
 from numpy import dot, trace, eye, outer
 from numpy.linalg import det
@@ -455,6 +457,29 @@ class PowerLinearFiber3D:
     def sstress(self, F):
         """Return 2nd Piola–Kirchoff stress tensor aligned to local axes."""
         raise NotImplementedError
+
+
+class EllipsoidalPowerFiber:
+    """Power-law fibers with ellipsoidal orientation distribution.
+
+    Coupled formulation.  FEBio XML name = "ellipsoidal fiber distribution".
+
+    """
+
+    def __init__(self, ξ: Tuple[float, float, float], β: Tuple[float, float, float]):
+        """Return EllipsoidalPowerFiber instance
+
+        :param ξ: (ξx, ξy, ξz) tuple of directional fiber coefficients.
+
+        :param β: (βx, βy, βz) tuple of direction fiber exponents.
+
+        """
+        self.ξ = ξ
+        self.β = β
+
+    @classmethod
+    def from_feb(cls, ksi, beta):
+        return cls(ksi, beta)
 
 
 class HolmesMow:

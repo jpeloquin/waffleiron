@@ -485,6 +485,7 @@ solid_class_from_name = {
     "Holmes-Mow": material.HolmesMow,
     "fiber-exp-pow": material.ExponentialFiber,
     "fiber-pow-linear": material.PowerLinearFiber,
+    "ellipsoidal fiber distribution": material.EllipsoidalPowerFiber,
     "neo-Hookean": material.NeoHookean,
     "solid mixture": material.SolidMixture,
     "rigid body": material.RigidBody,
