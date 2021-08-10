@@ -2,7 +2,6 @@ import dataclasses
 from copy import copy
 from dataclasses import dataclass
 from enum import Enum
-from numbers import Number
 from operator import itemgetter
 from typing import Hashable, NewType, Union, Optional
 from warnings import warn
@@ -101,12 +100,12 @@ class ContactConstraint:
     leader: FaceSet
     follower: FaceSet
     algorithm: str
-    search_scale: Number
-    projection_tol: Number  # search_tol in FEBio XML
-    augmented_lagrange_rtol: Number
-    augmented_lagrange_gapnorm_atol: Optional[Number]
+    search_scale: float
+    projection_tol: float  # search_tol in FEBio XML
+    augmented_lagrange_rtol: float
+    augmented_lagrange_gapnorm_atol: Optional[float]
     tension: bool = False
-    penalty_factor: Number = 1
+    penalty_factor: float = 1
     auto_adjust_penalty: bool = False
     use_augmented_lagrange: bool = False
     passes: int = 1
