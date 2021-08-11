@@ -16,6 +16,9 @@ from .febioxml_2_5 import mesh_xml, sequences, read_domains
 
 BODY_COND_PARENT = "Constraints"
 BODY_COND_NAME = "rigid_body"
+# Implicit rigid bodies do not seem to be supported in FEBio XML 2.0.
+IMPBODY_PARENT = None
+IMPBODY_NAME = None
 MESH_PARENT = "Geometry"
 ELEMENTDATA_PARENT = "Geometry"
 NODEDATA_PARENT = "Geometry"

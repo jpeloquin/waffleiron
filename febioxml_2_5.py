@@ -24,6 +24,8 @@ from .febioxml import *
 # XML element parents and names
 BODY_COND_PARENT = "Boundary"
 BODY_COND_NAME = "rigid_body"
+IMPBODY_PARENT = "Boundary"
+IMPBODY_NAME = "rigid"
 MESH_PARENT = "Geometry"
 ELEMENTDATA_PARENT = "MeshData"
 NODEDATA_PARENT = "MeshData"
@@ -258,6 +260,13 @@ def read_fixed_node_bcs(root: Element, model):
             nodeset = model.named["node sets"].obj(e_fix.attrib["node_set"])
             bcs[(dof, var)] = nodeset
     return bcs
+
+
+def parse_rigid_interface(e_rigid):
+    """Parse a <rigid> element"""
+    mat_id = int(e_rigid.attrib["rb"]) - 1
+    nodeset_name = e_rigid.attrib["node_set"]
+    return nodeset_name, mat_id
 
 
 def apply_body_bc(model, e_rigid_body, explicit_bodies, implicit_bodies, step):

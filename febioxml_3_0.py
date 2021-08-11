@@ -15,6 +15,8 @@ from .febioxml_2_5 import contact_bare_xml, meshdata_xml
 # XML element parents and names
 BODY_COND_PARENT = "Rigid"
 BODY_COND_NAME = "rigid_constraint"
+IMPBODY_PARENT = "Boundary"
+IMPBODY_NAME = "bc[@type='rigid']"
 MESH_PARENT = "Mesh"
 ELEMENTDATA_PARENT = "MeshData"
 NODEDATA_PARENT = "MeshData"
@@ -274,6 +276,14 @@ def read_fixed_node_bcs(root: Element, model):
             nodeset = model.named["node sets"].obj(e_fix.attrib["node_set"])
             bcs[(dof, var)] = nodeset
     return bcs
+
+
+def parse_rigid_interface(e_bc):
+    """Parse a <bc type="rigid"> element"""
+    nodeset_name = e_bc.attrib["node_set"]
+    e_rb = find_unique_tag(e_bc, "rb")
+    mat_id = int(e_rb.text) - 1
+    return nodeset_name, mat_id
 
 
 def sequences(root: Element) -> Dict[int, Sequence]:

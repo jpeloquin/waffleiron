@@ -666,16 +666,16 @@ class FebReader:
         # Read (1) implicit rigid bodies and (2) rigid body ↔ node set
         # rigid interfaces.
         implicit_bodies = {}
-        for e_impbod in self.root.findall(f"{fx.BODY_COND_PARENT}/rigid"):
+        for e_impbod in self.root.findall(f"{fx.IMPBODY_PARENT}/{fx.IMPBODY_NAME}"):
             # <rigid> elements may refer to implicit rigid bodies or to
             # rigid interfaces.  If the rigid "material" referenced by
             # the <rigid> element is assigned to elements, the element
             # represents a rigid interface.  Otherwise it represents an
             # rigid interface that interfaces with itself; i.e., an
             # implicit rigid body.
-            mat_id = int(e_impbod.attrib["rb"]) - 1
+            nodeset_name, mat_id = fx.parse_rigid_interface(e_impbod)
             mat = model.named["materials"].obj(mat_id, nametype="ordinal_id")
-            node_set = model.named["node sets"].obj(e_impbod.attrib["node_set"])
+            node_set = model.named["node sets"].obj(nodeset_name)
             if mat in materials_used:
                 # This <rigid> element represents an explicit rigid body
                 # ↔ node set interface.
