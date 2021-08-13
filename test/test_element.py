@@ -18,7 +18,13 @@ DIR_FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def f_tensor_logfile(elemdata, step, eid):
-    """Return F tensor read from a logfile."""
+    """Return F tensor from logfile data
+
+    Read the logfile first with textdata_list.  This function returns
+    the F tensor as a 3×3 array for the requested timepoint and element
+    ID.
+
+    """
     Fxx = elemdata[step]["Fxx"][eid]
     Fyy = elemdata[step]["Fyy"][eid]
     Fzz = elemdata[step]["Fzz"][eid]
@@ -372,28 +378,30 @@ class Quad4ElementTest(unittest.TestCase):
         npt.assert_approx_equal(computed, truth)
 
 
-class ElementMethodsTestHex8(unittest.TestCase):
-    def setUp(self):
-        self.elemdata = feb.input.textdata_list(
-            os.path.join("test", "fixtures", "complex_loading_elem_data.txt"), delim=","
-        )
-        self.soln = feb.input.XpltReader(
-            os.path.join("test", "fixtures", "complex_loading.xplt")
-        )
-        reader = feb.input.FebReader(
-            os.path.join("test", "fixtures", "complex_loading.feb")
-        )
-        self.model = reader.model()
-        self.model.apply_solution(self.soln)
+def test_FEBio_F_Hex8(febio_cmd):
+    """Test calculation of the F tensor.
 
-    def test_f(self):
-        istep = -1
-        u = self.soln.step_data(istep)["node variables"]["displacement"]
-        for eid in range(len(self.model.mesh.elements) - 1):
-            # don't check rigid body (last element)
-            F_expected = f_tensor_logfile(self.elemdata, istep, eid)
-            F = self.model.mesh.elements[eid].f((0, 0, 0))
-            npt.assert_almost_equal(F, F_expected, decimal=5)
+    F tensors are computed for each element based on the displacement
+    data read from the XPLT file and compared to the F tensor values
+    recorded in the text log.
+
+    """
+    # Setup
+    srcpath = DIR_FIXTURES / "bar_twist_stretch_rb_grip.feb"
+    runpath = DIR_OUT / f"bar_twist_stretch_rb_grip.{febio_cmd}.feb"
+    copyfile(srcpath, runpath)
+    feb.febio.run_febio_checked(runpath, cmd=febio_cmd)
+    model = feb.load_model(runpath)
+    elemdata = feb.input.textdata_list(
+        DIR_OUT / "bar_twist_stretch_rb_grip_-_elem_data.txt", delim=","
+    )
+    # Check F tensor values
+    istep = -1
+    for eid in range(len(model.mesh.elements) - 1):
+        # ^ Use len - 1 so rigid body (last element) is not checked
+        F_expected = f_tensor_logfile(elemdata, istep, eid)
+        F = model.mesh.elements[eid].f((0, 0, 0))
+        npt.assert_almost_equal(F, F_expected, decimal=5)
 
 
 def test_FEBio_intraElementHetF_Hex8(febio_cmd):
