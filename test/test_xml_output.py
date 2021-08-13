@@ -68,25 +68,31 @@ def test_repeated_write_gives_same_output(xml_version):
     pth_in = DIR_FIXTURES / "uniaxial_tension_implicit_rb_grips_biphasic.feb"
     model = feb.load_model(pth_in)
     # First write
-    print("Write 1")
     pth_out1 = DIR_OUT / (
         f"{Path(__file__).with_suffix('').name}."
         f"repeated_write_gives_same_output_-_write=1.xml{xml_version}.feb"
     )
+    # Need to remove time stamp or we won't have same output
+    xml = feb.output.xml(model, version=xml_version)
+    tstamp = xml.xpath("//comment()")[0]
+    xml.getroot().remove(tstamp)
     with open(pth_out1, "wb") as f:
-        feb.output.write_feb(model, f, version=xml_version)
+        feb.output.write_xml(xml, f)
     with open(pth_out1, "rb") as f:
         sha1 = hashlib.sha1()
         sha1.update(f.read())
         hash1 = sha1.hexdigest()
     # Second write
-    print("Write 2")
     pth_out2 = DIR_OUT / (
         f"{Path(__file__).with_suffix('').name}."
         f"repeated_write_gives_same_output_-_write=2.xml{xml_version}.feb"
     )
+    # Need to remove time stamp or we won't have same output
+    xml = feb.output.xml(model, version=xml_version)
+    tstamp = xml.xpath("//comment()")[0]
+    xml.getroot().remove(tstamp)
     with open(pth_out2, "wb") as f:
-        feb.output.write_feb(model, f, version=xml_version)
+        feb.output.write_xml(xml, f)
     with open(pth_out2, "rb") as f:
         sha1 = hashlib.sha1()
         sha1.update(f.read())
