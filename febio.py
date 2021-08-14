@@ -219,7 +219,7 @@ def check_must_points(model):
         n_actual = len(model.solution.step_times)
         if n_expected != n_actual:
             raise IncorrectTimePoints(
-                f'FEBio wrote {n_actual} time points when simulating {model.name}, but {n_expected} time points ("must points") were requested.  This may be caused by a bug in FEBio\'s time stepper or must point controller, or by requesting invalid time points that were silently ignored by FEBio.'
+                f'FEBio wrote {n_actual} time points when simulating model `{model.name}`, but {n_expected} time points ("must points") were requested.  This may be caused by a bug in FEBio\'s time stepper or must point controller, or by requesting invalid time points that were silently ignored by FEBio.'
             )
 
 
