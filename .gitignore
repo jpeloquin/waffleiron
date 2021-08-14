@@ -1,4 +1,3 @@
-*.log
 test/fixtures/test_febioxml.normalizeXML_bare_Boundary.xplt
 test/fixtures/test_material.Hex8_OrthoE.xplt
 test/output/
