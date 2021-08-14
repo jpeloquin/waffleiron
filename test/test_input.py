@@ -10,13 +10,13 @@ import pytest
 
 import febtools as feb
 from febtools.febio import run_febio_checked
-from febtools.test.fixtures import febio_cmd
+from febtools.test.fixtures import DIR_FIXTURES, febio_cmd
 
 
 @pytest.fixture(scope="module")
 def FixedNodeBC_Solid_Model(febio_cmd):
     """Solve solid model with fixed nodal boundary conditions"""
-    pth = Path("test") / "fixtures" / "cube_hex8_n=1_solid_all_BCs_fixed.feb"
+    pth = DIR_FIXTURES / "cube_hex8_n=1_solid_all_BCs_fixed.feb"
     run_febio_checked(pth, cmd=febio_cmd)
     yield pth
     # Delete FEBio-generated output

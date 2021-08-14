@@ -310,7 +310,7 @@ def distance(model: Model, a: NodeSet, b: NodeSet):
     d = np.empty(len(model.solution.step_times))
     d[:] = np.nan  # make any indexing errors more obvious
     for i in range(len(model.solution.step_times)):
-        δ = np.array(model.solution.step_data(i)["node variables"]["displacement"])
+        δ = np.array(model.solution.step_data(i)[("displacement", "node")])
         δ_a = np.mean([δ[j] for j in a], axis=0)
         δ_b = np.mean([δ[j] for j in b], axis=0)
         x0_a = np.mean([model.mesh.nodes[j] for j in a], axis=0)
@@ -350,7 +350,7 @@ def strain_gauge(model: Model, a: NodeSet, b: NodeSet):
     λ = np.empty(len(model.solution.step_times))
     λ[:] = np.nan  # make any indexing errors more obvious
     for i in range(len(model.solution.step_times)):
-        δ = np.array(model.solution.step_data(i)["node variables"]["displacement"])
+        δ = np.array(model.solution.step_data(i)[("displacement", "node")])
         δ_a = np.mean([δ[j] for j in a], axis=0)
         δ_b = np.mean([δ[j] for j in b], axis=0)
         x0_a = np.mean([model.mesh.nodes[j] for j in a], axis=0)

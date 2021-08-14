@@ -227,9 +227,10 @@ class Model:
         elif t is not None and step is not None:
             raise ValueError("Provide either `t` or `step`, not both.")
         data = solution.step_data(step)
-        properties = data["node variables"]
-        for k, v in properties.items():
-            self.apply_nodal_properties(k, v)
+        for (varname, entity_type), values in data.items():
+            if not entity_type == "node":
+                continue
+            self.apply_nodal_properties(varname, values)
 
     def apply_nodal_properties(self, key, values):
         """Apply nodal properties to each element."""

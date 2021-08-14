@@ -5,7 +5,7 @@ import unittest
 import os
 
 import febtools as feb
-from febtools.test.fixtures import gen_model_center_crack_Hex8
+from febtools.test.fixtures import DIR_FIXTURES, gen_model_center_crack_Hex8
 
 fp_out = os.path.join("test", "test_output")
 if not os.path.exists(fp_out):
@@ -14,19 +14,9 @@ if not os.path.exists(fp_out):
 
 class ScalarFieldTest(unittest.TestCase):
     def setUp(self):
-        soln = feb.input.XpltReader(
-            os.path.join(
-                "test", "fixtures", "center_crack_uniax_isotropic_elastic_quad4.xplt"
-            )
+        self.model = feb.load_model(
+            DIR_FIXTURES / "center_crack_uniax_isotropic_elastic_quad4.xplt"
         )
-        febreader = feb.input.FebReader(
-            os.path.join(
-                "test", "fixtures", "center_crack_uniax_isotropic_elastic_quad4.feb"
-            )
-        )
-        model = febreader.model()
-        model.apply_solution(soln, t=1.0)
-        self.model = model
 
     def test_y_stress(self):
         maxima = np.max(self.model.mesh.nodes, axis=0)

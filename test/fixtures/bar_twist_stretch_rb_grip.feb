@@ -213,10 +213,10 @@
 		<plotfile type="febio">
 			<var type="displacement"/>
 			<var type="stress"/>
+            <var type="reaction forces"/>
 		</plotfile>
     <logfile>
-      <element_data file="complex_loading_elem_data.txt" delim="," data="x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J"/>
-      <node_data file="complex_loading_node_data.txt" delim="," data="x;y;z;ux;uy;uz"/>
+      <element_data file="bar_twist_stretch_rb_grip_-_elem_data.txt" delim="," data="x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J"/>
     </logfile>
 	</Output>
 	<Step name="Step01">

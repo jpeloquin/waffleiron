@@ -273,8 +273,8 @@ def test_mataxis_stress(mataxis_local_global_hex8_models) -> None:
     pth_localb_model, pth_globalb_model = mataxis_local_global_hex8_models
     with open(pth_localb_model.with_suffix(".xplt"), "rb") as f:
         localb_result = feb.xplt.XpltData(f.read())
-    localb_stress = localb_result.step_data(-1)["domain variables"]["stress"][0]
+    localb_stress = localb_result.step_data(-1)[("stress", "domain")][0]
     with open(pth_globalb_model.with_suffix(".xplt"), "rb") as f:
         globalb_result = feb.xplt.XpltData(f.read())
-    globalb_stress = globalb_result.step_data(-1)["domain variables"]["stress"][0]
+    globalb_stress = globalb_result.step_data(-1)[("stress", "domain")][0]
     npt.assert_array_almost_equal_nulp(globalb_stress, localb_stress)

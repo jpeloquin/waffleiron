@@ -10,11 +10,7 @@ import os
 from febtools.material import *
 from febtools.test.fixtures import RTOL_F, RTOL_STRESS
 from febtools.input import FebReader, textdata_list
-from febtools.test.fixtures import febio_cmd_xml
-
-
-DIR_THIS = Path(__file__).parent
-DIR_FIXTURES = Path(__file__).parent / "fixtures"
+from febtools.test.fixtures import DIR_FIXTURES, DIR_OUT, febio_cmd_xml
 
 
 class ExponentialFiberTest(unittest.TestCase):
@@ -26,15 +22,8 @@ class ExponentialFiberTest(unittest.TestCase):
     """
 
     def setUp(self):
-        febreader = feb.input.FebReader(
-            os.path.join("test", "fixtures", "mixture_hm_exp.feb")
-        )
-        model = febreader.model()
-        with open(os.path.join("test", "fixtures", "mixture_hm_exp.xplt"), "rb") as f:
-            soln = feb.xplt.XpltData(f.read())
-        model.apply_solution(soln)
-        self.model = model
-        self.soln = soln
+        self.model = feb.load_model(DIR_FIXTURES / "mixture_hm_exp.feb")
+        self.soln = self.model.solution
 
     def w_test(self):
         # This is a very weak test; just a sanity check.
@@ -48,7 +37,7 @@ class ExponentialFiberTest(unittest.TestCase):
         F = self.model.mesh.elements[0].f((0, 0, 0))
         t_try = self.model.mesh.elements[0].material.tstress(F)
         data = self.soln.step_data(-1)
-        t_true = data["domain variables"]["stress"][0]
+        t_true = data[("stress", "domain")][0]
         npt.assert_allclose(t_try, t_true, rtol=1e-5, atol=1e-5)
 
     def test_sstress(self):
@@ -58,7 +47,7 @@ class ExponentialFiberTest(unittest.TestCase):
         f = elem.f(r)
         s_try = elem.material.sstress(f)
         t_try = (1.0 / np.linalg.det(f)) * np.dot(f, np.dot(s_try, f.T))
-        t_true = self.soln.step_data(-1)["domain variables"]["stress"][0]
+        t_true = self.soln.step_data(-1)[("stress", "domain")][0]
         npt.assert_allclose(t_try, t_true, rtol=1e-5, atol=1e-5)
 
 
@@ -225,17 +214,14 @@ class HolmesMowTest(unittest.TestCase):
     """Test Holmes Mow material definition"""
 
     def setUp(self):
-        with open(os.path.join("test", "fixtures", "holmes_mow.xplt"), "rb") as f:
-            self.soln = feb.xplt.XpltData(f.read())
-        febreader = FebReader(open(os.path.join("test", "fixtures", "holmes_mow.feb")))
-        self.model = febreader.model()
-        self.model.apply_solution(self.soln)
+        self.model = feb.load_model(DIR_FIXTURES / "holmes_mow.feb")
+        self.soln = self.model.solution
 
     def test_tstress(self):
         e = self.model.mesh.elements[0]
         F = e.f((0, 0, 0))
         t_try = e.material.tstress(F)
-        t_true = self.soln.step_data(-1)["domain variables"]["stress"][0]
+        t_true = self.soln.step_data(-1)[("stress", "domain")][0]
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
 
     def test_sstress(self):
@@ -245,7 +231,7 @@ class HolmesMowTest(unittest.TestCase):
         f = elem.f(r)
         s_try = elem.material.sstress(f)
         t_try = (1.0 / np.linalg.det(f)) * np.dot(f, np.dot(s_try, f.T))
-        t_true = self.soln.step_data(-1)["domain variables"]["stress"][0]
+        t_true = self.soln.step_data(-1)[("stress", "domain")][0]
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
 
 
@@ -253,21 +239,15 @@ class NeoHookeanTest(unittest.TestCase):
     """Test Holmes–Mow material definition"""
 
     def setUp(self):
-        # This test deliberately still uses XpltReader so at least one
-        # test will still exercise it.
-        self.soln = feb.input.XpltReader(
-            os.path.join("test", "fixtures", "neo_hookean.xplt")
-        )
-        febreader = FebReader(open(os.path.join("test", "fixtures", "neo_hookean.feb")))
-        self.model = febreader.model()
-        self.model.apply_solution(self.soln)
+        self.model = feb.load_model(DIR_FIXTURES / "neo_hookean.feb")
+        self.soln = self.model.solution
 
     def test_tstress(self):
         """Check Cauchy stress"""
         e = self.model.mesh.elements[0]
         F = e.f((0, 0, 0))
         t_try = e.material.tstress(F)
-        t_true = self.soln.step_data()["element variables"]["stress"][0]
+        t_true = self.soln.step_data(-1)[("stress", "domain")][0]
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
 
     def test_sstress(self):
@@ -277,7 +257,7 @@ class NeoHookeanTest(unittest.TestCase):
         f = elem.f(r)
         s_try = elem.material.sstress(f)
         t_try = (1.0 / np.linalg.det(f)) * np.dot(f, np.dot(s_try, f.T))
-        t_true = self.soln.step_data()["element variables"]["stress"][0]
+        t_true = self.soln.step_data(-1)[("stress", "domain")][0]
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
 
     # Don't bother with 1st Piola-Kirchoff stress; it's implemented as a
@@ -295,13 +275,9 @@ def test_FEBio_Hex8_OrthoE(febio_cmd_xml):
     model = feb.load_model(pth_in)
     #
     # Test 2: Write
-    pth_out = (
-        DIR_THIS
-        / "output"
-        / (
-            f"{Path(__file__).with_suffix('').name}."
-            + f"Hex8_OrthoE.{febio_cmd}.xml{xml_version}.feb"
-        )
+    pth_out = DIR_OUT / (
+        f"{Path(__file__).with_suffix('').name}."
+        + f"Hex8_OrthoE.{febio_cmd}.xml{xml_version}.feb"
     )
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()

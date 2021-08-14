@@ -16,6 +16,7 @@ from febtools.material import from_Lamé, to_Lamé
 from febtools.analysis import *
 from febtools import material
 from febtools.test.fixtures import (
+    DIR_FIXTURES,
     DIR_OUT,
     RTOL_F,
     ATOL_F,
@@ -197,21 +198,9 @@ class CenterCrackHex8(TestCase):
 
 class CenterCrackQuad4(TestCase):
     def setUp(self):
-        reader = feb.input.FebReader(
-            os.path.join(
-                "test", "fixtures", "center_crack_uniax_isotropic_elastic_quad4.feb"
-            )
+        self.model = feb.load_model(
+            DIR_FIXTURES / "center_crack_uniax_isotropic_elastic_quad4.feb"
         )
-        self.model = reader.model()
-        with open(
-            os.path.join(
-                "test", "fixtures", "center_crack_uniax_isotropic_elastic_quad4.xplt"
-            ),
-            "rb",
-        ) as f:
-            self.soln = feb.xplt.XpltData(f.read())
-        self.model.apply_solution(self.soln)
-
         material = self.model.mesh.elements[0].material
         y = material.y
         mu = material.mu
@@ -230,9 +219,9 @@ class CenterCrackQuad4(TestCase):
 
         def pk1(element_ids):
             """Convert Cauchy stress in each element to 1st P-K."""
-            data = self.soln.step_data(-1)
+            data = self.model.solution.step_data(-1)
             for i in element_ids:
-                t = data["domain variables"]["stress"][i]
+                t = data[("stress", "domain")][i]
                 e = self.model.mesh.elements[i]
                 f = e.f((0, 0))
                 fdet = np.linalg.det(f)

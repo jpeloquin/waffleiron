@@ -9,7 +9,7 @@ from copy import deepcopy
 # Febtools modules
 import febtools as feb
 from febtools.select import elements_containing_point
-from febtools import Mesh
+from febtools.test.fixtures import DIR_FIXTURES
 
 ### Face connectivity
 
@@ -18,10 +18,10 @@ class FaceConnectivityHex8(unittest.TestCase):
     """Test for correct face connectivity."""
 
     def setUp(self):
-        reader = feb.input.FebReader(
-            os.path.join("test", "fixtures", "center_crack_uniax_isotropic_elastic.feb")
+        model = feb.load_model(
+            DIR_FIXTURES / "center_crack_uniax_isotropic_elastic.feb"
         )
-        self.mesh = reader.mesh()
+        self.mesh = model.mesh
 
     def test_edge(self):
         faces = self.mesh.faces_with_node(0)
@@ -37,9 +37,7 @@ class ElementContainingPointCubeHex8(unittest.TestCase):
 
     def setUp(self):
         # The cube is bounded by -1 ≤ x ≤ 1, -1 ≤ y ≤ 1, and 0 ≤ z ≤ 2
-        self.model = feb.input.FebReader(
-            os.path.join("test", "fixtures", "uniax-8cube.feb")
-        ).model()
+        self.model = feb.load_model(DIR_FIXTURES / "uniax-8cube.feb")
         self.bb = feb.core._e_bb(self.model.mesh.elements)
 
     def test_outside(self):
@@ -109,13 +107,8 @@ class ElementContainingPointQuad4(unittest.TestCase):
 
     def setUp(self):
         # The square is bounded by x ∈ [-1, 1], y ∈ [-1, 1]
-        self.soln = feb.input.XpltReader(
-            os.path.join("test", "fixtures", "uniax-quad4.xplt")
-        )
-        self.model = feb.input.FebReader(
-            os.path.join("test", "fixtures", "uniax-quad4.feb")
-        ).model()
-        self.model.apply_solution(self.soln)
+        self.model = feb.load_model(DIR_FIXTURES / "uniax-quad4.feb")
+        self.soln = self.model.solution
         self.bb = feb.core._e_bb(self.model.mesh.elements)
 
     def test_outside(self):

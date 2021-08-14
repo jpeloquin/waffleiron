@@ -388,7 +388,7 @@ def test_FEBio_F_Hex8(febio_cmd):
     """
     # Setup
     srcpath = DIR_FIXTURES / "bar_twist_stretch_rb_grip.feb"
-    runpath = DIR_OUT / f"bar_twist_stretch_rb_grip.{febio_cmd}.feb"
+    runpath = DIR_OUT / f"test_element.F_Hex8.{febio_cmd}.feb"
     copyfile(srcpath, runpath)
     feb.febio.run_febio_checked(runpath, cmd=febio_cmd)
     model = feb.load_model(runpath)
@@ -432,14 +432,7 @@ def test_FEBio_intraElementHetF_Hex8(febio_cmd):
 
 class ElementMethodsTestQuad4(unittest.TestCase):
     def setUp(self):
-        self.soln = feb.input.XpltReader(
-            os.path.join("test", "fixtures", "center-crack-2d-1mm.xplt")
-        )
-        febreader = feb.input.FebReader(
-            os.path.join("test", "fixtures", "center-crack-2d-1mm.feb")
-        )
-        self.model = febreader.model()
-        self.model.apply_solution(self.soln)
+        self.model = feb.load_model(DIR_FIXTURES / "center-crack-2d-1mm.feb")
 
 
 class FTestTri3(unittest.TestCase):
@@ -451,21 +444,14 @@ class FTestTri3(unittest.TestCase):
     """
 
     def setUp(self):
-        self.soln = feb.input.XpltReader(
-            os.path.join("test", "fixtures", "square_tri3.xplt")
-        )
-        reader = feb.input.FebReader(
-            os.path.join("test", "fixtures", "square_tri3.feb")
-        )
-        self.model = reader.model()
-        self.model.apply_solution(self.soln)
+        self.model = feb.load_model(DIR_FIXTURES / "square_tri3.feb")
         self.elemdata = feb.input.textdata_list(
             os.path.join("test", "fixtures", "square_tri3_elem_data.txt"), delim=","
         )
 
     def test_f(self):
         istep = -1
-        u = self.soln.step_data(step=istep)["node variables"]["displacement"]
+        u = self.model.solution.step_data(istep)[("displacement", "node")]
         for eid in range(len(self.model.mesh.elements)):
             F_expected = f_tensor_logfile(self.elemdata, istep, eid)
             F = self.model.mesh.elements[eid].f((1.0 / 3.0, 1.0 / 3.0))
@@ -486,7 +472,7 @@ class FTestQuad4(unittest.TestCase):
 
     def test_f(self):
         istep = -1
-        u = self.soln.reader.step_data(istep)["displacement"]
+        u = self.soln.reader.step_data(istep)[("displacement", "node")]
         for eid in range(len(self.soln.elements)):
             F_expected = f_tensor_logfile(self.elemdata, istep, eid)
             F = self.soln.elements[eid].f((1.0 / 3.0, 1.0 / 3.0), u)

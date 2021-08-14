@@ -1,7 +1,6 @@
 # Base packages
 from math import inf
 import struct
-import sys
 from warnings import warn
 
 # Third-party public packages
@@ -54,8 +53,8 @@ tags_table = {
     16928768: {"name": "surface variables", "leaf": False},  # 0x01025000
     16908289: {"name": "dictionary item", "leaf": False},  # 0x01020001
     # Dictionary item tags
-    16908290: {
-        "name": "item type",  # 0x01020002,
+    0x01020002: {
+        "name": "item type",  # 16908290,
         "leaf": True,
         "format": "int",
         "singleton": True,
@@ -67,8 +66,10 @@ tags_table = {
         "singleton": True,
     },
     16908292: {"name": "item name", "leaf": True, "format": "str"},  # 0x01020004
+    # Item array size seems to always be 4 zero bytes
     0x01020005: {"name": "item array size", "leaf": True},  # 16908293
-    0x01020006: {"name": "item_array name", "leaf": True},  # 16908294
+    # Item array name appears to be unused
+    0x01020006: {"name": "item array name", "leaf": True},  # 16908294
     # Mesh (2.0) or Root/Geometry (1.0) tags
     17043456: {"name": "nodes", "leaf": False},  # 0x01041000
     17047552: {"name": "domains", "leaf": False},  # 0x01042000
@@ -144,7 +145,7 @@ tags_table = {
     0x01050003: {"name": "tag", "leaf": True, "format": "bytes"},  # 17104899
     0x01050004: {"name": "pos", "leaf": True, "format": "float"},  # 17104900
     0x01050005: {"name": "rot", "leaf": True, "format": "float"},  # 17104901
-    0x01050006: {"name": "data", "leaf": True, "format": "bytes"},  # 17104902
+    0x01050006: {"name": "data", "leaf": False, "format": "bytes"},  # 17104902
     # Mesh/Plot Objects/Point; xplt 2.0 only
     0x01051000: {"name": "point", "leaf": False},  # 17108992
     0x01051001: {"name": "coords", "leaf": True, "format": "bytes"},  # 17108992
@@ -187,12 +188,12 @@ tags_table = {
     },
     33685507: {"name": "data", "leaf": True, "format": "variable"},  # 0x02020003
     # State/Objects State
-    0x02040000: {"name": "objects state", "leaf": True, "format": "bytes"},  # 33816576
+    0x02040000: {"name": "objects state", "leaf": False, "format": "bytes"},  # 33816576
 }
 
 SUPPORTED_XPLT_VERSIONS = {2, 5, 48}
 # map of xplt version → path for mesh (2.0) or geometry (1.0) block
-MESH_PATH = {2: "root/mesh", 5: "root/mesh", 48: "mesh", 49: "mesh"}
+MESH_PATH = {2: "root/mesh", 4: "root/mesh", 5: "root/mesh", 48: "mesh", 49: "mesh"}
 # map of xplt version → path for parts (2.0) or materials (1.0) block
 PARTS_PATH = {
     2: "root/materials",
@@ -235,8 +236,21 @@ value_layout_from_id = {  # Refer to FE_enum.h:326
     3: "region",
 }
 
-# First key is data type (node, surface, or domain); second key is item
-# format (node, item, mult, or region).
+MDATA_PATH_BY_DTYPE = {
+    "node": "root/dictionary/node variables/dictionary item",
+    "surface": "root/dictionary/surface variables/dictionary item",
+    "domain": "root/dictionary/domain variables/dictionary item",
+    "object": "mesh/objects/point/data",
+}
+DATA_PATH_BY_DTYPE = {
+    "node": "state/state data/node data/state variable",
+    "surface": "state/state data/surface data/state variable",
+    "domain": "state/state data/domain data/state variable",
+    "object": "state/objects state/point",
+}
+# First key is data type (node, surface, domain, or object); second key is item
+# format / layout (node, item, mult, or region).  It's currently unclear if object
+# data can have an item format other than "item".
 entity_type_from_data_type = {
     "node": {
         "node": {
@@ -293,6 +307,13 @@ entity_type_from_data_type = {
             "region selector": None,
             "parent selector": None,
         },
+    },
+    "object": {
+        "item": {
+            "entity type": "object",
+            "region selector": None,
+            "parent selector": None,
+        }
     },
 }
 
@@ -468,7 +489,9 @@ def pprint_blocks(f, blocks, parents=tuple()):
             f.write(" " * (indent + 1) + "{")
         path = parents + (block["name"],)
         f.write(f"'path': '{'/'.join(path)}'")
-        for k in ["tag", "type", "address", "size"]:
+        # Write address/offset in hex (to match most hex editors)
+        f.write(",\n" + " " * (indent + 2) + f"'offset': '{block['address']:x}'")
+        for k in ["tag", "type", "size"]:
             f.write(",\n" + " " * (indent + 2) + "'{}': '{}'".format(k, block[k]))
 
         # Write block data/children
@@ -536,26 +559,39 @@ def unpack_data(data, val_type, endian):
     return v
 
 
-def _get_var_sdata(step_block, var_mdata):
-    """Return raw state data for variable."""
+def get_state_var_data(state_block, var_mdata):
+    """Return state data for a variable."""
     var_idx = var_mdata["index"]
     var_name = var_mdata["name"]
-    region_type = var_mdata["region type"]
-    region_tag = f"{region_type} data"
-    b_variable = find_all(
-        step_block["data"], f"state data/{region_tag}/state variable"
-    )[var_idx]
-    local_idx = find_one(b_variable["data"], "variable ID")["data"]
-    assert var_idx + 1 == local_idx
-    raw = find_one(b_variable["data"], "data")["data"]
-    return raw
+    rtype = var_mdata["region type"]
+    if rtype in ("node", "domain", "surface"):
+        # Standard state variables are stored in 'state variable' blocks
+        p = f"state/state data/{rtype} data/state variable"
+        var_blocks = find_all(state_block, p)
+        # Compute map from variable ID (0x02020002) to local index.  Note that the
+        # variable ID is converted to a 0-indexed value for consistency with the
+        # variable metadata.
+        idx_from_id = {
+            find_one(b["data"], "variable ID")["data"] - 1: i
+            for i, b in enumerate(var_blocks)
+        }
+        var_id = var_mdata["index"]
+        var_block = var_blocks[idx_from_id[var_id]]
+        data = find_one(var_block["data"], "data")["data"]
+    else:  # rtype = "object"
+        # Object state variables are stored in special 'objects state' blocks
+        p = f"state/objects state/point/data"
+        var_blocks = find_all(state_block, p)
+        data = b"".join(
+            [block["data"][var_mdata["index"]]["data"] for block in var_blocks]
+        )
+    return data
 
 
 def _regions_in_sdata(sdata, endian):
     """Return dict of region ID → rdata start byte in state data."""
     region_idx = {}
     i = 0  # Bytes offset to current region's ID
-    region_id = 0  # Current region ID
     while i < len(sdata):
         region_id, sz = struct.unpack(endian + "II", sdata[i : i + 8])
         region_idx[region_id] = i + 8
@@ -567,7 +603,7 @@ def _iter_step_data(step_blocks, var_mdata, endian):
     """Return a iterator over step and region yielding unpacked data."""
     for step_block in step_blocks:
         time = find_one(step_block["data"], "state header/time")["data"]
-        raw = _get_var_sdata(step_block, var_mdata)
+        raw = get_state_var_data(step_block, var_mdata)
         for region, values in _iter_region_data(raw, var_mdata["type"], endian):
             yield time, region, values
 
@@ -733,13 +769,11 @@ def surfaces(blocks, version):
     return surface_dict
 
 
-def variables(blocks):
-    """Return a dictionary of variable metadata."""
+def variable_metadata(blocks):
+    """Return a map of (entity type, variable name) → variable metadata"""
     vars_mdata = {}
-    for region_type in ("node", "surface", "domain"):
-        b_variables = find_all(
-            blocks, f"root/dictionary/{region_type} variables/dictionary item"
-        )
+    for entity_type, pth_dict in MDATA_PATH_BY_DTYPE.items():
+        b_variables = find_all(blocks, pth_dict)
         for i, b_variable in enumerate(b_variables):
             layout = value_layout_from_id[
                 find_one(b_variable["data"], "item format")["data"]
@@ -751,48 +785,14 @@ def variables(blocks):
             var_mdata = {
                 "name": var_name,
                 "type": var_type,
-                "region type": region_type,
+                "region type": entity_type,
                 "index": i,
                 "layout": layout,
             }
-            regional_mdata = entity_type_from_data_type[region_type][layout]
+            regional_mdata = entity_type_from_data_type[entity_type][layout]
             var_mdata.update(regional_mdata)
-            vars_mdata[var_name] = var_mdata
+            vars_mdata[(var_name, entity_type)] = var_mdata
     return vars_mdata
-
-
-def _raw_variables(blocks):
-    """Return a dictionary of raw variable metadata.
-
-    Keys are "{region_type} variables" (where region_type is node,
-    surface, or domain).
-
-    Values are lists of dictionaries with keys "item type", "item
-    format", "item array size", and "item name", with values
-    corresponding to the FEBio plotfile tags of the same name.
-
-    This function is intended for figuring out what's going on inside a
-    plotfile, not for use in scientific analysis.  In production, use
-    `variables()` instead.
-
-    """
-    b_data_dictionary = get_bdata_by_name(blocks, "root/dictionary")
-    data_dictionary = {}
-    for b_cat in b_data_dictionary:
-        for b_var in b_cat["data"]:
-            var = {}
-            for b in b_var["data"]:
-                # b is a block with keys: "name", "tag", "type" →
-                # "leaf" or "branch", "address" → int, "size" → int,
-                # and "data"
-                var[b["name"]] = b["data"]
-            # Convert coded values
-            var["item type"] = item_type_from_id[var["item type"]]
-            var["item format"] = value_layout_from_id[var["item format"]]
-            # Append variable entry to its category in the main data
-            # dictionary.
-            data_dictionary.setdefault(b_cat["name"], []).append(var)
-    return data_dictionary
 
 
 def _get_nodes_for_face(face, mesh):
@@ -875,17 +875,20 @@ class XpltData:
         for b in self.step_blocks:
             t = get_bdata_by_name(b["data"], "state header/time")[0]
             self.step_times.append(t)
-        # Get the metadata for each variable.  Do this here rather
-        # than in the `variables` function because this involves
-        # unpacking additional values that were not unpacked during
-        # the initial call to `parse_xplt_data`, so we need the
-        # endiannes of the file.  When this module is modified to use
-        # arrays instead of bytes, `parse_xplt_data` should be
-        # modified to parse the (region ID, size, region data)
-        # sections in the step data.
-        self.variables = variables(self.blocks)
+        # Get region metadata for each variable.  We need to unpack additional values
+        # that were not unpacked during the initial call to `parse_xplt_data`,
+        # so we need the endiannes of the file.  When this module is modified to use
+        # arrays instead of bytes, `parse_xplt_data` should be modified to parse the
+        # (region ID, size, region data) sections in the step data.
+        self.variables = {
+            varname: mdata
+            for (varname, etype), mdata in variable_metadata(self.blocks).items()
+        }
         for var, mdata in self.variables.items():
-            sdata = _get_var_sdata(self.step_blocks[0], mdata)
+            if mdata["region type"] == "object":
+                # Object data doesn't have region-specific subsets
+                continue
+            sdata = get_state_var_data(self.step_blocks[0], mdata)
             region_idxs = _regions_in_sdata(sdata, self.endian)
             # regions: tuple of region IDs for which the variable is
             # defined.  This is meant to assist the user in browsing
@@ -1128,34 +1131,44 @@ class XpltData:
         # TODO: The representation of the time series should not require the user to
         #  type the variable name twice to get the variable's values.  This is not
         #  good: self.values("displacement", id_)["displacement"]
-        vmd = self.variables[var]  # variable metadata dictionary
-        #
-        # TODO: Check for sufficient selectors for this variable
-        if vmd["parent selector"] is not None and parent_id is None:
-            raise ValueError
-        #
-        # Get indices to where the entity's value lies in the step data
-        vidx = self._entity_idx_in_sdata(
-            var,
-            vmd["entity type"],
-            entity_id,
-            vmd["type"],
-            vmd["layout"],
-            vmd["region type"],
-            region_id,
-            parent_id,
-        )
-        #
+        mdata = self.variables[var]  # variable metadata dictionary
+        if mdata["region type"] == "object":
+            # FEBio treats object data differently from node, domain, or surface data.
+            # Each object's data has its own specific data block.
+            offset = entity_id * VALUE_SZ_B[mdata["type"]]
+        else:
+            # Node, domain, or surface data
+            # TODO: Check for sufficient selectors for this variable
+            if mdata["parent selector"] is not None and parent_id is None:
+                raise ValueError
+            # Get indices to where the entity's value lies in the step data
+            offset = self._entity_idx_in_sdata(
+                var,
+                mdata["entity type"],
+                entity_id,
+                mdata["type"],
+                mdata["layout"],
+                mdata["region type"],
+                region_id,
+                parent_id,
+            )
+
+        def unpacker(raw, mdata, endian=self.endian, offset=offset):
+            return unpack_data(
+                raw[offset : offset + VALUE_SZ_B[mdata["type"]]],
+                mdata["type"],
+                endian,
+            )[0]
+
         # Iterate through steps, building up a time series table.
         columns = {"step": [], "time": [], var: []}
         step_idxs = range(
             max((0, step_bounds[0])), min((len(self.step_blocks), step_bounds[1]))
         )
         for step_idx in step_idxs:
-            raw = _get_var_sdata(self.step_blocks[step_idx], vmd)
-            value = unpack_data(
-                raw[vidx : vidx + VALUE_SZ_B[vmd["type"]]], vmd["type"], self.endian
-            )[0]
+            step_block = self.step_blocks[step_idx]
+            raw = get_state_var_data(step_block, mdata)
+            value = unpacker(raw, mdata)
             step_time = find_one(
                 self.step_blocks[step_idx]["data"], "state header/time"
             )["data"]
@@ -1165,36 +1178,51 @@ class XpltData:
         return columns
 
     def step_data(self, idx):
-        """Retrieve data for a specific solution step.
+        """Return all state data for a step
 
-        The solution data is returned as a dictionary.  The data names
-        (e.g. stress, displacement) are the keys.  These keys are read
-        from the file's dictionary section.  Data is formatted into a
-        list of floats, vectors, or tensors according to the data type
-        specified in the file's dictionary section.
+        The state data is returned as a map (entity type, variable name) → values.
+
+        In FEBio terms, there are three types of state data in a step's
+        state section:
+
+        1. "State data" (the name collision is unfortunate) which covers
+           data with four entity types: global, node, domain, and
+           surface.
+
+        2. Mesh data, which is new in FEBio 3.
+
+        3. Object data, which is new in FEBio 3 and as of FEBio 3.5
+           started to be used for rigid body data.
+
+        Febtools does not yet support mesh data.
+
+        Febtools treats object data merely as a another entity type,
+        "object".
+
+        Values are returned as a list of floats, vectors, or tensors
+        according to the data type specified in the file's dictionary
+        section.  The list index corresponds to the zero-indexed ID of
+        the corresponding geometric entity.
 
         """
         data = {}
-        b_statedata = get_bdata_by_name(self.step_blocks[idx]["data"], "state data")
-        for b_cat in b_statedata:  # iterate over data category blocks
-            base_name = b_cat["name"].split(" ")[0]
-            cat_name = base_name + " variables"
-            for b_var in b_cat["data"]:  # iterate over state variable blocks
-                var = {}
-                for b in b_var["data"]:
-                    var[b["name"]] = b["data"]
-                # Unpack variable data
-                var_id = var["variable ID"] - 1  # to 0-index
-                entry = _raw_variables(self.blocks)[cat_name][var_id]
+        state_block = self.step_blocks[idx]
+        for varname, mdata in self.variables.items():
+            raw = get_state_var_data(state_block, mdata)
+            entity_type = mdata["region type"]
+            if entity_type == "object":
+                values = unpack_data(raw, val_type=mdata["type"], endian=self.endian)
+            else:
+                raw = get_state_var_data(state_block, mdata)
                 # FEBio breaks from its documented tag format for
                 # variable_data tags.  The data payload consists of, for
                 # each region, a region ID (int; 4 bytes), the size of
-                # the varible_data payload for that region enumerated in
-                # bytes (int; 4 bytes), and the variable_data payload
+                # the variable_data payload for that region enumerated
+                # in bytes (int; 4 bytes), and the variable_data payload
                 # for that region.
                 i = 0  # offset into var['data'], in bytes
                 values = []
-                while i < len(var["data"]):
+                while i < len(raw):
                     # Iterate by region over variable_data data.
                     #
                     # TODO: What happens if regions don't have
@@ -1203,19 +1231,15 @@ class XpltData:
                     # against element sets?  I don't think so; only
                     # nodesets are defined in the FEBio XML, so any new
                     # element ordering would have to be created de novo.
-                    region_id, n = struct.unpack(
-                        self.endian + "II", var["data"][i : i + 8]
-                    )
+                    region_id, n = struct.unpack(self.endian + "II", raw[i : i + 8])
                     i += 8
                     values += unpack_data(
-                        var["data"][i : i + n],
-                        val_type=entry["item type"],
-                        endian=self.endian,
+                        raw[i : i + n],
+                        mdata["type"],
+                        self.endian,
                     )
                     i += n
-                data.setdefault(cat_name, {})[entry["item name"]] = values
-
+            data[(varname, entity_type)] = values
         # Add step time as a convenience
-        data["time"] = self.step_times[idx]
-
+        data[("time", "global")] = self.step_times[idx]
         return data

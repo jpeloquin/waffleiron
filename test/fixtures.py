@@ -70,18 +70,9 @@ def gen_model_center_crack_Hex8():
     Boundary conditions: 2% strain applied in y.
 
     """
-    reader = feb.input.FebReader(
-        os.path.join(
-            "test", "fixtures", "center_crack_uniax_isotropic_elastic_hex8.feb"
-        )
+    model = feb.load_model(
+        DIR_FIXTURES / "center_crack_uniax_isotropic_elastic_hex8.feb"
     )
-    model = reader.model()
-    soln = feb.input.XpltReader(
-        os.path.join(
-            "test", "fixtures", "center_crack_uniax_isotropic_elastic_hex8.xplt"
-        )
-    )
-    model.apply_solution(soln)
 
     material = model.mesh.elements[0].material
     γ = material.y
