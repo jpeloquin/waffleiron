@@ -29,6 +29,7 @@ from . import (
     mesh,
     output,
     plot,
+    scenario,
     select,
     xplt,
 )
