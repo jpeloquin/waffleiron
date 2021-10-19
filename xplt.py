@@ -580,7 +580,7 @@ def get_state_var_data(state_block, var_mdata):
         data = find_one(var_block["data"], "data")["data"]
     else:  # rtype = "object"
         # Object state variables are stored in special 'objects state' blocks
-        p = f"state/objects state/point/data"
+        p = "state/objects state/point/data"
         var_blocks = find_all(state_block, p)
         data = b"".join(
             [block["data"][var_mdata["index"]]["data"] for block in var_blocks]
