@@ -5942,9 +5942,6 @@
       <var type="fluid flux"/>
       <var type="reaction forces"/>
     </plotfile>
-    <logfile>
-      <node_data data="Rx" file="case=nominal_-_node_data.txt" format="%g">342</node_data>
-    </logfile>
   </Output>
   <Step name="Property instantiation">
     <Boundary>
