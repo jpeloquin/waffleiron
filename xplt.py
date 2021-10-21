@@ -580,11 +580,16 @@ def get_state_var_data(state_block, var_mdata):
         data = find_one(var_block["data"], "data")["data"]
     else:  # rtype = "object"
         # Object state variables are stored in special 'objects state' blocks
-        p = "state/objects state/point/data"
-        var_blocks = find_all(state_block, p)
+        var_blocks = find_all(state_block, "state/objects state/point/data")
         data = b"".join(
-            [block["data"][var_mdata["index"]]["data"] for block in var_blocks]
+            [
+                block["data"][var_idx]["data"]
+                for var_idx, block in zip(var_mdata["index"], var_blocks)
+            ]
         )
+        # ^ iterate over objects and concatenate their data for the current variable.
+        # `var_idx` is the index of the current variable's data block in the list of
+        # data blocks for the object to which `var_blocks` belongs.
     return data
 
 
@@ -772,15 +777,48 @@ def surfaces(blocks, version):
 def variable_metadata(blocks):
     """Return a map of (entity type, variable name) → variable metadata"""
     vars_mdata = {}
-    for entity_type, pth_dict in MDATA_PATH_BY_DTYPE.items():
-        b_variables = find_all(blocks, pth_dict)
+    # Object variables.  Each object stores its own list of data blocks, both in the
+    # metadata and in the state data itself.  Therefore we will see the same variable
+    # multiple times in the metadata.  We also need the index of the variable within
+    # each object's list, so we need to store a list of indexes.
+    b_objects = find_all(blocks, "mesh/objects/point")
+    for idx_object, b_object in enumerate(b_objects):
+        b_variables = find_all(b_object["data"], "data")
+        for idx_variable, b_variable in enumerate(b_variables):
+            var_name = find_one(b_variable["data"], "item name")["data"]
+            if idx_object == 0:
+                # Initialize the metadata dictionary
+                var_type = item_type_from_id[
+                    find_one(b_variable["data"], "item type")["data"]
+                ]
+                layout = value_layout_from_id[
+                    find_one(b_variable["data"], "item format")["data"]
+                ]
+                var_mdata = {
+                    "name": var_name,
+                    "type": var_type,
+                    "region type": "object",
+                    "index": [idx_variable],
+                    "layout": layout,
+                }
+                regional_mdata = entity_type_from_data_type["object"][layout]
+                var_mdata.update(regional_mdata)
+            else:
+                # We should have already seen this variable.  Or can
+                # different objects store different variables?  /fear
+                var_mdata = vars_mdata[(var_name, "object")]
+                var_mdata["index"].append(idx_variable)
+            vars_mdata[(var_name, "object")] = var_mdata
+    # Node, surface, and domain variables
+    for entity_type in ("node", "surface", "domain"):
+        b_variables = find_all(blocks, MDATA_PATH_BY_DTYPE[entity_type])
         for i, b_variable in enumerate(b_variables):
-            layout = value_layout_from_id[
-                find_one(b_variable["data"], "item format")["data"]
-            ]
             var_name = find_one(b_variable["data"], "item name")["data"]
             var_type = item_type_from_id[
                 find_one(b_variable["data"], "item type")["data"]
+            ]
+            layout = value_layout_from_id[
+                find_one(b_variable["data"], "item format")["data"]
             ]
             var_mdata = {
                 "name": var_name,
@@ -1133,8 +1171,10 @@ class XpltData:
         #  good: self.values("displacement", id_)["displacement"]
         mdata = self.variables[var]  # variable metadata dictionary
         if mdata["region type"] == "object":
-            # FEBio treats object data differently from node, domain, or surface data.
-            # Each object's data has its own specific data block.
+            # FEBio treats object data differently from node, domain, or surface
+            # data. There is a separate data block for each variable for each object.
+            # However get_state_var_data will concatenate variable blocks across
+            # objects, so we still need a byte offset.
             offset = entity_id * VALUE_SZ_B[mdata["type"]]
         else:
             # Node, domain, or surface data

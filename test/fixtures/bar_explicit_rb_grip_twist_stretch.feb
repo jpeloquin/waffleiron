@@ -216,7 +216,8 @@
             <var type="reaction forces"/>
 		</plotfile>
     <logfile>
-      <element_data file="bar_twist_stretch_rb_grip_-_elem_data.txt" delim="," data="x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J"/>
+		<element_data file="bar_explicit_rb_grip_twist_stretch_-_elem_data.txt" delim=", " data="x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J"/>
+		<rigid_body_data file="bar_explicit_rb_grip_twist_stretch_-_body_data.txt" delim=", " data="x;y;z;Fx;Fy;Fz;Mx;My;Mz"/>
     </logfile>
 	</Output>
 	<Step name="Step01">

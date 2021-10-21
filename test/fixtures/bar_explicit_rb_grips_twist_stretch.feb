@@ -1,0 +1,359 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<febio_spec version="3.0">
+	<Module type="solid"/>
+	<Globals>
+		<Constants>
+			<T>0</T>
+			<R>0</R>
+			<Fc>0</Fc>
+		</Constants>
+	</Globals>
+	<Material>
+		<material id="1" name="ElasticMaterial" type="isotropic elastic">
+			<density>1</density>
+			<E>100</E>
+			<v>0.3</v>
+		</material>
+		<material id="2" name="RGrip" type="rigid body">
+			<density>1</density>
+			<center_of_mass>5.5,0,1</center_of_mass>
+		</material>
+		<material id="3" name="LGrip" type="rigid body">
+			<density>1</density>
+			<center_of_mass>5.5,0,1</center_of_mass>
+		</material>
+	</Material>
+	<Mesh>
+		<Nodes name="Object01">
+			<node id="1">-5,-1,0</node>
+			<node id="2">-5,-1,1</node>
+			<node id="3">-5,-1,2</node>
+			<node id="4">-5,0,0</node>
+			<node id="5">-5,0,1</node>
+			<node id="6">-5,0,2</node>
+			<node id="7">-5,1,0</node>
+			<node id="8">-5,1,1</node>
+			<node id="9">-5,1,2</node>
+			<node id="10">-4,-1,0</node>
+			<node id="11">-4,-1,1</node>
+			<node id="12">-4,-1,2</node>
+			<node id="13">-4,0,0</node>
+			<node id="14">-4,0,1</node>
+			<node id="15">-4,0,2</node>
+			<node id="16">-4,1,0</node>
+			<node id="17">-4,1,1</node>
+			<node id="18">-4,1,2</node>
+			<node id="19">-3,-1,0</node>
+			<node id="20">-3,-1,1</node>
+			<node id="21">-3,-1,2</node>
+			<node id="22">-3,0,0</node>
+			<node id="23">-3,0,1</node>
+			<node id="24">-3,0,2</node>
+			<node id="25">-3,1,0</node>
+			<node id="26">-3,1,1</node>
+			<node id="27">-3,1,2</node>
+			<node id="28">-2,-1,0</node>
+			<node id="29">-2,-1,1</node>
+			<node id="30">-2,-1,2</node>
+			<node id="31">-2,0,0</node>
+			<node id="32">-2,0,1</node>
+			<node id="33">-2,0,2</node>
+			<node id="34">-2,1,0</node>
+			<node id="35">-2,1,1</node>
+			<node id="36">-2,1,2</node>
+			<node id="37">-1,-1,0</node>
+			<node id="38">-1,-1,1</node>
+			<node id="39">-1,-1,2</node>
+			<node id="40">-1,0,0</node>
+			<node id="41">-1,0,1</node>
+			<node id="42">-1,0,2</node>
+			<node id="43">-1,1,0</node>
+			<node id="44">-1,1,1</node>
+			<node id="45">-1,1,2</node>
+			<node id="46">0,-1,0</node>
+			<node id="47">0,-1,1</node>
+			<node id="48">0,-1,2</node>
+			<node id="49">0,0,0</node>
+			<node id="50">0,0,1</node>
+			<node id="51">0,0,2</node>
+			<node id="52">0,1,0</node>
+			<node id="53">0,1,1</node>
+			<node id="54">0,1,2</node>
+			<node id="55">1,-1,0</node>
+			<node id="56">1,-1,1</node>
+			<node id="57">1,-1,2</node>
+			<node id="58">1,0,0</node>
+			<node id="59">1,0,1</node>
+			<node id="60">1,0,2</node>
+			<node id="61">1,1,0</node>
+			<node id="62">1,1,1</node>
+			<node id="63">1,1,2</node>
+			<node id="64">2,-1,0</node>
+			<node id="65">2,-1,1</node>
+			<node id="66">2,-1,2</node>
+			<node id="67">2,0,0</node>
+			<node id="68">2,0,1</node>
+			<node id="69">2,0,2</node>
+			<node id="70">2,1,0</node>
+			<node id="71">2,1,1</node>
+			<node id="72">2,1,2</node>
+			<node id="73">3,-1,0</node>
+			<node id="74">3,-1,1</node>
+			<node id="75">3,-1,2</node>
+			<node id="76">3,0,0</node>
+			<node id="77">3,0,1</node>
+			<node id="78">3,0,2</node>
+			<node id="79">3,1,0</node>
+			<node id="80">3,1,1</node>
+			<node id="81">3,1,2</node>
+			<node id="82">4,-1,0</node>
+			<node id="83">4,-1,1</node>
+			<node id="84">4,-1,2</node>
+			<node id="85">4,0,0</node>
+			<node id="86">4,0,1</node>
+			<node id="87">4,0,2</node>
+			<node id="88">4,1,0</node>
+			<node id="89">4,1,1</node>
+			<node id="90">4,1,2</node>
+			<node id="91">5,-1,0</node>
+			<node id="92">5,-1,1</node>
+			<node id="93">5,-1,2</node>
+			<node id="94">5,0,0</node>
+			<node id="95">5,0,1</node>
+			<node id="96">5,0,2</node>
+			<node id="97">5,1,0</node>
+			<node id="98">5,1,1</node>
+			<node id="99">5,1,2</node>
+			<node id="100">5,-1,0</node>
+			<node id="101">5,-1,2</node>
+			<node id="102">5,1,0</node>
+			<node id="103">5,1,2</node>
+			<node id="104">6,-1,0</node>
+			<node id="105">6,-1,2</node>
+			<node id="106">6,1,0</node>
+			<node id="107">6,1,2</node>
+			<node id="108">-6,-1,0</node>
+			<node id="109">-6,-1,2</node>
+			<node id="110">-6,1,0</node>
+			<node id="111">-6,1,2</node>
+			<node id="112">-5,-1,0</node>
+			<node id="113">-5,-1,2</node>
+			<node id="114">-5,1,0</node>
+			<node id="115">-5,1,2</node>
+		</Nodes>
+		<Elements type="hex8" name="Part1">
+			<elem id="1">1,10,13,4,2,11,14,5</elem>
+			<elem id="2">2,11,14,5,3,12,15,6</elem>
+			<elem id="3">4,13,16,7,5,14,17,8</elem>
+			<elem id="4">5,14,17,8,6,15,18,9</elem>
+			<elem id="5">10,19,22,13,11,20,23,14</elem>
+			<elem id="6">11,20,23,14,12,21,24,15</elem>
+			<elem id="7">13,22,25,16,14,23,26,17</elem>
+			<elem id="8">14,23,26,17,15,24,27,18</elem>
+			<elem id="9">19,28,31,22,20,29,32,23</elem>
+			<elem id="10">20,29,32,23,21,30,33,24</elem>
+			<elem id="11">22,31,34,25,23,32,35,26</elem>
+			<elem id="12">23,32,35,26,24,33,36,27</elem>
+			<elem id="13">28,37,40,31,29,38,41,32</elem>
+			<elem id="14">29,38,41,32,30,39,42,33</elem>
+			<elem id="15">31,40,43,34,32,41,44,35</elem>
+			<elem id="16">32,41,44,35,33,42,45,36</elem>
+			<elem id="17">37,46,49,40,38,47,50,41</elem>
+			<elem id="18">38,47,50,41,39,48,51,42</elem>
+			<elem id="19">40,49,52,43,41,50,53,44</elem>
+			<elem id="20">41,50,53,44,42,51,54,45</elem>
+			<elem id="21">46,55,58,49,47,56,59,50</elem>
+			<elem id="22">47,56,59,50,48,57,60,51</elem>
+			<elem id="23">49,58,61,52,50,59,62,53</elem>
+			<elem id="24">50,59,62,53,51,60,63,54</elem>
+			<elem id="25">55,64,67,58,56,65,68,59</elem>
+			<elem id="26">56,65,68,59,57,66,69,60</elem>
+			<elem id="27">58,67,70,61,59,68,71,62</elem>
+			<elem id="28">59,68,71,62,60,69,72,63</elem>
+			<elem id="29">64,73,76,67,65,74,77,68</elem>
+			<elem id="30">65,74,77,68,66,75,78,69</elem>
+			<elem id="31">67,76,79,70,68,77,80,71</elem>
+			<elem id="32">68,77,80,71,69,78,81,72</elem>
+			<elem id="33">73,82,85,76,74,83,86,77</elem>
+			<elem id="34">74,83,86,77,75,84,87,78</elem>
+			<elem id="35">76,85,88,79,77,86,89,80</elem>
+			<elem id="36">77,86,89,80,78,87,90,81</elem>
+			<elem id="37">82,91,94,85,83,92,95,86</elem>
+			<elem id="38">83,92,95,86,84,93,96,87</elem>
+			<elem id="39">85,94,97,88,86,95,98,89</elem>
+			<elem id="40">86,95,98,89,87,96,99,90</elem>
+		</Elements>
+		<Elements type="hex8" name="Part2">
+			<elem id="41">100,104,106,102,101,105,107,103</elem>
+		</Elements>
+		<Elements type="hex8" name="Part6">
+			<elem id="42">108,112,114,110,109,113,115,111</elem>
+		</Elements>
+		<NodeSet name="RigidNodeset01">
+			<n id="91"/>
+			<n id="92"/>
+			<n id="93"/>
+			<n id="94"/>
+			<n id="95"/>
+			<n id="96"/>
+			<n id="97"/>
+			<n id="98"/>
+			<n id="99"/>
+		</NodeSet>
+		<NodeSet name="RigidInterfaceLGrip">
+			<n id="1"/>
+			<n id="2"/>
+			<n id="3"/>
+			<n id="4"/>
+			<n id="5"/>
+			<n id="6"/>
+			<n id="7"/>
+			<n id="8"/>
+			<n id="9"/>
+		</NodeSet>
+	</Mesh>
+	<MeshDomains>
+		<SolidDomain name="Part1" mat="ElasticMaterial"/>
+		<SolidDomain name="Part2" mat="RGrip"/>
+		<SolidDomain name="Part6" mat="LGrip"/>
+	</MeshDomains>
+	<Boundary>
+		<bc name="RigidInterfaceRGrip" type="rigid" node_set="RigidNodeset01">
+			<rb>2</rb>
+		</bc>
+		<bc name="RigidInterfaceLGrip" type="rigid" node_set="RigidInterfaceLGrip">
+			<rb>3</rb>
+		</bc>
+	</Boundary>
+	<Rigid>
+		<rigid_constraint name="RigidConstraint7" type="fix">
+			<rb>3</rb>
+			<dofs>Rx,Ry,Rz,Ru,Rv,Rw</dofs>
+		</rigid_constraint>
+	</Rigid>
+	<Contact>
+	</Contact>
+	<Step>
+		<step id="1" name="Step01">
+			<Control>
+				<analysis>STATIC</analysis>
+				<time_steps>10</time_steps>
+				<step_size>0.1</step_size>
+				<solver>
+					<max_refs>15</max_refs>
+					<max_ups>10</max_ups>
+					<diverge_reform>1</diverge_reform>
+					<reform_each_time_step>1</reform_each_time_step>
+					<dtol>0.001</dtol>
+					<etol>0.01</etol>
+					<rtol>0</rtol>
+					<lstol>0.9</lstol>
+					<min_residual>1e-20</min_residual>
+					<qnmethod>BFGS</qnmethod>
+					<rhoi>-2</rhoi>
+				</solver>
+				<time_stepper>
+					<dtmin>0.01</dtmin>
+					<dtmax>0.1</dtmax>
+					<max_retries>5</max_retries>
+					<opt_iter>10</opt_iter>
+				</time_stepper>
+			</Control>
+			<Rigid>
+				<rigid_constraint name="RigidDisplacement01" type="prescribe">
+					<rb>2</rb>
+					<dof>Rx</dof>
+					<value lc="1">2</value>
+					<relative>0</relative>
+				</rigid_constraint>
+				<rigid_constraint name="RigidDisplacement02" type="prescribe">
+					<rb>2</rb>
+					<dof>Ry</dof>
+					<value lc="2">0</value>
+					<relative>0</relative>
+				</rigid_constraint>
+				<rigid_constraint name="RigidDisplacement03" type="prescribe">
+					<rb>2</rb>
+					<dof>Rz</dof>
+					<value lc="3">2</value>
+					<relative>0</relative>
+				</rigid_constraint>
+				<rigid_constraint name="RigidDisplacement04" type="prescribe">
+					<rb>2</rb>
+					<dof>Ru</dof>
+					<value lc="4">3.14</value>
+					<relative>0</relative>
+				</rigid_constraint>
+				<rigid_constraint name="RigidDisplacement05" type="prescribe">
+					<rb>2</rb>
+					<dof>Rv</dof>
+					<value lc="5">0</value>
+					<relative>0</relative>
+				</rigid_constraint>
+				<rigid_constraint name="RigidDisplacement06" type="prescribe">
+					<rb>2</rb>
+					<dof>Rw</dof>
+					<value lc="6">0</value>
+					<relative>0</relative>
+				</rigid_constraint>
+			</Rigid>
+			<Constraints>
+			</Constraints>
+		</step>
+	</Step>
+	<LoadData>
+		<load_controller id="1" type="loadcurve">
+			<interpolate>LINEAR</interpolate>
+			<points>
+				<point>0,0</point>
+				<point>1,1</point>
+			</points>
+		</load_controller>
+		<load_controller id="2" type="loadcurve">
+			<interpolate>LINEAR</interpolate>
+			<points>
+				<point>0,0</point>
+				<point>1,1</point>
+			</points>
+		</load_controller>
+		<load_controller id="3" type="loadcurve">
+			<interpolate>LINEAR</interpolate>
+			<points>
+				<point>0,0</point>
+				<point>1,1</point>
+			</points>
+		</load_controller>
+		<load_controller id="4" type="loadcurve">
+			<interpolate>LINEAR</interpolate>
+			<points>
+				<point>0,0</point>
+				<point>1,1</point>
+			</points>
+		</load_controller>
+		<load_controller id="5" type="loadcurve">
+			<interpolate>LINEAR</interpolate>
+			<points>
+				<point>0,0</point>
+				<point>1,1</point>
+			</points>
+		</load_controller>
+		<load_controller id="6" type="loadcurve">
+			<interpolate>LINEAR</interpolate>
+			<points>
+				<point>0,0</point>
+				<point>1,1</point>
+			</points>
+		</load_controller>
+	</LoadData>
+	<Output>
+		<plotfile type="febio">
+			<var type="displacement"/>
+			<var type="reaction forces"/>
+			<var type="stress"/>
+		</plotfile>
+		<logfile>
+			<element_data file="bar_explicit_rb_grips_twist_stretch_-_elem_data.txt" delim=", " data="x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J"/>
+			<rigid_body_data file="bar_explicit_rb_grips_twist_stretch_-_body_data.txt" delim=", " data="x;y;z;Fx;Fy;Fz;Mx;My;Mz"/>
+		</logfile>
+	</Output>
+</febio_spec>

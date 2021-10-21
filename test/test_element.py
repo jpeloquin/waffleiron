@@ -387,13 +387,13 @@ def test_FEBio_F_Hex8(febio_cmd):
 
     """
     # Setup
-    srcpath = DIR_FIXTURES / "bar_twist_stretch_rb_grip.feb"
+    srcpath = DIR_FIXTURES / "bar_explicit_rb_grip_twist_stretch.feb"
     runpath = DIR_OUT / f"test_element.F_Hex8.{febio_cmd}.feb"
     copyfile(srcpath, runpath)
     feb.febio.run_febio_checked(runpath, cmd=febio_cmd)
     model = feb.load_model(runpath)
     elemdata = feb.input.textdata_list(
-        DIR_OUT / "bar_twist_stretch_rb_grip_-_elem_data.txt", delim=","
+        DIR_OUT / "bar_explicit_rb_grip_twist_stretch_-_elem_data.txt", delim=","
     )
     # Check F tensor values
     istep = -1
