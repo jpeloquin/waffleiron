@@ -419,6 +419,10 @@ def step_xml(step, name, seq_registry, physics, febioxml_module):
         parent = get_or_create_parent(e_step, p.path)
         tag = p.path.split("/")[-1]
         e = property_to_xml(getattr(step.ticker, nm), tag, seq_registry)
+        # Special-case dtnom (<step_size>), since it is multiplied with the number of
+        # steps to get the step duration, which is kind of important.
+        if nm == "dtnom":
+            e.text = f"{getattr(step.ticker, nm):.17f}"
         parent.append(e)
     for nm, p in fx.CONTROLLER_PARAMS.items():
         parent = get_or_create_parent(e_step, p.path)

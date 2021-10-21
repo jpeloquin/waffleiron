@@ -5,6 +5,7 @@ import subprocess
 from typing import Sequence
 
 from lxml import etree
+import numpy as np
 import psutil
 
 from .control import SaveIters
@@ -198,23 +199,33 @@ def check_solution_exists(model):
 
 def check_must_points(model):
     # Check if all must points were included
-    times = [0.0]
-    # ^ According to Steve, t = 0 s is mandatory if must points are
-    # used.  https://forums.febio.org/showthread.php?49-must-points
+    mptimes = [0.0]
+    # ^ According to Steve, t = 0 s is mandatory if must points are used.
+    # https://forums.febio.org/showthread.php?49-must-points
+    t_laststep = 0.0
     for step, name in model.steps:
         if not all(uses_must_points(model)):
             break
         dtmax = step.ticker.dtmax
-        cur_times = [a for a, b in dtmax.points]
-        # If the first time point in the current step is the same as the
-        # last time point of the previous step, FEBio does not write it
-        # the XPLT.  So we do not count it here either.
-        if cur_times[0] == times[-1]:
-            cur_times = cur_times[1:]
-        times += cur_times
+        candidate_times = [a for a, b in dtmax.points]
+        if candidate_times[0] == mptimes[-1]:
+            candidate_times = candidate_times[1:]
+        # Consider the remaining times in the dtmax sequence to be "must points" if they
+        # belong to the current step's time span.
+        for t in candidate_times:
+            # If the first time point in the current step is the same as the last time
+            # point of the previous step, FEBio does not write it to the XPLT.  So we do
+            # not count it here either.  Assume it is not possible to make FEBio repeat
+            # this time point, and therefore it can be rejected by inequality
+            # comparison.
+            t0 = t_laststep
+            t1 = t_laststep + step.duration
+            if t0 < t <= (t1 + np.spacing(t1)):
+                mptimes.append(t)
+        t_laststep = t_laststep + step.duration
     else:
         # Run if all simulation steps use must points
-        n_expected = len(times)
+        n_expected = len(mptimes)
         n_actual = len(model.solution.step_times)
         if n_expected != n_actual:
             raise IncorrectTimePoints(
