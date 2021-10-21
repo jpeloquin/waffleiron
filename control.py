@@ -87,6 +87,10 @@ class SaveIters(Enum):
     MINOR = "PLOT_MINOR_ITRS"
     USER = "PLOT_MUST_POINTS"
 
+    def __eq__(self, other):
+        if isinstance(other, str):
+            raise ValueError("Please compare enums by identity: use `x is SaveIters.USER`.  This is meant to avoid accidental comparison of the enum to a value.")
+
 
 @dataclass
 class IterController:

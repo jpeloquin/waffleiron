@@ -7,6 +7,7 @@ from typing import Sequence
 from lxml import etree
 import psutil
 
+from .control import SaveIters
 from .input import load_model
 from .febioxml import logfile_name
 
@@ -201,8 +202,7 @@ def check_must_points(model):
     # ^ According to Steve, t = 0 s is mandatory if must points are
     # used.  https://forums.febio.org/showthread.php?49-must-points
     for step, name in model.steps:
-        if step.controller.save_iters != "PLOT_MUST_POINTS":
-            must_point_sim = False
+        if not all(uses_must_points(model)):
             break
         dtmax = step.ticker.dtmax
         cur_times = [a for a, b in dtmax.points]
@@ -252,3 +252,10 @@ def read_log(pth):
                 msg = msg[:-2]
                 errors.append("\n".join(msg))
     return errors
+
+
+def uses_must_points(model):
+    """Return list of True/False for each step (phase) that uses must points"""
+    usemp = [True if step.controller.save_iters is SaveIters.USER else False
+             for step, name in model.steps]
+    return usemp
