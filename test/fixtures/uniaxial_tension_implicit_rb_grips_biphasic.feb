@@ -5977,7 +5977,6 @@
       <max_ups>0</max_ups>
       <plot_level>PLOT_MUST_POINTS</plot_level>
       <ptol>0.01</ptol>
-      <symmetric_biphasic>0</symmetric_biphasic>
       <time_stepper>
         <dtmin>0.025</dtmin>
         <max_retries>15</max_retries>
@@ -6020,7 +6019,6 @@
       <max_ups>0</max_ups>
       <plot_level>PLOT_MUST_POINTS</plot_level>
       <ptol>0.01</ptol>
-      <symmetric_biphasic>0</symmetric_biphasic>
       <time_stepper>
         <dtmin>0.1</dtmin>
         <max_retries>15</max_retries>
@@ -6073,7 +6071,6 @@
       <max_ups>0</max_ups>
       <plot_level>PLOT_MUST_POINTS</plot_level>
       <ptol>0.01</ptol>
-      <symmetric_biphasic>0</symmetric_biphasic>
       <time_stepper>
         <dtmin>0.0331541614321452</dtmin>
         <max_retries>15</max_retries>
@@ -6126,7 +6123,6 @@
       <max_ups>0</max_ups>
       <plot_level>PLOT_MUST_POINTS</plot_level>
       <ptol>0.01</ptol>
-      <symmetric_biphasic>0</symmetric_biphasic>
       <time_stepper>
         <dtmin>0.1</dtmin>
         <max_retries>15</max_retries>
@@ -6179,7 +6175,6 @@
       <max_ups>0</max_ups>
       <plot_level>PLOT_MUST_POINTS</plot_level>
       <ptol>0.01</ptol>
-      <symmetric_biphasic>0</symmetric_biphasic>
       <time_stepper>
         <dtmin>0.01999999999999993</dtmin>
         <max_retries>15</max_retries>
@@ -6232,7 +6227,6 @@
       <max_ups>0</max_ups>
       <plot_level>PLOT_MUST_POINTS</plot_level>
       <ptol>0.01</ptol>
-      <symmetric_biphasic>0</symmetric_biphasic>
       <time_stepper>
         <dtmin>10.0</dtmin>
         <max_retries>15</max_retries>
