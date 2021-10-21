@@ -204,7 +204,7 @@ def check_must_points(model):
         if step.controller.save_iters != "PLOT_MUST_POINTS":
             must_point_sim = False
             break
-        dtmax = step["control"]["time stepper"]["dtmax"]
+        dtmax = step.ticker.dtmax
         cur_times = [a for a, b in dtmax.points]
         # If the first time point in the current step is the same as the
         # last time point of the previous step, FEBio does not write it
