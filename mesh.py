@@ -58,6 +58,7 @@ def cylinder(t_radius: tuple, t_height: tuple, nc: int, material=None):
     z = nodes[:, 2]
     top_nodes = NodeSet(np.where(np.abs(z - height / 2) < _DEFAULT_TOL)[0])
     cylinder.named["node sets"].add("top", top_nodes)
+    # Side nodes are coincident with the maximum radius of the cylinder.
     r = np.linalg.norm(nodes[:, 0:2], axis=1)
     side_nodes = NodeSet(np.where(np.abs(r - radius) < _DEFAULT_TOL)[0])
     cylinder.named["node sets"].add("side", side_nodes)
