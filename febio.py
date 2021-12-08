@@ -50,7 +50,13 @@ class CheckError(Exception):
     pass
 
 
-class ObservationTimesError(CheckError):
+class MustPointCountError(CheckError):
+    """Raise when FEBio emits extra, missing, or offset time points"""
+
+    pass
+
+
+class MustPointTimeError(CheckError):
     """Raise when FEBio emits extra, missing, or offset time points"""
 
     pass
@@ -197,40 +203,56 @@ def check_solution_exists(model):
         )
 
 
-def check_must_points(model):
-    # Check if all must points were included
-    mptimes = [0.0]
+def check_must_points(model, atol=None):
+    """Check the number and time of the must points
+
+    This check is only done if all steps use must points, because otherwise the
+    number of time points is undefined.
+
+    """
+    t = np.array(model.solution.step_times)
+    # Check that time zero exists
+    if model.solution.step_times[0] != 0:
+        raise MustPointTimeError(
+            "Model 'model.name': Solution time points should start at 0, but they start at {model.solution.step_times[0]}"
+        )
     # ^ According to Steve, t = 0 s is mandatory if must points are used.
     # https://forums.febio.org/showthread.php?49-must-points
     t_laststep = 0.0
-    for step, name in model.steps:
-        if not all(uses_must_points(model)):
+    has_explicit_mp = uses_must_points(model)
+    for (
+        i,
+        (step, name),
+    ) in enumerate(model.steps):
+        if not has_explicit_mp[i]:
             break
+        # Requested and actual times should be treated as half open (,] intervals.
+        t0 = t_laststep
+        t1 = t_laststep + step.duration
+        t_obs = t[np.logical_and(t > t0, t <= (t1 + np.spacing(t1)))]
         dtmax = step.ticker.dtmax
-        candidate_times = [a for a, b in dtmax.points]
-        if candidate_times[0] == mptimes[-1]:
-            candidate_times = candidate_times[1:]
-        # Consider the remaining times in the dtmax sequence to be "must points" if they
-        # belong to the current step's time span.
-        for t in candidate_times:
-            # If the first time point in the current step is the same as the last time
-            # point of the previous step, FEBio does not write it to the XPLT.  So we do
-            # not count it here either.  Assume it is not possible to make FEBio repeat
-            # this time point, and therefore it can be rejected by inequality
-            # comparison.
-            t0 = t_laststep
-            t1 = t_laststep + step.duration
-            if t0 < t <= (t1 + np.spacing(t1)):
-                mptimes.append(t)
-        t_laststep = t_laststep + step.duration
-    else:
-        # Run if all simulation steps use must points
-        n_expected = len(mptimes)
-        n_actual = len(model.solution.step_times)
-        if n_expected != n_actual:
-            raise ObservationTimesError(
-                f'FEBio wrote {n_actual} time points when simulating model `{model.name}`, but {n_expected} time points ("must points") were requested.  This may be caused by a bug in FEBio\'s time stepper or must point controller, or by requesting invalid time points that were silently ignored by FEBio.'
+        t_dtmax = np.array([a for a, b in dtmax.points])
+        t_req = t_dtmax[np.logical_and(t_dtmax > t0, t_dtmax <= (t1 + np.spacing(t1)))]
+        # (1) Check must point count for this step
+        if len(t_obs) != len(t_req):
+            raise MustPointCountError(
+                f"Model '{model.name}' step {i}: {len(t_req)} time points ("
+                "must points"
+                ") were requested but FEBio wrote {len(actual_times)} time points.  This may be caused by a bug in FEBio's time stepper or must point controller, or you may have requested invalid time points that FEBio silently ignored."
             )
+        # (2) Check must point times for this step
+        err = np.array(t_obs) - t_req
+        if atol is None:
+            tol = np.spacing(t_req, dtype=np.float32)  # FEBio uses float32
+        else:
+            tol = np.full(t_req.shape, atol)
+        is_wrong = np.abs(err) > tol
+        if np.any(is_wrong):
+            raise MustPointTimeError(
+                f"Model '{model.name}' step {i}: time points {t_req[is_wrong]} were shifted by {err[is_wrong]}.  This may be an FEBio bug or the error tolerance of the time point check may be too tight."
+            )
+        # Re-initialize observed times for next step
+        t_laststep = t_laststep + step.duration
 
 
 def read_log(pth):
@@ -267,6 +289,8 @@ def read_log(pth):
 
 def uses_must_points(model):
     """Return list of True/False for each step (phase) that uses must points"""
-    usemp = [True if step.controller.save_iters is SaveIters.USER else False
-             for step, name in model.steps]
+    usemp = [
+        True if step.controller.save_iters is SaveIters.USER else False
+        for step, name in model.steps
+    ]
     return usemp
