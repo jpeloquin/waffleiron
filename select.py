@@ -221,7 +221,7 @@ def element_slice(elements, v, extent=default_tol, axis=(0, 0, 1)):
 
     """
     # sanitize inputs
-    axis = np.abs(np.array(axis), dtype=np.float)
+    axis = np.abs(np.array(axis), dtype=float)
     # figure out which axis we're using
     idx = np.array(axis).nonzero()[0]
     assert len(idx) == 1

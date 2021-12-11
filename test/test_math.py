@@ -4,7 +4,7 @@ import numpy.testing as npt
 import febtools as feb
 
 np.seterr(all="raise")
-_ZERO_ATOL = np.finfo(np.float).resolution * 1000
+_ZERO_ATOL = np.finfo(float).resolution * 1000
 
 
 class TestLinspaced(TestCase):
