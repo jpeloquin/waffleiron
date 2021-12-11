@@ -191,6 +191,7 @@ tags_table = {
     0x02040000: {"name": "objects state", "leaf": False, "format": "bytes"},  # 33816576
 }
 
+# TODO: Version 49 changed rigid body force data, again.
 SUPPORTED_XPLT_VERSIONS = {2, 5, 48}
 # map of xplt version → path for mesh (2.0) or geometry (1.0) block
 MESH_PATH = {2: "root/mesh", 4: "root/mesh", 5: "root/mesh", 48: "mesh", 49: "mesh"}
