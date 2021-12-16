@@ -501,7 +501,7 @@ def pprint_blocks(f, blocks, parents=tuple()):
                 f.write(",\n" + " " * (indent + 2) + "'children':\n")
                 pprint_blocks(f, block["data"], parents=path)
             else:  # Leaf or unknown
-                f.write(",\n" + " " * (indent + 2) + "'data': {}".format(block["data"]))
+                f.write(",\n" + " " * (indent + 2) + f"'data': {block['data']!r}")
 
         if i < len(blocks) - 1:  # Before last block
             # Close the braces for the current block and write a
