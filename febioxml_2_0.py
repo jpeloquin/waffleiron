@@ -92,7 +92,7 @@ def iter_node_conditions(root):
     guaranteed to be not-None, except "nodal values", which will be None
     if the condition applies the same condition to all nodes.
 
-    All returned IDs are 0-indexed for consistency with febtools.
+    All returned IDs are 0-indexed for consistency with waffleiron.
 
     """
     step_id = -1  # Curent step ID (0-indexed)
@@ -168,7 +168,7 @@ def read_fixed_node_bcs(root: Element, model):
             # different node lists.  Note also that since nodesets are implemented as
             # immutable frozen sets a name for an equal nodeset will also apply to this
             # nodeset.  Therefore,  if the nodeset is named in an FEBio XML 2.0 file and
-            # read into febtools, its original name should be used when it is exported to
+            # read into waffleiron, its original name should be used when it is exported to
             # name-oriented formats like FEBio XML 2.5.
             nodeset = NodeSet(model.fixed["node"][(dof, var)]) | node_ids
             bcs[(dof, var)] = nodeset

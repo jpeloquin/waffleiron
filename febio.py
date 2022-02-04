@@ -140,7 +140,7 @@ def run_febio_unchecked(pth_feb, threads=None, cmd=FEBIO_CMD):
                 break
         else:
             raise NotImplementedError(
-                f"febtools failed to parse FEBio file read status message '{ln}' from stdout"
+                f"waffleiron failed to parse FEBio file read status message '{ln}' from stdout"
             )
     return proc
 
@@ -152,7 +152,7 @@ def run_febio_checked(pth_feb, threads=None, cmd=FEBIO_CMD):
     (mostly absent) error checking:
 
     - Verify that the solution file (xplt file) actually exists and can be read by
-    febtools.
+    waffleiron.
 
     - In any step with PLOT_MUST_POINTS, verify that the number of time
       points matches the number of must points.
@@ -199,7 +199,7 @@ def check_solution_exists(model):
     """Check if a solution exists"""
     if model.solution is None:
         raise NoSolutionError(
-            f"{model.name} has no accompanying plotfile, or febtools could not recognize it as a plotfile."
+            f"{model.name} has no accompanying plotfile, or waffleiron could not recognize it as a plotfile."
         )
 
 

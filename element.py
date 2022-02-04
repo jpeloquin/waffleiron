@@ -1,8 +1,8 @@
 import numpy as np
 from scipy.optimize import fmin
 
-import febtools as feb
-from febtools.geometry import cross
+import waffleiron as wfl
+from waffleiron.geometry import cross
 
 
 def elem_obj(element, nodes, eid=None):
@@ -245,7 +245,7 @@ class Element:
             faces = tuple(tuple(self.ids[i] for i in f) for f in self.face_nodes)
         else:
             faces = self.face_nodes
-        faces = [feb._canonical_face(f) for f in faces]
+        faces = [wfl._canonical_face(f) for f in faces]
         return faces
 
     def face_normals(self, config="reference"):
@@ -253,7 +253,7 @@ class Element:
         normals = []
         # Iterate over faces
         for f in self.faces():
-            normals.append(feb.geometry.face_normal(f, self.mesh))
+            normals.append(wfl.geometry.face_normal(f, self.mesh))
         return normals
 
     def faces_with_node(self, node_id):

@@ -7,10 +7,10 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-import febtools as feb
-from febtools.febio import run_febio_checked
+import waffleiron as wfl
+from waffleiron.febio import run_febio_checked
 
-from febtools.test.fixtures import RTOL_STRESS, ATOL_STRESS, DIR_OUT, febio_cmd
+from waffleiron.test.fixtures import RTOL_STRESS, ATOL_STRESS, DIR_OUT, febio_cmd
 
 
 DIR_THIS = Path(__file__).parent
@@ -50,8 +50,8 @@ class Hex8ElementTest(unittest.TestCase):
             (2, 1.0, 1.2),
             (-2, 1.0, 1.2),
         ]
-        m = feb.material.IsotropicElastic({"E": 1e8, "v": 0.3})
-        self.element = feb.element.Hex8(nodes, material=m)
+        m = wfl.material.IsotropicElastic({"E": 1e8, "v": 0.3})
+        self.element = wfl.element.Hex8(nodes, material=m)
 
         # apply displacement
         self.ftensor = np.array(
@@ -222,7 +222,7 @@ class Quad4ElementTiltedTest(unittest.TestCase):
 
     def setUp(self):
         nodes = [(-2, -1.5, 0), (2, -1.5, 1.0), (2, 1.0, 3.5), (-2, 1.0, 2.5)]
-        self.element = feb.element.Quad4(nodes)
+        self.element = wfl.element.Quad4(nodes)
 
     def test_j(self):
         desired = np.array([[2.0, 0], [0, (1.0 - -1.5) / 2.0], [0.5, 2.5 / 2.0]])
@@ -245,8 +245,8 @@ class Quad4ElementTest(unittest.TestCase):
 
     def setUp(self):
         nodes = [(-2, -1.5, 2.0), (2, -1.5, 2.0), (2, 1.0, 2.0), (-2, 1.0, 2.0)]
-        m = feb.material.IsotropicElastic({"E": 1e8, "v": 0.3})
-        self.element = feb.element.Quad4(nodes, material=m)
+        m = wfl.material.IsotropicElastic({"E": 1e8, "v": 0.3})
+        self.element = wfl.element.Quad4(nodes, material=m)
 
         self.w = 4.0
         self.l = 2.5
@@ -390,9 +390,9 @@ def test_FEBio_F_Hex8(febio_cmd):
     srcpath = DIR_FIXTURES / "bar_explicit_rb_grip_twist_stretch.feb"
     runpath = DIR_OUT / f"test_element.F_Hex8.{febio_cmd}.feb"
     copyfile(srcpath, runpath)
-    feb.febio.run_febio_checked(runpath, cmd=febio_cmd)
-    model = feb.load_model(runpath)
-    elemdata = feb.input.textdata_list(
+    wfl.febio.run_febio_checked(runpath, cmd=febio_cmd)
+    model = wfl.load_model(runpath)
+    elemdata = wfl.input.textdata_list(
         DIR_OUT / "bar_explicit_rb_grip_twist_stretch_-_elem_data.txt", delim=","
     )
     # Check F tensor values
@@ -417,14 +417,14 @@ def test_FEBio_intraElementHetF_Hex8(febio_cmd):
     pth_out = DIR_OUT / f"test_element.intraElementHetF_Hex8.{febio_cmd}.feb"
     copyfile(pth_in, pth_out)
     run_febio_checked(pth_out, cmd=febio_cmd)
-    model = feb.load_model(pth_out)
+    model = wfl.load_model(pth_out)
     e = model.mesh.elements[0]
     # Does the test case actually different values for evaluation at r =
     # (0, 0, 0) vs. averaging over the Gauss points?
     σ_center = e.tstress((0, 0, 0))
     σ_gpt = np.mean([e.tstress(r) for r in e.gloc], axis=0)
     assert np.all(np.abs(σ_gpt - σ_center) > 0.003)
-    # Does febtools' stress averaged over Gauss points match FEBio
+    # Does waffleiron' stress averaged over Gauss points match FEBio
     # output stress?
     σ_FEBio = model.solution.value("stress", -1, 0, 1)
     npt.assert_allclose(σ_gpt, σ_FEBio, rtol=RTOL_STRESS, atol=ATOL_STRESS)
@@ -432,7 +432,7 @@ def test_FEBio_intraElementHetF_Hex8(febio_cmd):
 
 class ElementMethodsTestQuad4(unittest.TestCase):
     def setUp(self):
-        self.model = feb.load_model(DIR_FIXTURES / "center-crack-2d-1mm.feb")
+        self.model = wfl.load_model(DIR_FIXTURES / "center-crack-2d-1mm.feb")
 
 
 class FTestTri3(unittest.TestCase):
@@ -444,8 +444,8 @@ class FTestTri3(unittest.TestCase):
     """
 
     def setUp(self):
-        self.model = feb.load_model(DIR_FIXTURES / "square_tri3.feb")
-        self.elemdata = feb.input.textdata_list(
+        self.model = wfl.load_model(DIR_FIXTURES / "square_tri3.feb")
+        self.elemdata = wfl.input.textdata_list(
             os.path.join("test", "fixtures", "square_tri3_elem_data.txt"), delim=","
         )
 
@@ -465,8 +465,8 @@ class FTestQuad4(unittest.TestCase):
     """Test F tensor calculations for Tri3 mesh."""
 
     def setUp(self):
-        self.soln = feb.MeshSolution("test/fixtures/" "square_quad4.xplt")
-        self.elemdata = feb.textdata_list(
+        self.soln = wfl.MeshSolution("test/fixtures/" "square_quad4.xplt")
+        self.elemdata = wfl.textdata_list(
             "test/fixtures/" "square_quad4_elem_data.txt", delim=","
         )
 
@@ -482,7 +482,7 @@ class FTestQuad4(unittest.TestCase):
 def test_integration():
     # create trapezoidal element
     nodes = ((0.0, 0.0), (2.0, 0.0), (1.5, 2.0), (0.5, 2.0))
-    element = feb.element.Quad4(nodes)
+    element = wfl.element.Quad4(nodes)
     # compute area
     actual = element.integrate(lambda e, r: 1.0)
     desired = 3.0  # A_trapezoid = 0.5 * (b1 + b2) * h
@@ -493,7 +493,7 @@ def test_dinterp_2d():
     """Test dinterp with a truly 2D element."""
     # create square element
     nodes = ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0))
-    element = feb.element.Quad4(nodes)
+    element = wfl.element.Quad4(nodes)
     element.properties["testval"] = np.array((0.0, 10.0, 11.0, 1.0))
     desired = np.array([10.0, 1.0])
     actual = element.dinterp((0, 0), "testval").reshape(-1)

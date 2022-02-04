@@ -6,7 +6,7 @@ be known.  Unfortunately, FEBio does not store the material identity
 anywhere, just the user-defined name, which is usually something
 useless like "Mat1".  The J-integral code will therefore require a
 mapping from =material_name= in the =.xplt= file to the material class
-defined in =febtools=.
+defined in =waffleiron=.
 
 * Special case data fields
 
@@ -40,7 +40,7 @@ calculation of spatial derivatives including $x_3$, though.
 * Coding style
 ** Indexing conventions
 
-The zero-based index convention is maintained within =febtools=.
+The zero-based index convention is maintained within =waffleiron=.
 When output is written, it is translated to a different convention as necessary.
 Writing to FEBio XML, for example, is written with indices starting at 1.
 

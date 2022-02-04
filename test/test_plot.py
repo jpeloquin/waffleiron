@@ -4,8 +4,8 @@ import matplotlib.image as mpimg
 import unittest
 import os
 
-import febtools as feb
-from febtools.test.fixtures import DIR_FIXTURES, gen_model_center_crack_Hex8
+import waffleiron as wfl
+from waffleiron.test.fixtures import DIR_FIXTURES, gen_model_center_crack_Hex8
 
 fp_out = os.path.join("test", "test_output")
 if not os.path.exists(fp_out):
@@ -14,7 +14,7 @@ if not os.path.exists(fp_out):
 
 class ScalarFieldTest(unittest.TestCase):
     def setUp(self):
-        self.model = feb.load_model(
+        self.model = wfl.load_model(
             DIR_FIXTURES / "center_crack_uniax_isotropic_elastic_quad4.xplt"
         )
 
@@ -31,7 +31,7 @@ class ScalarFieldTest(unittest.TestCase):
         pts = np.concatenate([xv[..., np.newaxis], yv[..., np.newaxis]], axis=2)
         # calculate y-stress
         fn = lambda f, e: e.material.tstress(f)[1, 1]
-        img = feb.plot.scalar_field(self.model.mesh, fn, pts)
+        img = wfl.plot.scalar_field(self.model.mesh, fn, pts)
 
         fig = plt.figure()
         imgplot = plt.imshow(img)
@@ -56,20 +56,20 @@ class JDomainPlotTest(unittest.TestCase):
             if np.allclose(x, b[0]) and np.allclose(y, b[1])
         ]
         tip_line = set(tip_line)
-        zslice = feb.select.element_slice(
+        zslice = wfl.select.element_slice(
             self.model.mesh.elements, v=0.0, axis=np.array([0, 0, 1])
         )
 
         # find the crack faces
-        candidates = feb.select.surface_faces(self.model.mesh)
+        candidates = wfl.select.surface_faces(self.model.mesh)
         f_seed = [f for f in candidates if (len(set(f) & set(tip_line)) > 1)]
-        crack_faces = feb.select.f_grow_to_edge(f_seed, self.model.mesh)
+        crack_faces = wfl.select.f_grow_to_edge(f_seed, self.model.mesh)
 
         qdomain = [e for e in self.model.mesh.elements if tip_line.intersection(e.ids)]
-        qdomain = feb.select.e_grow(qdomain, zslice, n=5)
-        qdomain = feb.analysis.apply_q_3d(
+        qdomain = wfl.select.e_grow(qdomain, zslice, n=5)
+        qdomain = wfl.analysis.apply_q_3d(
             zslice, crack_faces, tip_line, q=np.array([1, 0, 0])
         )
-        fig, ax = feb.plot.plot_q(zslice, length=1e-4)
+        fig, ax = wfl.plot.plot_q(zslice, length=1e-4)
         fp_out = os.path.join("test", "test_output", "jdomain_plot_test.png")
         fig.savefig(fp_out)

@@ -1,7 +1,7 @@
 # Run these tests with pytest
 import unittest, os
-import febtools as feb
-from febtools import Mesh
+import waffleiron as wfl
+from waffleiron import Mesh
 
 
 class RectangularPrismHex8(unittest.TestCase):
@@ -26,14 +26,14 @@ class RectangularPrismHex8(unittest.TestCase):
             (0, 10, 1),
         ]
         # a rectangle (on left)
-        self.e = feb.element.Hex8.from_ids([0, 1, 2, 3, 4, 5, 6, 7], nodes)
+        self.e = wfl.element.Hex8.from_ids([0, 1, 2, 3, 4, 5, 6, 7], nodes)
 
     def test_points_in_element(self):
         points = [(0, 0, 0), (0.5, 0.5, 0), (0.9, 5, 1), (0.5, 0.5, 0.5), (0.9, 5, 0.5)]
         for p in points:
-            assert feb.geometry.point_in_element(self.e, p)
+            assert wfl.geometry.point_in_element(self.e, p)
 
     def test_points_not_in_element(self):
         points = [(-0.1, 0, 0), (-0.5, 0.4, 0.5), (10, 10, 10)]
         for p in points:
-            assert not feb.geometry.point_in_element(self.e, p)
+            assert not wfl.geometry.point_in_element(self.e, p)

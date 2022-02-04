@@ -9,7 +9,7 @@ import numpy as np
 from lxml import etree as ET
 
 # Within-module packages
-import febtools as feb
+import waffleiron as wfl
 from .core import (
     Body,
     ImplicitBody,
@@ -103,7 +103,7 @@ def holmesmow_to_feb(mat, model):
 def isotropicelastic_to_feb(mat, model):
     """Convert IsotropicElastic material instance to FEBio XML."""
     e = ET.Element("material", type="isotropic elastic")
-    E, ν = feb.material.from_Lamé(mat.y, mat.mu)
+    E, ν = wfl.material.from_Lamé(mat.y, mat.mu)
     e.append(property_to_xml(E, "E", model.named["sequences"]))
     e.append(property_to_xml(ν, "v", model.named["sequences"]))
     return e
@@ -128,7 +128,7 @@ def orthotropic_elastic_to_feb(mat, model):
 def neo_hookean_to_feb(mat, model):
     """Convert NeoHookean material instance to FEBio XML."""
     e = ET.Element("material", type="neo-Hookean")
-    E, ν = feb.material.from_Lamé(mat.y, mat.mu)
+    E, ν = wfl.material.from_Lamé(mat.y, mat.mu)
     e.append(property_to_xml(E, "E", model.named["sequences"]))
     e.append(property_to_xml(ν, "v", model.named["sequences"]))
     return e
@@ -161,8 +161,8 @@ def poroelastic_to_feb(mat, model):
     # Add permeability
     typ = febioxml.perm_name_from_class[type(mat.permeability)]
     f = {
-        feb.material.IsotropicConstantPermeability: iso_const_perm_to_feb,
-        feb.material.IsotropicHolmesMowPermeability: iso_holmes_mow_perm_to_feb,
+        wfl.material.IsotropicConstantPermeability: iso_const_perm_to_feb,
+        wfl.material.IsotropicHolmesMowPermeability: iso_holmes_mow_perm_to_feb,
     }
     e_permeability = f[type(mat.permeability)](mat.permeability, model)
     e.append(e_permeability)
@@ -224,7 +224,7 @@ def material_to_feb(mat, model):
     TODO: Write a version that works without a model object.
 
     """
-    if isinstance(mat, feb.material.OrientedMaterial):
+    if isinstance(mat, wfl.material.OrientedMaterial):
         orientation = mat.orientation
         mat = mat.material
     else:
@@ -233,17 +233,17 @@ def material_to_feb(mat, model):
         e = ET.Element("material", type="unknown")
     else:
         f = {
-            feb.material.ExponentialFiber: exponential_fiber_to_feb,
-            feb.material.PowerLinearFiber: power_linear_fiber_to_feb,
-            feb.material.HolmesMow: holmesmow_to_feb,
-            feb.material.IsotropicElastic: isotropicelastic_to_feb,
-            feb.material.NeoHookean: neo_hookean_to_feb,
-            feb.material.OrthotropicElastic: orthotropic_elastic_to_feb,
-            feb.material.PoroelasticSolid: poroelastic_to_feb,
-            feb.material.SolidMixture: solidmixture_to_feb,
-            feb.material.RigidBody: rigid_body_to_feb,
-            feb.material.DonnanSwelling: donnan_to_feb,
-            feb.material.Multigeneration: multigeneration_to_feb,
+            wfl.material.ExponentialFiber: exponential_fiber_to_feb,
+            wfl.material.PowerLinearFiber: power_linear_fiber_to_feb,
+            wfl.material.HolmesMow: holmesmow_to_feb,
+            wfl.material.IsotropicElastic: isotropicelastic_to_feb,
+            wfl.material.NeoHookean: neo_hookean_to_feb,
+            wfl.material.OrthotropicElastic: orthotropic_elastic_to_feb,
+            wfl.material.PoroelasticSolid: poroelastic_to_feb,
+            wfl.material.SolidMixture: solidmixture_to_feb,
+            wfl.material.RigidBody: rigid_body_to_feb,
+            wfl.material.DonnanSwelling: donnan_to_feb,
+            wfl.material.Multigeneration: multigeneration_to_feb,
         }
         try:
             e = f[type(mat)](mat, model)
@@ -296,7 +296,7 @@ def add_nodeset(xml_root, name, nodes, febioxml_module):
 def sequence_time_offsets(model):
     """Return map: sequence → global start time.
 
-    In `febtools`, each step has its own running time (step-local time),
+    In `waffleiron`, each step has its own running time (step-local time),
     and step-related time sequences are in step-local time.  But in
     FEBio XML, all time sequences are written in global time.  This
     function calculates and returns the time offsets that must be added
@@ -490,7 +490,7 @@ def xml(model, version="3.0"):
     assert materials_used - set(material_registry.objects()) == set()
 
     root = ET.Element("febio_spec", version="{}".format(version))
-    msg = f"Exported to FEBio XML by febtools prerelease at {datetime.today().strftime('%Y-%m-%dT%H:%M:%S%z')}"
+    msg = f"Exported to FEBio XML by waffleiron prerelease at {datetime.today().strftime('%Y-%m-%dT%H:%M:%S%z')}"
     root.append(ET.Comment(msg))
 
     version_major, version_minor = [int(a) for a in version.split(".")]
@@ -616,7 +616,7 @@ def xml(model, version="3.0"):
     for i, implicit_body in enumerate(implicit_bodies_to_process):
         body_name = f"implicit_rigid_body_{i+1}"
         # Create the implicit body's FEBio rigid material
-        mat = feb.material.RigidBody()
+        mat = wfl.material.RigidBody()
         tag = material_to_feb(mat, model)
         # TODO: Support comments in reader
         # tag.append(ET.Comment("Implicit rigid body"))
@@ -704,7 +704,7 @@ def xml(model, version="3.0"):
         if physics == Physics.BIPHASIC:
             output_vars += ["effective fluid pressure", "fluid pressure", "fluid flux"]
         rigid_bodies_present = any(
-            isinstance(m, feb.material.RigidBody) for m in material_registry.objects()
+            isinstance(m, wfl.material.RigidBody) for m in material_registry.objects()
         )
         if rigid_bodies_present:
             output_vars += ["reaction forces"]

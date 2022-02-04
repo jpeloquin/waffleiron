@@ -5,9 +5,9 @@ from numpy import dot
 from math import degrees, radians, cos, sin
 from unittest import TestCase
 
-# Febtools packages
-import febtools as feb
-from febtools.select import find_closest_timestep, adj_faces, surface_faces
+# Waffleiron packages
+import waffleiron as wfl
+from waffleiron.select import find_closest_timestep, adj_faces, surface_faces
 
 
 class FindClosestTimestep(TestCase):
@@ -71,7 +71,7 @@ class QuadMesh(TestCase):
     """Test selection of corners in rotated mesh."""
 
     def setUp(self):
-        reader = feb.input.FebReader(
+        reader = wfl.input.FebReader(
             os.path.join(
                 "test", "fixtures", "center_crack_uniax_isotropic_elastic_quad4.feb"
             )
@@ -87,7 +87,7 @@ class QuadMesh(TestCase):
 
     def test_select_corners(self):
         """Test for selection of four exterior corner nodes."""
-        corner_nodes = feb.select.corner_nodes(self.model.mesh)
+        corner_nodes = wfl.select.corner_nodes(self.model.mesh)
         assert not set(corner_nodes) - set([0, 100, 5554, 5454])
 
 
@@ -97,7 +97,7 @@ class SelectionHex8Consolidated(TestCase):
     # gradually move SelectionHex8 tests to here
 
     def setUp(self):
-        reader = feb.input.FebReader(
+        reader = wfl.input.FebReader(
             os.path.join(
                 "test", "fixtures", "center_crack_uniax_isotropic_elastic_hex8.feb"
             )
@@ -112,14 +112,14 @@ class SelectionHex8Consolidated(TestCase):
         p1 = np.array([0.005, 0.00734127, 0.0])
         p2 = np.array([0.0028879, 0.01, 0.0])
         l = p2 - p1
-        n = feb.geometry.cross(l, (0, 0, 1))
+        n = wfl.geometry.cross(l, (0, 0, 1))
         # Bisect off the elements in the afforementioned triangle
-        elset = feb.select.bisect(self.mesh.elements, p=p1, v=n)
+        elset = wfl.select.bisect(self.mesh.elements, p=p1, v=n)
         assert len(elset) == 6 * 4
 
     def test_element_slice(self):
         # select the two layers in the middle
-        eset = feb.select.element_slice(self.mesh.elements, v=0, axis=(0, 0, 1))
+        eset = wfl.select.element_slice(self.mesh.elements, v=0, axis=(0, 0, 1))
         assert len(eset) == len(self.mesh.elements) / 2
 
 
@@ -127,7 +127,7 @@ class SelectionHex8(TestCase):
     """Test selections for a hex8 mesh with a hole."""
 
     def setUp(self):
-        reader = feb.input.FebReader(
+        reader = wfl.input.FebReader(
             os.path.join("test", "fixtures", "center_crack_uniax_isotropic_elastic.feb")
         )
         self.mesh = reader.mesh()

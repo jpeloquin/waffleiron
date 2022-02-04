@@ -1,8 +1,8 @@
 import numpy as np
 
-from febtools.core import NodeSet
-from febtools.model import Model
-from febtools.exceptions import SelectionException
+from waffleiron.core import NodeSet
+from waffleiron.model import Model
+from waffleiron.exceptions import SelectionException
 
 
 def eval_fn_x(soln, fn, pt):
@@ -287,7 +287,7 @@ def distance(model: Model, a: NodeSet, b: NodeSet):
     Inputs:
     -------
 
-    model := febtools Model object with a solution.
+    model := waffleiron Model object with a solution.
 
     a := First distance marker
 
@@ -325,7 +325,7 @@ def strain_gauge(model: Model, a: NodeSet, b: NodeSet):
     Inputs:
     -------
 
-    model := febtools Model object with a solution.
+    model := waffleiron Model object with a solution.
 
     a := First strain gauge marker / anchor.
 

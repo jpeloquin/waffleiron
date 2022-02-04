@@ -6,10 +6,10 @@ Run these tests with pytest.
 import unittest, os
 from copy import deepcopy
 
-# Febtools modules
-import febtools as feb
-from febtools.select import elements_containing_point
-from febtools.test.fixtures import DIR_FIXTURES
+# Waffleiron modules
+import waffleiron as wfl
+from waffleiron.select import elements_containing_point
+from waffleiron.test.fixtures import DIR_FIXTURES
 
 ### Face connectivity
 
@@ -18,7 +18,7 @@ class FaceConnectivityHex8(unittest.TestCase):
     """Test for correct face connectivity."""
 
     def setUp(self):
-        model = feb.load_model(
+        model = wfl.load_model(
             DIR_FIXTURES / "center_crack_uniax_isotropic_elastic.feb"
         )
         self.mesh = model.mesh
@@ -37,8 +37,8 @@ class ElementContainingPointCubeHex8(unittest.TestCase):
 
     def setUp(self):
         # The cube is bounded by -1 ≤ x ≤ 1, -1 ≤ y ≤ 1, and 0 ≤ z ≤ 2
-        self.model = feb.load_model(DIR_FIXTURES / "uniax-8cube.feb")
-        self.bb = feb.core._e_bb(self.model.mesh.elements)
+        self.model = wfl.load_model(DIR_FIXTURES / "uniax-8cube.feb")
+        self.bb = wfl.core._e_bb(self.model.mesh.elements)
 
     def test_outside(self):
         points = [(3, 3, 3), (-2.5, -3.0, -10), (-5.0, -3.0, 1.0)]
@@ -86,11 +86,11 @@ class ElementContainingPointNarrowParallelogram(unittest.TestCase):
             (2, 15, 1),
         ]
         # a rectangle (on left)
-        self.e1 = feb.element.Hex8.from_ids([0, 1, 2, 3, 6, 7, 8, 9], nodes)
+        self.e1 = wfl.element.Hex8.from_ids([0, 1, 2, 3, 6, 7, 8, 9], nodes)
         # a parallelogram (on right)
-        self.e2 = feb.element.Hex8.from_ids([2, 4, 5, 3, 8, 10, 11, 9], nodes)
-        self.mesh = feb.Mesh(nodes, [self.e1, self.e2])
-        self.bb = feb.core._e_bb(self.mesh.elements)
+        self.e2 = wfl.element.Hex8.from_ids([2, 4, 5, 3, 8, 10, 11, 9], nodes)
+        self.mesh = wfl.Mesh(nodes, [self.e1, self.e2])
+        self.bb = wfl.core._e_bb(self.mesh.elements)
 
     def test_point_in_rectangle(self):
         """Test points that are nearest e2 nodes, but in e1."""
@@ -107,9 +107,9 @@ class ElementContainingPointQuad4(unittest.TestCase):
 
     def setUp(self):
         # The square is bounded by x ∈ [-1, 1], y ∈ [-1, 1]
-        self.model = feb.load_model(DIR_FIXTURES / "uniax-quad4.feb")
+        self.model = wfl.load_model(DIR_FIXTURES / "uniax-quad4.feb")
         self.soln = self.model.solution
-        self.bb = feb.core._e_bb(self.model.mesh.elements)
+        self.bb = wfl.core._e_bb(self.model.mesh.elements)
 
     def test_outside(self):
         points = [(3, 3, 0), (-2.5, -3.0, 0), (-5.0, -3.0, 0)]

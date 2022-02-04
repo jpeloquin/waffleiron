@@ -7,9 +7,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-# febtools' local modules
-import febtools as feb
-from febtools.material import from_Lamé
+# waffleiron' local modules
+import waffleiron as wfl
+from waffleiron.material import from_Lamé
 
 
 RTOL_F = 5e-7
@@ -70,7 +70,7 @@ def gen_model_center_crack_Hex8():
     Boundary conditions: 2% strain applied in y.
 
     """
-    model = feb.load_model(
+    model = wfl.load_model(
         DIR_FIXTURES / "center_crack_uniax_isotropic_elastic_hex8.feb"
     )
 
@@ -97,9 +97,9 @@ def gen_model_center_crack_Hex8():
     tip_line_l = set(tip_line_l)
 
     # identify crack faces
-    f_candidates = feb.select.surface_faces(model.mesh)
+    f_candidates = wfl.select.surface_faces(model.mesh)
     f_seed = [f for f in f_candidates if (len(set(f) & tip_line_r) > 1)]
-    f_crack_surf = feb.select.f_grow_to_edge(f_seed, model.mesh)
+    f_crack_surf = wfl.select.f_grow_to_edge(f_seed, model.mesh)
     crack_faces = f_crack_surf
 
     attrib = {
@@ -158,7 +158,7 @@ def gen_model_single_spiky_Hex8(material=None):
         np.sin(radians(-11)),
     ]
     nodes = np.vstack([x1, x2, x3, x4, x5, x6, x7, x8])
-    element = feb.element.Hex8.from_ids([i for i in range(8)], nodes)
+    element = wfl.element.Hex8.from_ids([i for i in range(8)], nodes)
     element.material = material
-    model = feb.Model(feb.Mesh(nodes, [element]))
+    model = wfl.Model(wfl.Mesh(nodes, [element]))
     return model

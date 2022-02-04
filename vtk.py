@@ -2,7 +2,7 @@ import numpy as np
 from tvtk.api import tvtk
 from .element import Hex8
 
-# Mapping from febtools cell types to vtk cell types
+# Mapping from waffleiron cell types to vtk cell types
 vtk_cell_type = {Hex8: tvtk.Hexahedron().cell_type}
 
 

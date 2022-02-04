@@ -1,9 +1,9 @@
 """Functions to generate models commonly used in experiments"""
 import numpy as np
 
-import febtools as feb
+import waffleiron as wfl
 from . import _DEFAULT_TOL
-from febtools.control import Step, auto_ticker
+from waffleiron.control import Step, auto_ticker
 from .core import Sequence, NodeSet
 from .math import linspaced, logspaced
 
@@ -18,9 +18,9 @@ def freeswell_cube(h, material, init_duration, swell_duration, init_n=10, swell_
     DC = [D + s * (C - D) for s in linspaced(0, 1, n=3)]
     AD = [A + s * (D - A) for s in linspaced(0, 1, n=3)]
     BC = [B + s * (C - B) for s in linspaced(0, 1, n=3)]
-    base = feb.mesh.quadrilateral(AD, BC, AB, DC)
-    cube = feb.mesh.zstack(base, feb.math.linspaced(0, 0.1, n=3) - h / 2)
-    model = feb.Model(cube)
+    base = wfl.mesh.quadrilateral(AD, BC, AB, DC)
+    cube = wfl.mesh.zstack(base, wfl.math.linspaced(0, 0.1, n=3) - h / 2)
+    model = wfl.Model(cube)
     for element in model.mesh.elements:
         element.material = material
     # Adjust constants for mm, g, s, C, nmol, MPa, mM system

@@ -5,12 +5,12 @@ from numpy import dot
 from numpy.linalg import inv
 import numpy.testing as npt
 
-import febtools as feb
+import waffleiron as wfl
 import os
-from febtools.material import *
-from febtools.test.fixtures import RTOL_F, RTOL_STRESS
-from febtools.input import FebReader, textdata_list
-from febtools.test.fixtures import DIR_FIXTURES, DIR_OUT, febio_cmd_xml
+from waffleiron.material import *
+from waffleiron.test.fixtures import RTOL_F, RTOL_STRESS
+from waffleiron.input import FebReader, textdata_list
+from waffleiron.test.fixtures import DIR_FIXTURES, DIR_OUT, febio_cmd_xml
 
 
 class ExponentialFiberTest(unittest.TestCase):
@@ -22,7 +22,7 @@ class ExponentialFiberTest(unittest.TestCase):
     """
 
     def setUp(self):
-        self.model = feb.load_model(DIR_FIXTURES / "mixture_hm_exp.feb")
+        self.model = wfl.load_model(DIR_FIXTURES / "mixture_hm_exp.feb")
         self.soln = self.model.solution
 
     def w_test(self):
@@ -214,7 +214,7 @@ class HolmesMowTest(unittest.TestCase):
     """Test Holmes Mow material definition"""
 
     def setUp(self):
-        self.model = feb.load_model(DIR_FIXTURES / "holmes_mow.feb")
+        self.model = wfl.load_model(DIR_FIXTURES / "holmes_mow.feb")
         self.soln = self.model.solution
 
     def test_tstress(self):
@@ -239,7 +239,7 @@ class NeoHookeanTest(unittest.TestCase):
     """Test Holmes–Mow material definition"""
 
     def setUp(self):
-        self.model = feb.load_model(DIR_FIXTURES / "neo_hookean.feb")
+        self.model = wfl.load_model(DIR_FIXTURES / "neo_hookean.feb")
         self.soln = self.model.solution
 
     def test_tstress(self):
@@ -272,7 +272,7 @@ def test_FEBio_Hex8_OrthoE(febio_cmd_xml):
     pth_in = DIR_FIXTURES / (
         f"{Path(__file__).with_suffix('').name}." + "Hex8_OrthoE.feb"
     )
-    model = feb.load_model(pth_in)
+    model = wfl.load_model(pth_in)
     #
     # Test 2: Write
     pth_out = DIR_OUT / (
@@ -282,12 +282,12 @@ def test_FEBio_Hex8_OrthoE(febio_cmd_xml):
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
-        feb.output.write_feb(model, f, version=xml_version)
+        wfl.output.write_feb(model, f, version=xml_version)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    feb.febio.run_febio_checked(pth_out, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd)
     #
     # Test 4: Is the output as expected?
-    model = feb.load_model(pth_out)
+    model = wfl.load_model(pth_out)
     e = model.mesh.elements[0]
     ##
     ## Test 4.1: Do we see the correct applied displacements?  A test

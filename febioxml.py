@@ -189,7 +189,7 @@ def normalize_xml(root):
     """Convert some items in FEBio XML to 'normal' representation.
 
     FEBio XML allows some items to be specified several ways.  To reduce
-    the complexity of the code that converts FEBio XML to a febtools
+    the complexity of the code that converts FEBio XML to a waffleiron
     Model, this function should be used ahead of time to normalize the
     representation of said items.
 

@@ -8,9 +8,9 @@ import numpy.testing as npt
 import numpy as np
 import pytest
 
-import febtools as feb
-from febtools.febio import run_febio_checked
-from febtools.test.fixtures import DIR_FIXTURES, febio_cmd
+import waffleiron as wfl
+from waffleiron.febio import run_febio_checked
+from waffleiron.test.fixtures import DIR_FIXTURES, febio_cmd
 
 
 @pytest.fixture(scope="module")
@@ -28,11 +28,11 @@ def test_FEBio_FixedNodeBC_Solid(FixedNodeBC_Solid_Model):
     """Test read of FEBio XML and XPLT files with fixed boundary conditions."""
     pth = FixedNodeBC_Solid_Model
     # Test 1: Read XML?
-    model = feb.load_model(pth)
+    model = wfl.load_model(pth)
     # Test 2: Read XPLT?
     pth_xplt = pth.with_suffix(".xplt")
     with open(pth_xplt, "rb") as f:
-        xplt = feb.xplt.XpltData(f.read())
+        xplt = wfl.xplt.XpltData(f.read())
     # Test 3: Read mesh from XPLT?
     mesh = xplt.mesh()
     # Check node values
@@ -58,11 +58,11 @@ def FixedNodeBC_Biphasic_Model(febio_cmd):
 def test_FEBio_Fixed_NodeBC_Biphasic(FixedNodeBC_Biphasic_Model):
     pth = FixedNodeBC_Biphasic_Model
     # Test 1: Read XML?
-    model = feb.load_model(pth)
+    model = wfl.load_model(pth)
     # Test 2: Read XPLT?
     pth_xplt = pth.with_suffix(".xplt")
     with open(str(pth_xplt), "rb") as f:
-        xplt = feb.xplt.XpltData(f.read())
+        xplt = wfl.xplt.XpltData(f.read())
     # Test 3: Read mesh from XPLT?
     mesh = xplt.mesh()
     # Check node values
@@ -80,7 +80,7 @@ class EnvironmentConstants(unittest.TestCase):
     path = "test/fixtures/isotropic_elastic.feb"
 
     def test_temperature_constant(self):
-        model = feb.load_model(self.path)
+        model = wfl.load_model(self.path)
         assert model.environment["temperature"] == 300
 
 
@@ -90,9 +90,9 @@ class UniversalConstants(unittest.TestCase):
     path = "test/fixtures/isotropic_elastic.feb"
 
     def test_idal_gas_constant(self):
-        model = feb.load_model(self.path)
+        model = wfl.load_model(self.path)
         assert model.constants["R"] == 8.314e-6
 
     def test_Faraday_constant(self):
-        model = feb.load_model(self.path)
+        model = wfl.load_model(self.path)
         assert model.constants["F"] == 96485e-9

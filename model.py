@@ -35,7 +35,7 @@ class Model:
 
     def __init__(self, mesh):
         if type(mesh) is not Mesh:
-            raise TypeError("{} is not of type" "febtools.core.Model".format(mesh))
+            raise TypeError("{} is not of type" "waffleiron.core.Model".format(mesh))
 
         self.mesh = mesh  # The model geometry
         self.solution = None  # The solution for the model

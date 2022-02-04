@@ -10,8 +10,8 @@ import numpy as np
 from numpy import array
 import pandas as pd
 
-import febtools.element
-from febtools.exceptions import UnsupportedFormatError
+import waffleiron.element
+from waffleiron.exceptions import UnsupportedFormatError
 from operator import itemgetter
 
 from .math import orthonormal_basis, vec_from_sph
@@ -402,7 +402,7 @@ class FebReader:
                 + "is not an FEBio xml file."
             )
         if self.feb_version not in SUPPORTED_FEBIO_XML_VERS:
-            msg = f"FEBio XML version {self.feb_version} is not supported by febtools"
+            msg = f"FEBio XML version {self.feb_version} is not supported by waffleiron"
             raise UnsupportedFormatError(msg, file, self.feb_version)
         # Get the correct FEBio XML module
         version_major, version_minor = [int(a) for a in self.feb_version.split(".")]
@@ -632,7 +632,7 @@ class FebReader:
             v = _vec_from_text(e_mcs_local[0].text)  # tuple
             equal = (_vec_from_text(e.text) == v for e in e_mcs_local)
             if not all(equal):
-                msg = f'{e_mcs_local.base}:{e_mcs_local.sourceline} Multiple <mat_axis type="local"> elements with unequal values are present.  febtools does not support this case.'
+                msg = f'{e_mcs_local.base}:{e_mcs_local.sourceline} Multiple <mat_axis type="local"> elements with unequal values are present.  waffleiron does not support this case.'
                 raise ValueError(msg)
             # Convert the node ID encoded local basis to an explicit
             # basis for each finite element.  We can use the first
@@ -688,7 +688,7 @@ class FebReader:
         # Read fixed boundary conditions. TODO: Support solutes
         #
         # Here, no prefix on an axis / BC name means it's named as in
-        # febtools.  An `xml` prefix means it's named as in FEBio XML.
+        # waffleiron.  An `xml` prefix means it's named as in FEBio XML.
         #
         # Read fixed constraints on node sets:
         fixed_node_bcs = fx.read_fixed_node_bcs(self.root, model)

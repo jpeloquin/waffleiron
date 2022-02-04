@@ -9,17 +9,17 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-# febtools' local modules
-import febtools as feb
-from febtools import Step
-from febtools.load import prescribe_deformation
-from febtools.control import auto_ticker
-from febtools.febioxml import basis_mat_axis_local
-from febtools.element import Hex8
-from febtools.model import Model, Mesh
-from febtools.material import IsotropicElastic, OrthotropicElastic
-from febtools.output import write_feb, write_xml
-from febtools.test.fixtures import (
+# waffleiron' local modules
+import waffleiron as wfl
+from waffleiron import Step
+from waffleiron.load import prescribe_deformation
+from waffleiron.control import auto_ticker
+from waffleiron.febioxml import basis_mat_axis_local
+from waffleiron.element import Hex8
+from waffleiron.model import Model, Mesh
+from waffleiron.material import IsotropicElastic, OrthotropicElastic
+from waffleiron.output import write_feb, write_xml
+from waffleiron.test.fixtures import (
     DIR_OUT,
     febio_cmd,
     febio_cmd_xml,
@@ -38,19 +38,19 @@ def test_FEBio_normalizeXML_bare_Boundary(febio_cmd):
     pth_in = DIR_FIXTURES / (
         f"{Path(__file__).with_suffix('').name}." + "normalizeXML_bare_Boundary.feb"
     )
-    tree = feb.input.read_febio_xml(pth_in)
-    normalized_root = feb.febioxml.normalize_xml(tree.getroot())
+    tree = wfl.input.read_febio_xml(pth_in)
+    normalized_root = wfl.febioxml.normalize_xml(tree.getroot())
     normalized_tree = normalized_root.getroottree()
     pth_out = DIR_OUT / (
         f"{Path(__file__).with_suffix('').name}."
         + f"normalizeXML_bare_Boundary.{febio_cmd}.feb"
     )
     with open(pth_out, "wb") as f:
-        feb.output.write_xml(normalized_tree, f)
+        wfl.output.write_xml(normalized_tree, f)
     # Test 1: Can FEBio still read the normalized file?
-    feb.febio.run_febio_checked(pth_out, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd)
     # Test 2: Did the right displacements get applied?
-    model = feb.load_model(pth_out)
+    model = wfl.load_model(pth_out)
     ## Test 2.1: Did node 0 stay fixed?
     expected_Δx_node0 = (0, 0, 0)
     Δx_node0 = model.solution.value("displacement", step=1, entity_id=0)
@@ -203,7 +203,7 @@ def mataxis_local_global_hex8_models(febio_cmd_xml) -> Generator:
     #
     # Model 1: Local basis; material axes given by <mat_axis type="local">
     localb_model = gen_model_single_spiky_Hex8(material=material)
-    sequence = feb.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
+    sequence = wfl.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
     step = Step(physics="solid", ticker=auto_ticker(sequence))
     localb_model.add_step(step)
     node_set = [i for i in range(len(localb_model.mesh.nodes))]
@@ -212,7 +212,7 @@ def mataxis_local_global_hex8_models(febio_cmd_xml) -> Generator:
         DIR_OUT
         / f"mataxis_local_global_hex8_models.localb.{febio_cmd}.xml{xml_version}.feb"
     )
-    tree = feb.output.xml(localb_model, version=xml_version)
+    tree = wfl.output.xml(localb_model, version=xml_version)
     # add <mat_axis type="local">
     e_mat = tree.find("Material/material")
     e_mat_axis = e_mat.makeelement("mat_axis")
@@ -221,13 +221,13 @@ def mataxis_local_global_hex8_models(febio_cmd_xml) -> Generator:
     e_mat_axis.text = ", ".join([str(a) for a in basis_code])
     with open(pth_localb_model, "wb") as f:
         write_xml(tree, f)
-    feb.febio.run_febio_checked(pth_localb_model, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(pth_localb_model, cmd=febio_cmd)
     #
     # Model 2: Global basis; material axes are x1, x2, x3
     basis = np.array(basis_mat_axis_local(localb_model.mesh.elements[0], basis_code))
     # ^ dim 0 over basis vectors, dim 1 over X
     globalb_model = gen_model_single_spiky_Hex8(material=material)
-    seq = feb.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
+    seq = wfl.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
     step = Step("solid", ticker=auto_ticker(seq))
     globalb_model.add_step(step)
     node_set = [i for i in range(len(globalb_model.mesh.nodes))]
@@ -236,7 +236,7 @@ def mataxis_local_global_hex8_models(febio_cmd_xml) -> Generator:
         DIR_OUT
         / f"mataxis_local_global_hex8_models.globalb.{febio_cmd}.xml{xml_version}..feb"
     )
-    tree = feb.output.xml(localb_model, version=xml_version)
+    tree = wfl.output.xml(localb_model, version=xml_version)
     # add <mat_axis type="vector">
     e_mat = tree.find("Material/material")
     e_mat_axis = e_mat.makeelement("mat_axis")
@@ -251,7 +251,7 @@ def mataxis_local_global_hex8_models(febio_cmd_xml) -> Generator:
     e_d.text = ", ".join([str(a) for a in basis[:, 1]])
     with open(pth_globalb_model, "wb") as f:
         write_xml(tree, f)
-    feb.febio.run_febio_checked(pth_globalb_model, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(pth_globalb_model, cmd=febio_cmd)
 
     yield (pth_localb_model, pth_globalb_model)
 
@@ -272,9 +272,9 @@ def test_mataxis_stress(mataxis_local_global_hex8_models) -> None:
     """
     pth_localb_model, pth_globalb_model = mataxis_local_global_hex8_models
     with open(pth_localb_model.with_suffix(".xplt"), "rb") as f:
-        localb_result = feb.xplt.XpltData(f.read())
+        localb_result = wfl.xplt.XpltData(f.read())
     localb_stress = localb_result.step_data(-1)[("stress", "domain")][0]
     with open(pth_globalb_model.with_suffix(".xplt"), "rb") as f:
-        globalb_result = feb.xplt.XpltData(f.read())
+        globalb_result = wfl.xplt.XpltData(f.read())
     globalb_stress = globalb_result.step_data(-1)[("stress", "domain")][0]
     npt.assert_array_almost_equal_nulp(globalb_stress, localb_stress)

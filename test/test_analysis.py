@@ -9,13 +9,13 @@ import numpy.testing as npt
 import numpy as np
 import pytest
 
-import febtools as feb
-from febtools.control import Step, auto_ticker
-from febtools.input import FebReader
-from febtools.material import from_Lamé, to_Lamé
-from febtools.analysis import *
-from febtools import material
-from febtools.test.fixtures import (
+import waffleiron as wfl
+from waffleiron.control import Step, auto_ticker
+from waffleiron.input import FebReader
+from waffleiron.material import from_Lamé, to_Lamé
+from waffleiron.analysis import *
+from waffleiron import material
+from waffleiron.test.fixtures import (
     DIR_FIXTURES,
     DIR_OUT,
     RTOL_F,
@@ -58,7 +58,7 @@ class CenterCrackHex8(TestCase):
     def test_right_tip(self):
         # Calculate J
 
-        zslice = feb.select.element_slice(
+        zslice = wfl.select.element_slice(
             self.model.mesh.elements, v=0e-3, axis=(0, 0, 1)
         )
         nodes = [n for e in zslice for n in e.nodes]
@@ -68,13 +68,13 @@ class CenterCrackHex8(TestCase):
 
         # define integration domain
         domain = [e for e in zslice if self.tip_line_r.intersection(e.ids)]
-        domain = feb.select.e_grow(domain, zslice, n=2)
-        domain = feb.analysis.apply_q_3d(
+        domain = wfl.select.e_grow(domain, zslice, n=2)
+        domain = wfl.analysis.apply_q_3d(
             domain, self.crack_faces, self.tip_line_r, q=[1, 0, 0]
         )
         # assert len(domain) == 4**2.0 * 4**2.0 * 2
 
-        jbdl = feb.analysis.jintegral(domain)
+        jbdl = wfl.analysis.jintegral(domain)
         jbar = jbdl / (0.5 * deltaL)
         # 0.5 * deltaL is standing in for ∫q(η)dη; this is ok for a
         # tringular q(η)
@@ -88,7 +88,7 @@ class CenterCrackHex8(TestCase):
 
     def test_left_tip(self):
         """Test if J is valid for left crack tip."""
-        zslice = feb.select.element_slice(
+        zslice = wfl.select.element_slice(
             self.model.mesh.elements, v=0e-3, axis=(0, 0, 1)
         )
         nodes = [n for e in zslice for n in e.nodes]
@@ -98,13 +98,13 @@ class CenterCrackHex8(TestCase):
 
         # define integration domain
         domain = [e for e in zslice if self.tip_line_l.intersection(e.ids)]
-        domain = feb.select.e_grow(domain, zslice, n=2)
-        domain = feb.analysis.apply_q_3d(
+        domain = wfl.select.e_grow(domain, zslice, n=2)
+        domain = wfl.analysis.apply_q_3d(
             domain, self.crack_faces, self.tip_line_l, q=[-1, 0, 0]
         )
         assert len(domain) == 6 * 6 * 2
 
-        jbdl = feb.analysis.jintegral(domain)
+        jbdl = wfl.analysis.jintegral(domain)
         jbar = jbdl / (0.5 * deltaL)
         # 0.5 * deltaL is standing in for ∫q(η)dη; this is ok for a
         # tringular q(η)
@@ -134,7 +134,7 @@ class CenterCrackHex8(TestCase):
             e.properties["displacement"] = np.dot(R, e.properties["displacement"].T).T
 
         # Calculate J
-        zslice = feb.select.element_slice(
+        zslice = wfl.select.element_slice(
             self.model.mesh.elements, v=0e-3, axis=(0, 0, 1)
         )
         nodes = [n for e in zslice for n in e.nodes]
@@ -142,13 +142,13 @@ class CenterCrackHex8(TestCase):
 
         # Right tip
         domain = [e for e in zslice if self.tip_line_r.intersection(e.ids)]
-        domain = feb.select.e_grow(domain, zslice, n=2)
-        domain = feb.analysis.apply_q_3d(
+        domain = wfl.select.e_grow(domain, zslice, n=2)
+        domain = wfl.analysis.apply_q_3d(
             domain, self.crack_faces, self.tip_line_r, q=[cos(angle), sin(angle), 0]
         )
         assert len(domain) == 6 * 6 * 2
 
-        jbar_r = feb.analysis.jintegral(domain) / (0.5 * deltaL)
+        jbar_r = wfl.analysis.jintegral(domain) / (0.5 * deltaL)
         npt.assert_allclose(jbar_r, G, rtol=0.07)
         # Test for consistency with value calculated when code
         # initially verified
@@ -173,7 +173,7 @@ class CenterCrackHex8(TestCase):
             e.properties["displacement"] = np.dot(R, e.properties["displacement"].T).T
 
         # Calculate J
-        zslice = feb.select.element_slice(
+        zslice = wfl.select.element_slice(
             self.model.mesh.elements, v=0e-3, axis=(0, 0, 1)
         )
 
@@ -183,13 +183,13 @@ class CenterCrackHex8(TestCase):
         # define integration domain
         # Right tip
         domain = [e for e in zslice if self.tip_line_l.intersection(e.ids)]
-        domain = feb.select.e_grow(domain, zslice, n=2)
-        domain = feb.analysis.apply_q_3d(
+        domain = wfl.select.e_grow(domain, zslice, n=2)
+        domain = wfl.analysis.apply_q_3d(
             domain, self.crack_faces, self.tip_line_l, q=[-cos(angle), -sin(angle), 0]
         )
         assert len(domain) == 6 * 6 * 2
 
-        jbar_l = feb.analysis.jintegral(domain) / (0.5 * deltaL)
+        jbar_l = wfl.analysis.jintegral(domain) / (0.5 * deltaL)
         npt.assert_allclose(jbar_l, G, rtol=0.07)
         # Test for consistency with value calculated when code
         # initially verified
@@ -198,7 +198,7 @@ class CenterCrackHex8(TestCase):
 
 class CenterCrackQuad4(TestCase):
     def setUp(self):
-        self.model = feb.load_model(
+        self.model = wfl.load_model(
             DIR_FIXTURES / "center_crack_uniax_isotropic_elastic_quad4.feb"
         )
         material = self.model.mesh.elements[0].material
@@ -266,20 +266,20 @@ def complex_strain_hex8_model(febio_cmd_xml) -> Generator:
         DIR_OUT
         / f"test_analysis.complex_strain_hex8_model.{febio_cmd}.xml{xml_version}.feb"
     )
-    mat = feb.material.HolmesMow(10, 0.3, 4)
-    model = feb.Model(feb.mesh.rectangular_prism((2, 2), (2, 2), (2, 2), material=mat))
-    seq = feb.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
+    mat = wfl.material.HolmesMow(10, 0.3, 4)
+    model = wfl.Model(wfl.mesh.rectangular_prism((2, 2), (2, 2), (2, 2), material=mat))
+    seq = wfl.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
     step = Step("solid", ticker=auto_ticker(seq, 10))
     model.add_step(step)
     F = np.array([[1.5, 0.5, 0], [0, 1, 0], [0, 0, 1]])
     left = model.named["node sets"].obj("−x1 face")
     right = model.named["node sets"].obj("+x1 face")
-    feb.load.prescribe_deformation(model, step, left, np.eye(3), seq)
-    feb.load.prescribe_deformation(model, step, right, F, seq)
+    wfl.load.prescribe_deformation(model, step, left, np.eye(3), seq)
+    wfl.load.prescribe_deformation(model, step, right, F, seq)
     with open(path, "wb") as f:
-        feb.output.write_feb(model, f, version=xml_version)
-    feb.febio.run_febio_checked(path, cmd=febio_cmd)
-    solved = feb.load_model(path)
+        wfl.output.write_feb(model, f, version=xml_version)
+    wfl.febio.run_febio_checked(path, cmd=febio_cmd)
+    solved = wfl.load_model(path)
     yield solved
 
     # Cleanup
@@ -290,7 +290,7 @@ def test_strain_gauge_nodesets(complex_strain_hex8_model):
     model = complex_strain_hex8_model
     left = model.named["node sets"].obj("−x1 face")
     right = model.named["node sets"].obj("+x1 face")
-    λ = feb.analysis.strain_gauge(model, left, right)
+    λ = wfl.analysis.strain_gauge(model, left, right)
     expected = np.array(
         [
             1.0,

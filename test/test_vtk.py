@@ -3,8 +3,8 @@ import unittest
 from tvtk.api import tvtk
 from tvtk.common import configure_input
 
-import febtools as feb
-from febtools.vtk import tvtk_ugrid_from_mesh
+import waffleiron as wfl
+from waffleiron.vtk import tvtk_ugrid_from_mesh
 
 
 class ExportVTK(unittest.TestCase):
@@ -12,7 +12,7 @@ class ExportVTK(unittest.TestCase):
         fp = os.path.join(
             "test", "fixtures", "center_crack_uniax_isotropic_elastic_hex8.feb"
         )
-        self.model = feb.input.load_model(fp)
+        self.model = wfl.input.load_model(fp)
 
     def test_vtk_from_hex8(self):
         ugrid = tvtk_ugrid_from_mesh(self.model.mesh)

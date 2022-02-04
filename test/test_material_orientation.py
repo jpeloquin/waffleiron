@@ -7,14 +7,14 @@ from unittest import TestCase
 import numpy as np
 import numpy.testing as npt
 
-# febtools' local modules
-import febtools as feb
-from febtools import Step
-from febtools.load import prescribe_deformation
-from febtools.control import auto_ticker
-from febtools.febio import run_febio_checked
-from febtools.math import vec_from_sph
-from febtools.test.fixtures import (
+# waffleiron' local modules
+import waffleiron as wfl
+from waffleiron import Step
+from waffleiron.load import prescribe_deformation
+from waffleiron.control import auto_ticker
+from waffleiron.febio import run_febio_checked
+from waffleiron.math import vec_from_sph
+from waffleiron.test.fixtures import (
     RTOL_F,
     ATOL_F,
     RTOL_STRESS,
@@ -34,31 +34,31 @@ def _fixture_FEBio_fiberDirectionLocal_Hex8_fiber(xml_version):
 
     Run with:
 
-        python -c "import febtools.test.test_material_axes; febtools.test.test_material_axes._fixture_FEBio_fiberDirectionLocal_Hex8_fiber()"
+        python -c "import waffleiron.test.test_material_axes; waffleiron.test.test_material_axes._fixture_FEBio_fiberDirectionLocal_Hex8_fiber()"
 
     """
     model = gen_model_single_spiky_Hex8()
-    matrix = feb.material.HolmesMow({"E": 0.5, "v": 0, "beta": 3.4})
-    fibers1 = feb.material.ExponentialFiber(
+    matrix = wfl.material.HolmesMow({"E": 0.5, "v": 0, "beta": 3.4})
+    fibers1 = wfl.material.ExponentialFiber(
         {"alpha": 65, "beta": 2, "ksi": 0.296}, orientation=vec_from_sph(0, 60)
     )
-    fibers2 = feb.material.ExponentialFiber(
+    fibers2 = wfl.material.ExponentialFiber(
         {"alpha": 65, "beta": 2, "ksi": 0.296}, orientation=vec_from_sph(0, 120)
     )
-    fibers3 = feb.material.ExponentialFiber(
+    fibers3 = wfl.material.ExponentialFiber(
         {"alpha": 65, "beta": 2, "ksi": 0.296}, orientation=vec_from_sph(100, 90)
     )
-    material = feb.material.SolidMixture([fibers1, fibers2, fibers3, matrix])
+    material = wfl.material.SolidMixture([fibers1, fibers2, fibers3, matrix])
     for e in model.mesh.elements:
         e.material = material
-    sequence = feb.Sequence(((0, 0), (1, 1)), extrap="extrapolate", interp="linear")
+    sequence = wfl.Sequence(((0, 0), (1, 1)), extrap="extrapolate", interp="linear")
     model.add_step(Step(physics="solid", ticker=auto_ticker(sequence)))
     F = np.array([[1.14, 0.18, 0.11], [-0.20, 1.09, 0.17], [-0.11, 0.20, 1.12]])
     # ^ make all diagonal stretches large and positive to load fibers
-    node_set = feb.NodeSet([i for i in range(len(model.mesh.nodes))])
+    node_set = wfl.NodeSet([i for i in range(len(model.mesh.nodes))])
     prescribe_deformation(model, node_set, F, sequence)
     # Write model to FEBio XML
-    tree = feb.output.xml(model, version=xml_version)
+    tree = wfl.output.xml(model, version=xml_version)
     pth = DIR_FIXTURES / (
         f"{Path(__file__).with_suffix('').name}."
         + "fiberDirectionLocal_Hex8_fiber"
@@ -77,7 +77,7 @@ def _fixture_FEBio_fiberDirectionLocal_Hex8_fiber(xml_version):
     e_logfile.append(e_elementdata)
     e_Output.append(e_logfile)
     with open(pth, "wb") as f:
-        feb.output.write_xml(tree, f)
+        wfl.output.write_xml(tree, f)
     run_febio_checked(pth)
 
 
@@ -92,7 +92,7 @@ def test_FEBio_SOHomFibAng_Hex8_ExpFiber(febio_cmd_xml):
     pth_in = DIR_FIXTURES / (
         f"{Path(__file__).with_suffix('').name}." + "SOHomFibAng_Hex8_ExpFiber.feb"
     )
-    model = feb.load_model(pth_in)
+    model = wfl.load_model(pth_in)
     #
     # Test 2: Write
     pth_out = DIR_OUT / (
@@ -102,12 +102,12 @@ def test_FEBio_SOHomFibAng_Hex8_ExpFiber(febio_cmd_xml):
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
-        feb.output.write_feb(model, f, version=xml_version)
+        wfl.output.write_feb(model, f, version=xml_version)
     # Test 3: Solve: Can FEBio use the roundtripped file?
     run_febio_checked(pth_out, cmd=febio_cmd)
     #
     # Test 4: Is the output as expected?
-    model = feb.load_model(pth_out)
+    model = wfl.load_model(pth_out)
     e = model.mesh.elements[0]
     ##
     ## Test 4.1: Do we see the correct applied displacements?  A test
@@ -147,7 +147,7 @@ def test_FEBio_MOHomMatAxVec_Hex8_LinOrtho(febio_cmd_xml):
     pth_in = DIR_FIXTURES / (
         f"{Path(__file__).with_suffix('').name}." + "MOHomMatAxVec_Hex8_OrthoE.feb"
     )
-    model = feb.load_model(pth_in)
+    model = wfl.load_model(pth_in)
     #
     # Test 2: Write
     pth_out = DIR_OUT / (
@@ -157,12 +157,12 @@ def test_FEBio_MOHomMatAxVec_Hex8_LinOrtho(febio_cmd_xml):
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
-        feb.output.write_feb(model, f, version=xml_version)
+        wfl.output.write_feb(model, f, version=xml_version)
     # Test 3: Solve: Can FEBio use the roundtripped file?
     run_febio_checked(pth_out, cmd=febio_cmd)
     #
     # Test 4: Is the output as expected?
-    model = feb.load_model(pth_out)
+    model = wfl.load_model(pth_out)
     e = model.mesh.elements[0]
     ##
     ## Test 4.1: Do we see the correct applied displacements?  A test
@@ -206,7 +206,7 @@ def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE(febio_cmd_xml):
     pth_in = DIR_FIXTURES / (
         f"{Path(__file__).with_suffix('').name}." + "LOHetMatAxLoc_Hex8_OrthoE.feb"
     )
-    model = feb.load_model(pth_in)
+    model = wfl.load_model(pth_in)
     #
     # Test 2: Write
     pth_out = DIR_OUT / (
@@ -216,12 +216,12 @@ def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE(febio_cmd_xml):
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
-        feb.output.write_feb(model, f, version=xml_version)
+        wfl.output.write_feb(model, f, version=xml_version)
     # Test 3: Solve: Can FEBio use the roundtripped file?
     run_febio_checked(pth_out, cmd=febio_cmd)
     #
     # Test 4: Is the output as expected?
-    model = feb.load_model(pth_out)
+    model = wfl.load_model(pth_out)
     ##
     ## Test 4.1: Do we see the correct applied displacements?  A test
     ## failure here means that there is a defect in the code that reads
@@ -258,7 +258,7 @@ def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE(febio_cmd_xml):
     )
     σ_xplt_E12 = model.solution.value("stress", -1, 11, 1)
     npt.assert_allclose(σ_xplt_E12, σ_expected_E12, rtol=RTOL_STRESS, atol=ATOL_STRESS)
-    ## Test 4.2.2: Does febtools calculate the same stress as FEBio?
+    ## Test 4.2.2: Does waffleiron calculate the same stress as FEBio?
     for i in range(8, 12):
         e = model.mesh.elements[i]
         σ_FEBio = model.solution.value("stress", -1, i, 1)
@@ -284,7 +284,7 @@ def test_FEBio_LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber(febio_cmd_xml):
         f"{Path(__file__).with_suffix('').name}."
         + "LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber.feb"
     )
-    model = feb.load_model(pth_in)
+    model = wfl.load_model(pth_in)
     #
     # Test 2: Write
     pth_out = DIR_OUT / (
@@ -295,12 +295,12 @@ def test_FEBio_LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber(febio_cmd_xml):
     if not pth_out.parent.exists():
         pth_out.parent.mkdir()
     with open(pth_out, "wb") as f:
-        feb.output.write_feb(model, f, version=xml_version)
+        wfl.output.write_feb(model, f, version=xml_version)
     # Test 3: Solve: Can FEBio use the roundtripped file?
     run_febio_checked(pth_out, cmd=febio_cmd)
     #
     # Test 4: Is the output as expected?
-    model = feb.load_model(pth_out)
+    model = wfl.load_model(pth_out)
     ##
     ## Test 4.1: Do we see the correct applied displacements?  A test
     ## failure here means that there is a defect in the code that reads
@@ -337,7 +337,7 @@ def test_FEBio_LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber(febio_cmd_xml):
     )
     σ_xplt_E12 = model.solution.value("stress", -1, 11, 1)
     npt.assert_allclose(σ_xplt_E12, σ_expected_E12, rtol=RTOL_STRESS, atol=ATOL_STRESS)
-    ## Test 4.2.2: Does febtools calculate the same stress as FEBio?
+    ## Test 4.2.2: Does waffleiron calculate the same stress as FEBio?
     for i in range(8, 12):
         e = model.mesh.elements[i]
         σ_FEBio = model.solution.value("stress", -1, i, 1)

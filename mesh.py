@@ -5,8 +5,8 @@ import numpy as np
 from numpy.linalg import norm
 from shapely.geometry import LineString, Point, Polygon
 
-# Febtools modules
-import febtools as feb
+# Waffleiron modules
+import waffleiron as wfl
 from .core import FaceSet, NodeSet, _DEFAULT_TOL
 from .geometry import pt_series
 from .element import Hex8, Quad4
@@ -44,10 +44,10 @@ def cylinder(t_radius: tuple, t_height: tuple, nc: int, material=None):
     B = np.array((radius, height / 2))
     C = np.array((0, -height / 2))
     D = np.array((radius, -height / 2))
-    pts_AB = [A + s * (B - A) for s in feb.math.linspaced(0, 1, n=nr + 1)]
-    pts_CD = [C + s * (D - C) for s in feb.math.linspaced(0, 1, n=nr + 1)]
-    pts_AC = [A + s * (C - A) for s in feb.math.linspaced(0, 1, n=nh + 1)]
-    pts_BD = [B + s * (D - B) for s in feb.math.linspaced(0, 1, n=nh + 1)]
+    pts_AB = [A + s * (B - A) for s in wfl.math.linspaced(0, 1, n=nr + 1)]
+    pts_CD = [C + s * (D - C) for s in wfl.math.linspaced(0, 1, n=nr + 1)]
+    pts_AC = [A + s * (C - A) for s in wfl.math.linspaced(0, 1, n=nh + 1)]
+    pts_BD = [B + s * (D - B) for s in wfl.math.linspaced(0, 1, n=nh + 1)]
     pane = quadrilateral(pts_AC, pts_BD, pts_CD, pts_AB)
     cylinder = polar_stack_full(pane, nc)
     if material is not None:
@@ -117,7 +117,7 @@ def polar_stack_full(mesh, n):
         p = nodes[element.faces()[0], :]
         v1 = p[1] - p[0]
         v2 = p[-1] - p[0]
-        v3 = feb.geometry.cross(v1, v2)
+        v3 = wfl.geometry.cross(v1, v2)
         if v3[1] < 0:
             element.ids = element.ids[::-1]
         elif v3[2] == 0:
@@ -168,7 +168,7 @@ def polar_stack_full(mesh, n):
                     r_nids_next = r_nids + offset[r_nids] + ilayer * stride[r_nids]
                 new_elements.append(
                     (
-                        feb.element.Penta6,
+                        wfl.element.Penta6,
                         (
                             c_nids[0],
                             r_nids_last[0],
@@ -196,7 +196,7 @@ def polar_stack_full(mesh, n):
                         element.ids + offset[element.ids] + ilayer * stride[element.ids]
                     )
                 new_elements.append(
-                    (feb.element.Hex8, np.hstack((r_nids_last, r_nids_next)))
+                    (wfl.element.Hex8, np.hstack((r_nids_last, r_nids_next)))
                 )
     # Construct objects for the new mesh
     nodes = np.vstack(all_nodes)

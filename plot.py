@@ -4,7 +4,7 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
-import febtools as feb
+import waffleiron as wfl
 
 
 def scalar_field(mesh, fn, pts):
@@ -32,7 +32,7 @@ def scalar_field(mesh, fn, pts):
         zv = np.zeros(pts[:, :, 0].shape)
         pts = np.concatenate([pts, zv[..., np.newaxis]], axis=2)
 
-    bb = feb.core._e_bb(mesh.elements)
+    bb = wfl.core._e_bb(mesh.elements)
 
     field = np.empty(pts.shape[0:2])
     for i in range(pts.shape[0]):
@@ -40,7 +40,7 @@ def scalar_field(mesh, fn, pts):
             x = pts[i, j, 0]
             y = pts[i, j, 1]
             z = pts[i, j, 2]
-            elems = feb.select.elements_containing_point(
+            elems = wfl.select.elements_containing_point(
                 (x, y, z), mesh.elements, bb=bb
             )
             if not elems:

@@ -18,7 +18,7 @@ import numpy as np
 # Same-package modules
 from .core import Sequence, Interpolant, Extrapolant
 from .math import densify
-import febtools.material as matlib
+import waffleiron.material as matlib
 
 
 def auto_ticker(seq: Sequence, pts_per_segment: int = 1):

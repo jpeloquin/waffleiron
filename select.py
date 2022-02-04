@@ -7,9 +7,9 @@ from copy import copy
 
 import numpy as np
 
-import febtools as feb
+import waffleiron as wfl
 from .core import _canonical_face
-from febtools.geometry import inter_face_angle, face_normal
+from waffleiron.geometry import inter_face_angle, face_normal
 
 default_tol = 10 * np.finfo(float).eps
 
@@ -102,13 +102,13 @@ def elements_containing_point(point, elements, bb=None, tol=default_tol):
     """
     p = np.array(point)
     if not bb:
-        bb = feb.core._e_bb(elements)
+        bb = wfl.core._e_bb(elements)
     in_bb = np.all(
         np.logical_and((point + tol) >= bb[0], (point - tol) <= bb[1]), axis=1
     )
     inds = np.nonzero(in_bb)[0]
     candidates = [elements[i] for i in inds]
-    elements = [e for e in candidates if feb.geometry.point_in_element(e, p, dtol=tol)]
+    elements = [e for e in candidates if wfl.geometry.point_in_element(e, p, dtol=tol)]
     return elements
 
 
@@ -118,7 +118,7 @@ def select_elems_around_node(mesh, i, n=1):
     Parameters
     ----------
 
-    mesh : febtools.mesh.Mesh object
+    mesh : waffleiron.mesh.Mesh object
 
     i : integer
         The index of the central node.

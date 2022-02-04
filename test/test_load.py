@@ -6,15 +6,15 @@ from unittest import TestCase
 import numpy as np
 import numpy.testing as npt
 
-# febtools' local modules
-import febtools as feb
-from febtools import Step
-from febtools.control import auto_ticker
-from febtools.element import Hex8
-from febtools.febioxml import basis_mat_axis_local
-from febtools.model import Model, Mesh
-from febtools.material import IsotropicElastic
-from febtools.test.fixtures import DIR_OUT, febio_cmd_xml, gen_model_single_spiky_Hex8
+# waffleiron' local modules
+import waffleiron as wfl
+from waffleiron import Step
+from waffleiron.control import auto_ticker
+from waffleiron.element import Hex8
+from waffleiron.febioxml import basis_mat_axis_local
+from waffleiron.model import Model, Mesh
+from waffleiron.material import IsotropicElastic
+from waffleiron.test.fixtures import DIR_OUT, febio_cmd_xml, gen_model_single_spiky_Hex8
 
 
 DIR_THIS = Path(__file__).parent
@@ -34,7 +34,7 @@ def test_pipeline_prescribe_deformation_singleHex8(febio_cmd_xml):
 
     - the resulting FEBio XML file can be solved by FEBio
 
-    - the FEBio solution can be read by febtools
+    - the FEBio solution can be read by waffleiron
 
     - the F tensor returned by FEBio is the same as that which was input
 
@@ -48,19 +48,19 @@ def test_pipeline_prescribe_deformation_singleHex8(febio_cmd_xml):
     material = IsotropicElastic({"E": 10, "v": 0})
     for e in model.mesh.elements:
         e.material = material
-    sequence = feb.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
+    sequence = wfl.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
     step = Step(physics="solid", ticker=auto_ticker(sequence))
     model.add_step(step)
 
     # Test 1: Does prescribe_deformation complete without error?
     F = np.array([[1.34, 0.18, -0.11], [-0.20, 1.14, 0.17], [-0.11, 0.20, 0.93]])
-    node_set = feb.NodeSet([i for i in range(len(model.mesh.nodes))])
-    feb.load.prescribe_deformation(model, step, node_set, F, sequence)
+    node_set = wfl.NodeSet([i for i in range(len(model.mesh.nodes))])
+    wfl.load.prescribe_deformation(model, step, node_set, F, sequence)
 
     # Test 2: Can the resulting model be converted to FEBio XML?
     fnm_stem = "prescribe_deformation_singleHex8"
     fnm_textdata = f"{fnm_stem}_-_element_data.txt"
-    tree = feb.output.xml(model, version=xml_version)
+    tree = wfl.output.xml(model, version=xml_version)
     e_Output = tree.find("Output")
     e_logfile = e_Output.makeelement("logfile")
     e_elementdata = e_logfile.makeelement(
@@ -73,16 +73,16 @@ def test_pipeline_prescribe_deformation_singleHex8(febio_cmd_xml):
     e_Output.append(e_logfile)
     pth = DIR_OUT / f"{fnm_stem}.{febio_cmd}.xml{xml_version}.feb"
     with open(pth, "wb") as f:
-        feb.output.write_xml(tree, f)
+        wfl.output.write_xml(tree, f)
 
     # Test 3: Can FEBio use the resulting FEBio XML file?
-    feb.febio.run_febio_checked(pth, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(pth, cmd=febio_cmd)
 
-    # Test 4: Can the FEBio solution be read by febtools?
-    solved = feb.load_model(pth)
+    # Test 4: Can the FEBio solution be read by waffleiron?
+    solved = wfl.load_model(pth)
 
     # Test 5: Is the F tensor returned by FEBio the one that we expect?
-    F_febio = feb.input.textdata_list(DIR_THIS / "output" / fnm_textdata)[-1]
+    F_febio = wfl.input.textdata_list(DIR_THIS / "output" / fnm_textdata)[-1]
     F_febio = np.array(
         [
             [F_febio["Fxx"][0], F_febio["Fxy"][0], F_febio["Fxz"][0]],
@@ -99,17 +99,17 @@ def test_FEBio_tied_elastic_contact_global(febio_cmd_xml):
     # Test 1: Read
     mod = Path(__file__).with_suffix("").name
     pth_in = DIR_FIXTURES / f"{mod}.tied_elastic_contact_global.feb"
-    model = feb.load_model(pth_in)
+    model = wfl.load_model(pth_in)
     # Verify that contact exists
     assert len(model.constraints) == 1
     # Test 2: Write
     pth_out = DIR_OUTPUT / f"{pth_in.stem}.{febio_cmd}.xml{xml_version}.feb"
     with open(pth_out, "wb") as f:
-        feb.output.write_feb(model, f, xml_version)
+        wfl.output.write_feb(model, f, xml_version)
     # Test 3: Solve - Can FEBio use the roundtripped file?
-    feb.febio.run_febio_checked(pth_out, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd)
     # Test 4: Is the output as expected?
-    solved = feb.load_model(pth_out)
+    solved = wfl.load_model(pth_out)
     # Test 4.0: Did the nodes of the rigid indenter move down?
     rigid_nodes = [i for face in model.named["face sets"].obj("indenter") for i in face]
     for idx in rigid_nodes:
@@ -123,7 +123,7 @@ def test_FEBio_tied_elastic_contact_global(febio_cmd_xml):
         # Use loose tolerance b/c contact is imprecise
         npt.assert_allclose(δz, -0.11, rtol=5e-5)
     # Test 4.2: Was the correct strain produced?
-    e_solid = [e for e in solved.mesh.elements if isinstance(e, feb.element.Hex8)][0]
+    e_solid = [e for e in solved.mesh.elements if isinstance(e, wfl.element.Hex8)][0]
     F = e_solid.f((0, 0, 0))
     npt.assert_allclose(F[2, 2], (0.3 - 0.11) / 0.3, rtol=5e-5)
 
@@ -134,17 +134,17 @@ def test_FEBio_tied_elastic_contact_step(febio_cmd_xml):
     # Test 1: Read
     mod = Path(__file__).with_suffix("").name
     pth_in = DIR_FIXTURES / f"{mod}.tied_elastic_contact_step.feb"
-    model = feb.load_model(pth_in)
+    model = wfl.load_model(pth_in)
     # Verify that contact exists in 2nd step
     assert len(model.steps[1].step.bc["contact"]) == 1
     # Test 2: Write
     pth_out = DIR_OUTPUT / f"{pth_in.stem}.{febio_cmd}.xml{xml_version}.feb"
     with open(pth_out, "wb") as f:
-        feb.output.write_feb(model, f, xml_version)
+        wfl.output.write_feb(model, f, xml_version)
     # Test 3: Solve - Can FEBio use the roundtripped file?
-    feb.febio.run_febio_checked(pth_out, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd)
     # Test 4: Is the output as expected?
-    solved = feb.load_model(pth_out)
+    solved = wfl.load_model(pth_out)
     # Test 4.0: Did the nodes of the rigid indenter move down?
     rigid_nodes = [i for face in model.named["face sets"].obj("indenter") for i in face]
     for idx in rigid_nodes:
@@ -160,7 +160,7 @@ def test_FEBio_tied_elastic_contact_step(febio_cmd_xml):
         # Use loose tolerance b/c contact is imprecise
         npt.assert_allclose(δz, -0.11, rtol=5e-5)
     # Test 4.2: Was the correct strain produced?
-    e_solid = [e for e in solved.mesh.elements if isinstance(e, feb.element.Hex8)][0]
+    e_solid = [e for e in solved.mesh.elements if isinstance(e, wfl.element.Hex8)][0]
     F = e_solid.f((0, 0, 0))
     npt.assert_allclose(F[2, 2], (0.3 - 0.11) / 0.3, rtol=5e-5)
 
@@ -173,7 +173,7 @@ def test_FEBio_prescribe_rigid_body_displacement(febio_cmd_xml):
         DIR_FIXTURES
         / f"{Path(__file__).with_suffix('').name}.prescribe_rigid_body_displacement.feb"
     )
-    model = feb.load_model(pth_in)
+    model = wfl.load_model(pth_in)
     # Verify that global rigid body fixed constraints were picked up
     for dof, var in [
         ("x2", "displacement"),
@@ -189,11 +189,11 @@ def test_FEBio_prescribe_rigid_body_displacement(febio_cmd_xml):
     # Test 2: Write
     pth_out = DIR_THIS / "output" / f"{pth_in.stem}.{febio_cmd}.xml{xml_version}.feb"
     with open(pth_out, "wb") as f:
-        feb.output.write_feb(model, f, version=xml_version)
+        wfl.output.write_feb(model, f, version=xml_version)
     # Test 3: Solve - Can FEBio use the roundtripped file?
-    feb.febio.run_febio_checked(pth_out, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd)
     # Test 4: Is the output as expected?
-    solved = feb.load_model(pth_out)
+    solved = wfl.load_model(pth_out)
     δz = solved.solution.values("displacement", 0)["displacement"][-1][2]
     npt.assert_almost_equal(δz, 0.43)
     δx = solved.solution.values("displacement", 0)["displacement"][-1][0]
@@ -209,7 +209,7 @@ def test_FEBio_prescribe_node_pressure_Hex8(febio_cmd_xml):
     pth_in = DIR_FIXTURES / (
         f"{Path(__file__).with_suffix('').name}.prescribe_node_pressure.feb"
     )
-    model = feb.load_model(pth_in)
+    model = wfl.load_model(pth_in)
     #
     # Test 2: Write
     pth_out = (
@@ -221,12 +221,12 @@ def test_FEBio_prescribe_node_pressure_Hex8(febio_cmd_xml):
         )
     )
     with open(pth_out, "wb") as f:
-        feb.output.write_feb(model, f, version=xml_version)
+        wfl.output.write_feb(model, f, version=xml_version)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    feb.febio.run_febio_checked(pth_out, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd)
     #
     # Test 4: Is the output as expected?
-    model = feb.load_model(pth_out)
+    model = wfl.load_model(pth_out)
     e = model.mesh.elements[0]
     # Test 4.1: Do we see the correct resultant fluid pressure?
     p_FEBio_1 = model.solution.value("fluid pressure", step=1, entity_id=0, region_id=1)

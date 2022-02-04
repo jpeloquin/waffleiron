@@ -318,7 +318,7 @@ entity_type_from_data_type = {
     },
 }
 
-_PARSE_ERROR_GENERIC = "  One of the following is true: (1) the input data is not valid plotfile data, (2) the file format specification has changed, or (3) there is a bug in febtools."
+_PARSE_ERROR_GENERIC = "  One of the following is true: (1) the input data is not valid plotfile data, (2) the file format specification has changed, or (3) there is a bug in waffleiron."
 
 _LOOKUP_ERROR_GENERIC = "  Note that nodes and element IDs are 0-indexed, but surface and domain IDs are read from the plotfile verbatim.  FEBio seems to always use 1-indexed surface and domain IDs."
 
@@ -852,7 +852,7 @@ class XpltData:
         self.version = find_one(self.blocks, "root/header/version")["data"][0]
         if self.version not in SUPPORTED_XPLT_VERSIONS:
             warn(
-                f"Xplt version tag = {self.version}, which is not known to be supported by febtools.  Proceeding regardless.  Subsequent errors may be due to unaddressed changes in FEBio's xplt format."
+                f"Xplt version tag = {self.version}, which is not known to be supported by waffleiron.  Proceeding regardless.  Subsequent errors may be due to unaddressed changes in FEBio's xplt format."
             )
 
         self.regions = {
@@ -964,7 +964,7 @@ class XpltData:
         for b in b_domains:
             # Get list of elements as tuples of node ids.  Note that the
             # binary database format uses 0-indexing for nodes, same as
-            # febtools.  The data field for each element's block
+            # waffleiron.  The data field for each element's block
             # contains the element ID followed by the element's node
             # IDs.
             i_elements = get_bdata_by_name(b["data"], "element_list/element")
@@ -1235,9 +1235,9 @@ class XpltData:
         3. Object data, which is new in FEBio 3 and as of FEBio 3.5
            started to be used for rigid body data.
 
-        Febtools does not yet support mesh data.
+        Waffleiron does not yet support mesh data.
 
-        Febtools treats object data merely as a another entity type,
+        Waffleiron treats object data merely as a another entity type,
         "object".
 
         Values are returned as a list of floats, vectors, or tensors

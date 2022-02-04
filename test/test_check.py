@@ -1,8 +1,8 @@
 import numpy.testing as npt
 
-from febtools import load_model
-from febtools.febio import uses_must_points
-from febtools.test.fixtures import DIR_FIXTURES, DIR_OUT
+from waffleiron import load_model
+from waffleiron.febio import uses_must_points
+from waffleiron.test.fixtures import DIR_FIXTURES, DIR_OUT
 
 
 def test_uses_must_points():
