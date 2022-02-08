@@ -236,9 +236,7 @@ def check_must_points(model, atol=None):
         # (1) Check must point count for this step
         if len(t_obs) != len(t_req):
             raise MustPointCountError(
-                f"Model '{model.name}' step {i}: {len(t_req)} time points ("
-                "must points"
-                ") were requested but FEBio wrote {len(actual_times)} time points.  This may be caused by a bug in FEBio's time stepper or must point controller, or you may have requested invalid time points that FEBio silently ignored."
+                f"Model '{model.name}' step {i}: {len(t_req)} time points (\"must points\") were requested but FEBio wrote {len(actual_times)} time points.  This may be caused by a bug in FEBio's time stepper or must point controller, or you may have requested invalid time points that FEBio silently ignored."
             )
         # (2) Check must point times for this step
         err = np.array(t_obs) - t_req
