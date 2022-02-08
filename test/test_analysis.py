@@ -52,7 +52,7 @@ class CenterCrackHex8(TestCase):
 
         # Define G for plane stress
         K_I = pavg[1][1] * (pi * a * 1.0 / cos(pi * a / width)) ** 0.5
-        G = K_I ** 2.0 / self.E
+        G = K_I**2.0 / self.E
         return G
 
     def test_right_tip(self):
@@ -246,7 +246,7 @@ class CenterCrackQuad4(TestCase):
         # calculate stress intensity
         K_I = stress * (math.pi * a * 1.0 / math.cos(math.pi * a / W)) ** 0.5
         # Felderson; accurate to 0.3% for a/W ≤ 0.35
-        G = K_I ** 2.0 / self.E
+        G = K_I**2.0 / self.E
 
         id_crack_tip = [self.model.mesh.find_nearest_nodes(*(1e-3, 0.0, 0.0))[0]]
         elements = apply_q_2d(self.model.mesh, id_crack_tip, n=2, q=[1, 0, 0])

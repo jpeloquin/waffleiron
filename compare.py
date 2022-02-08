@@ -119,7 +119,7 @@ def plot_stress(s, x, y, title, fsave, delta=50e-6, clabel=""):
     if clabel:
         i = int(math.log(v.max(), 10) / 3)
         if i >= 1:
-            v = v * (1e-3 ** i)
+            v = v * (1e-3**i)
         scaleprefix = ["", "k", "M", "G", "T"][i]
     else:
         scaleprefix = ""
@@ -181,8 +181,8 @@ def stressplot(v, title, fsave, clabel=""):
         s = [t[0][i] for t in v]
         plot_stress(
             s,
-            np.array(x) * 10 ** 3,
-            np.array(y) * 10 ** 3,
+            np.array(x) * 10**3,
+            np.array(y) * 10**3,
             title + s_title,
             thisf,
             delta=50e-3,

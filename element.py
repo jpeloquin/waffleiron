@@ -456,7 +456,7 @@ class Hex8(Element3D):
     )
 
     # Gauss point locations
-    g = 1.0 / 3.0 ** 0.5
+    g = 1.0 / 3.0**0.5
     gloc = (
         (-g, -g, -g),
         (g, -g, -g),
@@ -616,7 +616,7 @@ class Penta6(Element3D):
     #         (0.0, 1.0,  1.0))
 
     # Gauss point locations
-    g = 1.0 / 3.0 ** 0.5
+    g = 1.0 / 3.0**0.5
     gloc = (
         (1 / 6, 1 / 6, -g),
         (2 / 3, 1 / 6, -g),
@@ -734,7 +734,7 @@ class Quad4(Element2D):
     # vertex point locations in natural coordinates
     vloc = ((-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0))
 
-    a = 1.0 / 3.0 ** 0.5
+    a = 1.0 / 3.0**0.5
     gloc = ((-a, -a), (a, -a), (a, a), (-a, a))  # Gauss point locations
     gwt = (1, 1, 1, 1)  # Gauss weights
 

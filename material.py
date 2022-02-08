@@ -250,7 +250,7 @@ class ExponentialFiber:
         α = self.α
         β = self.β
         ξ = self.ξ
-        Ψ = ξ / (α * β) * (exp(α * (λ ** 2 - 1) ** β) - 1)
+        Ψ = ξ / (α * β) * (exp(α * (λ**2 - 1) ** β) - 1)
         return Ψ
 
     def stress(self, λ):
@@ -258,7 +258,7 @@ class ExponentialFiber:
         α = self.α
         β = self.β
         ξ = self.ξ
-        dΨ_dλsq = ξ * (λ ** 2 - 1) ** (β - 1) * exp(α * (λ ** 2 - 1) ** β)
+        dΨ_dλsq = ξ * (λ**2 - 1) ** (β - 1) * exp(α * (λ**2 - 1) ** β)
         # Use dΨ_dλsq instead of dΨ_dλ because this is the equivalent of
         # dΨ/dC.
         σ = 2 * dΨ_dλsq * unit_step(λ - 1)
@@ -324,7 +324,7 @@ class ExponentialFiber3D:
         N = self.orientation
         # Square of fiber stretch
         In = dot(N, dot(C, N))
-        yf = In ** 0.5  # fiber stretch
+        yf = In**0.5  # fiber stretch
         n = dot(F, N) / yf
 
         a = self.alpha
@@ -379,10 +379,10 @@ class PowerLinearFiber:
         λ0 = self.λ0
         β = self.β
         E = self.E
-        ξ = E / 2 / (β - 1) * λ0 ** (-3) * (λ0 ** 2 - 1) ** (2 - β)
-        b = E / 2 / (λ0 ** 3) * ((λ0 ** 2 - 1) / (2 * (β - 1)) + λ0 ** 2)
+        ξ = E / 2 / (β - 1) * λ0 ** (-3) * (λ0**2 - 1) ** (2 - β)
+        b = E / 2 / (λ0**3) * ((λ0**2 - 1) / (2 * (β - 1)) + λ0**2)
         # Stress
-        λsq = λ ** 2
+        λsq = λ**2
         if λ <= 1:
             σ = 0
         elif λ <= λ0:
@@ -428,7 +428,7 @@ class PowerLinearFiber3D:
     def tstress(self, F):
         """Return Cauchy stress tensor aligned to local axes."""
         # Properties
-        I0 = self.λ0 ** 2.0
+        I0 = self.λ0**2.0
         β = self.β
         E = self.E
         N = self.orientation
@@ -502,7 +502,7 @@ class HolmesMow:
         y, mu = to_Lamé(self.E, self.ν)
         C = np.dot(F.T, F)
         i1 = np.trace(C)
-        i2 = 0.5 * (i1 ** 2.0 - trace(dot(C, C)))
+        i2 = 0.5 * (i1**2.0 - trace(dot(C, C)))
         J = np.linalg.det(F)
         Q = (
             self.β
@@ -510,7 +510,7 @@ class HolmesMow:
             * (
                 (2.0 * mu - y) * (i1 - 3.0)
                 + y * (i2 - 3.0)
-                - (y + 2.0 * mu) * log(J ** 2.0)
+                - (y + 2.0 * mu) * log(J**2.0)
             )
         )
         c = (y + 2.0 * mu) / (2.0 * self.β)
@@ -523,14 +523,14 @@ class HolmesMow:
         J = det(F)
         B = dot(F, F.T)  # left cauchy-green
         i1 = np.trace(B)
-        i2 = 0.5 * (i1 ** 2.0 - trace(dot(B, B)))
+        i2 = 0.5 * (i1**2.0 - trace(dot(B, B)))
         Q = (
             self.β
             / (y + 2.0 * mu)
             * (
                 (2.0 * mu - y) * (i1 - 3.0)
                 + y * (i2 - 3.0)
-                - (y + 2.0 * mu) * log(J ** 2.0)
+                - (y + 2.0 * mu) * log(J**2.0)
             )
         )
         t = (
@@ -588,7 +588,7 @@ class IsotropicElastic:
         mu = self.mu
         E = 0.5 * (np.dot(F.T, F) - np.eye(3))
         trE = np.trace(E)
-        W = 0.5 * y * trE ** 2.0 + mu * np.sum(E * E)
+        W = 0.5 * y * trE**2.0 + mu * np.sum(E * E)
         return W
 
     def tstress(self, F):

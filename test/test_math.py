@@ -268,7 +268,7 @@ class TestPowerspaced(TestCase):
         n = 21
 
         def f(x):
-            return x ** power
+            return x**power
 
         for power in (-0.5, 0, 1, 1.5):
             for offset in (0, 1, 7):

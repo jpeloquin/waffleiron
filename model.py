@@ -412,7 +412,7 @@ class Mesh:
         else:
             p = (x, y, z)
         d = np.array(self.nodes) - p
-        d = np.sum(d ** 2.0, axis=1)
+        d = np.sum(d**2.0, axis=1)
         idx = np.nonzero(d == np.min(d))[0]
         return idx
 

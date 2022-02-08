@@ -20,7 +20,7 @@ def find_closest_timestep(target, times, steps, rtol=0.01, atol="auto"):
     if atol == "auto":
         atol = max(
             abs(np.nextafter(target, 0) - target),
-            abs(np.nextafter(target, target ** 2) - target),
+            abs(np.nextafter(target, target**2) - target),
         )
     if len(steps) != len(times):
         raise ValueError(

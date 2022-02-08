@@ -150,12 +150,12 @@ def powerspaced(offset, span, n, power, dmin=None):
         if dmin is None:
             dmin = (1 / n) ** (-1 / power) * span
         x = np.zeros(n)
-        x[1:] = np.linspace((offset + span) ** power, dmin ** power, n - 1)[::-1] ** (
+        x[1:] = np.linspace((offset + span) ** power, dmin**power, n - 1)[::-1] ** (
             1 / power
         )
         # ^ work reversed so linspace generates end point for n = 2.
     else:  # power > 0
-        x = np.linspace(offset ** power, (offset + span) ** power, n) ** (1 / power)
+        x = np.linspace(offset**power, (offset + span) ** power, n) ** (1 / power)
     return x
 
 
