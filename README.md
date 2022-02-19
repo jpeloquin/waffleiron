@@ -36,7 +36,10 @@ By doing so, you *incur obligations* when you redistribute waffleiron to retain 
 
 Waffleiron depends on:
 
-- A working Python ≥ 3.8 environment.  TODO: List all dependencies.
+- A working Python ≥ 3.8 environment.  Its dependencies are:
+  - Required dependencies: numpy, scipy, lxml, pandas, matplotlib, psutil, shapely
+  - Optional dependencies: mayavi (for tvtk; this can be a pain to install)
+  - To run the test suite: pytest
 - A working FEBio installation.  By default, waffleiron uses the command `febio` to start an FEBio process, but if the environment variable `FEBIO_CMD` is defined its value will be used instead.
 
 TODO: Add minimal example.
