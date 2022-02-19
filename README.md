@@ -4,9 +4,9 @@ Main features:
 
 - Create FEBio models in Python.  The interface is designed to work at a higher level of abstraction than FEBio XML or [Gibbon](https://github.com/gibbonCode/GIBBON), closer to the level of abstraction in FEBio Studio (but with no GUI).  The aim is to keep user input as terse as possible through the use of sensible defaults and automatic logic.
 - Import/export FEBio XML 3.0 and 2.5 to/from waffleiron model objects.
-  - Good support for: <Step>, <Globals>, <Mesh>, <MeshDomains>, <MeshData>, <Boundary>, <Rigid>, <Output>.
-  - Partial support for: <Material> (I've only implemented materials we use), <Contact> (tied-elastic works, the rest doesn't), <LoadData> (type="loadcurve" works; I haven't added type="math" yet).
-  - No support for: <Loads>, <Constraints>, <Discrete>.
+  - Good support for: `<Step>`, `<Globals>`, `<Mesh>`, `<MeshDomains>`, `<MeshData>`, `<Boundary>`, `<Rigid>`, `<Output>`.
+  - Partial support for: `<Material>` (I've only implemented materials we use), `<Contact>` (tied-elastic works, the rest doesn't), `<LoadData>` (type="loadcurve" works; I haven't added type="math" yet).
+  - No support for: `<Loads>`, `<Constraints>`, `<Discrete>`.
 - Read data from xplt files into Python objects.  List metadata for variables, extract state data (except 'state/mesh state', which I haven't figured out yet), and extract geometry data.
 - Read data from an FEBio text data file into a [pandas](https://github.com/pandas-dev/pandas) data frame (table).
 - For a few materials, recalculate output variables independent of FEBio.  This has been used to calculate strain and stress for submaterials, especially fibers, in a mixture or multigeneration material.  This has helped identify a few FEBio bugs related to material orientation, which have been fixed upstream.
