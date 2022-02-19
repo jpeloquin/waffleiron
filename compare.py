@@ -1,4 +1,3 @@
-#!/usr/bin/python
 """Compares two mesh solutions with equivalent geometry.
 
 Features:
