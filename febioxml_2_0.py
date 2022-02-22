@@ -5,7 +5,7 @@ from collections import defaultdict
 from lxml import etree as ET
 
 # Same-package modules
-from .core import ContactConstraint, Interpolant, Extrapolant, Sequence
+from .core import ContactConstraint, Interpolant, Extrapolant, NodeSet, Sequence
 from .output import material_to_feb
 from .control import SaveIters
 from .febioxml import *

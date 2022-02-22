@@ -7,6 +7,7 @@ from lxml import etree as ET
 
 # Same-package modules
 from .core import (
+    NodeSet,
     ZeroIdxID,
     OneIdxID,
     Sequence,

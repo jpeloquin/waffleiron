@@ -2,16 +2,10 @@ from collections import namedtuple
 import os
 from pathlib import Path
 
-import lxml.etree as ET
-from lxml.etree import Element, ElementTree
+from lxml import etree
 from .core import (
     Body,
     ImplicitBody,
-    ContactConstraint,
-    NodeSet,
-    FaceSet,
-    ElementSet,
-    _canonical_face,
     Sequence,
     ScaledSequence,
     Interpolant,
@@ -216,7 +210,7 @@ def normalize_xml(root):
         e_Control = root.find("Control")
         # From validation above, we know that no <Step> element exists,
         # so we need to create one.
-        e_Step = ET.Element("Step")
+        e_Step = etree.Element("Step")
         e_Control.getparent().remove(e_Control)
         root.insert(1, e_Step)
         e_Step.append(e_Control)
@@ -227,13 +221,13 @@ def normalize_xml(root):
     if e_rBoundary is not None:
         e_Step = root.find("Step")
         if e_Step is None:
-            e_Step = ET.Element("Step")
+            e_Step = etree.Element("Step")
             root.insert(1, e_Step)
         es_prescribe = e_rBoundary.findall("prescribe")
         # Do we need to create a Step/Boundary element?
         e_sBoundary = e_Step.find("Boundary")
         if len(es_prescribe) != 0 and e_sBoundary is None:
-            e_sBoundary = ET.SubElement(e_Step, "Boundary")
+            e_sBoundary = etree.SubElement(e_Step, "Boundary")
         # Move the <prescribe> elements
         for e_prescribe in es_prescribe:
             e_rBoundary.remove(e_prescribe)
@@ -275,7 +269,7 @@ def get_or_create_xml(root, path):
     for part in parts:
         current = find_unique_tag(parent, part)
         if current is None:
-            current = ET.SubElement(parent, part)
+            current = etree.SubElement(parent, part)
         parent = current
     return current
 
@@ -398,13 +392,13 @@ def property_to_xml(value, tag, seq_registry):
     """Convert a constant or variable property to FEBio XML"""
     if isinstance(value, Sequence):
         # Time-varying property, not scaled
-        e = ET.Element(tag)
+        e = etree.Element(tag)
         seq_id = get_or_create_item_id(seq_registry, value)
         e.attrib["lc"] = str(seq_id + 1)
         e.text = "1"  # scale factor
     elif isinstance(value, ScaledSequence):
         # Time-varying property, scaled
-        e = ET.Element(tag)
+        e = etree.Element(tag)
         seq_id = get_or_create_item_id(seq_registry, value.sequence)
         e.attrib["lc"] = str(seq_id + 1)
         e.text = num_to_text(value.scale)
@@ -416,7 +410,7 @@ def property_to_xml(value, tag, seq_registry):
 
 def const_property_to_xml(value, tag):
     """Convert a constant property to FEBio XML"""
-    e = ET.Element(tag)
+    e = etree.Element(tag)
     e.text = to_text(value)
     return e
 

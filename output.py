@@ -5,8 +5,8 @@ from math import degrees
 from datetime import datetime
 
 # Public packages
+from lxml import etree
 import numpy as np
-from lxml import etree as ET
 
 # Within-module packages
 import waffleiron as wfl
@@ -75,7 +75,7 @@ def _fixup_ordinal_ids(registry):
 
 def exponential_fiber_to_feb(mat, model):
     """Convert ExponentialFiber material instance to FEBio XML."""
-    e = ET.Element("material", type="fiber-exp-pow")
+    e = etree.Element("material", type="fiber-exp-pow")
     e.append(property_to_xml(mat.α, "alpha", model.named["sequences"]))
     e.append(property_to_xml(mat.β, "beta", model.named["sequences"]))
     e.append(property_to_xml(mat.ξ, "ksi", model.named["sequences"]))
@@ -84,7 +84,7 @@ def exponential_fiber_to_feb(mat, model):
 
 def power_linear_fiber_to_feb(mat, model):
     """Convert PowerLinearFiber material instance to FEBio XML."""
-    e = ET.Element("material", type="fiber-pow-linear")
+    e = etree.Element("material", type="fiber-pow-linear")
     e.append(property_to_xml(mat.E, "E", model.named["sequences"]))
     e.append(property_to_xml(mat.β, "beta", model.named["sequences"]))
     e.append(property_to_xml(mat.λ0, "lam0", model.named["sequences"]))
@@ -93,7 +93,7 @@ def power_linear_fiber_to_feb(mat, model):
 
 def holmesmow_to_feb(mat, model):
     """Convert HolmesMow material instance to FEBio XML."""
-    e = ET.Element("material", type="Holmes-Mow")
+    e = etree.Element("material", type="Holmes-Mow")
     e.append(property_to_xml(mat.E, "E", model.named["sequences"]))
     e.append(property_to_xml(mat.ν, "v", model.named["sequences"]))
     e.append(property_to_xml(mat.β, "beta", model.named["sequences"]))
@@ -102,7 +102,7 @@ def holmesmow_to_feb(mat, model):
 
 def isotropicelastic_to_feb(mat, model):
     """Convert IsotropicElastic material instance to FEBio XML."""
-    e = ET.Element("material", type="isotropic elastic")
+    e = etree.Element("material", type="isotropic elastic")
     E, ν = wfl.material.from_Lamé(mat.y, mat.mu)
     e.append(property_to_xml(E, "E", model.named["sequences"]))
     e.append(property_to_xml(ν, "v", model.named["sequences"]))
@@ -111,7 +111,7 @@ def isotropicelastic_to_feb(mat, model):
 
 def orthotropic_elastic_to_feb(mat, model):
     """Convert OrthotropicElastic material instance to FEBio XML."""
-    e = ET.Element("material", type="orthotropic elastic")
+    e = etree.Element("material", type="orthotropic elastic")
     # Material properties
     e.append(property_to_xml(mat.E1, "E1", model.named["sequences"]))
     e.append(property_to_xml(mat.E2, "E2", model.named["sequences"]))
@@ -127,7 +127,7 @@ def orthotropic_elastic_to_feb(mat, model):
 
 def neo_hookean_to_feb(mat, model):
     """Convert NeoHookean material instance to FEBio XML."""
-    e = ET.Element("material", type="neo-Hookean")
+    e = etree.Element("material", type="neo-Hookean")
     E, ν = wfl.material.from_Lamé(mat.y, mat.mu)
     e.append(property_to_xml(E, "E", model.named["sequences"]))
     e.append(property_to_xml(ν, "v", model.named["sequences"]))
@@ -136,14 +136,14 @@ def neo_hookean_to_feb(mat, model):
 
 def iso_const_perm_to_feb(mat, model):
     """Convert IsotropicConstantPermeability instance to FEBio XML"""
-    e = ET.Element("permeability", type="perm-const-iso")
+    e = etree.Element("permeability", type="perm-const-iso")
     e.append(property_to_xml(mat.k, "perm", model.named["sequences"]))
     return e
 
 
 def iso_holmes_mow_perm_to_feb(mat, model):
     """Convert IsotropicHolmesMowPermeability instance to FEBio XML"""
-    e = ET.Element("permeability", type="perm-Holmes-Mow")
+    e = etree.Element("permeability", type="perm-Holmes-Mow")
     e.append(property_to_xml(mat.k0, "perm", model.named["sequences"]))
     e.append(property_to_xml(mat.M, "M", model.named["sequences"]))
     e.append(property_to_xml(mat.α, "alpha", model.named["sequences"]))
@@ -152,7 +152,7 @@ def iso_holmes_mow_perm_to_feb(mat, model):
 
 def poroelastic_to_feb(mat, model):
     """Convert Poroelastic material instance to FEBio XML"""
-    e = ET.Element("material", type="biphasic")
+    e = etree.Element("material", type="biphasic")
     e.append(property_to_xml(mat.solid_fraction, "phi0", model.named["sequences"]))
     # Add solid material
     e_solid = material_to_feb(mat.solid_material, model)
@@ -171,7 +171,7 @@ def poroelastic_to_feb(mat, model):
 
 def solidmixture_to_feb(mat, model):
     """Convert SolidMixture material instance to FEBio XML."""
-    e = ET.Element("material", type="solid mixture")
+    e = etree.Element("material", type="solid mixture")
     for submat in mat.materials:
         m = material_to_feb(submat, model)
         m.tag = "solid"
@@ -181,13 +181,13 @@ def solidmixture_to_feb(mat, model):
 
 def multigeneration_to_feb(mat, model):
     """Convert Multigeneration material instance to FEBio XML."""
-    e = ET.Element("material", type="multigeneration")
+    e = etree.Element("material", type="multigeneration")
     i = 1
     for t, submat in zip(mat.generation_times, mat.materials):
-        e_generation = ET.SubElement(e, "generation")
+        e_generation = etree.SubElement(e, "generation")
         e_generation.attrib["id"] = str(i)
         i += 1
-        ET.SubElement(e_generation, "start_time").text = str(t)
+        etree.SubElement(e_generation, "start_time").text = str(t)
         e_submat = material_to_feb(submat, model)
         e_submat.tag = "solid"
         e_generation.append(e_submat)
@@ -196,7 +196,7 @@ def multigeneration_to_feb(mat, model):
 
 def rigid_body_to_feb(mat, model):
     """Convert SolidMixture material instance to FEBio XML."""
-    e = ET.Element("material", type="rigid body")
+    e = etree.Element("material", type="rigid body")
     if mat.density is None:
         density = 1
     else:
@@ -207,7 +207,7 @@ def rigid_body_to_feb(mat, model):
 
 def donnan_to_feb(mat, model):
     """Convert DonnanSwelling material instance to FEBio XML."""
-    e = ET.Element("material", type="Donnan equilibrium")
+    e = etree.Element("material", type="Donnan equilibrium")
     e.append(property_to_xml(mat.phi0_w, "phiw0", model.named["sequences"]))
     e.append(property_to_xml(mat.fcd0, "cF0", model.named["sequences"]))
     e.append(property_to_xml(mat.ext_osm, "bosm", model.named["sequences"]))
@@ -230,7 +230,7 @@ def material_to_feb(mat, model):
     else:
         orientation = None
     if mat is None:
-        e = ET.Element("material", type="unknown")
+        e = etree.Element("material", type="unknown")
     else:
         f = {
             wfl.material.ExponentialFiber: exponential_fiber_to_feb,
@@ -257,18 +257,18 @@ def material_to_feb(mat, model):
     if orientation is not None:
         if np.array(orientation).ndim == 2:
             # material axes orientation
-            e_mat_axis = ET.Element("mat_axis", type="vector")
-            ET.SubElement(e_mat_axis, "a").text = febioxml.bvec_to_text(
+            e_mat_axis = etree.Element("mat_axis", type="vector")
+            etree.SubElement(e_mat_axis, "a").text = febioxml.bvec_to_text(
                 orientation[:, 0]
             )
-            ET.SubElement(e_mat_axis, "d").text = febioxml.bvec_to_text(
+            etree.SubElement(e_mat_axis, "d").text = febioxml.bvec_to_text(
                 orientation[:, 1]
             )
             e.insert(0, e_mat_axis)
             e.append(e_mat_axis)
         elif np.array(orientation).ndim == 1:
             # vector orientation
-            e_vector = ET.Element("fiber", type="vector")
+            e_vector = etree.Element("fiber", type="vector")
             e_vector.text = bvec_to_text(orientation)
             e.append(e_vector)
         else:
@@ -284,13 +284,13 @@ def add_nodeset(xml_root, name, nodes, febioxml_module):
     e_Mesh = xml_root.find(fx.MESH_PARENT)
     for existing in xml_root.xpath(f"{fx.MESH_PARENT}/NodeSet[@name='{name}']"):
         existing.getparent().remove(existing)
-    e_nodeset = ET.SubElement(e_Mesh, "NodeSet", name=name)
+    e_nodeset = etree.SubElement(e_Mesh, "NodeSet", name=name)
     # Sort nodes to be user-friendly (humans often read .feb files) and,
     # more importantly, so that local IDs in NodeData elements (FEBio
     # XML 2.5) or mesh_data elements (FEBio XML 3.0) have a stable
     # relationship with actual node IDs.
     for node_id in sorted(nodes):
-        ET.SubElement(e_nodeset, "node", id=str(node_id + 1))
+        etree.SubElement(e_nodeset, "node", id=str(node_id + 1))
 
 
 def sequence_time_offsets(model):
@@ -345,7 +345,7 @@ def contact_section(
     contacts, model, named_surface_pairs, named_contacts, febioxml_module
 ):
     fx = febioxml_module
-    e_contact_section = ET.Element("Contact")
+    e_contact_section = etree.Element("Contact")
     for contact in contacts:
         contact_name = named_contacts.get_or_create_name(
             f"contact_-_{contact.algorithm}", contact
@@ -361,7 +361,7 @@ def contact_section(
         # tension.  The tied-elastic algorithm /should/ support tension, but I tested
         # it in FEBio 3.2 and it does not.
         if contact.algorithm == "sliding-elastic":
-            ET.SubElement(e_contact, "tension").text = str(int(contact.tension))
+            etree.SubElement(e_contact, "tension").text = str(int(contact.tension))
         else:
             if contact.tension:
                 raise ValueError(
@@ -369,18 +369,18 @@ def contact_section(
                     f"is known to support tension–compression contact in FEBio. "
                 )
         # Write penalty-related tags
-        ET.SubElement(e_contact, "penalty").text = num_to_text(contact.penalty_factor)
-        ET.SubElement(e_contact, "auto_penalty").text = bool_to_text(
+        etree.SubElement(e_contact, "penalty").text = num_to_text(contact.penalty_factor)
+        etree.SubElement(e_contact, "auto_penalty").text = bool_to_text(
             contact.auto_adjust_penalty
         )
         # Write algorithm modification tags
-        ET.SubElement(e_contact, "laugon").text = bool_to_text(
+        etree.SubElement(e_contact, "laugon").text = bool_to_text(
             contact.use_augmented_lagrange
         )
-        ET.SubElement(e_contact, "symmetric_stiffness").text = bool_to_text(
+        etree.SubElement(e_contact, "symmetric_stiffness").text = bool_to_text(
             contact.symmetric_stiffness
         )
-        e_two_pass = ET.SubElement(e_contact, "two_pass")
+        e_two_pass = etree.SubElement(e_contact, "two_pass")
         if contact.passes == 2:
             e_two_pass.text = "1"
         elif contact.passes == 1:
@@ -404,7 +404,7 @@ def face_xml(face, face_id):
 
     """
     nm = {3: "tri3", 4: "quad4"}
-    e = ET.Element(nm[len(face)], id=str(face_id + 1))
+    e = etree.Element(nm[len(face)], id=str(face_id + 1))
     e.text = " " + ", ".join(f"{i+1}" for i in face) + " "
     return e
 
@@ -414,7 +414,7 @@ def step_xml(step, name, seq_registry, physics, febioxml_module):
     # We need to know what physics are being used because FEBio accepts
     # some parameters only for some physics.
     fx = febioxml_module
-    e_step = ET.Element(fx.STEP_NAME, name=name)
+    e_step = etree.Element(fx.STEP_NAME, name=name)
     for nm, p in fx.TICKER_PARAMS.items():
         parent = get_or_create_parent(e_step, p.path)
         tag = p.path.split("/")[-1]
@@ -429,7 +429,7 @@ def step_xml(step, name, seq_registry, physics, febioxml_module):
         tag = p.path.split("/")[-1]
         v = getattr(step.controller, nm)
         if nm == "save_iters":
-            e = ET.SubElement(parent, tag)
+            e = etree.SubElement(parent, tag)
             e.text = v.value
         else:
             e = property_to_xml(v, tag, seq_registry)
@@ -489,9 +489,9 @@ def xml(model, version="3.0"):
         material_registry.get_or_create_name("Material", mat)
     assert materials_used - set(material_registry.objects()) == set()
 
-    root = ET.Element("febio_spec", version="{}".format(version))
+    root = etree.Element("febio_spec", version="{}".format(version))
     msg = f"Exported to FEBio XML by waffleiron prerelease at {datetime.today().strftime('%Y-%m-%dT%H:%M:%S%z')}"
-    root.append(ET.Comment(msg))
+    root.append(etree.Comment(msg))
 
     version_major, version_minor = [int(a) for a in version.split(".")]
     if version_major == 2 and version_minor == 0:
@@ -507,7 +507,7 @@ def xml(model, version="3.0"):
 
     # Set solver module (analysis type)
     physics = auto_physics([m for m in material_registry.objects()])
-    e_module = ET.SubElement(root, "Module")
+    e_module = etree.SubElement(root, "Module")
     e_module.attrib["type"] = physics.value
     # Warn if there's an incompatibility between requested materials and
     # physics.
@@ -527,7 +527,7 @@ def xml(model, version="3.0"):
                 f"Material `{type(mat)}` is not listed as compatible with Module {physics}"
             )
 
-    e_Material = ET.SubElement(root, "Material")
+    e_Material = etree.SubElement(root, "Material")
 
     domains = fx.domains(model)
     for e in fx.mesh_xml(model, domains, material_registry):
@@ -544,7 +544,7 @@ def xml(model, version="3.0"):
     for e in e_elemsets:
         elementset_parent.append(e)
 
-    e_boundary = ET.SubElement(root, "Boundary")
+    e_boundary = etree.SubElement(root, "Boundary")
 
     # Write contact constraints
     contact_constraints = [
@@ -555,24 +555,24 @@ def xml(model, version="3.0"):
     )
     root.append(e_Contact)
 
-    e_constraints = ET.SubElement(root, "Constraints")
+    e_constraints = etree.SubElement(root, "Constraints")
 
-    e_loaddata = ET.SubElement(root, "LoadData")
+    e_loaddata = etree.SubElement(root, "LoadData")
 
-    Output = ET.SubElement(root, "Output")
+    Output = etree.SubElement(root, "Output")
 
     # Typical MKS constants
-    e_Constants = ET.Element("Constants")
+    e_Constants = etree.Element("Constants")
     if "R" in model.constants:
-        ET.SubElement(e_Constants, "R").text = str(model.constants["R"])
+        etree.SubElement(e_Constants, "R").text = str(model.constants["R"])
     if "temperature" in model.environment:
-        ET.SubElement(e_Constants, "T").text = str(model.environment["temperature"])
+        etree.SubElement(e_Constants, "T").text = str(model.environment["temperature"])
     if "F" in model.constants:
-        ET.SubElement(e_Constants, "Fc").text = str(model.constants["F"])
+        etree.SubElement(e_Constants, "Fc").text = str(model.constants["F"])
     # Add Globals/Constants if any defined; FEBio can't cope with an empty
     # Globals element.
     if len(e_Constants.getchildren()) > 0:
-        e_Globals = ET.Element("Globals")
+        e_Globals = etree.Element("Globals")
         e_Globals.append(e_Constants)
         root.insert(root.index(e_module) + 1, e_Globals)
         # ^ FEBio requires that first element must be <Module>
@@ -634,9 +634,9 @@ def xml(model, version="3.0"):
         # Assumes interface is a node set.
         if version == "2.0":
             # FEBio XML 2.0 puts rigid bodies under §Constraints
-            e_interface = ET.SubElement(e_Contact, "contact", type="rigid")
+            e_interface = etree.SubElement(e_Contact, "contact", type="rigid")
             for i in implicit_body.interface:
-                ET.SubElement(e_interface, "node", id=str(i + 1), rb=str(mat_id + 1))
+                etree.SubElement(e_interface, "node", id=str(i + 1), rb=str(mat_id + 1))
         elif version_major == 2 and version_minor >= 5:
             # FEBio XML 2.5 puts rigid bodies under §Boundary
             try:
@@ -646,7 +646,7 @@ def xml(model, version="3.0"):
                 nodeset = implicit_body.interface
                 name = model.named["node sets"].get_or_create_name(name_base, nodeset)
             add_nodeset(root, name, implicit_body.interface, febioxml_module=fx)
-            ET.SubElement(e_boundary, "rigid", rb=str(mat_id + 1), node_set=name)
+            etree.SubElement(e_boundary, "rigid", rb=str(mat_id + 1), node_set=name)
 
     # Write global constraints / conditions / BCs and anything that
     # goes in global <Boundary>
@@ -661,7 +661,7 @@ def xml(model, version="3.0"):
         )[0]
         node_set_name = model.named["node sets"].name(interface.node_set)
         add_nodeset(root, node_set_name, interface.node_set, febioxml_module=fx)
-        ET.SubElement(
+        etree.SubElement(
             e_boundary, "rigid", rb=str(rigid_body_id + 1), node_set=node_set_name
         )
     #
@@ -698,7 +698,7 @@ def xml(model, version="3.0"):
             e_rb_cond_parent.append(e_body_cond)
 
     # Output section
-    plotfile = ET.SubElement(Output, "plotfile", type="febio")
+    plotfile = etree.SubElement(Output, "plotfile", type="febio")
     if not model.output["variables"]:  # empty list
         output_vars = ["displacement", "stress", "relative volume"]
         if physics == Physics.BIPHASIC:
@@ -711,12 +711,12 @@ def xml(model, version="3.0"):
     else:
         output_vars = model.output["variables"]
     for var in output_vars:
-        ET.SubElement(plotfile, "var", type=var)
+        etree.SubElement(plotfile, "var", type=var)
 
     # Step section(s)
     e_step_parent = root.find(fx.STEP_PARENT)
     if e_step_parent is None:
-        e_step_parent = ET.SubElement(root, fx.STEP_PARENT)
+        e_step_parent = etree.SubElement(root, fx.STEP_PARENT)
     cumulative_time = 0.0
     visited_implicit_bodies = set()
     step_idx = 0
@@ -742,7 +742,7 @@ def xml(model, version="3.0"):
         # inconsistent tense compared to nodal constraints.)
         #
         # FEBio does handle empty tags appropriately, which helps.
-        e_Boundary = ET.Element("Boundary")
+        e_Boundary = etree.Element("Boundary")
         #
         # Collect nodal BCs in a more convenient heirarchy for writing
         # FEBio XML.  FEBio XML only supports nodal boundary conditions
@@ -866,7 +866,7 @@ def xml(model, version="3.0"):
     # Write *all* named face sets ("surfaces")
     surface_parent = find_unique_tag(root, fx.MESH_PARENT)
     for nm, face_set in model.named["face sets"].pairs():
-        e_surface = ET.SubElement(surface_parent, "Surface", name=nm)
+        e_surface = etree.SubElement(surface_parent, "Surface", name=nm)
         for i, face in enumerate(face_set):
             e_surface.append(face_xml(face, i))
     # Write *all* named surface pairs
@@ -877,7 +877,7 @@ def xml(model, version="3.0"):
         surface_parent.append(e_surfpair)
     # TODO: Handle element sets too.
 
-    tree = ET.ElementTree(root)
+    tree = etree.ElementTree(root)
     return tree
 
 

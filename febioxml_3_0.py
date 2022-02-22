@@ -176,7 +176,7 @@ def iter_node_conditions(root):
             yield info
 
 
-def read_domains(root: ET.Element):
+def read_domains(root: etree.Element):
     """Return list of domains"""
     domains = []
     e_domains = find_unique_tag(root, "MeshDomains")
@@ -351,10 +351,10 @@ def body_constraints_xml(
             variable_constraints.append((dof, bc))
     # Create <rigid_constraint> element for fixed constraints
     if fixed_constraints:
-        e_rb_fixed = ET.Element(BODY_COND_NAME)
+        e_rb_fixed = etree.Element(BODY_COND_NAME)
         e_rb_fixed.attrib["type"] = BC_TYPE_TAG["body"][("fixed", "displacement")]
-        ET.SubElement(e_rb_fixed, "rb").text = str(mat_id + 1)
-        ET.SubElement(e_rb_fixed, "dofs").text = ",".join(
+        etree.SubElement(e_rb_fixed, "rb").text = str(mat_id + 1)
+        etree.SubElement(e_rb_fixed, "dofs").text = ",".join(
             XML_RB_DOF_FROM_DOF[dof] for dof, _ in fixed_constraints
         )
         elems.append(e_rb_fixed)
@@ -362,27 +362,27 @@ def body_constraints_xml(
     # think you must use a separate element for each degree of freedom
     # (x, y, z, Rx, Ry, Rz).
     for dof, bc in variable_constraints:
-        e_rb = ET.Element(BODY_COND_NAME)
+        e_rb = etree.Element(BODY_COND_NAME)
         k = ("variable", bc["variable"])
         e_rb.attrib["type"] = BC_TYPE_TAG["body"][k]
-        ET.SubElement(e_rb, "rb").text = str(mat_id + 1)
-        ET.SubElement(e_rb, "dof").text = XML_RB_DOF_FROM_DOF[dof]
+        etree.SubElement(e_rb, "rb").text = str(mat_id + 1)
+        etree.SubElement(e_rb, "dof").text = XML_RB_DOF_FROM_DOF[dof]
         seq = bc["sequence"]
         seq_id = get_or_create_seq_id(sequence_registry, seq)
-        e_value = ET.SubElement(e_rb, "value")
+        e_value = etree.SubElement(e_rb, "value")
         e_value.attrib["lc"] = str(seq_id + 1)
         v = bc["scale"]
         if isinstance(bc["sequence"], ScaledSequence):
             v = v * bc["sequence"].scale
         e_value.text = str(v)
         if bc["variable"] == "force":
-            ET.SubElement(e_rb, "load_type").text = "0"
+            etree.SubElement(e_rb, "load_type").text = "0"
             # ^ semantics of this are unclear, but this is what FEBio
             # Studio 1.3 exports
         #
         # FEBio only supports relative constraints for displacement
         if bc["variable"] == "displacement":
-            ET.SubElement(e_rb, "relative").text = bool_to_text(bc["relative"])
+            etree.SubElement(e_rb, "relative").text = bool_to_text(bc["relative"])
         elif bc["relative"]:
             # Most likely: bc['variable'] == "force"
             raise ValueError(
@@ -401,27 +401,27 @@ def mesh_xml(model, domains, material_registry):
     <Geometry> became <Mesh> in FEBio XML 3.0
 
     """
-    e_geometry = ET.Element(MESH_PARENT)
-    e_meshdomains = ET.Element("MeshDomains")
+    e_geometry = etree.Element(MESH_PARENT)
+    e_meshdomains = etree.Element("MeshDomains")
     # Write <nodes>
-    e_nodes = ET.SubElement(e_geometry, "Nodes")
+    e_nodes = etree.SubElement(e_geometry, "Nodes")
     for i, x in enumerate(model.mesh.nodes):
         feb_nid = i + 1  # 1-indexed
-        e = ET.SubElement(e_nodes, "node", id="{}".format(feb_nid))
+        e = etree.SubElement(e_nodes, "node", id="{}".format(feb_nid))
         e.text = vec_to_text(x)
         e_nodes.append(e)
     # Write <Elements> and <SolidDomain> for each domain
     for i, domain in enumerate(domains):
         # <Elements>
-        e_elements = ET.SubElement(e_geometry, "Elements", name=domain["name"])
+        e_elements = etree.SubElement(e_geometry, "Elements", name=domain["name"])
         e_elements.attrib["type"] = domain["element_type"].feb_name
         for i, e in domain["elements"]:
-            e_element = ET.SubElement(e_elements, "elem")
+            e_element = etree.SubElement(e_elements, "elem")
             e_element.attrib["id"] = str(i + 1)
             e_element.text = ", ".join(str(i + 1) for i in e.ids)
         # <SolidDomain>
         mat_name = material_registry.names(domain["material"], "canonical")[0]
-        e_soliddomain = ET.SubElement(
+        e_soliddomain = etree.SubElement(
             e_meshdomains, "SolidDomain", name=domain["name"], mat=mat_name
         )
     return e_geometry, e_meshdomains
@@ -429,7 +429,7 @@ def mesh_xml(model, domains, material_registry):
 
 def node_data_xml(nodes, data, data_name, nodeset_name):
     """Construct NodeData XML element"""
-    e_NodeData = ET.Element("NodeData")
+    e_NodeData = etree.Element("NodeData")
     e_NodeData.attrib["data_type"] = "scalar"
     # TODO: support other data types
     e_NodeData.attrib["name"] = data_name
@@ -442,7 +442,7 @@ def node_data_xml(nodes, data, data_name, nodeset_name):
     # order of node ID.
     lid_from_node_id = {node_id: i + 1 for i, node_id in enumerate(sorted(nodes))}
     for i, v in zip(nodes, data):
-        ET.SubElement(
+        etree.SubElement(
             e_NodeData,
             "node",
             lid=str(lid_from_node_id[i]),
@@ -475,11 +475,11 @@ def node_fix_disp_xml(fixed_conditions, nodeset_registry):
         base = f"fixed_nodes_{','.join(dof for dof, var in dofvar_pairs)}_auto"
         nodeset_name = nodeset_registry.get_or_create_name(base, nodeset)
         # Create element
-        e_bc = ET.Element(
+        e_bc = etree.Element(
             "bc", type=BC_TYPE_TAG["node"]["fixed"], node_set=nodeset_name
         )
         txt = ",".join(XML_BC_FROM_DOF[t] for t in dofvar_pairs)
-        e_dofs = ET.SubElement(e_bc, "dofs").text = txt
+        e_dofs = etree.SubElement(e_bc, "dofs").text = txt
         e_bcs.append(e_bc)
     return e_bcs
 
@@ -495,12 +495,12 @@ def node_var_disp_xml(
 
     """
     # Hierarchy: <Boundary><bc type="prescribe" node_set="set_name">
-    e_bc = ET.Element("bc", type=BC_TYPE_TAG["node"]["variable"])
-    e_dof = ET.SubElement(e_bc, "dof").text = XML_BC_FROM_DOF[(dof, var)]
+    e_bc = etree.Element("bc", type=BC_TYPE_TAG["node"]["variable"])
+    e_dof = etree.SubElement(e_bc, "dof").text = XML_BC_FROM_DOF[(dof, var)]
     seq_id = get_or_create_seq_id(model.named["sequences"], seq)
-    e_sc = ET.SubElement(e_bc, "scale", lc=str(seq_id + 1), type="map")
+    e_sc = etree.SubElement(e_bc, "scale", lc=str(seq_id + 1), type="map")
     # Other subelements
-    ET.SubElement(e_bc, "relative").text = str(int(relative))
+    etree.SubElement(e_bc, "relative").text = str(int(relative))
     # Get or create a name for the node set
     nm_base = "nodal_bc_" f"step={step_name}_var={var[0]}_seq={seq_id}_autogen"
     nodeset = NodeSet(nodes)
@@ -536,18 +536,18 @@ def sequence_xml(sequence: Sequence, sequence_id: int, t0=0.0):
     step-local to global simulation time.
 
     """
-    e_loadcurve = ET.Element(
+    e_loadcurve = etree.Element(
         "load_controller", id=str(sequence_id + 1), type="loadcurve"
     )
-    ET.SubElement(e_loadcurve, "interpolate").text = XML_INTERP_FROM_INTERP[
+    etree.SubElement(e_loadcurve, "interpolate").text = XML_INTERP_FROM_INTERP[
         sequence.interpolant
     ]
-    ET.SubElement(e_loadcurve, "extend").text = XML_EXTRAP_FROM_EXTRAP[
+    etree.SubElement(e_loadcurve, "extend").text = XML_EXTRAP_FROM_EXTRAP[
         sequence.extrapolant
     ]
-    e_points = ET.SubElement(e_loadcurve, "points")
+    e_points = etree.SubElement(e_loadcurve, "points")
     for pt in sequence.points:
-        ET.SubElement(e_points, "point").text = f"{pt[0] + t0}, {pt[1]}"
+        etree.SubElement(e_points, "point").text = f"{pt[0] + t0}, {pt[1]}"
     return e_loadcurve
 
 
@@ -558,9 +558,11 @@ def surface_pair_xml(faceset_registry, primary, secondary, name):
     `faceset_registry`.
 
     """
-    e_surfpair = ET.Element("SurfacePair", name=name)
-    ET.SubElement(e_surfpair, "primary").text = faceset_registry.names(primary)[0]
-    ET.SubElement(e_surfpair, "secondary").text = faceset_registry.names(secondary)[0]
+    e_surfpair = etree.Element("SurfacePair", name=name)
+    etree.SubElement(e_surfpair, "primary").text = faceset_registry.names(primary)[0]
+    etree.SubElement(e_surfpair, "secondary").text = faceset_registry.names(secondary)[
+        0
+    ]
     return e_surfpair
 
 
@@ -568,5 +570,5 @@ def step_xml_factory():
     """Create empty <step> XML elements"""
     i = 1
     while True:
-        e = ET.Element(STEP_NAME, id=str(i), name=f"Step{i}")
+        e = etree.Element(STEP_NAME, id=str(i), name=f"Step{i}")
         yield e

@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Union, Dict, Tuple
 import warnings
 
-from lxml import etree as ET
+from lxml import etree
 import struct
 import numpy as np
 from numpy import array
@@ -88,7 +88,7 @@ def read_contacts(root, named_face_sets, febioxml_module):
     return global_contacts, step_contacts
 
 
-def read_contact(e_contact: ET.Element, named_face_sets, febioxml_module):
+def read_contact(e_contact: etree.Element, named_face_sets, febioxml_module):
     fx = febioxml_module
     tree = e_contact.getroottree()
     root = tree.getroot()
@@ -117,22 +117,22 @@ def read_contact(e_contact: ET.Element, named_face_sets, febioxml_module):
 
 def read_febio_xml(f):
     """Return lxml tree for FEBio XML file path or IO object."""
-    parser = ET.XMLParser(remove_blank_text=True)
+    parser = etree.XMLParser(remove_blank_text=True)
     try:
         f = open(f, "rb")
     except TypeError:
         # Assume pth is already an IO object; caller may have some reason to
         # hold it open, or just never wrote the file to disk.
-        tree = ET.parse(f, parser)
+        tree = etree.parse(f, parser)
     else:
         try:
-            tree = ET.parse(f, parser)
+            tree = etree.parse(f, parser)
         finally:
             f.close()
     return tree
 
 
-def read_mesh(root: ET.Element, febioxml_module) -> Tuple[array, array]:
+def read_mesh(root: etree.Element, febioxml_module) -> Tuple[array, array]:
     """Return lists of nodes and elements
 
     Materials will *not* be assigned.
@@ -158,7 +158,7 @@ def read_mesh(root: ET.Element, febioxml_module) -> Tuple[array, array]:
     return nodes, elements
 
 
-def read_named_sets(root: ET.Element, febioxml_module) -> Dict[str, Dict[str, list]]:
+def read_named_sets(root: etree.Element, febioxml_module) -> Dict[str, Dict[str, list]]:
     """Read nodesets, etc., and apply them to a model."""
     fx = febioxml_module
     sets: Dict[str, dict] = {"node sets": {}, "face sets": {}, "element sets": {}}
@@ -390,10 +390,10 @@ class FebReader:
     def __init__(self, file):
         """Read a file path as an FEBio xml file."""
         self.file = file
-        self.root = normalize_xml(ET.parse(self.file).getroot())
+        self.root = normalize_xml(etree.parse(self.file).getroot())
         # Remove comments so iteration over child elements doesn't get
         # tripped up
-        ET.strip_tags(self.root, ET.Comment)
+        etree.strip_tags(self.root, etree.Comment)
         self.feb_version = self.root.attrib["version"]
         if self.root.tag != "febio_spec":
             raise Exception(
