@@ -1,7 +1,7 @@
 import dataclasses
 import os
 from pathlib import Path
-from typing import Any, Union, Dict, Tuple
+from typing import Any, List, Union, Dict, Tuple
 import warnings
 
 from lxml import etree
@@ -9,6 +9,7 @@ import struct
 import numpy as np
 from numpy import array
 import pandas as pd
+from numpy.typing import NDArray
 
 import waffleiron.element
 from waffleiron.exceptions import UnsupportedFormatError
@@ -133,7 +134,7 @@ def read_febio_xml(f):
     return tree
 
 
-def read_mesh(root: etree.Element, febioxml_module) -> Tuple[array, array]:
+def read_mesh(root: etree.Element, febioxml_module) -> Tuple[NDArray, List]:
     """Return lists of nodes and elements
 
     Materials will *not* be assigned.

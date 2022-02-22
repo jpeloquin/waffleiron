@@ -139,7 +139,7 @@ def iter_node_conditions(root):
             yield info
 
 
-def read_fixed_node_bcs(root: Element, model):
+def read_fixed_node_bcs(root: etree.Element, model):
     """Return nodesets with fixed degrees of freedom
 
     :param root: <febio_spec> Element

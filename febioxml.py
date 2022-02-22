@@ -67,7 +67,7 @@ def domains(model):
 # Functions for reading FEBio XML
 
 
-def find_unique_tag(root: Element, path):
+def find_unique_tag(root: etree.Element, path):
     """Find and return a tag or an error if > 1 of same."""
     tags = root.findall(path)
     if len(tags) == 1:

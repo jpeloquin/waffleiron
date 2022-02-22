@@ -192,7 +192,7 @@ def get_surface_name(surfacepair_subelement):
     return surfacepair_subelement.attrib["surface"]
 
 
-def read_domains(root: Element):
+def read_domains(root: etree.Element):
     """Return list of domains"""
     domains = []
     e_domains = root.findall(f"{MESH_PARENT}/Elements")
@@ -210,7 +210,7 @@ def read_domains(root: Element):
     return domains
 
 
-def sequences(root: Element) -> Dict[int, Sequence]:
+def sequences(root: etree.Element) -> Dict[int, Sequence]:
     """Return dictionary of sequence ID → sequence from FEBio XML 2.5"""
     sequences = {}
     for ord_id, e_lc in enumerate(root.findall("LoadData/loadcurve")):
@@ -235,7 +235,7 @@ def sequences(root: Element) -> Dict[int, Sequence]:
     return sequences
 
 
-def read_fixed_node_bcs(root: Element, model):
+def read_fixed_node_bcs(root: etree.Element, model):
     """Return nodesets with fixed degrees of freedom
 
     :param root: <febio_spec> Element

@@ -255,7 +255,7 @@ def get_surface_name(surfacepair_subelement):
     return surfacepair_subelement.text
 
 
-def read_fixed_node_bcs(root: Element, model):
+def read_fixed_node_bcs(root: etree.Element, model):
     """Return nodesets with fixed degrees of freedom
 
     :param root: <febio_spec> Element
@@ -294,7 +294,7 @@ def parse_rigid_interface(e_bc):
     return nodeset_name, mat_id
 
 
-def sequences(root: Element) -> Dict[int, Sequence]:
+def sequences(root: etree.Element) -> Dict[int, Sequence]:
     """Return dictionary of sequence ID → sequence from FEBio XML 3.0"""
     sequences = {}
     for ord_id, e_lc in enumerate(root.findall("LoadData/load_controller")):
