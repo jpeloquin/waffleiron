@@ -9,7 +9,6 @@ from lxml import etree
 import numpy as np
 
 # Within-module packages
-import waffleiron as wfl
 from .core import (
     Body,
     ImplicitBody,
@@ -103,7 +102,7 @@ def holmesmow_to_feb(mat, model):
 def isotropicelastic_to_feb(mat, model):
     """Convert IsotropicElastic material instance to FEBio XML."""
     e = etree.Element("material", type="isotropic elastic")
-    E, ν = wfl.material.from_Lamé(mat.y, mat.mu)
+    E, ν = matlib.from_Lamé(mat.y, mat.mu)
     e.append(property_to_xml(E, "E", model.named["sequences"]))
     e.append(property_to_xml(ν, "v", model.named["sequences"]))
     return e
@@ -128,7 +127,7 @@ def orthotropic_elastic_to_feb(mat, model):
 def neo_hookean_to_feb(mat, model):
     """Convert NeoHookean material instance to FEBio XML."""
     e = etree.Element("material", type="neo-Hookean")
-    E, ν = wfl.material.from_Lamé(mat.y, mat.mu)
+    E, ν = matlib.from_Lamé(mat.y, mat.mu)
     e.append(property_to_xml(E, "E", model.named["sequences"]))
     e.append(property_to_xml(ν, "v", model.named["sequences"]))
     return e
@@ -161,8 +160,8 @@ def poroelastic_to_feb(mat, model):
     # Add permeability
     typ = febioxml.perm_name_from_class[type(mat.permeability)]
     f = {
-        wfl.material.IsotropicConstantPermeability: iso_const_perm_to_feb,
-        wfl.material.IsotropicHolmesMowPermeability: iso_holmes_mow_perm_to_feb,
+        matlib.IsotropicConstantPermeability: iso_const_perm_to_feb,
+        matlib.IsotropicHolmesMowPermeability: iso_holmes_mow_perm_to_feb,
     }
     e_permeability = f[type(mat.permeability)](mat.permeability, model)
     e.append(e_permeability)
@@ -224,7 +223,7 @@ def material_to_feb(mat, model):
     TODO: Write a version that works without a model object.
 
     """
-    if isinstance(mat, wfl.material.OrientedMaterial):
+    if isinstance(mat, matlib.OrientedMaterial):
         orientation = mat.orientation
         mat = mat.material
     else:
@@ -233,17 +232,17 @@ def material_to_feb(mat, model):
         e = etree.Element("material", type="unknown")
     else:
         f = {
-            wfl.material.ExponentialFiber: exponential_fiber_to_feb,
-            wfl.material.PowerLinearFiber: power_linear_fiber_to_feb,
-            wfl.material.HolmesMow: holmesmow_to_feb,
-            wfl.material.IsotropicElastic: isotropicelastic_to_feb,
-            wfl.material.NeoHookean: neo_hookean_to_feb,
-            wfl.material.OrthotropicElastic: orthotropic_elastic_to_feb,
-            wfl.material.PoroelasticSolid: poroelastic_to_feb,
-            wfl.material.SolidMixture: solidmixture_to_feb,
-            wfl.material.RigidBody: rigid_body_to_feb,
-            wfl.material.DonnanSwelling: donnan_to_feb,
-            wfl.material.Multigeneration: multigeneration_to_feb,
+            matlib.ExponentialFiber: exponential_fiber_to_feb,
+            matlib.PowerLinearFiber: power_linear_fiber_to_feb,
+            matlib.HolmesMow: holmesmow_to_feb,
+            matlib.IsotropicElastic: isotropicelastic_to_feb,
+            matlib.NeoHookean: neo_hookean_to_feb,
+            matlib.OrthotropicElastic: orthotropic_elastic_to_feb,
+            matlib.PoroelasticSolid: poroelastic_to_feb,
+            matlib.SolidMixture: solidmixture_to_feb,
+            matlib.RigidBody: rigid_body_to_feb,
+            matlib.DonnanSwelling: donnan_to_feb,
+            matlib.Multigeneration: multigeneration_to_feb,
         }
         try:
             e = f[type(mat)](mat, model)
@@ -616,7 +615,7 @@ def xml(model, version="3.0"):
     for i, implicit_body in enumerate(implicit_bodies_to_process):
         body_name = f"implicit_rigid_body_{i+1}"
         # Create the implicit body's FEBio rigid material
-        mat = wfl.material.RigidBody()
+        mat = matlib.RigidBody()
         tag = material_to_feb(mat, model)
         # TODO: Support comments in reader
         # tag.append(ET.Comment("Implicit rigid body"))
@@ -704,7 +703,7 @@ def xml(model, version="3.0"):
         if physics == Physics.BIPHASIC:
             output_vars += ["effective fluid pressure", "fluid pressure", "fluid flux"]
         rigid_bodies_present = any(
-            isinstance(m, wfl.material.RigidBody) for m in material_registry.objects()
+            isinstance(m, matlib.RigidBody) for m in material_registry.objects()
         )
         if rigid_bodies_present:
             output_vars += ["reaction forces"]

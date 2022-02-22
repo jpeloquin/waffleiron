@@ -5,11 +5,7 @@ import unittest
 import os
 
 import waffleiron as wfl
-from waffleiron.test.fixtures import DIR_FIXTURES, gen_model_center_crack_Hex8
-
-fp_out = os.path.join("test", "test_output")
-if not os.path.exists(fp_out):
-    os.mkdir(fp_out)
+from waffleiron.test.fixtures import DIR_FIXTURES, DIR_OUT, gen_model_center_crack_Hex8
 
 
 class ScalarFieldTest(unittest.TestCase):
@@ -71,5 +67,4 @@ class JDomainPlotTest(unittest.TestCase):
             zslice, crack_faces, tip_line, q=np.array([1, 0, 0])
         )
         fig, ax = wfl.plot.plot_q(zslice, length=1e-4)
-        fp_out = os.path.join("test", "test_output", "jdomain_plot_test.png")
-        fig.savefig(fp_out)
+        fig.savefig(DIR_OUT / "jdomain_plot_test.png")
