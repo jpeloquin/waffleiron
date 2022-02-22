@@ -657,7 +657,7 @@ class FebReader:
             ids = model.named["materials"].names(material, "ordinal_id")
             assert (len(ids)) == 1
             mat_id = ids[0]
-            if isinstance(material, material_lib.RigidBody):
+            if isinstance(material, material_lib.Rigid):
                 elements = []
                 for i in domain["elements"]:
                     elements.append(model.mesh.elements[i])

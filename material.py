@@ -219,7 +219,7 @@ class SolidMixture:
         return sum(material.sstress(F) for material in self.materials)
 
 
-class RigidBody:
+class Rigid:
     """Rigid body."""
 
     def __init__(self, props={}, **kwargs):

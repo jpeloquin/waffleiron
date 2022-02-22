@@ -1,11 +1,13 @@
 # Base packages
 from collections import defaultdict
 from copy import copy, deepcopy
+from functools import singledispatch
 from math import degrees
 from datetime import datetime
 
 # Public packages
 from lxml import etree
+from lxml.etree import ElementTree
 import numpy as np
 
 # Within-module packages
@@ -72,7 +74,56 @@ def _fixup_ordinal_ids(registry):
         )
 
 
-def exponential_fiber_to_feb(mat, model):
+@singledispatch
+def material_to_feb(mat, model) -> ElementTree:
+    """Return material instance as FEBio XML
+
+    The model argument is needed so that time-dependent material parameters, if any,
+    can be given the right FEBio XML load curve ID.
+
+    TODO: Try to figure out how to make this conversion work without a model object.
+
+    """
+    raise NotImplementedError(
+        f"Conversion of {mat} to FEBio XML is not yet supported."
+    )
+
+
+@material_to_feb.register
+def _(mat: matlib.OrientedMaterial, model) -> ElementTree:
+    """Convert an OrientedMaterial material instance to FEBio XML"""
+    orientation = mat.orientation
+    e = material_to_feb(mat.material, model)
+    # Add material coordinate system if it is defined for this material.  Any mixture
+    # material /should/ call `material_to_feb` for each sub-material, so we shouldn't
+    # need to handle material coordinate systems anywhere else.
+    if orientation is None:
+        return e
+    if np.array(orientation).ndim == 2:
+        # material axes orientation
+        e_mat_axis = etree.Element("mat_axis", type="vector")
+        etree.SubElement(e_mat_axis, "a").text = febioxml.bvec_to_text(
+            orientation[:, 0]
+        )
+        etree.SubElement(e_mat_axis, "d").text = febioxml.bvec_to_text(
+            orientation[:, 1]
+        )
+        e.insert(0, e_mat_axis)
+        e.append(e_mat_axis)
+    elif np.array(orientation).ndim == 1:
+        # vector orientation
+        e_vector = etree.Element("fiber", type="vector")
+        e_vector.text = bvec_to_text(orientation)
+        e.append(e_vector)
+    else:
+        raise ValueError(
+            f"Rank {orientation.ndim} material orientation not supported.  Provided orientation was {orientation}."
+        )
+    return e
+
+
+@material_to_feb.register
+def _(mat: matlib.ExponentialFiber, model) -> ElementTree:
     """Convert ExponentialFiber material instance to FEBio XML."""
     e = etree.Element("material", type="fiber-exp-pow")
     e.append(property_to_xml(mat.α, "alpha", model.named["sequences"]))
@@ -81,7 +132,8 @@ def exponential_fiber_to_feb(mat, model):
     return e
 
 
-def power_linear_fiber_to_feb(mat, model):
+@material_to_feb.register
+def _(mat: matlib.PowerLinearFiber, model) -> ElementTree:
     """Convert PowerLinearFiber material instance to FEBio XML."""
     e = etree.Element("material", type="fiber-pow-linear")
     e.append(property_to_xml(mat.E, "E", model.named["sequences"]))
@@ -90,7 +142,8 @@ def power_linear_fiber_to_feb(mat, model):
     return e
 
 
-def holmesmow_to_feb(mat, model):
+@material_to_feb.register
+def _(mat: matlib.HolmesMow, model) -> ElementTree:
     """Convert HolmesMow material instance to FEBio XML."""
     e = etree.Element("material", type="Holmes-Mow")
     e.append(property_to_xml(mat.E, "E", model.named["sequences"]))
@@ -99,7 +152,8 @@ def holmesmow_to_feb(mat, model):
     return e
 
 
-def isotropicelastic_to_feb(mat, model):
+@material_to_feb.register
+def _(mat: matlib.IsotropicElastic, model) -> ElementTree:
     """Convert IsotropicElastic material instance to FEBio XML."""
     e = etree.Element("material", type="isotropic elastic")
     E, ν = matlib.from_Lamé(mat.y, mat.mu)
@@ -108,7 +162,8 @@ def isotropicelastic_to_feb(mat, model):
     return e
 
 
-def orthotropic_elastic_to_feb(mat, model):
+@material_to_feb.register
+def _(mat: matlib.OrthotropicElastic, model) -> ElementTree:
     """Convert OrthotropicElastic material instance to FEBio XML."""
     e = etree.Element("material", type="orthotropic elastic")
     # Material properties
@@ -124,7 +179,8 @@ def orthotropic_elastic_to_feb(mat, model):
     return e
 
 
-def neo_hookean_to_feb(mat, model):
+@material_to_feb.register
+def _(mat: matlib.NeoHookean, model) -> ElementTree:
     """Convert NeoHookean material instance to FEBio XML."""
     e = etree.Element("material", type="neo-Hookean")
     E, ν = matlib.from_Lamé(mat.y, mat.mu)
@@ -133,14 +189,16 @@ def neo_hookean_to_feb(mat, model):
     return e
 
 
-def iso_const_perm_to_feb(mat, model):
+@material_to_feb.register
+def _(mat: matlib.IsotropicConstantPermeability, model):
     """Convert IsotropicConstantPermeability instance to FEBio XML"""
     e = etree.Element("permeability", type="perm-const-iso")
     e.append(property_to_xml(mat.k, "perm", model.named["sequences"]))
     return e
 
 
-def iso_holmes_mow_perm_to_feb(mat, model):
+@material_to_feb.register
+def _(mat: matlib.IsotropicHolmesMowPermeability, model) -> ElementTree:
     """Convert IsotropicHolmesMowPermeability instance to FEBio XML"""
     e = etree.Element("permeability", type="perm-Holmes-Mow")
     e.append(property_to_xml(mat.k0, "perm", model.named["sequences"]))
@@ -149,7 +207,8 @@ def iso_holmes_mow_perm_to_feb(mat, model):
     return e
 
 
-def poroelastic_to_feb(mat, model):
+@material_to_feb.register
+def _(mat: matlib.PoroelasticSolid, model) -> ElementTree:
     """Convert Poroelastic material instance to FEBio XML"""
     e = etree.Element("material", type="biphasic")
     e.append(property_to_xml(mat.solid_fraction, "phi0", model.named["sequences"]))
@@ -158,17 +217,17 @@ def poroelastic_to_feb(mat, model):
     e_solid.tag = "solid"
     e.append(e_solid)
     # Add permeability
-    typ = febioxml.perm_name_from_class[type(mat.permeability)]
     f = {
         matlib.IsotropicConstantPermeability: iso_const_perm_to_feb,
         matlib.IsotropicHolmesMowPermeability: iso_holmes_mow_perm_to_feb,
     }
-    e_permeability = f[type(mat.permeability)](mat.permeability, model)
+    e_permeability = material_to_feb(mat.permeability, model)
     e.append(e_permeability)
     return e
 
 
-def solidmixture_to_feb(mat, model):
+@material_to_feb.register
+def _(mat: matlib.SolidMixture, model) -> ElementTree:
     """Convert SolidMixture material instance to FEBio XML."""
     e = etree.Element("material", type="solid mixture")
     for submat in mat.materials:
@@ -178,7 +237,8 @@ def solidmixture_to_feb(mat, model):
     return e
 
 
-def multigeneration_to_feb(mat, model):
+@material_to_feb.register
+def _(mat: matlib.Multigeneration, model) -> ElementTree:
     """Convert Multigeneration material instance to FEBio XML."""
     e = etree.Element("material", type="multigeneration")
     i = 1
@@ -193,7 +253,8 @@ def multigeneration_to_feb(mat, model):
     return e
 
 
-def rigid_body_to_feb(mat, model):
+@material_to_feb.register
+def _(mat: matlib.Rigid, model) -> ElementTree:
     """Convert SolidMixture material instance to FEBio XML."""
     e = etree.Element("material", type="rigid body")
     if mat.density is None:
@@ -204,76 +265,14 @@ def rigid_body_to_feb(mat, model):
     return e
 
 
-def donnan_to_feb(mat, model):
+@material_to_feb.register
+def donnan_to_feb(mat: matlib.DonnanSwelling, model) -> ElementTree:
     """Convert DonnanSwelling material instance to FEBio XML."""
     e = etree.Element("material", type="Donnan equilibrium")
     e.append(property_to_xml(mat.phi0_w, "phiw0", model.named["sequences"]))
     e.append(property_to_xml(mat.fcd0, "cF0", model.named["sequences"]))
     e.append(property_to_xml(mat.ext_osm, "bosm", model.named["sequences"]))
     e.append(property_to_xml(mat.osm_coef, "Phi", model.named["sequences"]))
-    return e
-
-
-def material_to_feb(mat, model):
-    """Convert a material instance to FEBio XML.
-
-    The model argument is need so that time-dependent material
-    parameters, if any, can be given the right FEBio XML load curve ID.
-
-    TODO: Write a version that works without a model object.
-
-    """
-    if isinstance(mat, matlib.OrientedMaterial):
-        orientation = mat.orientation
-        mat = mat.material
-    else:
-        orientation = None
-    if mat is None:
-        e = etree.Element("material", type="unknown")
-    else:
-        f = {
-            matlib.ExponentialFiber: exponential_fiber_to_feb,
-            matlib.PowerLinearFiber: power_linear_fiber_to_feb,
-            matlib.HolmesMow: holmesmow_to_feb,
-            matlib.IsotropicElastic: isotropicelastic_to_feb,
-            matlib.NeoHookean: neo_hookean_to_feb,
-            matlib.OrthotropicElastic: orthotropic_elastic_to_feb,
-            matlib.PoroelasticSolid: poroelastic_to_feb,
-            matlib.SolidMixture: solidmixture_to_feb,
-            matlib.RigidBody: rigid_body_to_feb,
-            matlib.DonnanSwelling: donnan_to_feb,
-            matlib.Multigeneration: multigeneration_to_feb,
-        }
-        try:
-            e = f[type(mat)](mat, model)
-        except ValueError:
-            msg = "{} not implemented for conversion to FEBio XML."
-            raise
-    # Add material coordinate system if it is defined for this material.
-    # Any mixture material /should/ call `material_to_feb` (this
-    # function) for each sub-material, so we shouldn't need to handle
-    # material coordinate systems anywhwere else.
-    if orientation is not None:
-        if np.array(orientation).ndim == 2:
-            # material axes orientation
-            e_mat_axis = etree.Element("mat_axis", type="vector")
-            etree.SubElement(e_mat_axis, "a").text = febioxml.bvec_to_text(
-                orientation[:, 0]
-            )
-            etree.SubElement(e_mat_axis, "d").text = febioxml.bvec_to_text(
-                orientation[:, 1]
-            )
-            e.insert(0, e_mat_axis)
-            e.append(e_mat_axis)
-        elif np.array(orientation).ndim == 1:
-            # vector orientation
-            e_vector = etree.Element("fiber", type="vector")
-            e_vector.text = bvec_to_text(orientation)
-            e.append(e_vector)
-        else:
-            raise ValueError(
-                f"Rank {orientation.ndim} material orientation not supported.  Provided orientation was {orientation}."
-            )
     return e
 
 
@@ -368,7 +367,9 @@ def contact_section(
                     f"is known to support tension–compression contact in FEBio. "
                 )
         # Write penalty-related tags
-        etree.SubElement(e_contact, "penalty").text = num_to_text(contact.penalty_factor)
+        etree.SubElement(e_contact, "penalty").text = num_to_text(
+            contact.penalty_factor
+        )
         etree.SubElement(e_contact, "auto_penalty").text = bool_to_text(
             contact.auto_adjust_penalty
         )
@@ -479,7 +480,7 @@ def xml(model, version="3.0"):
     # diagonal error termination if an unreferenced rigid body material
     # is present.
     for mat in set(material_registry.objects()) - materials_used:
-        if type(mat) is matlib.RigidBody:
+        if type(mat) is matlib.Rigid:
             material_registry.remove_object(mat)
     _fixup_ordinal_ids(material_registry)
     # Ensure each material has an ID and name
@@ -615,7 +616,7 @@ def xml(model, version="3.0"):
     for i, implicit_body in enumerate(implicit_bodies_to_process):
         body_name = f"implicit_rigid_body_{i+1}"
         # Create the implicit body's FEBio rigid material
-        mat = matlib.RigidBody()
+        mat = matlib.Rigid()
         tag = material_to_feb(mat, model)
         # TODO: Support comments in reader
         # tag.append(ET.Comment("Implicit rigid body"))
@@ -703,7 +704,7 @@ def xml(model, version="3.0"):
         if physics == Physics.BIPHASIC:
             output_vars += ["effective fluid pressure", "fluid pressure", "fluid flux"]
         rigid_bodies_present = any(
-            isinstance(m, matlib.RigidBody) for m in material_registry.objects()
+            isinstance(m, matlib.Rigid) for m in material_registry.objects()
         )
         if rigid_bodies_present:
             output_vars += ["reaction forces"]

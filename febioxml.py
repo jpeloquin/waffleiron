@@ -486,7 +486,7 @@ solid_class_from_name = {
     "ellipsoidal fiber distribution": material.EllipsoidalPowerFiber,
     "neo-Hookean": material.NeoHookean,
     "solid mixture": material.SolidMixture,
-    "rigid body": material.RigidBody,
+    "rigid body": material.Rigid,
     "biphasic": material.PoroelasticSolid,
     "Donnan equilibrium": material.DonnanSwelling,
     "multigeneration": material.Multigeneration,
@@ -504,7 +504,7 @@ perm_name_from_class = {v: k for k, v in perm_class_from_name.items()}
 # derived from the material's type.
 physics_compat_by_mat = {
     material.PoroelasticSolid: {Physics.BIPHASIC},
-    material.RigidBody: {Physics.SOLID, Physics.BIPHASIC},
+    material.Rigid: {Physics.SOLID, Physics.BIPHASIC},
     material.OrthotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
     material.IsotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
     material.SolidMixture: {Physics.SOLID, Physics.BIPHASIC},
