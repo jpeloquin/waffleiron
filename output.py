@@ -896,6 +896,13 @@ def write_feb(model, f, version="3.0"):
 
     materials : list of Material objects
 
+    version : FEBio XML version to target.
+
+    Usage Example
+    -------------
+    with open(pth, "wb") as f:
+        write_feb(model, f, version="3.0")
+
     """
     tree = xml(model, version=version)
     write_xml(tree, f)
