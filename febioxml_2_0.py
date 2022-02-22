@@ -217,7 +217,7 @@ def meshdata_xml(model):
                 str(t) for t in element.properties["thickness"]
             )
         if "v_fiber" in element.properties:
-            ET.SubElement(e_edata, "fiber").text = ",".join(
+            ET.SubElement(e_element, "fiber").text = ",".join(
                 str(a) for a in element.properties["v_fiber"]
             )
     e_elemsets = tuple()  # For compatibility with other XML versions
@@ -239,9 +239,7 @@ def node_fix_disp_xml(fixed_conditions, nodeset_registry):
     for (dof, var), nodeset in fixed_conditions.items():
         if not nodeset:
             continue
-        e_bc = ET.Element(
-            e_boundary, BC_TYPE_TAG["node"]["fixed"], bc=XML_BC_FROM_DOF[(dof, var)]
-        )
+        e_bc = ET.Element(BC_TYPE_TAG["node"]["fixed"], bc=XML_BC_FROM_DOF[(dof, var)])
         for i in nodeset:
             ET.SubElement(e_bc, "node", id=str(i + 1))
         e_bcs.append(e_bc)
@@ -255,11 +253,14 @@ def tag_face(face):
     return tag
 
 
-def nodal_var_disp_xml(model, nodes, scales, scale, dof, var):
+def node_var_disp_xml(
+    model, xmlroot, nodes, scales, seq, dof, var, relative, step_name
+):
     e_bc = ET.Element(
         "prescribe",
         bc=XML_BC_FROM_DOF[(dof, var)],
     )
+    seq_id = get_or_create_seq_id(model.named["sequences"], seq)
     e_bc.attrib["lc"] = str(seq_id + 1)
     # Write nodes as children of <Step><Boundary><prescribe>
     for i, sc in zip(nodes, scales):

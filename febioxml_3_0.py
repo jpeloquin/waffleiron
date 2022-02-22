@@ -3,7 +3,15 @@ from collections import defaultdict
 from typing import Dict
 
 # Same-package modules
-from .core import ZeroIdxID, OneIdxID, Body, ImplicitBody, Extrapolant, Interpolant
+from .core import (
+    NodeSet,
+    ZeroIdxID,
+    OneIdxID,
+    Body,
+    ImplicitBody,
+    Extrapolant,
+    Interpolant,
+)
 from .control import SaveIters
 from .febioxml import *
 

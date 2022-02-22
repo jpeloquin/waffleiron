@@ -634,7 +634,7 @@ def xml(model, version="3.0"):
         # Assumes interface is a node set.
         if version == "2.0":
             # FEBio XML 2.0 puts rigid bodies under §Constraints
-            e_interface = ET.SubElement(tag_contact, "contact", type="rigid")
+            e_interface = ET.SubElement(e_Contact, "contact", type="rigid")
             for i in implicit_body.interface:
                 ET.SubElement(e_interface, "node", id=str(i + 1), rb=str(mat_id + 1))
         elif version_major == 2 and version_minor >= 5:
