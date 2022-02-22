@@ -49,6 +49,7 @@ from .febioxml import (
     VAR_FROM_XML_NODE_BC,
     DOF_NAME_FROM_XML_NODE_BC,
     SUPPORTED_FEBIO_XML_VERS,
+    VerbatimXMLMaterial,
     elem_cls_from_feb,
     normalize_xml,
     to_number,
@@ -422,16 +423,20 @@ class FebReader:
         """Return dictionary of materials keyed by id."""
         mats = {}
         mat_labels = {}
-        for m in self.root.findall("./Material/material"):
-            # Read material into dictionary
-            material = self._read_material(m)
-            mat_id = int(m.attrib["id"]) - 1  # FEBio counts from 1
-            material = mat_obj_from_elemd(material)
-
+        for e in self.root.findall("./Material/material"):
+            mat_id = int(e.attrib["id"]) - 1  # FEBio counts from 1
+            matprops = self._read_material(e)
+            if not matprops["material"] in febioxml.solid_class_from_name:
+                warnings.warn(
+                    f"Reading material {matprops['material']} from FEBio XML is not yet supported.  Its XML content will be stored in the Waffleiron model.  It will be reproduced verbatim (except for the material ID) if the model is written to FEBio XML."
+                )
+                mat = VerbatimXMLMaterial(e)
+            else:
+                mat = mat_obj_from_elemd(matprops)
             # Store material in index
-            mats[mat_id] = material
-            if "name" in m.attrib:
-                mat_labels[mat_id] = m.attrib["name"]
+            mats[mat_id] = mat
+            if "name" in e.attrib:
+                mat_labels[mat_id] = e.attrib["name"]
             else:
                 mat_labels[mat_id] = str(mat_id)
         return mats, mat_labels
@@ -766,18 +771,10 @@ class FebReader:
 
 def mat_obj_from_elemd(d):
     """Convert material element to material object"""
-    # Set default values for common properties
-    orientation = None
-    # TODO: Handle conflicting orientations; e.g., both <mat_axis> and
-    # <fiber>.  FEBio stacks these.
-    # Do we even support reading this material?
-    if not d["material"] in febioxml.solid_class_from_name:
-        raise ValueError(
-            f"{d['material']} is not supported in the loading of FEBio XML."
-        )
-
     # Read material orientation
-    #
+    orientation = None
+    # TODO: Handle conflicting orientations; e.g., both <mat_axis> and <fiber>.
+    #  FEBio stacks these.
     # Read material orientation in the form of <mat_axis> or <fiber>
     p_mat_axis = d["properties"].pop("mat_axis", None)
     p_fiber = d["properties"].pop("fiber", None)

@@ -9,8 +9,11 @@ import numpy as np
 import pytest
 
 import waffleiron as wfl
+from waffleiron import load_model
 from waffleiron.febio import run_febio_checked
-from waffleiron.test.fixtures import DIR_FIXTURES, febio_cmd
+from waffleiron.input import read_febio_xml
+from waffleiron.output import write_feb
+from waffleiron.test.fixtures import DIR_FIXTURES, DIR_OUT, febio_cmd
 
 
 @pytest.fixture(scope="module")
@@ -22,6 +25,26 @@ def FixedNodeBC_Solid_Model(febio_cmd):
     # Delete FEBio-generated output
     pth.with_suffix(".log").unlink()
     pth.with_suffix(".xplt").unlink()
+
+
+def test_Unit_Read_FebioXMLVerbatimMaterial():
+    """Test read of unrecognized material in FEBio XML"""
+    p_in = DIR_FIXTURES / "cube_hex8_n=1_unknown_material_febioxml3.0.feb"
+    with open(p_in, "rb") as f:
+        xml_in = read_febio_xml(f)
+    model = load_model(p_in)
+    p_out = DIR_OUT / "cube_hex8_n=1_unknown_material_febioxml3.0.feb"
+    with open(p_out, "wb") as f:
+        write_feb(model, f, version="3.0")
+    with open(p_out, "rb") as f:
+        xml_out = read_febio_xml(f)
+    e = xml_out.find("Material/material[@name='Material1']")
+    assert e.tag == "material"
+    assert e.attrib["name"] == "Material1"
+    assert e.attrib["type"] == "special snowflake"
+    assert len(e) == 2
+    assert e.find("param_a").text == "1"
+    assert e.find("param_b").text == "2"
 
 
 def test_FEBio_FixedNodeBC_Solid(FixedNodeBC_Solid_Model):

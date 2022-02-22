@@ -30,6 +30,7 @@ from . import febioxml_2_0
 from . import febioxml_2_5
 from . import febioxml_3_0
 from .febioxml import (
+    VerbatimXMLMaterial,
     find_unique_tag,
     get_or_create_item_id,
     get_or_create_seq_id,
@@ -84,9 +85,13 @@ def material_to_feb(mat, model) -> ElementTree:
     TODO: Try to figure out how to make this conversion work without a model object.
 
     """
-    raise NotImplementedError(
-        f"Conversion of {mat} to FEBio XML is not yet supported."
-    )
+    raise NotImplementedError(f"Conversion of {mat} to FEBio XML is not yet supported.")
+
+
+@material_to_feb.register
+def _(mat: VerbatimXMLMaterial, model) -> ElementTree:
+    """Convert VerbatimXMLMaterial instance to FEBio XML"""
+    return mat.xml
 
 
 @material_to_feb.register
@@ -217,10 +222,6 @@ def _(mat: matlib.PoroelasticSolid, model) -> ElementTree:
     e_solid.tag = "solid"
     e.append(e_solid)
     # Add permeability
-    f = {
-        matlib.IsotropicConstantPermeability: iso_const_perm_to_feb,
-        matlib.IsotropicHolmesMowPermeability: iso_holmes_mow_perm_to_feb,
-    }
     e_permeability = material_to_feb(mat.permeability, model)
     e.append(e_permeability)
     return e
@@ -520,12 +521,11 @@ def xml(model, version="3.0"):
             checked_mat = mat.material
         else:
             checked_mat = mat
-        if (not type(checked_mat) in fx.physics_compat_by_mat) or (
-            physics not in fx.physics_compat_by_mat[type(checked_mat)]
-        ):
-            raise ValueError(
-                f"Material `{type(mat)}` is not listed as compatible with Module {physics}"
-            )
+        if type(checked_mat) in fx.physics_compat_by_mat:
+            if physics not in fx.physics_compat_by_mat[type(checked_mat)]:
+                raise ValueError(
+                    f"Material `{type(mat)}` is not listed as compatible with Module {physics}"
+                )
 
     e_Material = etree.SubElement(root, "Material")
 

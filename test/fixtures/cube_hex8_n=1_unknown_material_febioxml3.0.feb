@@ -2,7 +2,7 @@
 <!-- Exported by FEBio Studio 1.7 & formatted with xmllint &#45;&#45;format -->
 <febio_spec version="3.0">
   <Material>
-    <material id="1" name="Fancypants" type="special snowflake">
+    <material id="1" name="Material1" type="special snowflake">
       <param_a>1</param_a>
       <param_b>2</param_b>
     </material>

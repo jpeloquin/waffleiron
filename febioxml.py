@@ -1,6 +1,7 @@
 from collections import namedtuple
 import os
 from pathlib import Path
+from typing import Union
 
 from lxml import etree
 from .core import (
@@ -528,3 +529,10 @@ CONTACT_PARAMS = {
     "search_scale": OptParameter("search_radius", to_number, 1.0),
     "projection_tol": OptParameter("search_tol", to_number, 0.01),
 }
+
+
+class VerbatimXMLMaterial:
+    def __init__(self, xml: Union[str, etree.ElementTree]):
+        if isinstance(xml, str):
+            xml = etree.fromstring(xml)
+        self.xml = xml
