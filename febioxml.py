@@ -1,9 +1,12 @@
+import warnings
 from collections import namedtuple
 import os
 from pathlib import Path
 from typing import Union
 
 from lxml import etree
+import numpy as np
+
 from .core import (
     Body,
     ImplicitBody,
@@ -14,9 +17,8 @@ from .core import (
 )
 from .control import Physics
 from .element import Quad4, Tri3, Hex8, Penta6, Element
-from . import material
-from .math import orthonormal_basis
-
+from . import material as matlib
+from .math import orthonormal_basis, vec_from_sph
 
 # Helper classes
 
@@ -67,7 +69,7 @@ def domains(model):
 # Functions for reading FEBio XML
 
 
-def find_unique_tag(root: etree.Element, path):
+def find_unique_tag(root: etree.Element, path, req=False):
     """Find and return a tag or an error if > 1 of same."""
     tags = root.findall(path)
     if len(tags) == 1:
@@ -77,7 +79,186 @@ def find_unique_tag(root: etree.Element, path):
             f"Multiple `{path}` tags in file `{os.path.abspath(root.base)}`"
         )
     else:
-        return None
+        if req:
+            raise ValueError(
+                f"Could not find required XML tag {path} relative to {root} at {root.base}:{root.sourceline}."
+            )
+        else:
+            return None
+
+
+def read_material(e, sequence_registry):
+    """Read a material from an XML element
+
+    This function will not mutate `sequence_registry`.
+
+    """
+
+    def guess_matprops(e):
+        """Return dictionary of scalar material properties
+
+        Any XML element with a scalar numeric value is assumed to be a material
+        property.
+
+        """
+        props = {}
+        for c in e:
+            try:
+                v = to_number(c.text)
+            except ValueError:
+                continue
+            props[c.tag] = v
+        return props
+
+    # Check if the material type is fully supported
+    material_type = read_material_type(e)
+    if material_type not in material_from_xml_name:
+        warnings.warn(
+            f"Reading material {material_type} from FEBio XML is not yet supported.  Its XML content will be stored in the Waffleiron model.  It will be reproduced verbatim (except for the material ID) if the model is written to FEBio XML."
+        )
+        return VerbatimXMLMaterial(e)
+    cls = material_from_xml_name[material_type]
+    orientation = read_material_orientation(e)
+    if material_type == "solid mixture":
+        constituents = [
+            read_material(c, sequence_registry) for c in e if c.tag == "solid"
+        ]
+        # TODO: Shouldn't solid mixture support material orientation?
+        material = cls(constituents)
+    elif material_type == "biphasic":
+        # Permeability constitutive equation
+        e_permeability = find_unique_tag(e, "permeability", req=True)
+        perm_type = e_permeability.attrib["type"]
+        perm_class = perm_class_from_name[perm_type]
+        props = {c.tag: to_number(c.text) for c in e_permeability}
+        permeability = perm_class.from_feb(**props)
+        # Solid constituent
+        constituents = [read_material(c, sequence_registry) for c in e if c.tag == "solid"]
+        if len(constituents) > 1:
+            raise ValueError(
+                f"A porelastic solid was encountered with {len(constituents)} solid constituents.  Poroelastic solids must have exactly one solid constituent.  The relevant poroelastic solid is at {e.base}:{e.sourceline}."
+            )
+        solid = constituents[0]
+        e_solid_fraction = find_unique_tag(e, "phi0", req=True)
+        # ^ FEbio doesn't require this, but the default is apparently zero, which is
+        # wrong.  So it's de facto required.
+        solid_fraction = read_parameter(e_solid_fraction, sequence_registry)
+        material = matlib.PoroelasticSolid(solid, permeability, solid_fraction)
+    elif material_type == "multigeneration":
+        # Constructing materials for the list of generations works just like a solid
+        # mixture
+        generations = []
+        for g in e.findall("generation"):
+            t = to_number(find_unique_tag(g, "start_time", req=True).text)
+            solid = read_material(find_unique_tag(g, "solid", req=True))
+            generations.append((t, solid))
+        material = cls(generations)
+    elif hasattr(cls, "from_feb") and callable(cls.from_feb):
+        material = cls.from_feb(**guess_matprops(e))
+    else:
+        material = cls(guess_matprops(e))
+    # Apply total orientation for the material (which may be a submaterial)
+    if orientation is not None:
+        material = matlib.OrientedMaterial(material, orientation)
+    return material
+
+
+def read_material_orientation(e):
+    """Return orientation of a material
+
+    The orientation may be returned as a 3-element vector or a matrix of 3
+    orthonormal basis vectors.
+
+    The material orientation is assumed to not vary with time.  Currently only scalar
+    parameters can vary with time.
+
+    """
+    material_type = read_material_type(e)
+    # Read material orientation in the form of <mat_axis> or <fiber>
+    e_mat_axis = find_unique_tag(e, "mat_axis")
+    e_fiber = find_unique_tag(e, "fiber")
+    # Handle multiple orientation definitions
+    if (e_mat_axis is not None) and (e_fiber is not None):
+        # FEBio's documentation says that only one could be defined, but FEBio itself
+        # accepts both, with undocumented handling regarding precedence.  So we raise
+        # an error.
+        raise ValueError(
+            f"Found both <mat_axis> and <fiber> XML elements in material; only one may be present.  The material definition is at {e.base}:{e.sourcline}."
+        )
+    # <mat_axis>
+    elif e_mat_axis is not None:
+        if e_mat_axis.attrib["type"] == "vector":
+            a = read_vector(find_unique_tag(e_mat_axis, "a", req=True).text)
+            d = read_vector(find_unique_tag(e_mat_axis, "d", req=True).text)
+            orientation = orthonormal_basis(a, d)
+        elif e_mat_axis.attrib["type"] == "local":
+            orientation = None
+            # <mat_axis type="local"> is converted to a heterogeneous orientation
+            # separately in FebReader.model via basis_mat_axis_local; no need to
+            # handle it here.
+        else:
+            raise NotImplementedError(
+                f"<mat_axis> orientation type '{e_mat_axis.attrib['type']}' is not yet implemented.  The relevant <mat_axis> element is at {e_mat_axis.base}:{e_mat_axis.sourceline}."
+            )
+    # <fiber>
+    elif e_fiber is not None:
+        fiber_orientation_type = e_fiber.attrib["type"]
+        if fiber_orientation_type == "vector":
+            orientation = read_vector(e_fiber.text)
+        elif fiber_orientation_type == "angles":
+            θ = to_number(find_unique_tag(e_fiber, "theta", req=True).text)
+            φ = to_number(find_unique_tag(e_fiber, "phi", req=True).text)
+            orientation = vec_from_sph(θ, φ)
+        else:
+            # Should support <fiber> types: local, spherical, cylindrical
+            raise NotImplementedError(
+                f"<fiber> orientation type '{fiber_orientation_type}' is not yet implemented.  The relevant <fiber> element is at {e_fiber.base}:{e_fiber.sourceline}."
+            )
+    else:
+        orientation = None
+
+    # Read "material property" orientation defined using <theta> and <phi> elements
+    # on the material itself.  These *combine* with the <mat_axis> or <fiber>
+    # material orientation / basis.
+    e_theta = find_unique_tag(e, "theta")
+    e_phi = find_unique_tag(e, "phi")
+    if (e_theta is not None) and (e_phi is not None):
+        θ = to_number(e_theta.text)
+        φ = to_number(e_phi.text)
+        matprop_orientation = vec_from_sph(θ, φ)
+    elif (e_theta is not None) and (e_phi is None):
+        # If either spherical angle is present, the other must be also
+        raise ValueError(
+            f"Found a <theta> element but no <phi> in material \"{material_type}\".  Both spherical angles are required to define a material orientation.  The relevant material is at {e.base}:{e.sourceline}."
+        )
+    elif (e_phi is not None) and (e_theta is None):
+        # If either spherical angle is present, the other must be also
+        raise ValueError(
+            f"Found a <phi> element but no <theta> in material \"{material_type}\".  Both spherical angles are required to define a material orientation.  The relevant material is at {e.base}:{e.sourceline}."
+        )
+    else:
+        matprop_orientation = None
+
+    # Combine material property orientation and material orientation as appropriate.
+    if matprop_orientation is not None:
+        if orientation is None:
+            orientation = matprop_orientation
+        else:
+            if orientation.ndim == 2:
+                orientation = orientation @ matprop_orientation
+            else:
+                # `orientation` is just a vector.  Interpret it as indicating a
+                # transformation from [1, 0, 0] to its value.
+                raise NotImplementedError
+    return orientation
+
+
+def read_material_type(e):
+    if "type" not in e.attrib:
+        raise ValueError(
+            f"Material is missing its `type` attribute in {e.base}:{e.sourceline}"
+        )
+    return e.attrib["type"]
 
 
 def read_parameter(e, sequence_registry):
@@ -137,6 +318,10 @@ def read_parameters(xml, paramdict):
 def read_point(text):
     x, y = text.split(",")
     return to_number(x), to_number(y)
+
+
+def read_vector(text):
+    return np.array([float(x) for x in text.split(",")])
 
 
 def basis_mat_axis_local(element: Element, local_ids=(1, 2, 4)):
@@ -479,40 +664,40 @@ EXTRAP_FROM_XML_EXTRAP = {v: k for k, v in XML_EXTRAP_FROM_EXTRAP.items()}
 
 elem_cls_from_feb = {"quad4": Quad4, "tri3": Tri3, "hex8": Hex8, "penta6": Penta6}
 
-solid_class_from_name = {
-    "isotropic elastic": material.IsotropicElastic,
-    "Holmes-Mow": material.HolmesMow,
-    "fiber-exp-pow": material.ExponentialFiber,
-    "fiber-pow-linear": material.PowerLinearFiber,
-    "ellipsoidal fiber distribution": material.EllipsoidalPowerFiber,
-    "neo-Hookean": material.NeoHookean,
-    "solid mixture": material.SolidMixture,
-    "rigid body": material.Rigid,
-    "biphasic": material.PoroelasticSolid,
-    "Donnan equilibrium": material.DonnanSwelling,
-    "multigeneration": material.Multigeneration,
-    "orthotropic elastic": material.OrthotropicElastic,
+material_from_xml_name = {
+    "isotropic elastic": matlib.IsotropicElastic,
+    "Holmes-Mow": matlib.HolmesMow,
+    "fiber-exp-pow": matlib.ExponentialFiber,
+    "fiber-pow-linear": matlib.PowerLinearFiber,
+    "ellipsoidal fiber distribution": matlib.EllipsoidalPowerFiber,
+    "neo-Hookean": matlib.NeoHookean,
+    "solid mixture": matlib.SolidMixture,
+    "rigid body": matlib.Rigid,
+    "biphasic": matlib.PoroelasticSolid,
+    "Donnan equilibrium": matlib.DonnanSwelling,
+    "multigeneration": matlib.Multigeneration,
+    "orthotropic elastic": matlib.OrthotropicElastic,
 }
-solid_name_from_class = {v: k for k, v in solid_class_from_name.items()}
+material_name_from_class = {v: k for k, v in material_from_xml_name.items()}
 
 perm_class_from_name = {
-    "perm-Holmes-Mow": material.IsotropicHolmesMowPermeability,
-    "perm-const-iso": material.IsotropicConstantPermeability,
+    "perm-Holmes-Mow": matlib.IsotropicHolmesMowPermeability,
+    "perm-const-iso": matlib.IsotropicConstantPermeability,
 }
 perm_name_from_class = {v: k for k, v in perm_class_from_name.items()}
 
 # TODO: Redesign the compatibility system so that compatibility can be
 # derived from the material's type.
 physics_compat_by_mat = {
-    material.PoroelasticSolid: {Physics.BIPHASIC},
-    material.Rigid: {Physics.SOLID, Physics.BIPHASIC},
-    material.OrthotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
-    material.IsotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
-    material.SolidMixture: {Physics.SOLID, Physics.BIPHASIC},
-    material.PowerLinearFiber: {Physics.SOLID, Physics.BIPHASIC},
-    material.ExponentialFiber: {Physics.SOLID, Physics.BIPHASIC},
-    material.HolmesMow: {Physics.SOLID, Physics.BIPHASIC},
-    material.NeoHookean: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.PoroelasticSolid: {Physics.BIPHASIC},
+    matlib.Rigid: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.OrthotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.IsotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.SolidMixture: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.PowerLinearFiber: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.ExponentialFiber: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.HolmesMow: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.NeoHookean: {Physics.SOLID, Physics.BIPHASIC},
 }
 
 # Map of ContactConstraint fields → elements relative to <contact>
@@ -532,6 +717,14 @@ CONTACT_PARAMS = {
 
 
 class VerbatimXMLMaterial:
+    """Store FEBio XML for a material that is not yet implemented
+
+    A future enhancement would be to make the object aware of sequences that were used
+    to define time-varying material parameters, and renumber them as appropriately
+    during export.
+
+    """
+
     def __init__(self, xml: Union[str, etree.ElementTree]):
         if isinstance(xml, str):
             xml = etree.fromstring(xml)

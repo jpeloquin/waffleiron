@@ -56,6 +56,7 @@ from .febioxml import (
     to_number,
     maybe_to_number,
     find_unique_tag,
+    read_material,
     read_parameter,
     read_parameters,
     OptParameter,
@@ -421,20 +422,12 @@ class FebReader:
         self._sequences = None  # memo for sequences()
 
     def materials(self):
-        """Return dictionary of materials keyed by id."""
+        """Return materials and their labels keyed by id."""
         mats = {}
         mat_labels = {}
         for e in self.root.findall("./Material/material"):
             mat_id = int(e.attrib["id"]) - 1  # FEBio counts from 1
-            matprops = self._read_material(e)
-            if not matprops["material"] in febioxml.solid_class_from_name:
-                warnings.warn(
-                    f"Reading material {matprops['material']} from FEBio XML is not yet supported.  Its XML content will be stored in the Waffleiron model.  It will be reproduced verbatim (except for the material ID) if the model is written to FEBio XML."
-                )
-                mat = VerbatimXMLMaterial(e)
-            else:
-                mat = mat_obj_from_elemd(matprops)
-            # Store material in index
+            mat = read_material(e, self.sequences)
             mats[mat_id] = mat
             if "name" in e.attrib:
                 mat_labels[mat_id] = e.attrib["name"]
@@ -448,73 +441,15 @@ class FebReader:
 
         Sequence IDs are integers starting from 0.
 
-        The first time this method is called for a FebReader object it
-        creates and memoizes a set of Sequence objects.  Subsequent
-        calls return the same Sequence objects.
+        The first time this method is called for a FebReader object it creates and
+        memoizes a dictionary of Sequence objects from the <loadcurve> elements in
+        the FEBio XML.  Subsequent calls return the same Sequence objects.
 
         """
         fx = self.febioxml_module
         if self._sequences is None:
             self._sequences = fx.sequences(self.root)
         return self._sequences
-
-    def _read_material(self, tag):
-        """Get material properties dictionary from <material>.
-
-        tag := the XML <material> element.
-
-        """
-        # TODO: This is a bad way of reading materials.  FEBio XML
-        # doesn't have a lot of regularity and this conversion of a
-        # material's XML tree to a dictionary is an extra step that just
-        # gets in the way.
-        m = {}
-        m["material"] = tag.attrib["type"]
-        m["properties"] = {}
-        constituents = []
-        for child in tag:
-            if child.tag in ["material", "solid"]:
-                # Child element is a material
-                constituents.append(self._read_material(child))
-            if child.tag == "generation":
-                t0 = to_number(child.find("start_time").text)
-                m["properties"].setdefault("start times", []).append(t0)
-                e_mat = child.find("solid")
-                constituents.append(self._read_material(e_mat))
-            else:
-                # Child element is a property (note: this isn't always true)
-                m["properties"][child.tag] = self._read_property(child)
-        if constituents:
-            m["constituents"] = constituents
-        return m
-
-    def _read_property(self, tag):
-        """Read a material property element."""
-        # Check if this is a time-varying or fixed property
-        if "lc" in tag.attrib:
-            # The property is time-varying
-            seq_id = int(tag.attrib["lc"]) - 1
-            sequence = self.sequences[seq_id]
-            scale = to_number(tag.text)
-            return ScaledSequence(sequence, scale)
-        else:
-            # The property is fixed
-            p = {}
-            p.update(tag.attrib)
-            for child in tag:
-                p_child = self._read_property(child)
-                p[child.tag] = p_child
-            if tag.text is not None:
-                v = tag.text.lstrip().rstrip()
-                if v:
-                    v = [float(a) for a in v.split(",")]
-                    if len(v) == 1:
-                        v = v[0]
-                    if not p:
-                        return v
-                    else:
-                        p["value"] = v
-            return p
 
     def model(self):
         """Return model."""
@@ -768,108 +703,3 @@ class FebReader:
         nodes, elements = read_mesh(self.root, fx)
         mesh = Mesh(nodes, elements)
         return mesh
-
-
-def mat_obj_from_elemd(d):
-    """Convert material element to material object"""
-    # Read material orientation
-    orientation = None
-    # TODO: Handle conflicting orientations; e.g., both <mat_axis> and <fiber>.
-    #  FEBio stacks these.
-    # Read material orientation in the form of <mat_axis> or <fiber>
-    p_mat_axis = d["properties"].pop("mat_axis", None)
-    p_fiber = d["properties"].pop("fiber", None)
-    if p_mat_axis is not None and p_fiber is not None:
-        # FEBio's documentation says that only one could be defined, but
-        # FEBio itself accepts both, with undocumented handling (e.g.,
-        # precedence).  So raise an error.
-        raise ValueError(
-            f"Found both <mat_axis> and <fiber> XML elements in {d['material']}; only one may be present."
-        )
-    if p_mat_axis is not None:
-        if p_mat_axis["type"] == "vector":
-            orientation = orthonormal_basis(p_mat_axis["a"], p_mat_axis["d"])
-        # <mat_axis type="local"> is converted to a heterogeneous
-        # orientation in Model's initializer; no need to handle it here.
-    elif p_fiber is not None:
-        # Currently we only support <fiber type="angles">.  Other
-        # types: local, vector, spherical, cylindrical.
-        if p_fiber["type"] == "angles":
-            orientation = vec_from_sph(p_fiber["theta"], p_fiber["phi"])
-        elif p_fiber["type"] == "vector":
-            orientation = np.array(p_fiber["value"])
-        else:
-            raise NotImplementedError
-    # Read material orientation in the form of material property-like
-    # XML elements.
-    p_theta = d["properties"].pop("theta", None)
-    p_phi = d["properties"].pop("phi", None)
-    # Verify that both spherical angles are present, or neither
-    if p_theta is not None and p_phi is None:
-        raise ValueError(
-            f"Found a <theta> element but no <phi> in {d['material']}; both spherical angles are required to define a material orientation."
-        )
-    if p_theta is None and p_phi is not None:
-        raise ValueError(
-            f"Found a <phi> element but no <theta> in {d['material']}; both spherical angles are required to define a material orientation."
-        )
-    if p_theta is not None and p_phi is not None:
-        matprop_orientation = vec_from_sph(p_theta, p_phi)
-        if orientation is None:
-            orientation = matprop_orientation
-        else:
-            # Have to combine orientations
-            if np.array(orientation).ndim == 2:
-                orientation = orientation @ matprop_orientation
-            else:
-                # `orientation` is just a vector.  Interpret it as
-                # indicating a transformation from [1, 0, 0] to its
-                # value.
-                raise NotImplementedError
-
-    # Create material object
-    cls = febioxml.solid_class_from_name[d["material"]]
-    if d["material"] == "solid mixture":
-        constituents = []
-        for d_child in d["constituents"]:
-            child_material = mat_obj_from_elemd(d_child)
-            constituents.append(child_material)
-        material = cls(constituents)
-    elif d["material"] == "biphasic":
-        # Instantiate Permeability object
-        p_props = d["properties"]["permeability"]
-        typ = d["properties"]["permeability"]["type"]
-        p_class = febioxml.perm_class_from_name[typ]
-        permeability = p_class.from_feb(**p_props)
-        # Instantiate solid constituent object
-        if len(d["constituents"]) > 1:
-            # TODO: Specify which material in the error message.
-            # This requires retaining material ids in the dict
-            # passed to this function.
-            raise ValueError(
-                """A porelastic solid was encountered with {len(d['constituents'])} solid constituents.  Poroelastic solids must have exactly one solid constituent."""
-            )
-        solid = mat_obj_from_elemd(d["constituents"][0])
-        solid_fraction = d["properties"]["phi0"]  # what is the default?
-        # Return the Poroelastic Solid object
-        material = material_lib.PoroelasticSolid(solid, permeability, solid_fraction)
-    elif d["material"] == "multigeneration":
-        # Constructing materials for the list of generations works
-        # just like a solid mixture
-        constituents = []
-        for d_child in d["constituents"]:
-            constituents.append(mat_obj_from_elemd(d_child))
-        generations = (
-            (t, mat) for t, mat in zip(d["properties"]["start times"], constituents)
-        )
-        material = cls(generations)
-    elif hasattr(cls, "from_feb") and callable(cls.from_feb):
-        if "density" in d["properties"]:
-            del d["properties"]["density"]  # density not supported yet
-        material = cls.from_feb(**d["properties"])
-    else:
-        material = cls(d["properties"])
-    # Apply total (sub)material orientation
-    if orientation is not None:
-        material = material_lib.OrientedMaterial(material, orientation)
-    return material

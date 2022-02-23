@@ -203,6 +203,10 @@ class SolidMixture:
 
         """
         self.materials = []
+        if not solids:
+            raise ValueError(
+                "SolidMixture requires at least one solid, but none were provided."
+            )
         for solid in solids:
             self.materials.append(solid)
 
@@ -216,7 +220,7 @@ class SolidMixture:
         return sum(material.pstress(F) for material in self.materials)
 
     def sstress(self, F):
-        return sum(material.sstress(F) for material in self.materials)
+        return sum([material.sstress(F) for material in self.materials])
 
 
 class Rigid:
