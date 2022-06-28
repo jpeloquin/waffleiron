@@ -194,9 +194,9 @@ def read_named_sets(root: etree.Element, febioxml_module) -> Dict[str, Dict[str,
 def read_step(step_xml, model, physics, febioxml_module):
     """Return a Step object for a <Step> XML element
 
-    If an optional control parameter are missing, it will be initialized
-    with the default value as documented in the FEBio user manual.  This
-    may differ from the default actually used by FEBio.
+    If an optional control parameter is missing, it will be initialized with the
+    default value as documented in the FEBio user manual.  This may differ from the
+    default actually used by FEBio.
 
     This function does not (yet) read conditions, only the control
     settings (time and solver).
