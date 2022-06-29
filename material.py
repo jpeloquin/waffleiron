@@ -13,6 +13,12 @@ _DEFAULT_ORIENT_RANK1 = np.array([1, 0, 0])
 _DEFAULT_ORIENT_RANK2 = (np.array([1, 0, 0]), np.array([0, 1, 0]), np.array([0, 0, 1]))
 
 
+class ParameterValueError(ValueError):
+    """Raise when a parameter value is impossible (nonphysical)."""
+
+    pass
+
+
 def to_Lamé(E, v):
     """Convert Young's modulus & Poisson ratio to Lamé parameters."""
     y = v * E / ((1.0 + v) * (1.0 - 2.0 * v))
@@ -150,11 +156,11 @@ class DonnanSwelling:
     def __init__(self, phi0_w, fcd0, ext_osm, osm_coef, **kwargs):
         # Bounds checks
         if _is_fixed_property(phi0_w) and not (0 <= phi0_w <= 1):
-            raise ValueError(f"phi0_w = {phi0_w}; it is required that 0 ≤ phi0_w ≤ 1")
+            raise ParameterValueError(f"phi0_w = {phi0_w}; it is required that 0 ≤ phi0_w ≤ 1")
         if _is_fixed_property(fcd0) and not (fcd0 >= 0):
-            raise ValueError(f"fcd0 = {fcd0}; it is required that 0 < fcd0")
+            raise ParameterValueError(f"fcd0 = {fcd0}; it is required that 0 < fcd0")
         if _is_fixed_property(ext_osm) and not (ext_osm >= 0):
-            raise ValueError(f"ext_osm = {ext_osm}; it is required that 0 < ext_osm")
+            raise ParameterValueError(f"ext_osm = {ext_osm}; it is required that 0 < ext_osm")
         # Store values
         self.phi0_w = phi0_w
         self.fcd0 = fcd0
