@@ -6,6 +6,8 @@ from math import degrees
 from datetime import datetime
 
 # Public packages
+from typing import BinaryIO
+
 from lxml import etree
 from lxml.etree import ElementTree
 import numpy as np
@@ -23,7 +25,7 @@ from .core import (
 )
 from .control import auto_physics, Physics
 
-from . import material as matlib
+from . import Model, material as matlib
 from .math import sph_from_vec
 from . import febioxml
 from . import febioxml_2_0
@@ -448,7 +450,7 @@ def step_xml(step, name, seq_registry, physics, febioxml_module):
     return e_step
 
 
-def xml(model, version="3.0"):
+def xml(model: Model, version="3.0"):
     """Convert a model to an FEBio XML tree.
 
     Creating an FEBio XML tree from a model is useful because it allows
@@ -881,7 +883,7 @@ def xml(model, version="3.0"):
     return tree
 
 
-def write_xml(tree, f):
+def write_xml(tree, f: BinaryIO):
     """Write an XML tree to a .feb file"""
     tree.write(f, pretty_print=True, xml_declaration=True, encoding="utf-8")
 
