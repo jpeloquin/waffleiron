@@ -420,10 +420,11 @@ def mesh_xml(model, domains, material_registry):
             e_element.attrib["id"] = str(i + 1)
             e_element.text = ", ".join(str(i + 1) for i in e.ids)
         # <SolidDomain>
-        mat_name = material_registry.names(domain["material"], "canonical")[0]
-        e_soliddomain = etree.SubElement(
-            e_meshdomains, "SolidDomain", name=domain["name"], mat=mat_name
-        )
+        if domain["material"] is not None:
+            mat_name = material_registry.names(domain["material"], "canonical")[0]
+            e_soliddomain = etree.SubElement(
+                e_meshdomains, "SolidDomain", name=domain["name"], mat=mat_name
+            )
     return e_geometry, e_meshdomains
 
 
