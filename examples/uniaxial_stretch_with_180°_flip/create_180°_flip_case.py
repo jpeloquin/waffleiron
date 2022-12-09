@@ -21,10 +21,8 @@ if __name__ == "__main__":
     displacements = []
     for λ, θ in zip(stretches, angles):
         F = np.eye(3)
-        F[0,0] = λ
-        R = np.array([[cos(θ), sin(θ), 0],
-                      [-sin(θ), cos(θ), 0],
-                      [0, 0, 1]])
+        F[0, 0] = λ
+        R = np.array([[cos(θ), sin(θ), 0], [-sin(θ), cos(θ), 0], [0, 0, 1]])
         displacements.append((R @ F @ x_ref - x_ref).T)
     displacements = np.array(displacements)
 
@@ -32,8 +30,7 @@ if __name__ == "__main__":
     sequences = defaultdict(dict)  # keys: node index, BC axis name
     for inode in range(len(model.mesh.nodes)):
         for ix, dof in zip(range(3), ["x1", "x2", "x3"]):
-            pts = [(t, u)
-                   for t, u in zip(times, displacements[:, inode, ix])]
+            pts = [(t, u) for t, u in zip(times, displacements[:, inode, ix])]
             seq = wfl.Sequence(pts, interp="spline", extrap="constant")
             # TODO: The extra .step is awkward; make NameStep fancier.
             model.apply_nodal_bc([inode], dof, "displacement", seq, model.steps[0].step)

@@ -665,7 +665,9 @@ def xml(model: Model, version="3.0"):
                 e_child.attrib["node_set"] = name
             e_parent.append(e_child)
         else:
-            raise ValueError(f"Implicit rigid body not (yet) supported for export to FEBio XML {version_major}.{version_minor}")
+            raise ValueError(
+                f"Implicit rigid body not (yet) supported for export to FEBio XML {version_major}.{version_minor}"
+            )
 
     # Write global constraints / conditions / BCs and anything that
     # goes in global <Boundary>

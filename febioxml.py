@@ -133,7 +133,9 @@ def read_material(e, sequence_registry):
         props = {c.tag: to_number(c.text) for c in e_permeability}
         permeability = perm_class.from_feb(**props)
         # Solid constituent
-        constituents = [read_material(c, sequence_registry) for c in e if c.tag == "solid"]
+        constituents = [
+            read_material(c, sequence_registry) for c in e if c.tag == "solid"
+        ]
         if len(constituents) > 1:
             raise ValueError(
                 f"A porelastic solid was encountered with {len(constituents)} solid constituents.  Poroelastic solids must have exactly one solid constituent.  The relevant poroelastic solid is at {e.base}:{e.sourceline}."
@@ -229,12 +231,12 @@ def read_material_orientation(e):
     elif (e_theta is not None) and (e_phi is None):
         # If either spherical angle is present, the other must be also
         raise ValueError(
-            f"Found a <theta> element but no <phi> in material \"{material_type}\".  Both spherical angles are required to define a material orientation.  The relevant material is at {e.base}:{e.sourceline}."
+            f'Found a <theta> element but no <phi> in material "{material_type}".  Both spherical angles are required to define a material orientation.  The relevant material is at {e.base}:{e.sourceline}.'
         )
     elif (e_phi is not None) and (e_theta is None):
         # If either spherical angle is present, the other must be also
         raise ValueError(
-            f"Found a <phi> element but no <theta> in material \"{material_type}\".  Both spherical angles are required to define a material orientation.  The relevant material is at {e.base}:{e.sourceline}."
+            f'Found a <phi> element but no <theta> in material "{material_type}".  Both spherical angles are required to define a material orientation.  The relevant material is at {e.base}:{e.sourceline}.'
         )
     else:
         matprop_orientation = None
