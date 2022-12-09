@@ -178,16 +178,16 @@ class Model:
         model to FEBio, it will automatically leak the boundary
         condition to all subsequent steps.)
 
-        dof := 'x1', 'x2', 'x3', 'fluid', 'temperature', or 'charge'.
+        :param dof: 'x1', 'x2', 'x3', 'fluid', 'temperature', or 'charge'.
 
-        sequence := conditions.Sequence object or 'fixed'
+        :param variable: "displacement", "rotation", "force", or "moment", etc.
 
-        body := Body or ImplicitBody object
+        :param sequence: conditions.Sequence object or 'fixed'
 
-        step := Step object or None.  The step to which the rigid body
-        boundary condition applies.  If None, the condition will be
-        applied globally.
+        :param body: Body or ImplicitBody object
 
+        :param step: Step object or None.  The step to which the rigid body boundary
+        condition applies.  If None, the condition will be applied globally.
         """
         _validate_dof(dof, body=True)
         if step is None:
