@@ -178,6 +178,7 @@ class Step:
             self.controller = IterController()
         else:
             self.controller = controller
+        assert isinstance(ticker, Ticker)
         self.ticker = ticker
         self.bc: dict = {"node": {}, "body": {}, "contact": []}
 
