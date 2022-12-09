@@ -437,8 +437,10 @@ def body_mat_id(body, material_registry, implicit_rb_mats):
         mat = body.elements[0].material
         mat_id = material_registry.names(mat, nametype="ordinal_id")[0]
     elif isinstance(body, ImplicitBody):
-        mat = material_registry[body]
-        mat_id = material_registry.name(mat, nametype="ordinal_id")
+        mat = implicit_rb_mats[body]
+        ids = material_registry.names(mat, nametype="ordinal_id")
+        assert len(ids) == 1
+        mat_id = ids[0]
     else:
         msg = (
             f"body {body} does not have a supported type.  "
