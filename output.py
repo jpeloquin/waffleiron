@@ -639,16 +639,33 @@ def xml(model: Model, version="3.0"):
             e_interface = etree.SubElement(e_Contact, "contact", type="rigid")
             for i in implicit_body.interface:
                 etree.SubElement(e_interface, "node", id=str(i + 1), rb=str(mat_id + 1))
-        elif version_major == 2 and version_minor >= 5:
-            # FEBio XML 2.5 puts rigid bodies under §Boundary
+        elif (version_major == 2 and version_minor == 5) or version_major == 3:
+            # Get or create the nodeset
             try:
-                name = model.named["node sets"].name(implicit_body.interface)
+                names = model.named["node sets"].names(implicit_body.interface)
+                assert len(names) == 1
+                name = names[0]
             except KeyError:
                 name_base = f"{body_name}_interface"
                 nodeset = implicit_body.interface
                 name = model.named["node sets"].get_or_create_name(name_base, nodeset)
             add_nodeset(root, name, implicit_body.interface, febioxml_module=fx)
-            etree.SubElement(e_boundary, "rigid", rb=str(mat_id + 1), node_set=name)
+            # Add the rigid body interface to the XML
+            e_parent = root.find(fx.IMPBODY_PARENT)
+            if version_major == 3:
+                # No simple way to create an XML element object from IMPBODY_NAME =
+                # "bc[@type='rigid']" (?).
+                e_child = etree.Element("bc")
+                e_child.attrib["type"] = "rigid"
+                e_child.attrib["node_set"] = name
+                etree.SubElement(e_child, "rb").text = str(mat_id + 1)
+            else:  # version == 2.5
+                e_child = etree.Element(fx.IMPBODY_NAME)
+                e_child.attrib["rb"] = str(mat_id + 1)
+                e_child.attrib["node_set"] = name
+            e_parent.append(e_child)
+        else:
+            raise ValueError(f"Implicit rigid body not (yet) supported for export to FEBio XML {version_major}.{version_minor}")
 
     # Write global constraints / conditions / BCs and anything that
     # goes in global <Boundary>
