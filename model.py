@@ -275,7 +275,7 @@ class Mesh:
         # Bodies
         self.bodies = set()
 
-        # Initialize dictionaries to hold named named entities
+        # Initialize dictionaries to hold named entities
         self.named = {
             "materials": NameRegistry(),
             "node sets": NameRegistry(),

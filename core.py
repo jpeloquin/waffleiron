@@ -76,7 +76,7 @@ class ImplicitBody:
         """
         self.mesh = mesh
         self.interface = interface
-        # ^ NameRegistry needs this to be hashable
+        # ^ TODO: NameRegistry needs this to be hashable
         self.material = material
 
 
