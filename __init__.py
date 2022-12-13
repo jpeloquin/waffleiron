@@ -26,6 +26,7 @@ from . import (
     geometry,
     input,
     material,
+    math,
     mesh,
     output,
     plot,
