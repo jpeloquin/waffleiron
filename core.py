@@ -21,7 +21,7 @@ def _validate_dof(dof, body=False):
     if body:
         allowed_dofs += ["α1", "α2", "α3"]
     if not dof in allowed_dofs:
-        msg = f"{dof} is not a supported axis type.  The supported degrees of freedom are {','.join(allowed_axes)}."
+        msg = f"{dof} is not a supported axis type.  The supported degrees of freedom are {','.join(allowed_dofs)}."
         raise ValueError(msg)
 
 
@@ -64,6 +64,8 @@ class ElementSet(frozenset):
 
 class ImplicitBody:
     """A geometric body defined by its interface with a mesh."""
+
+    # TODO: How are you supposed to find out which nodes belong to an implicit body?
 
     def __init__(self, mesh, interface: NodeSet, material=None):
         """Constructor for ImplicitBody object.
