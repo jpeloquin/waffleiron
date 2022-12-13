@@ -171,15 +171,9 @@ def run_febio_checked(pth_feb, threads=None, cmd=FEBIO_CMD):
     # have old output still visible even after re-running the
     # simulation.
     pth_xplt = pth_feb.with_suffix(".xplt")
-    try:
-        pth_xplt.unlink()
-    except FileNotFoundError:
-        pass
+    pth_xplt.unlink(missing_ok=True)
     pth_log = logfile_name(root)
-    try:
-        pth_log.unlink()
-    except FileNotFoundError:
-        pass
+    pth_log.unlink(missing_ok=True)
     proc = run_febio_unchecked(pth_feb, threads=threads, cmd=cmd)
     if proc.returncode != 0:
         msg = f"FEBio returned error code {proc.returncode} while running {pth_feb}; check {pth_feb.with_suffix('.log')}."
