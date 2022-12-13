@@ -233,10 +233,12 @@ def read_step(step_xml, model, physics, febioxml_module):
     return step, step_name
 
 
-def load_model(fpath):
+def load_model(fpath, read_xplt=True):
     """Loads a model (feb) and the solution (xplt) if it exists.
 
-
+    :param read_xplt: If True (default), try to read the xplt file (if any) with the
+    same basename as the provided path.  Set to False if the FEBio XML file and the xplt
+    file do not describe the same model.
 
     The following data is supported for FEBio XML 2.0:
     - Materials
@@ -266,24 +268,25 @@ def load_model(fpath):
         warnings.warn(msg)
         feb_ok = False
     # Attempt to read the xplt file, if it exists
-    if os.path.exists(fp_xplt):
-        with open(fp_xplt, "rb") as f:
-            soln = xplt.XpltData(f.read())
-        xplt_ok = True
-    else:
-        xplt_ok = False
-    # Combine the feb and xplt data, preferring the feb data for model definition
-    if feb_ok and xplt_ok:
-        model.apply_solution(soln)
-    elif not feb_ok and xplt_ok:
-        # Use the xplt file to construct a model
-        model = Model(soln.mesh())
-        model.apply_solution(soln)
-    elif not feb_ok and not xplt_ok:
-        raise ValueError(
-            "Neither `{}` nor `{}` could be read.  Check that they exist "
-            "and are accessible.".format(fp_feb, fp_xplt)
-        )
+    if read_xplt:
+        if os.path.exists(fp_xplt):
+            with open(fp_xplt, "rb") as f:
+                soln = xplt.XpltData(f.read())
+            xplt_ok = True
+        else:
+            xplt_ok = False
+        # Combine the feb and xplt data, preferring the feb data for model definition
+        if feb_ok and xplt_ok:
+            model.apply_solution(soln)
+        elif not feb_ok and xplt_ok:
+            # Use the xplt file to construct a model
+            model = Model(soln.mesh())
+            model.apply_solution(soln)
+        elif not feb_ok and not xplt_ok:
+            raise ValueError(
+                "Neither `{}` nor `{}` could be read.  Check that they exist "
+                "and are accessible.".format(fp_feb, fp_xplt)
+            )
     model.name = fpath.stem
     return model
 
