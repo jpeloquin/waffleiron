@@ -221,12 +221,24 @@ def check_must_points(model, atol=None):
         if not has_explicit_mp[i]:
             break
         # Requested and actual times should be treated as half open (,] intervals.
+        # And we need to assign points using float32, since that's what FEBio puts in
+        # its plotfiles.
         t0 = t_laststep
         t1 = t_laststep + step.duration
-        t_obs = t[np.logical_and(t > t0, t <= (t1 + np.spacing(t1, dtype="float32")))]
+        t_obs = t[
+            np.logical_and(
+                t - t0 > np.spacing(t0, dtype="float32"),
+                t - t1 <= np.spacing(t1, dtype="float32"),
+            )
+        ]
         dtmax = step.ticker.dtmax
         t_dtmax = np.array([a for a, b in dtmax.points])
-        t_req = t_dtmax[np.logical_and(t_dtmax > t0, t_dtmax <= (t1 + np.spacing(t1)))]
+        t_req = t_dtmax[
+            np.logical_and(
+                t_dtmax - t0 > np.spacing(t0, dtype="float32"),
+                t_dtmax - t1 <= np.spacing(t1, dtype="float32"),
+            )
+        ]
         # (1) Check must point count for this step
         if len(t_obs) != len(t_req):
             raise MustPointCountError(
