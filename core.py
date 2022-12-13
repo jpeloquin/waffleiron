@@ -72,8 +72,8 @@ class ImplicitBody:
 
         interface := a collection of node ids
 
-        At some some point in the future, support may be added to define
-        an interface using a list of faces.
+        At some point in the future, support may be added to define an interface
+        using a list of faces.
 
         """
         self.mesh = mesh
