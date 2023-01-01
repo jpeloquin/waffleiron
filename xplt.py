@@ -1174,7 +1174,7 @@ class XpltData:
         if mdata["region type"] == "object":
             # FEBio treats object data differently from node, domain, or surface
             # data. There is a separate data block for each variable for each object.
-            # However get_state_var_data will concatenate variable blocks across
+            # However, get_state_var_data will concatenate variable blocks across
             # objects, so we still need a byte offset.
             offset = entity_id * VALUE_SZ_B[mdata["type"]]
         else:
