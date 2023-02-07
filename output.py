@@ -122,7 +122,7 @@ def _(mat: matlib.OrientedMaterial, model) -> ElementTree:
 
 @material_to_feb.register
 def _(mat: matlib.ExponentialFiber, model) -> ElementTree:
-    """Convert ExponentialFiber material instance to FEBio XML."""
+    """Convert ExponentialFiber material instance to FEBio XML"""
     e = etree.Element("material", type="fiber-exp-pow")
     e.append(property_to_xml(mat.α, "alpha", model.named["sequences"]))
     e.append(property_to_xml(mat.β, "beta", model.named["sequences"]))
@@ -132,7 +132,7 @@ def _(mat: matlib.ExponentialFiber, model) -> ElementTree:
 
 @material_to_feb.register
 def _(mat: matlib.PowerLinearFiber, model) -> ElementTree:
-    """Convert PowerLinearFiber material instance to FEBio XML."""
+    """Convert PowerLinearFiber material instance to FEBio XML"""
     e = etree.Element("material", type="fiber-pow-linear")
     e.append(property_to_xml(mat.E, "E", model.named["sequences"]))
     e.append(property_to_xml(mat.β, "beta", model.named["sequences"]))
@@ -142,7 +142,7 @@ def _(mat: matlib.PowerLinearFiber, model) -> ElementTree:
 
 @material_to_feb.register
 def _(mat: matlib.HolmesMow, model) -> ElementTree:
-    """Convert HolmesMow material instance to FEBio XML."""
+    """Convert HolmesMow material instance to FEBio XML"""
     e = etree.Element("material", type="Holmes-Mow")
     e.append(property_to_xml(mat.E, "E", model.named["sequences"]))
     e.append(property_to_xml(mat.ν, "v", model.named["sequences"]))
@@ -152,7 +152,7 @@ def _(mat: matlib.HolmesMow, model) -> ElementTree:
 
 @material_to_feb.register
 def _(mat: matlib.IsotropicElastic, model) -> ElementTree:
-    """Convert IsotropicElastic material instance to FEBio XML."""
+    """Convert IsotropicElastic material instance to FEBio XML"""
     e = etree.Element("material", type="isotropic elastic")
     E, ν = matlib.from_Lamé(mat.y, mat.mu)
     e.append(property_to_xml(E, "E", model.named["sequences"]))
@@ -162,7 +162,7 @@ def _(mat: matlib.IsotropicElastic, model) -> ElementTree:
 
 @material_to_feb.register
 def _(mat: matlib.OrthotropicElastic, model) -> ElementTree:
-    """Convert OrthotropicElastic material instance to FEBio XML."""
+    """Convert OrthotropicElastic material instance to FEBio XML"""
     e = etree.Element("material", type="orthotropic elastic")
     # Material properties
     e.append(property_to_xml(mat.E1, "E1", model.named["sequences"]))
@@ -179,7 +179,7 @@ def _(mat: matlib.OrthotropicElastic, model) -> ElementTree:
 
 @material_to_feb.register
 def _(mat: matlib.NeoHookean, model) -> ElementTree:
-    """Convert NeoHookean material instance to FEBio XML."""
+    """Convert NeoHookean material instance to FEBio XML"""
     e = etree.Element("material", type="neo-Hookean")
     E, ν = matlib.from_Lamé(mat.y, mat.mu)
     e.append(property_to_xml(E, "E", model.named["sequences"]))
@@ -222,7 +222,7 @@ def _(mat: matlib.PoroelasticSolid, model) -> ElementTree:
 
 @material_to_feb.register
 def _(mat: matlib.SolidMixture, model) -> ElementTree:
-    """Convert SolidMixture material instance to FEBio XML."""
+    """Convert SolidMixture material instance to FEBio XML"""
     e = etree.Element("material", type="solid mixture")
     for submat in mat.materials:
         m = material_to_feb(submat, model)
@@ -233,7 +233,7 @@ def _(mat: matlib.SolidMixture, model) -> ElementTree:
 
 @material_to_feb.register
 def _(mat: matlib.Multigeneration, model) -> ElementTree:
-    """Convert Multigeneration material instance to FEBio XML."""
+    """Convert Multigeneration material instance to FEBio XML"""
     e = etree.Element("material", type="multigeneration")
     i = 1
     for t, submat in zip(mat.generation_times, mat.materials):
@@ -249,7 +249,7 @@ def _(mat: matlib.Multigeneration, model) -> ElementTree:
 
 @material_to_feb.register
 def _(mat: matlib.Rigid, model) -> ElementTree:
-    """Convert SolidMixture material instance to FEBio XML."""
+    """Convert SolidMixture material instance to FEBio XML"""
     e = etree.Element("material", type="rigid body")
     if mat.density is None:
         density = 1
@@ -261,7 +261,7 @@ def _(mat: matlib.Rigid, model) -> ElementTree:
 
 @material_to_feb.register
 def donnan_to_feb(mat: matlib.DonnanSwelling, model) -> ElementTree:
-    """Convert DonnanSwelling material instance to FEBio XML."""
+    """Convert DonnanSwelling material instance to FEBio XML"""
     e = etree.Element("material", type="Donnan equilibrium")
     e.append(property_to_xml(mat.phi0_w, "phiw0", model.named["sequences"]))
     e.append(property_to_xml(mat.fcd0, "cF0", model.named["sequences"]))
@@ -271,7 +271,7 @@ def donnan_to_feb(mat: matlib.DonnanSwelling, model) -> ElementTree:
 
 
 def add_nodeset(xml_root, name, nodes, febioxml_module):
-    """Add a named node set to FEBio XML."""
+    """Add a named node set to FEBio XML"""
     fx = febioxml_module
     e_Mesh = xml_root.find(fx.MESH_PARENT)
     for existing in xml_root.xpath(f"{fx.MESH_PARENT}/NodeSet[@name='{name}']"):
