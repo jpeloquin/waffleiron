@@ -1,8 +1,7 @@
 # Base packages
 from collections import defaultdict
-from copy import copy, deepcopy
+from copy import copy
 from functools import singledispatch
-from math import degrees
 from datetime import datetime
 
 # Public packages
@@ -14,11 +13,9 @@ import numpy as np
 
 # Within-module packages
 from .core import (
-    Body,
     ImplicitBody,
     ContactConstraint,
     NameRegistry,
-    NodeSet,
     Sequence,
     ScaledSequence,
     RigidInterface,
@@ -26,7 +23,6 @@ from .core import (
 from .control import auto_physics, Physics
 
 from . import Model, material as matlib
-from .math import sph_from_vec
 from . import febioxml
 from . import febioxml_2_0
 from . import febioxml_2_5
@@ -35,17 +31,12 @@ from .febioxml import (
     VerbatimXMLMaterial,
     find_unique_tag,
     get_or_create_item_id,
-    get_or_create_seq_id,
     get_or_create_xml,
     get_or_create_parent,
     bool_to_text,
-    float_to_text,
-    vec_to_text,
+    material_name_from_class,
     bvec_to_text,
     property_to_xml,
-    DOF_NAME_FROM_XML_NODE_BC,
-    XML_BC_FROM_DOF,
-    VAR_FROM_XML_NODE_BC,
     num_to_text,
 )
 
