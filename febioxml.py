@@ -142,7 +142,7 @@ def read_material(e, sequence_registry):
             )
         solid = constituents[0]
         e_solid_fraction = find_unique_tag(e, "phi0", req=True)
-        # ^ FEbio doesn't require this, but the default is apparently zero, which is
+        # ^ FEBio doesn't require this, but the default is apparently zero, which is
         # wrong.  So it's de facto required.
         solid_fraction = read_parameter(e_solid_fraction, sequence_registry)
         material = matlib.PoroelasticSolid(solid, permeability, solid_fraction)
