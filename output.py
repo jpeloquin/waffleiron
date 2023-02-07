@@ -141,6 +141,18 @@ def _(mat: matlib.PowerLinearFiber, model) -> ElementTree:
 
 
 @material_to_feb.register
+def _(mat: matlib.EllipsoidalPowerFiber, model) -> ElementTree:
+    """Covert EllipsoidalPowerFiber material instance to FEBio XML"""
+    type_ = material_name_from_class[mat.__class__]
+    e = etree.Element("material", type=type_)
+    e_ksi = etree.SubElement(e, "ksi")
+    e_ksi.text = bvec_to_text(mat.ξ)
+    e_beta = etree.SubElement(e, "beta")
+    e_beta.text = bvec_to_text(mat.β)
+    return e
+
+
+@material_to_feb.register
 def _(mat: matlib.HolmesMow, model) -> ElementTree:
     """Convert HolmesMow material instance to FEBio XML"""
     e = etree.Element("material", type="Holmes-Mow")

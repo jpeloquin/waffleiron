@@ -106,7 +106,10 @@ def read_material(e, sequence_registry):
             try:
                 v = to_number(c.text)
             except ValueError:
-                continue
+                try:
+                    v = to_vec(c.text)
+                except ValueError:
+                    continue
             props[c.tag] = v
         return props
 
@@ -526,6 +529,15 @@ def to_number(s):
         return int(s)
     except ValueError:
         return float(s)
+
+
+def to_vec(s):
+    """Convert string to sequence of int or float as appropriate."""
+    tokens = s.split(",")
+    if len(tokens) > 1:
+        return [to_number(t) for t in tokens]
+    else:
+        raise ValueError("Provided string does not appear to be a sequence of values.")
 
 
 def maybe_to_number(s):
