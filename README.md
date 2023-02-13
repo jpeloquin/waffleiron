@@ -50,7 +50,7 @@ Please feel free to [raise an issue](https://github.com/jpeloquin/waffleiron/iss
 Because waffleiron has been released into the wild very recently there are likely many difficulties to smooth over and I would like to hear about any you encounter.
 FEBio also moves quickly and I may not be aware of breaking changes on FEBio's end.
 
-However, please be aware that responsibility for the accuracy or usefulness of any results you produce lies with you.
+However, responsibility for the accuracy or usefulness of any results you produce lies with you.
 If you want me to verify that you are using the software in the correct manner and it is operating correctly, please contact me through the [Delaware Center for Musculoskeletal Research](https://sites.udel.edu/engr-dcmr/) to arrange contract work or collaboration.
 
 # Contributing
