@@ -568,7 +568,7 @@ def int_to_text(v):
 
 def num_to_text(v):
     """Serialize numeric value to text by type"""
-    if isinstance(v, int):
+    if isinstance(v, (int, np.integer)):
         return int_to_text(v)
     elif isinstance(v, float):
         return float_to_text(v)
