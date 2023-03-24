@@ -200,8 +200,9 @@ def check_solution_exists(model):
 def check_must_points(model, atol=None):
     """Check the number and time of the must points
 
-    This check is only done if all steps use must points, because otherwise the
-    number of time points is undefined.
+    This check can only be done if all steps use must points.  Otherwise, the number of
+    required time points is undefined.  TODO: It could selectively check steps that do
+    require must points.
 
     """
     t = np.array(model.solution.step_times)
