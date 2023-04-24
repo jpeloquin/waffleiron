@@ -579,7 +579,7 @@ def num_to_text(v):
 
 
 def vec_to_text(v):
-    return ", ".join(f"{a:.7e}" for a in v)
+    return ", ".join(float_to_text(a) for a in v)
 
 
 def bvec_to_text(v):
@@ -587,7 +587,7 @@ def bvec_to_text(v):
 
 
 def float_to_text(a):
-    return f"{a:.7g}"
+    return f"{a:.16g}"
 
 
 def property_to_xml(value, tag, seq_registry):
