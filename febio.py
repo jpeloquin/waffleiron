@@ -2,7 +2,6 @@ import errno
 import os
 from pathlib import Path
 import subprocess
-from typing import Sequence
 
 from lxml import etree
 import numpy as np
