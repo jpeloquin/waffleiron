@@ -2,7 +2,6 @@ import errno
 import os
 from pathlib import Path
 import subprocess
-from typing import Sequence
 
 from lxml import etree
 import numpy as np
@@ -17,7 +16,7 @@ from .febioxml import logfile_name
 FEBIO_CMD = os.environ.get("FEBIO_CMD", "febio")
 
 # Number of threads to use for each FEBio call
-FEBIO_THREADS = psutil.cpu_count(logical=False)
+FEBIO_THREADS_DEFAULT = psutil.cpu_count(logical=False)
 
 
 class FEBioError(Exception):
@@ -62,6 +61,15 @@ class MustPointTimeError(CheckError):
     pass
 
 
+def febio_thread_count():
+    """Return number of threads to use for an FEBio call"""
+    try:
+        threads = os.environ["OMP_NUM_THREADS"]
+    except KeyError:
+        threads = FEBIO_THREADS_DEFAULT
+    return threads
+
+
 def run_febio_unchecked(pth_feb, threads=None, cmd=FEBIO_CMD):
     """Run FEBio and return the process object.
 
@@ -83,7 +91,7 @@ def run_febio_unchecked(pth_feb, threads=None, cmd=FEBIO_CMD):
     # always reflects the last run and (2) all relevant error messages
     # are written to the log file.
     if threads is None:
-        threads = FEBIO_THREADS
+        threads = febio_thread_count()
     pth_feb = Path(pth_feb)
     pth_log = pth_feb.with_suffix(".log")
     env = os.environ.copy()
@@ -159,7 +167,7 @@ def run_febio_checked(pth_feb, threads=None, cmd=FEBIO_CMD):
 
     """
     if threads is None:
-        threads = FEBIO_THREADS
+        threads = febio_thread_count()
     pth_feb = Path(pth_feb)
     dir_feb = pth_feb.parent
     with open(pth_feb, "rb") as f:
@@ -200,8 +208,9 @@ def check_solution_exists(model):
 def check_must_points(model, atol=None):
     """Check the number and time of the must points
 
-    This check is only done if all steps use must points, because otherwise the
-    number of time points is undefined.
+    This check can only be done if all steps use must points.  Otherwise, the number of
+    required time points is undefined.  TODO: It could selectively check steps that do
+    require must points.
 
     """
     t = np.array(model.solution.step_times)
