@@ -36,8 +36,8 @@ invertible for calculating spatial derivatives.  It is probably
 possible to calculate a non-square pseudo-inverse of $J$ that permits
 calculation of spatial derivatives including $x_3$, though.
 
-
 * Coding style
+
 ** Indexing conventions
 
 The zero-based index convention is maintained within =waffleiron=.
