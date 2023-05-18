@@ -21,8 +21,13 @@ from .math import densify
 import waffleiron.material as matlib
 
 
-def auto_ticker(seq: Sequence, pts_per_segment: int = 1):
-    """Return a ticker with an automatic "must point" curve in dtmax"""
+def auto_ticker(seq: Sequence, pts_per_segment: int = 1, r_dtmin=0.1):
+    """Return a ticker with an automatic "must point" curve in dtmax
+
+    :param r_dtmin: Set the minimum allowed time step to `r_dtmin` * the minimum time
+    step in `seq`.
+
+    """
     ticker = Ticker()
     duration = seq.points[-1][0] - seq.points[0][0]
     time = np.array([a for a, b in seq.points])
@@ -57,7 +62,7 @@ def auto_ticker(seq: Sequence, pts_per_segment: int = 1):
         dt_nominal = duration / nsteps
     ticker.n = nsteps
     ticker.dtnom = dt_nominal
-    ticker.dtmin = 0.1 * dt_min
+    ticker.dtmin = r_dtmin * dt_min
     return ticker
 
 
