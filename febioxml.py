@@ -619,7 +619,8 @@ def const_property_to_xml(value, tag):
 
 def update_method_to_xml(value, tag):
     """Convert Solver.update_method to XML"""
-    conv = {"BFGS": "0", "Broyden": "1"}
+    conv = {"BFGS": "0", "Broyden": "1", "Newton": "0"}
+    # ^ you only actually get Newton iterations if max_ups = 0
     return const_property_to_xml(conv[value], tag)
 
 

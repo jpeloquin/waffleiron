@@ -21,6 +21,13 @@ from .math import densify
 import waffleiron.material as matlib
 
 
+class Physics(Enum):
+    """Level of physics to simulate"""
+
+    SOLID = "solid"
+    BIPHASIC = "biphasic"
+
+
 def auto_ticker(seq: Sequence, pts_per_segment: int = 1, r_dtmin=0.1):
     """Return a ticker with an automatic "must point" curve in dtmax
 
@@ -118,21 +125,22 @@ class Solver:
     lstol: float = 0.9
     ptol: float = 0.01  # Biphasic-specific
     min_residual: float = 1e-20
-    update_method: str = "BFGS"  # alt: 'Broyden'
+    update_method: str = "BFGS"  # alt: 'Broyden' or 'Newton'
     reform_each_time_step: bool = True
     reform_on_diverge: bool = True
     max_refs: int = 15
     max_ups: int = 10
 
-    def __init__(self, physics="solid", **kwargs):
+    def __init__(self, physics=Physics.SOLID, **kwargs):
         # Not sure if there's a better alternative to overriding
         # __init__ to make the defaults depend on an input argument.
-        if physics == "biphasic":
+        if physics == Physics.BIPHASIC:
             # Only use full Newton iterations
+            self.update_method = "Newton"
             self.max_ups = 0
             self.reform_each_time_step = True
-            # Increase max number of reformations b/c every iteration in
-            # the full Newton method is a reformation
+            # Increase max number of reformations, since every iteration in the full
+            # Newton method is a reformation
             self.max_refs = 50
             # Don't include "symmetric_biphasic"; FEBio 3 doesn't accept
             # it.  And the default in FEBio 2.5 is symmetric_biphasic =
@@ -144,6 +152,11 @@ class Solver:
                 setattr(self, k, v)
             else:
                 raise TypeError(f"__init__() got an unexpected keyword argument '{k}'")
+        self.validate()
+
+    def validate(self):
+        if self.update_method == "Newton" and self.max_ups != 0:
+            raise ValueError("Chose both update_method = 'Newton' and max_ups != 0.  Due to limitations in FEBio XML syntax, you must choose max_ups = 0 if you want a Newton solver.")
 
 
 @dataclass
@@ -154,13 +167,6 @@ class Ticker:
     dtnom: float = 0.1
     dtmin: float = 0.01
     dtmax: Union[float, Sequence] = 0.1
-
-
-class Physics(Enum):
-    """Level of physics to simulate"""
-
-    SOLID = "solid"
-    BIPHASIC = "biphasic"
 
 
 class Step:
