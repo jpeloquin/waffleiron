@@ -43,6 +43,8 @@ class Model:
         self.name = None  # model name, to facilitate error messages
 
         self.output = {"variables": []}
+        # ^ TODO: probably should be a set; doesn't make sense to have an output
+        #  variable twice
         # TODO: write_feb only populates this output variable list if it
         # is empty, which is bad if you just want to force one output
         # variable to be included while retaining the auto-export
