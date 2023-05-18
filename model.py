@@ -3,7 +3,7 @@
 from collections import namedtuple
 from math import inf
 import sys
-from typing import Union
+from typing import Optional, Union
 
 # Public packages
 import numpy as np
@@ -120,7 +120,7 @@ class Model:
         variable,
         sequence,
         step: Step,
-        scales=None,
+        scales: Optional[dict] = None,
         relative=False,
     ):
         """Apply a boundary condition to a set of nodes.
@@ -151,7 +151,7 @@ class Model:
         default_scale = 1
         _validate_dof(dof)
         if sequence == "fixed":
-            scales = [None] * len(node_ids)
+            scales = {i: None for i in node_ids}
         else:
             # variable BC
             if scales is None:

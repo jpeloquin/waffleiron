@@ -53,6 +53,7 @@ class NodeSet(frozenset):
 
     Recall that in Waffleiron, node IDs are zero-indexed.
     """
+
     # TODO: Set operations should return a NodeSet
 
 
