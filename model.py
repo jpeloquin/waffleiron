@@ -51,26 +51,26 @@ class Model:
         self.constants = {"R": 8.31446261815324, "F": 96485.33212}  # J/mol·K  # C/mol
 
         # Fixed conditions
-        self.fixed = {}
-        self.fixed["node"] = {
-            ("x1", "displacement"): set(),
-            ("x2", "displacement"): set(),
-            ("x3", "displacement"): set(),
-            ("fluid", "pressure"): set(),
-            ("solute", "concentration"): set(),
+        self.fixed = {
+            "node": {
+                ("x1", "displacement"): set(),
+                ("x2", "displacement"): set(),
+                ("x3", "displacement"): set(),
+                ("fluid", "pressure"): set(),
+                ("solute", "concentration"): set(),
+            },
+            "body": {
+                ("x1", "displacement"): set(),
+                ("x2", "displacement"): set(),
+                ("x3", "displacement"): set(),
+                ("fluid", "pressure"): set(),
+                ("solute", "concentration"): set(),
+                ("α1", "rotation"): set(),
+                ("α2", "rotation"): set(),
+                ("α3", "rotation"): set(),
+            },
         }
-        self.fixed["body"] = {
-            ("x1", "displacement"): set(),
-            ("x2", "displacement"): set(),
-            ("x3", "displacement"): set(),
-            ("fluid", "pressure"): set(),
-            ("solute", "concentration"): set(),
-            ("α1", "rotation"): set(),
-            ("α2", "rotation"): set(),
-            ("α3", "rotation"): set(),
-        }
-        # Note: for multiphasic problems, concentration is a list of
-        # sets
+        # Note: for multiphasic problems, concentration is a list of sets
         #
         # TODO: Make the specification of fixed-for-all-time BCs have
         # the same format as for BCs in steps.
