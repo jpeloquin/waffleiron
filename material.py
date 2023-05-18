@@ -671,7 +671,8 @@ class OrthotropicElastic:
         self.Cλ = np.linalg.inv(self.Sλ) - 2 * np.diag(self.μ)
 
     @classmethod
-    def from_feb(cls, E1, E2, E3, G12, G23, G31, v12, v23, v31):
+    def from_feb(cls, E1, E2, E3, G12, G23, G31, v12, v23, v31, **kwargs):
+        # parsing FEBio XML may call from_feb with extra kwargs
         return cls(
             {
                 "E1": E1,
