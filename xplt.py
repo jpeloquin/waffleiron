@@ -220,7 +220,7 @@ element_type_from_id = {
     6: "hex20",
     7: "tet10",
     8: "tet15",
-    9: "hex27",
+    9: element.Hex27,
 }
 
 item_type_from_id = {0: "float", 1: "vec3f", 2: "mat3fs"}

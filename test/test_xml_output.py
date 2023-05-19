@@ -2,8 +2,12 @@
 import hashlib
 from pathlib import Path
 
+import numpy.testing as npt
+
 import waffleiron as wfl
-from waffleiron import febioxml_2_5 as febioxml
+from waffleiron import Model, febioxml_2_5 as febioxml, load_model
+from waffleiron.mesh import rectangular_prism_hex27
+from waffleiron.output import write_feb
 from waffleiron.test.fixtures import DIR_FIXTURES, DIR_OUT, xml_version
 
 
@@ -60,11 +64,33 @@ def test_write_Faraday_constant(xml_version):
     assert xml.find("Globals/Constants/Fc").text == "26.801"
 
 
-# Test for mutation
+# Test writing & reading particular element types
+
+
+def test_rectangular_prism_hex27_febioxml() -> None:
+    # Can Hex27 elements be written to FEBio XML?
+    model_in = Model(
+        rectangular_prism_hex27((2, 1, 1), [(-0.5, 0.5), (-0.5, 0.5), (0, 1)])
+    )
+    p = DIR_OUT / (
+        f"{Path(__file__).with_suffix('').name}." + "rectangular_prism_hex27.feb"
+    )
+    with open(p, "wb") as f:
+        write_feb(model_in, f)
+    # Can it be read from FEBio XML?
+    model_out = load_model(p)
+    # TODO: Models should have an equality method
+    npt.assert_allclose(model_in.mesh.nodes, model_out.mesh.nodes)
+
+
+# Test for mutation issues
 
 
 def test_repeated_write_gives_same_output(xml_version):
-    """Test repeated write of same model file"""
+    """Repeated write of same model file should give same output
+
+    The process of writing FEBio XML should not materially change the model.
+    """
     pth_in = DIR_FIXTURES / "uniaxial_tension_implicit_rb_grips_biphasic.feb"
     model = wfl.load_model(pth_in)
     # First write

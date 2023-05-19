@@ -16,7 +16,7 @@ from .core import (
     Extrapolant,
 )
 from .control import Physics
-from .element import Quad4, Tri3, Hex8, Penta6, Element
+from .element import Hex27, Quad4, Tri3, Hex8, Penta6, Element
 from . import material as matlib
 from .math import orthonormal_basis, vec_from_sph
 
@@ -679,7 +679,13 @@ XML_EXTRAP_FROM_EXTRAP = {
 }
 EXTRAP_FROM_XML_EXTRAP = {v: k for k, v in XML_EXTRAP_FROM_EXTRAP.items()}
 
-elem_cls_from_feb = {"quad4": Quad4, "tri3": Tri3, "hex8": Hex8, "penta6": Penta6}
+elem_cls_from_feb = {
+    "quad4": Quad4,
+    "tri3": Tri3,
+    "hex8": Hex8,
+    "hex27": Hex27,
+    "penta6": Penta6,
+}
 
 material_from_xml_name = {
     "isotropic elastic": matlib.IsotropicElastic,

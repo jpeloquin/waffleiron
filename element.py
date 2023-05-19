@@ -415,9 +415,9 @@ class Tri3(Element2D):
 
 
 class Hex8(Element3D):
-    """Functions for hex8 trilinear elements."""
+    """8-node (trilinear) hexahedral element"""
 
-    n = 8  # number of vertices
+    n = 8  # number of nodes
     r_n = 3  # number of natural basis parameters
 
     feb_name = "hex8"
@@ -586,10 +586,24 @@ class Hex8(Element3D):
         return ddn
 
 
+class Hex20(Element3D):
+    """20-node (quadratic) hexahedral element"""
+
+    pass
+
+
+class Hex27(Element3D):
+    """27-node (quadratic) hexahedral element"""
+
+    n = 27  # number of nodes
+    r_n = 3  # number of natural basis parameters
+    feb_name = "hex27"  # label in FEBio XML
+
+
 class Penta6(Element3D):
     """Functions for penta6 linear elements."""
 
-    n = 6  # number of vertices
+    n = 6  # number of nodes
     r_n = 3  # number of natural basis parameters
 
     feb_name = "penta6"

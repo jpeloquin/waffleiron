@@ -9,7 +9,7 @@ from shapely.geometry import LineString, Point, Polygon
 import waffleiron as wfl
 from .core import FaceSet, NodeSet, _DEFAULT_TOL
 from .geometry import pt_series
-from .element import Hex8, Quad4
+from .element import Hex27, Hex8, Quad4
 from .model import Mesh
 
 
@@ -76,6 +76,67 @@ def cylinder(t_radius: tuple, t_height: tuple, nc: int, material=None):
                     top_faces.add(f)
     cylinder.named["face sets"].add("top", FaceSet(top_faces))
     return cylinder
+
+
+def label_rectangular_prism(mesh: Mesh, bounds=None):
+    """Add standard node set labels to a rectangular prism mesh"""
+    nodes = np.array(mesh.nodes)  # remove when array is default
+    if bounds is None:
+        xmin = np.min(nodes, axis=0)
+        xmax = np.max(nodes, axis=0)
+        bounds = [(xmin[0], xmax[0]), (xmin[1], xmax[1]), (xmax[2], xmax[2])]
+    # Label the faces
+    # ±x faces
+    ns = NodeSet(
+        np.nonzero(
+            np.isclose(
+                nodes[:, 0], bounds[0][0], rtol=0, atol=abs(np.spacing(bounds[0][0]))
+            )
+        )[0]
+    )
+    mesh.named["node sets"].add("−x1 face", ns)
+    ns = NodeSet(
+        np.nonzero(
+            np.isclose(
+                nodes[:, 0], bounds[0][1], rtol=0, atol=abs(np.spacing(bounds[0][1]))
+            )
+        )[0]
+    )
+    mesh.named["node sets"].add("+x1 face", ns)
+    # ±y faces
+    ns = NodeSet(
+        np.nonzero(
+            np.isclose(
+                nodes[:, 1], bounds[1][0], rtol=0, atol=abs(np.spacing(bounds[1][0]))
+            )
+        )[0]
+    )
+    mesh.named["node sets"].add("−x2 face", ns)
+    ns = NodeSet(
+        np.nonzero(
+            np.isclose(
+                nodes[:, 1], bounds[1][1], rtol=0, atol=abs(np.spacing(bounds[1][1]))
+            )
+        )[0]
+    )
+    mesh.named["node sets"].add("+x2 face", ns)
+    # ±z faces
+    ns = NodeSet(
+        np.nonzero(
+            np.isclose(
+                nodes[:, 2], bounds[2][0], rtol=0, atol=abs(np.spacing(bounds[2][0]))
+            )
+        )[0]
+    )
+    mesh.named["node sets"].add("−x3 face", ns)
+    ns = NodeSet(
+        np.nonzero(
+            np.isclose(
+                nodes[:, 2], bounds[2][1], rtol=0, atol=abs(np.spacing(bounds[2][1]))
+            )
+        )[0]
+    )
+    mesh.named["node sets"].add("+x3 face", ns)
 
 
 def polar_stack_full(mesh, n):
@@ -278,45 +339,85 @@ def rectangular_prism(length, width, thickness, material=None):
     zi = np.linspace(-t / 2, t / 2, nt + 1)
     mesh = zstack(mesh, zi)
     # Label the faces
-    nodes = np.array(mesh.nodes)  # remove when array is default
-    # ±x faces
-    ns = NodeSet(
-        np.nonzero(np.isclose(nodes[:, 0], -l / 2, rtol=0, atol=np.spacing(l / 2)))[0]
-    )
-    assert len(ns) == (nw + 1) * (nt + 1)
-    mesh.named["node sets"].add("−x1 face", ns)
-    ns = NodeSet(
-        np.nonzero(np.isclose(nodes[:, 0], l / 2, rtol=0, atol=np.spacing(l / 2)))[0]
-    )
-    assert len(ns) == (nw + 1) * (nt + 1)
-    mesh.named["node sets"].add("+x1 face", ns)
-    # ±y faces
-    ns = NodeSet(
-        np.nonzero(np.isclose(nodes[:, 1], -w / 2, rtol=0, atol=np.spacing(w / 2)))[0]
-    )
-    assert len(ns) == (nl + 1) * (nt + 1)
-    mesh.named["node sets"].add("−x2 face", ns)
-    ns = NodeSet(
-        np.nonzero(np.isclose(nodes[:, 1], w / 2, rtol=0, atol=np.spacing(w / 2)))[0]
-    )
-    assert len(ns) == (nl + 1) * (nt + 1)
-    mesh.named["node sets"].add("+x2 face", ns)
-    # ±z faces
-    ns = NodeSet(
-        np.nonzero(np.isclose(nodes[:, 2], -t / 2, rtol=0, atol=np.spacing(t / 2)))[0]
-    )
-    assert len(ns) == (nl + 1) * (nw + 1)
-    mesh.named["node sets"].add("−x3 face", ns)
-    ns = NodeSet(
-        np.nonzero(np.isclose(nodes[:, 2], t / 2, rtol=0, atol=np.spacing(t / 2)))[0]
-    )
-    assert len(ns) == (nl + 1) * (nw + 1)
-    mesh.named["node sets"].add("+x3 face", ns)
+    label_rectangular_prism(mesh, [(-l / 2, l / 2), (-w / 2, w / 2), (-t / 2, t / 2)])
+    assert len(mesh.named["node sets"].obj("−x1 face")) == (nw + 1) * (nt + 1)
+    assert len(mesh.named["node sets"].obj("+x1 face")) == (nw + 1) * (nt + 1)
+    assert len(mesh.named["node sets"].obj("−x2 face")) == (nl + 1) * (nt + 1)
+    assert len(mesh.named["node sets"].obj("+x2 face")) == (nl + 1) * (nt + 1)
+    assert len(mesh.named["node sets"].obj("−x3 face")) == (nl + 1) * (nw + 1)
+    assert len(mesh.named["node sets"].obj("+x3 face")) == (nl + 1) * (nw + 1)
     # Assign material
     if material is not None:
         for e in mesh.elements:
             e.material = material
     return mesh
+
+
+def rectangular_prism_hex27(n, bounds=[(0, 1), (0, 1), (0, 1)]):
+    """Return rectangular prism constructed using 3d grid
+
+    :param n: 3-element array of element counts along length (x), width (y),
+    and height (z).
+
+    :param bounds: [(xmin, xmax), (ymin, ymax), (zmin, zmax)] extent of mesh.
+
+    Bounds are accepted as arguments to avoid having to apply arithmetic to shift or
+    scale the mesh after creation, avoiding loss of precision in the node positions
+    """
+    ne = np.array(n)
+    nn = 2 * ne + 1  # total number of nodes in each direction
+    nodes = np.array(
+        np.meshgrid(
+            np.linspace(bounds[0][0], bounds[0][1], nn[0]),
+            np.linspace(bounds[1][0], bounds[1][1], nn[1]),
+            np.linspace(bounds[2][0], bounds[2][1], nn[2]),
+            indexing="ij",
+        )
+    )  # first index over xyz
+    ids_for_element = np.full(ne, None)
+    for i in range(ne[0]):
+        for j in range(ne[1]):
+            for k in range(ne[2]):
+                id3 = np.array(
+                    [
+                        [i * 2, j * 2, k * 2],  # 1
+                        [i * 2 + 2, j * 2, k * 2],  # 2
+                        [i * 2 + 2, j * 2 + 2, k * 2],  # 3
+                        [i * 2, j * 2 + 2, k * 2],  # 4
+                        [i * 2, j * 2, k * 2 + 2],  # 5
+                        [i * 2 + 2, j * 2, k * 2 + 2],  # 6
+                        [i * 2 + 2, j * 2 + 2, k * 2 + 2],  # 7
+                        [i * 2, j * 2 + 2, k * 2 + 2],  # 8
+                        [i * 2 + 1, j * 2, k * 2],  # 9
+                        [i * 2 + 2, j * 2 + 1, k * 2],  # 10
+                        [i * 2 + 1, j * 2 + 2, k * 2],  # 11
+                        [i * 2, j * 2 + 1, k * 2],  # 12
+                        [i * 2 + 1, j * 2, k * 2 + 2],  # 13
+                        [i * 2 + 2, j * 2 + 1, k * 2 + 2],  # 14
+                        [i * 2 + 1, j * 2 + 2, k * 2 + 2],  # 15
+                        [i * 2, j * 2 + 1, k * 2 + 2],  # 16
+                        [i * 2, j * 2, k * 2 + 1],  # 17
+                        [i * 2 + 2, j * 2, k * 2 + 1],  # 18
+                        [i * 2 + 2, j * 2 + 2, k * 2 + 1],  # 19
+                        [i * 2, j * 2 + 2, k * 2 + 1],  # 20
+                        [i * 2 + 1, j * 2, k * 2 + 1],  # 21
+                        [i * 2 + 2, j * 2 + 1, k * 2 + 1],  # 22
+                        [i * 2 + 1, j * 2 + 2, k * 2 + 1],  # 23
+                        [i * 2, j * 2 + 1, k * 2 + 1],  # 24
+                        [i * 2 + 1, j * 2 + 1, k * 2],  # 25
+                        [i * 2 + 1, j * 2 + 1, k * 2 + 2],  # 26
+                        [i * 2 + 1, j * 2 + 1, k * 2 + 1],  # 27
+                    ]
+                )
+                id1 = [np.ravel_multi_index(t, nodes.shape[1:], order="C") for t in id3]
+                ids_for_element[i, j, k] = id1
+    return Mesh.from_ids(
+        nodes.reshape(
+            (3, -1),
+        ).T,
+        ids_for_element.reshape(-1),
+        Hex27,
+    )
 
 
 def quadrilateral(col1, col2, row1, row2):
@@ -392,7 +493,6 @@ def quadrilateral(col1, col2, row1, row2):
     # Loop over rows of nodes, creating one row at a time, from -x2 to
     # +x2.  We already initialized the -x2 most row above.
     for i in range(1, nr):
-
         # Add interpolated points for this row
         thisrow_pts = [col1[i]]
         v_c = np.array(col2[i]) - np.array(col1[i])
