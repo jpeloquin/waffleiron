@@ -8,7 +8,6 @@ _ZERO_ATOL = np.finfo(float).resolution * 1000
 
 
 class TestLinspaced(TestCase):
-
     # Test that errors are produced in reponse to invalid input
 
     def test_inability_to_span_error(self):
@@ -91,7 +90,6 @@ class TestLinspaced(TestCase):
 
 
 class TestLogspaced(TestCase):
-
     # Test that errors are produced in reponse to invalid input
 
     def test_inability_to_span_error(self):
@@ -190,7 +188,6 @@ class TestLogspaced(TestCase):
 
 
 class TestPowerspaced(TestCase):
-
     # Test that errors are produced in reponse to invalid input
 
     def test_inability_to_span_error(self):

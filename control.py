@@ -156,7 +156,9 @@ class Solver:
 
     def validate(self):
         if self.update_method == "Newton" and self.max_ups != 0:
-            raise ValueError("Chose both update_method = 'Newton' and max_ups != 0.  Due to limitations in FEBio XML syntax, you must choose max_ups = 0 if you want a Newton solver.")
+            raise ValueError(
+                "Chose both update_method = 'Newton' and max_ups != 0.  Due to limitations in FEBio XML syntax, you must choose max_ups = 0 if you want a Newton solver."
+            )
 
 
 @dataclass
