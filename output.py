@@ -646,7 +646,6 @@ def xml(model: Model, version="3.0"):
             # Get or create the nodeset
             try:
                 names = model.named["node sets"].names(implicit_body.interface)
-                assert len(names) == 1
                 name = names[0]
             except KeyError:
                 name_base = f"{body_name}_interface"
