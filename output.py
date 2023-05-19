@@ -284,6 +284,11 @@ def donnan_to_feb(mat: matlib.DonnanSwelling, model) -> ElementTree:
 
 def add_nodeset(xml_root, name, nodes, febioxml_module):
     """Add a named node set to FEBio XML"""
+    if len(nodes) == 0:
+        # Tested in FEBio 3.2
+        raise ValueError(
+            f"Node set '{name}' is empty.  FEBio XML unfortunately does not support empty node sets."
+        )
     fx = febioxml_module
     e_Mesh = xml_root.find(fx.MESH_PARENT)
     for existing in xml_root.xpath(f"{fx.MESH_PARENT}/NodeSet[@name='{name}']"):
