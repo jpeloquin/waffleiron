@@ -182,15 +182,18 @@ def read_domains(root: etree.Element):
     e_domains = find_unique_tag(root, "MeshDomains")
     for e in e_domains:
         name = e.attrib["name"]
-        material = e.attrib["mat"]
         e_domain = find_unique_tag(root, f"{MESH_PARENT}/Elements[@name='{name}']")
         elements = [
             ZeroIdxID(int(e.attrib["id"]) - 1) for e in e_domain.findall("elem")
         ]
+        if e.attrib["mat"] == "":
+            material = None
+        else:
+            material = ("canonical", e.attrib["mat"])
         domain = {
             "name": name,
-            "material": ("canonical", material),
             "elements": elements,
+            "material": material,
         }
         domains.append(domain)
     return domains

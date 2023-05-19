@@ -510,6 +510,8 @@ class FebReader:
         # were used this way
         materials_used = set()
         for domain in domains:
+            if domain["material"] is None:
+                continue
             nametype, name = domain["material"]
             material = model.named["materials"].obj(name, nametype)
             materials_used.add(material)
@@ -596,6 +598,8 @@ class FebReader:
         # rigid body "material" in the XML with explicit geometry.
         explicit_bodies = {}
         for domain in domains:
+            if domain["material"] is None:
+                continue
             nametype, name = domain["material"]
             material = model.named["materials"].obj(name, nametype)
             ids = model.named["materials"].names(material, "ordinal_id")
