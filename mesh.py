@@ -356,13 +356,14 @@ def rectangular_prism(length, width, thickness, material=None):
 def rectangular_prism_hex27(n, bounds=[(0, 1), (0, 1), (0, 1)]):
     """Return rectangular prism constructed using 3d grid
 
-    :param n: 3-element array of element counts along length (x), width (y),
-    and height (z).
+    :param n: [nx, ny, nz], where nx is the element count along length (x), ny is the
+    element count along the width (y), and nz is the same along the height (z).
 
     :param bounds: [(xmin, xmax), (ymin, ymax), (zmin, zmax)] extent of mesh.
 
     Bounds are accepted as arguments to avoid having to apply arithmetic to shift or
     scale the mesh after creation, avoiding loss of precision in the node positions
+
     """
     ne = np.array(n)
     nn = 2 * ne + 1  # total number of nodes in each direction
