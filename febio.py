@@ -61,6 +61,50 @@ class MustPointTimeError(CheckError):
     pass
 
 
+class LogFile:
+    def __init__(self, pth):
+        """Attempt to read an FEBio log file
+
+        This function only has partial support for reading the FEBio log
+        file.  Even if the implementation were "complete", the FEBio log
+        format is undocumented and there is no guarantee it will remain the
+        same between FEBio versions.  Expect some things in the log file to
+        be missed.
+
+        read_log is meant to read the following items from the log file:
+
+        - Errors boxed in asterisks, starting with a centered ERROR line.
+        - Termination message
+
+        """
+        self.errors = []
+        self.termination = None
+        self.path = pth
+        # It's not clear which encoding FEBio uses for it's log files.
+        with open(pth, "r") as f:
+            for ln in f:
+                ln = ln.rstrip()  # don't need \n
+                # Match error
+                if ln.startswith(" *") and "ERROR" in ln:
+                    # Found a boxed error.
+                    msg = []
+                    ln = f.readline()  # skip blank line after ERROR
+                    while not ln.startswith(" **********"):
+                        ln = f.readline()
+                        s = ln.strip("* \n\r\t")
+                        msg.append(s)
+                    # skip end blank line + end asterisk border
+                    msg = msg[:-2]
+                    self.errors.append("\n".join(msg))
+                # Match termination message
+                elif ln.endswith("T E R M I N A T I O N"):
+                    self.termination = (
+                        ln.removesuffix("T E R M I N A T I O N")
+                        .replace(" ", "")
+                        .capitalize()
+                    )
+
+
 def febio_thread_count():
     """Return number of threads to use for an FEBio call"""
     try:
@@ -266,38 +310,6 @@ def check_must_points(model, atol=None):
             )
         # Re-initialize observed times for next step
         t_laststep = t_laststep + step.duration
-
-
-def read_log(pth):
-    """Attempt to read an FEBio log file
-
-    This function only has partial support for reading the FEBio log
-    file.  Even if the implementation were "complete", the FEBio log
-    format is undocumented and there is no guarantee it will remain the
-    same between FEBio versions.  Expect some things in the log file to
-    be missed.
-
-    read_log is meant to read the following items from the log file:
-
-    - Errors boxed in asterisks, starting with a centered ERROR line.
-
-    """
-    # It's not clear which encoding FEBio uses for it's log files.
-    errors = []
-    with open(pth, "r") as f:
-        for ln in f:
-            if ln.startswith(" *") and "ERROR" in ln:
-                # Found a boxed error.
-                msg = []
-                ln = f.readline()  # skip blank line after ERROR
-                while not ln.startswith(" **********"):
-                    ln = f.readline()
-                    s = ln.strip("* \n\r\t")
-                    msg.append(s)
-                # skip end blank line + end asterisk border
-                msg = msg[:-2]
-                errors.append("\n".join(msg))
-    return errors
 
 
 def uses_must_points(model):

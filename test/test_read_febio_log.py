@@ -1,4 +1,4 @@
-from waffleiron.febio import read_log
+from waffleiron.febio import LogFile
 from waffleiron.test.fixtures import DIR_FIXTURES
 
 
@@ -17,6 +17,6 @@ def test_read_boxed_error():
 
     """
     p = DIR_FIXTURES / "log_boxed_error.log"
-    errors = read_log(p)
-    assert len(errors) == 1
-    assert errors[0] == "Model initialization failed"
+    log = LogFile(p)
+    assert len(log.errors) == 1
+    assert log.errors[0] == "Model initialization failed"
