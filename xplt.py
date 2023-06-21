@@ -1223,6 +1223,7 @@ class XpltData:
             columns["step"].append(step_idx)
             columns["time"].append(step_time)
             columns[var].append(value)
+        columns[var] = np.array(columns[var])
         return columns
 
     def step_data(self, idx):
