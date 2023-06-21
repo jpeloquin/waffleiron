@@ -3,7 +3,7 @@
 from collections import namedtuple
 from math import inf
 import sys
-from typing import Optional, Union
+from typing import Iterable, Optional, Union
 
 # Public packages
 import numpy as np
@@ -20,6 +20,7 @@ from .core import (
     NameRegistry,
     _validate_dof,
 )
+from .element import Element
 from .select import e_grow, find_closest_timestep
 from . import util
 
@@ -307,6 +308,20 @@ class Mesh:
             element_objects.append(e)
         mesh = cls(nodes, element_objects)
         return mesh
+
+    def add_elements(self, nodes, elements: Iterable[Element]):
+        """Add elements to the mesh
+
+        Use this function rather than appending directly to self.elements to ensure
+        proper housekeeping.
+
+        """
+        offset = len(self.nodes)
+        self.nodes = np.vstack([self.nodes, nodes])
+        for e in elements:
+            e.mesh = self
+            e.ids += offset
+            self.elements.append(e)
 
     def update_elements(self):
         """Update elements with current node coordinates."""

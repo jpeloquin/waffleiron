@@ -60,8 +60,11 @@ class Element:
             calculated by indexing into `mesh`.
 
         """
-        self.ids = None  # indices of nodes in mesh
-        self.mesh = None
+        self.ids = np.arange(len(nodes))
+        # ^ Indices of nodes.  For a standalone element, the standard indices.  For
+        # an element belonging to a mesh, these will be updated to index into the
+        # mesh's node list.
+        self.mesh = None  # None unless added to a Mesh
         self.basis = None
         self.material = material
         self.properties = {"displacement": np.array([(0, 0, 0) for i in nodes])}
