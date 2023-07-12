@@ -112,7 +112,7 @@ class IterController:
 
     max_retries: int = 5
     opt_iter: int = 10
-    save_iters: SaveIters = SaveIters.USER
+    save_iters: SaveIters = dataclasses.field(default_factory= lambda: SaveIters.USER)
 
 
 @dataclass
