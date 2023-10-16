@@ -363,7 +363,8 @@ def contact_bare_xml(contact, model, named_surface_pairs, contact_name=None):
     to a named surface pair.
 
     """
-    e_contact = ET.Element("contact", type=contact.algorithm)
+    contact_tag = CONTACT_NAME_FROM_CLASS[contact.__class__]
+    e_contact = ET.Element("contact", type=contact_tag)
     # Contact name
     if contact_name is not None:
         e_contact.attrib["name"] = str(contact_name)
@@ -374,13 +375,13 @@ def contact_bare_xml(contact, model, named_surface_pairs, contact_name=None):
     for k in surface_name:
         face_set = getattr(contact, k)
         nm = model.named["face sets"].get_or_create_name(
-            f"contact_surface_-_{contact.algorithm}",
+            f"contact_surface_-_{contact_tag}",
             face_set,
         )
         surface_name[k] = nm
     # Contact surface (face set) pair
     nm_surfpair = named_surface_pairs.get_or_create_name(
-        f"contact_surfaces_-_{contact.algorithm}",
+        f"contact_surfaces_-_{contact_tag}",
         (contact.leader, contact.follower),
     )
     e_contact.attrib["surface_pair"] = nm_surfpair

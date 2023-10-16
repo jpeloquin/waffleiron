@@ -9,6 +9,8 @@ import numpy as np
 
 from .core import (
     Body,
+    ContactSlidingElastic,
+    ContactSlidingNodeOnFacet,
     ImplicitBody,
     Sequence,
     ScaledSequence,
@@ -728,20 +730,36 @@ physics_compat_by_mat = {
     matlib.NeoHookean: {Physics.SOLID, Physics.BIPHASIC},
 }
 
-# Map of ContactConstraint fields → elements relative to <contact>
+# Map of ContactConstraint fields → elements relative to <contact>.  This needs to be
+# done for each contact algorithm, since they don't all support the same parameters.
+# They currently have the same defaults in FEBio, but that doesn't really make sense
+# and may change in the future.
 CONTACT_PARAMS = {
     "tension": OptParameter("tension", text_to_bool, False),
     "penalty_factor": OptParameter("penalty", to_number, 1),
-    "auto_adjust_penalty": OptParameter("auto_penalty", text_to_bool, False),
+    "two_pass": OptParameter("two_pass", text_to_bool, False),
+    "auto_penalty": OptParameter("auto_penalty", text_to_bool, False),
+    "update_penalty": OptParameter("update_penalty", text_to_bool, False),
     "symmetric_stiffness": OptParameter("symmetric_stiffness", text_to_bool, False),
     "use_augmented_lagrange": OptParameter("laugon", text_to_bool, False),
     "augmented_lagrange_rtol": OptParameter("tolerance", to_number, 1.0),
     "augmented_lagrange_gapnorm_atol": OptParameter("gaptol", maybe_to_number, 0.0),
     "augmented_lagrange_minaug": OptParameter("minaug", int, 0),
     "augmented_lagrange_maxaug": OptParameter("maxaug", int, 10),
+    "smoothed_lagrangian": OptParameter("smooth_aug", text_to_bool, False),
+    "friction_coefficient": OptParameter("fric_coeff", to_number, 0.0),
+    "friction_penalty": OptParameter("fric_penalty", to_number, 0.0),
     "search_scale": OptParameter("search_radius", to_number, 1.0),
+    "max_segment_updates": OptParameter("seg_up", int, 0),
+    "tangential_stiffness_scale": OptParameter("ktmult", to_number, 1.0),
+    "gap_tol": OptParameter("gaptol", to_number, 0.0),
     "projection_tol": OptParameter("search_tol", to_number, 0.01),
 }
+CONTACT_CLASS_FROM_XML = {
+    "sliding-node-on-facet": ContactSlidingNodeOnFacet,
+    "sliding-elastic": ContactSlidingElastic,
+}
+CONTACT_NAME_FROM_CLASS = {v: k for k, v in CONTACT_CLASS_FROM_XML.items()}
 
 
 class VerbatimXMLMaterial:

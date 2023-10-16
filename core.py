@@ -98,51 +98,63 @@ class RigidInterface:
         self.node_set = node_set
 
 
-@dataclass
-class ContactConstraint:
+@dataclass(eq=False)
+class ContactConstraint(object):
     """A constraint defining contact between two surfaces."""
 
+    # Only include parameters here if they are supported by all contact algorithms,
+    # with the same default values.
     leader: FaceSet
     follower: FaceSet
-    algorithm: str
-    search_scale: float
-    projection_tol: float  # search_tol in FEBio XML
-    augmented_lagrange_rtol: float
-    augmented_lagrange_gapnorm_atol: Optional[float]
-    tension: bool = False
+
+    two_pass: bool = True  # opposite default from FEBio
     penalty_factor: float = 1
-    auto_adjust_penalty: bool = False
+    auto_penalty: bool = False
     use_augmented_lagrange: bool = False
-    passes: int = 1
-    symmetric_stiffness: bool = False
+    augmented_lagrange_rtol: float = 1.0  # tolerance in FEBio XML
+    augmented_lagrange_gapnorm_atol: Optional[float] = None
+    projection_tol: float = 0.01  # search_tol in FEBio XML
+
+    @property
+    def values(self):
+        return {
+            f.name: getattr(self, f.name)
+            for f in dataclasses.fields(self)
+            if f.name not in ("leader", "follower")
+        }
+
+
+@dataclass(init=True, eq=False)
+class ContactSlidingNodeOnFacet(ContactConstraint):
+    """Sliding node on facet (N2F) contact, sliding-node-on-facet in FEBio XML"""
+
     augmented_lagrange_minaug: int = 0
     augmented_lagrange_maxaug: int = 10
 
-    def __init__(
-        self,
-        leader: FaceSet,
-        follower: FaceSet,
-        **kwargs,
-    ):
-        self.leader = leader
-        self.follower = follower
-        # Set optional parameters
-        fields = set(f.name for f in dataclasses.fields(self))
-        for k, v in kwargs.items():
-            if k in fields:
-                setattr(self, k, v)
-            else:
-                raise TypeError(f"__init__() got an unexpected keyword argument '{k}'")
-        # TODO: Warn if two passes are specified and at least one of the
-        # surfaces belongs to a rigid body.
+    max_segment_updates: Optional[int] = None
 
-    def __hash__(self):
-        """Return object identifier
+    friction_coefficient: Optional[float] = None
+    friction_penalty: Optional[float] = None
+    # tangential_stiffness_scale not supported in FEBio 4.3.0, contrary to docs
 
-        Implemented so ContactConstraint can be used as a key in dictionaries.
 
-        """
-        return id(self) // 16
+@dataclass(init=True, eq=False)
+class ContactSlidingElastic(ContactConstraint):
+    """Sliding node on facet (N2F) contact, sliding-node-on-facet in FEBio XML"""
+
+    update_penalty: bool = False
+
+    augmented_lagrange_minaug: int = 0
+    augmented_lagrange_maxaug: int = 10
+    smoothed_lagrangian: bool = False
+    symmetric_stiffness: bool = False
+
+    max_segment_updates: Optional[int] = None
+    search_scale: float = 1.0
+
+    friction_coefficient: Optional[float] = None
+    tension: bool = False
+    # tangential_stiffness_scale not supported in FEBio 4.3.0, contrary to docs
 
 
 def _canonical_face(face):

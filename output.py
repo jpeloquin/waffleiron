@@ -28,6 +28,8 @@ from . import febioxml_2_0
 from . import febioxml_2_5
 from . import febioxml_3_0
 from .febioxml import (
+    CONTACT_NAME_FROM_CLASS,
+    CONTACT_PARAMS,
     VerbatimXMLMaterial,
     find_unique_tag,
     get_or_create_item_id,
@@ -38,6 +40,7 @@ from .febioxml import (
     bvec_to_text,
     property_to_xml,
     num_to_text,
+    to_text,
 )
 
 # ^ The intent here is to eventually be able to switch between FEBio XML
@@ -356,51 +359,17 @@ def contact_section(
     fx = febioxml_module
     e_contact_section = etree.Element("Contact")
     for contact in contacts:
-        contact_name = named_contacts.get_or_create_name(
-            f"contact_-_{contact.algorithm}", contact
-        )
+        algo = CONTACT_NAME_FROM_CLASS[contact.__class__]
+        contact_name = named_contacts.get_or_create_name(f"contact_-_{algo}", contact)
         # Create the bar <contact> XML element in a version-specific manner
         e_contact = fx.contact_bare_xml(
             contact, model, named_surface_pairs, contact_name=contact_name
         )
         e_contact_section.append(e_contact)
-        # Fill in the contact parameters (not currently known to be version-specific)
-        #
-        # Currently only the sliding-elastic contact algorithm is known to support
-        # tension.  The tied-elastic algorithm /should/ support tension, but I tested
-        # it in FEBio 3.2 and it does not.
-        if contact.algorithm == "sliding-elastic":
-            etree.SubElement(e_contact, "tension").text = str(int(contact.tension))
-        else:
-            if contact.tension:
-                raise ValueError(
-                    f"tension = True, but only the sliding-elastic contact algorithm "
-                    f"is known to support tension–compression contact in FEBio. "
-                )
-        # Write penalty-related tags
-        etree.SubElement(e_contact, "penalty").text = num_to_text(
-            contact.penalty_factor
-        )
-        etree.SubElement(e_contact, "auto_penalty").text = bool_to_text(
-            contact.auto_adjust_penalty
-        )
-        # Write algorithm modification tags
-        etree.SubElement(e_contact, "laugon").text = bool_to_text(
-            contact.use_augmented_lagrange
-        )
-        etree.SubElement(e_contact, "symmetric_stiffness").text = bool_to_text(
-            contact.symmetric_stiffness
-        )
-        e_two_pass = etree.SubElement(e_contact, "two_pass")
-        if contact.passes == 2:
-            e_two_pass.text = "1"
-        elif contact.passes == 1:
-            e_two_pass.text = "0"
-        else:
-            raise ValueError(
-                f"{contact.passes} passes requested in a contact constraint; FEBio "
-                f"supports either 1 or 2 passes. "
-            )
+        # Fill in the contact parameters (not currently known to be specific to any
+        # particular FEBio version)
+        for nm, v in contact.values.items():
+            etree.SubElement(e_contact, CONTACT_PARAMS[nm].path).text = to_text(v)
     return e_contact_section
 
 
@@ -917,19 +886,16 @@ def write_xml(tree, f: BinaryIO):
 def write_feb(model, f, version="3.0"):
     """Write model's FEBio XML representation to a file object.
 
-    Inputs
-    ------
-    fpath : string
-        Path for output file.
+    :param model: The model object to write to FEBio XML.
 
-    materials : list of Material objects
+    :param f: File-like object to write to.
 
-    version : FEBio XML version to target.
+    :param version: FEBio XML version to target.
 
-    Usage Example
-    -------------
-    with open(pth, "wb") as f:
-        write_feb(model, f, version="3.0")
+    Usage Example::
+
+        with open(pth, "wb") as f:
+            write_feb(model, f, version="3.0")
 
     """
     tree = xml(model, version=version)

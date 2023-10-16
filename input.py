@@ -47,6 +47,7 @@ from . import xplt
 from . import febioxml, febioxml_2_0, febioxml_2_5, febioxml_3_0
 from . import material as material_lib
 from .febioxml import (
+    CONTACT_CLASS_FROM_XML,
     VAR_FROM_XML_NODE_BC,
     DOF_NAME_FROM_XML_NODE_BC,
     SUPPORTED_FEBIO_XML_VERS,
@@ -103,18 +104,15 @@ def read_contact(e_contact: etree.Element, named_face_sets, febioxml_module):
     e_follower = find_unique_tag(e_SurfacePair, fx.SURFACEPAIR_FOLLOWER_NAME)
     leader = named_face_sets.obj(fx.get_surface_name(e_leader))
     follower = named_face_sets.obj(fx.get_surface_name(e_follower))
+    algo = e_contact.attrib["type"]
     # Read simple parameters
-    kwargs = read_parameters(e_contact, fx.CONTACT_PARAMS)
-    # "two_pass" requires special handling
-    if (e_two_pass := e_contact.find("two_pass")) is not None:
-        two_pass = text_to_bool(e_two_pass.text)
-        if two_pass:
-            kwargs["passes"] = 2
-        else:
-            kwargs["passes"] = 1
-    contact = ContactConstraint(
-        leader, follower, algorithm=e_contact.attrib["type"], **kwargs
-    )
+    cls = CONTACT_CLASS_FROM_XML[algo]
+    kwargs = {
+        k: v
+        for k, v in read_parameters(e_contact, fx.CONTACT_PARAMS).items()
+        if hasattr(cls, k)
+    }
+    contact = cls(leader, follower, **kwargs)
     return contact
 
 
