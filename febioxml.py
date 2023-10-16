@@ -101,7 +101,9 @@ def read_material(e, sequence_registry):
         property.
 
         """
-        props = {}
+        conprops = {}
+        extprops = {}
+        extension_tags = ("density",)
         for c in e:
             try:
                 v = to_number(c.text)
@@ -110,8 +112,11 @@ def read_material(e, sequence_registry):
                     v = to_vec(c.text)
                 except ValueError:
                     continue
-            props[c.tag] = v
-        return props
+            if c.tag in extension_tags:
+                extprops[c.tag] = v
+            else:
+                conprops[c.tag] = v
+        return conprops, extprops
 
     # Check if the material type is fully supported
     material_type = read_material_type(e)
@@ -159,9 +164,9 @@ def read_material(e, sequence_registry):
             generations.append((t, solid))
         material = cls(generations)
     elif hasattr(cls, "from_feb") and callable(cls.from_feb):
-        material = cls.from_feb(**guess_matprops(e))
+        material = cls.from_feb(**guess_matprops(e)[0])
     else:
-        material = cls(guess_matprops(e))
+        material = cls(guess_matprops(e)[0])
     # Apply total orientation for the material (which may be a submaterial)
     if orientation is not None:
         material = matlib.OrientedMaterial(material, orientation)
