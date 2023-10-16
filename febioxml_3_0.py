@@ -20,6 +20,8 @@ from .febioxml_2_5 import contact_bare_xml, meshdata_xml
 
 # Facts about FEBio XML 3.0
 
+VERSION = "3.0"
+
 # XML element parents and names
 BODY_COND_PARENT = "Rigid"
 BODY_COND_NAME = "rigid_constraint"

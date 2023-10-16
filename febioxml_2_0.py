@@ -14,6 +14,8 @@ from .febioxml_2_5 import mesh_xml, sequences, read_domains
 
 # Facts about FEBio XML 2.0
 
+VERSION = "2.0"
+
 BODY_COND_PARENT = "Constraints"
 BODY_COND_NAME = "rigid_body"
 # Implicit rigid bodies do not seem to be supported in FEBio XML 2.0.

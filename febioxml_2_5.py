@@ -22,6 +22,8 @@ from .febioxml import *
 
 # Facts about FEBio XML 2.5
 
+VERSION = "2.5"
+
 # XML element parents and names
 BODY_COND_PARENT = "Boundary"
 BODY_COND_NAME = "rigid_body"
