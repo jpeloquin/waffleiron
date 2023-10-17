@@ -140,17 +140,17 @@ def label_rectangular_prism(mesh: Mesh, bounds=None):
 
 
 def polar_stack_full(mesh, n):
-    """Stack a planar mesh of Quad4 elements about z in a full circle
+    """Stack a planar mesh of Quad4 elements in x–z in a full circle around z
 
-    mesh := 2D mesh of Quad4 elements.  One edge of the mesh is assumed
-    to be on the x^2 + y^2 = 0 centerline.
+    mesh := 2D mesh of Quad4 elements.  One edge of the mesh is assumed to be on the x^2
+    + y^2 = 0 centerline.
 
     n := number of element layers to create.
 
     The resulting mesh has a core of Penta6 elements surrounded by Hex8 elements.
 
-    TODO: Support input meshes that do not have nodes on the centerline,
-    e.g., for creating hollow cylinders.
+    TODO: Support input meshes that do not have nodes on the centerline, e.g., for
+    creating hollow cylinders.
 
     """
     # Convert 2D nodes array to 3D in x–z plane
