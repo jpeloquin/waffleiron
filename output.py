@@ -369,6 +369,10 @@ def contact_section(
         # Fill in the contact parameters (not currently known to be specific to any
         # particular FEBio version)
         for nm, v in contact.values.items():
+            # Handle None values (where the parameter is turned off).  FEBio XML
+            # doesn't have a way to indicate a numeric parameter is disabled.
+            if v is None:
+                v = CONTACT_PARAMS[nm].default
             etree.SubElement(e_contact, CONTACT_PARAMS[nm].path).text = to_text(v)
     return e_contact_section
 
