@@ -147,6 +147,10 @@ class PoroelasticSolid:
         """
         self.solid_material = solid
         self.solid_fraction = solid_fraction
+        if not isinstance(permeability, Permeability):
+            # If the value is not a Permeability instance and is valid, it must be a
+            # number, implicitly assuming isotropic constant permeability
+            permeability = IsotropicConstantPermeability(permeability)
         self.permeability = permeability
 
 
