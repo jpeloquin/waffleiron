@@ -757,6 +757,7 @@ CONTACT_PARAMS = {
 }
 CONTACT_CLASS_FROM_XML = {
     "sliding-node-on-facet": ContactSlidingNodeOnFacet,
+    "sliding-facet-on-facet": ContactSlidingFacetOnFacet,
     "sliding-elastic": ContactSlidingElastic,
 }
 CONTACT_NAME_FROM_CLASS = {v: k for k, v in CONTACT_CLASS_FROM_XML.items()}

@@ -131,7 +131,11 @@ class ContactConstraint(object):
 
 @dataclass(init=True, eq=False)
 class ContactSlidingNodeOnFacet(ContactConstraint):
-    """Sliding node on facet (N2F) contact, sliding-node-on-facet in FEBio XML"""
+    """Sliding node on facet (N2F) contact.
+
+    'sliding-node-on-facet' in FEBio XML
+
+    """
 
     augmented_lagrange_minaug: int = 0
     augmented_lagrange_maxaug: int = 10
@@ -144,8 +148,27 @@ class ContactSlidingNodeOnFacet(ContactConstraint):
 
 
 @dataclass(init=True, eq=False)
+class ContactSlidingFacetOnFacet(ContactConstraint):
+    """Sliding facet on facet (F2F) contact.
+
+    'sliding-facet-on-facet' in FEBio XML.
+
+    """
+
+    update_penalty: bool = False
+    augmented_lagrange_minaug: int = 0
+    augmented_lagrange_maxaug: int = 10
+    smoothed_lagrangian: bool = False
+    search_scale: float = 1.0
+
+
+@dataclass(init=True, eq=False)
 class ContactSlidingElastic(ContactConstraint):
-    """Sliding node on facet (N2F) contact, sliding-node-on-facet in FEBio XML"""
+    """Sliding node on facet (N2F) contact.
+
+    'sliding-node-on-facet' in FEBio XML
+
+    """
 
     update_penalty: bool = False
 
