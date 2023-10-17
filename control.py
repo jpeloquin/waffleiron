@@ -65,10 +65,9 @@ def auto_ticker(seq: Sequence, n_steps: int = 1, r_dtmin=0.1, must_point_fix=Tru
     dt_min = np.min(dt_must)
     nsteps = math.ceil(duration / dt_min)
     dt_nominal = duration / nsteps
-    if dt_min == dt_nominal:
-        # Sometimes FEBio skips a must point even when the first time
-        # point is coincident with the step_size.  Add an extra step to
-        # avoid this.
+    if must_point_fix and (dt_min == dt_nominal):
+        # Sometimes FEBio skips a must point even when the first time point is
+        # coincident with the step_size.  Add an extra step to avoid this.
         nsteps += 1
         dt_nominal = duration / nsteps
     ticker.n = nsteps
