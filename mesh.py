@@ -268,6 +268,21 @@ def polar_stack_full(mesh, n):
     return mesh
 
 
+def points_on_line(A, B, s):
+    """Return points at normalized arc length positions s along line AB
+
+    The points are returned as numpy arrays.
+
+    """
+    A = np.array(A)
+    B = np.array(B)
+    if min(s) < 0:
+        raise ValueError(f"s must be in [0, 1].  Min value was {min(s)}.")
+    if max(s) > 1:
+        raise ValueError(f"s must be in [0, 1].  Max value was {max(s)}.")
+    return [A + si * (B - A) for si in s]
+
+
 def zstack(mesh, zcoords):
     """Stack a 2d mesh in the z direction to make a 3d mesh.
 
