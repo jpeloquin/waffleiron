@@ -160,6 +160,12 @@ def powerspaced(offset, span, n, power, dmin=None):
 
 
 def densify(curve, n):
+    """Return curve with more points in between each pair of points
+
+    :param n: For each pair of points A and B in the input curve, n is the number of
+    points in the half-open interval (A, B] in the output curve.
+
+    """
     dense_curve = []
     for i, (x0, y0) in enumerate(curve[:-1]):
         x1 = curve[i + 1][0]

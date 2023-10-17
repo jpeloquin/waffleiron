@@ -28,8 +28,12 @@ class Physics(Enum):
     BIPHASIC = "biphasic"
 
 
-def auto_ticker(seq: Sequence, pts_per_segment: int = 1, r_dtmin=0.1):
+def auto_ticker(seq: Sequence, n_steps: int = 1, r_dtmin=0.1, must_point_fix=True):
     """Return a ticker with an automatic "must point" curve in dtmax
+
+    :param n_steps: Number of steps in the ticker.  The number of time points is
+    n_steps + 1.  The number of steps may be automatically increased to work around
+    an FEBio must point bug.
 
     :param r_dtmin: Set the minimum allowed time step to `r_dtmin` * the minimum time
     step in `seq`.
@@ -41,7 +45,7 @@ def auto_ticker(seq: Sequence, pts_per_segment: int = 1, r_dtmin=0.1):
     dt = np.diff(time)
     dt = np.concatenate([dt, dt[-1:]])  # len(dt) == len(time)
     # Assign must point sequence
-    curve_must_dt = densify([(a, b) for a, b in zip(time, dt)], n=pts_per_segment)
+    curve_must_dt = densify([(a, b) for a, b in zip(time, dt)], n=n_steps)
     # TODO: Densification should respect the curve's interpolant
     # Recalculate dt after densification.
     t = np.array(curve_must_dt)[:, 0]
