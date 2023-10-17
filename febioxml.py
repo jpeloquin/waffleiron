@@ -10,6 +10,7 @@ import numpy as np
 from .core import (
     Body,
     ContactSlidingElastic,
+    ContactSlidingFacetOnFacet,
     ContactSlidingNodeOnFacet,
     ImplicitBody,
     Sequence,

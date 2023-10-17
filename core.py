@@ -128,6 +128,12 @@ class ContactConstraint(object):
             f"{self.__class__} is a base class for specific contact implementations."
         )
 
+    def __post_init__(self):
+        if not isinstance(self.leader, FaceSet):
+            self.leader = FaceSet(self.leader)
+        if not isinstance(self.follower, FaceSet):
+            self.follower = FaceSet(self.follower)
+
 
 @dataclass(init=True, eq=False)
 class ContactSlidingNodeOnFacet(ContactConstraint):
