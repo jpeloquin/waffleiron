@@ -123,6 +123,11 @@ class ContactConstraint(object):
             if f.name not in ("leader", "follower")
         }
 
+    def __init__(self):
+        raise NotImplementedError(
+            f"{self.__class__} is a base class for specific contact implementations."
+        )
+
 
 @dataclass(init=True, eq=False)
 class ContactSlidingNodeOnFacet(ContactConstraint):
