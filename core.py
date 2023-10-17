@@ -107,7 +107,7 @@ class ContactConstraint(object):
     leader: FaceSet
     follower: FaceSet
 
-    two_pass: bool = True  # opposite default from FEBio
+    two_pass: bool = False
     penalty_factor: float = 1
     auto_penalty: bool = False
     use_augmented_lagrange: bool = False
