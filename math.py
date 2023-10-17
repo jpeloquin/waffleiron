@@ -49,6 +49,19 @@ def vec_from_sph(θ, φ):
     )
 
 
+def biasrange_log(start, stop, n=10):
+    """Log spaced series with n points, finer near start."""
+    # x ∈ [0, 1]
+    x = (10 ** np.linspace(0, np.log10(10 + 1), n) - 1) / 10
+    l = stop - start
+    x = [sc * l + start for sc in x]
+    # fix start and endpoints to given values, as numerical
+    # error will have accumulated
+    x[0] = start
+    x[-1] = stop
+    return x
+
+
 def linspaced(offset, span, n):
     """Return a series of n equally spaced values x.
 
