@@ -16,7 +16,7 @@ from .core import (
     Body,
     ImplicitBody,
 )
-from .control import SaveIters
+from .control import Dynamics, SaveIters
 from .febioxml import *
 
 
@@ -235,6 +235,10 @@ def sequences(root: etree.Element) -> Dict[int, Sequence]:
             curve, interp=interp, extrap=extrap, steplocal=False
         )
     return sequences
+
+
+def read_dynamics_element(e):
+    return Dynamics(e.attrib["type"].lower())
 
 
 def read_fixed_node_bcs(root: etree.Element, model):
@@ -573,3 +577,9 @@ def surface_pair_xml(faceset_registry, primary, secondary, name):
         surface=faceset_registry.names(secondary)[0],
     )
     return e_surfpair
+
+
+def write_dynamics_element(dynamics: Dynamics):
+    e = etree.Element("analysis")
+    e.attrib["type"] = dynamics.value
+    return e

@@ -21,6 +21,19 @@ from .math import densify
 import waffleiron.material as matlib
 
 
+class Dynamics(Enum):
+    """Level of dynamics to simulate
+
+    In a steady-state analysis, the time derivatives of the solid displacement and
+    solute concentrations are set to zero.
+
+    """
+
+    STATIC = "static"
+    STEADYSTATE = "steady-state"
+    DYNAMIC = "dynamic"
+
+
 class Physics(Enum):
     """Level of physics to simulate"""
 
@@ -177,24 +190,29 @@ class Ticker:
 class Step:
     """Simulation step"""
 
+    # TODO: Get rid of `physics` argument; it should be a property of the model. Here
+    #  it's only used to automatically set up the solver.  Pass the model instead.
     def __init__(
         self,
         physics: Union[Physics, str],
+        dynamics: Union[Dynamics, str],
         ticker: Ticker,
         solver: Solver = None,
         controller: IterController = None,
     ):
         if isinstance(physics, str):
             physics = Physics(physics)
+        if isinstance(dynamics, str):
+            dynamics = Dynamics(dynamics)
+        self.dynamics = dynamics
         if solver is None:
-            self.solver = Solver(physics)
-        else:
-            self.solver = solver
+            solver = Solver(physics)
+        self.solver = solver
         if controller is None:
-            self.controller = IterController()
-        else:
-            self.controller = controller
-        assert isinstance(ticker, Ticker)
+            controller = IterController()
+        self.controller = controller
+        if not isinstance(ticker, Ticker):
+            raise TypeError("`ticker` must be a Ticker")
         self.ticker = ticker
         self.bc: dict = {"node": {}, "body": {}, "contact": []}
 

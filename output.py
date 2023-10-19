@@ -399,9 +399,10 @@ def step_xml(step, name, seq_registry, physics, febioxml_module):
     # some parameters only for some physics.
     fx = febioxml_module
     e_step = etree.Element(fx.STEP_NAME, name=name)
-    # e_control = etree.SubElement(e_step, "Control")
-    # e_analysis = etree.SubElement(e_control, "analysis")
-    # e_analysis.attrib["type"] = "static"
+    e_control = etree.SubElement(e_step, "Control")
+    # Dynamics
+    e_control.append(fx.write_dynamics_element(step.dynamics))
+    # Ticker
     for nm, p in fx.TICKER_PARAMS.items():
         parent = get_or_create_parent(e_step, p.path)
         tag = p.path.split("/")[-1]
@@ -492,7 +493,7 @@ def xml(model: Model, version="3.0"):
             f"Writing FEBio XML {version_major}.{version_minor} is not supported."
         )
 
-    # Set solver module (analysis type)
+    # Set solver module
     physics = auto_physics([m for m in material_registry.objects()])
     e_module = etree.SubElement(root, "Module")
     e_module.attrib["type"] = physics.value

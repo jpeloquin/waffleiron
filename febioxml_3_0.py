@@ -12,7 +12,7 @@ from .core import (
     Extrapolant,
     Interpolant,
 )
-from .control import SaveIters
+from .control import Dynamics, SaveIters
 from .febioxml import *
 
 # These parts work the same as in FEBio XML 2.5
@@ -258,6 +258,10 @@ def get_surface_name(surfacepair_subelement):
 
     """
     return surfacepair_subelement.text
+
+
+def read_dynamics_element(e):
+    return Dynamics(e.text.lower())
 
 
 def read_fixed_node_bcs(root: etree.Element, model):
@@ -578,3 +582,9 @@ def step_xml_factory():
     while True:
         e = etree.Element(STEP_NAME, id=str(i), name=f"Step{i}")
         yield e
+
+
+def write_dynamics_element(dynamics: Dynamics):
+    e = etree.Element("analysis")
+    e.text = dynamics.value
+    return e

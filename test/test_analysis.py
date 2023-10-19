@@ -269,7 +269,7 @@ def complex_strain_hex8_model(febio_cmd_xml) -> Generator:
     mat = wfl.material.HolmesMow(10, 0.3, 4)
     model = wfl.Model(wfl.mesh.rectangular_prism((2, 2), (2, 2), (2, 2), material=mat))
     seq = wfl.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
-    step = Step("solid", ticker=auto_ticker(seq, 10))
+    step = Step("solid", dynamics="static", ticker=auto_ticker(seq, 10))
     model.add_step(step)
     F = np.array([[1.5, 0.5, 0], [0, 1, 0], [0, 0, 1]])
     left = model.named["node sets"].obj("−x1 face")

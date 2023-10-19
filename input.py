@@ -34,6 +34,7 @@ from .core import (
     RigidInterface,
 )
 from .control import (
+    Dynamics,
     Physics,
     auto_physics,
     Ticker,
@@ -208,6 +209,13 @@ def read_step(step_xml, model, physics, febioxml_module):
 
     step_name = step_xml.attrib["name"] if "name" in step_xml.attrib else None
 
+    # Dynamics
+    e = find_unique_tag(step_xml, "Control/analysis")
+    if e is not None:
+        dynamics = fx.read_dynamics_element(e)
+    else:
+        dynamics = Dynamics.STATIC
+
     ticker_kwargs = read_parameters(step_xml, fx.TICKER_PARAMS)
     solver_kwargs = read_parameters(step_xml, fx.SOLVER_PARAMS)
     controller_kwargs = read_parameters(step_xml, fx.CONTROLLER_PARAMS)
@@ -226,7 +234,13 @@ def read_step(step_xml, model, physics, febioxml_module):
     if not solver.update_method in ("BFGS", "Broyden"):
         # ^ could have gotten a default value from Solver.__init__
         solver.update_method = update_method[solver.update_method]
-    step = Step(physics=physics, ticker=ticker, solver=solver, controller=controller)
+    step = Step(
+        physics=physics,
+        dynamics=dynamics,
+        ticker=ticker,
+        solver=solver,
+        controller=controller,
+    )
 
     return step, step_name
 

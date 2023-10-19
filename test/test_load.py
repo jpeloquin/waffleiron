@@ -49,7 +49,7 @@ def test_pipeline_prescribe_deformation_singleHex8(febio_cmd_xml):
     for e in model.mesh.elements:
         e.material = material
     sequence = wfl.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
-    step = Step(physics="solid", ticker=auto_ticker(sequence))
+    step = Step(physics="solid", dynamics="static", ticker=auto_ticker(sequence))
     model.add_step(step)
 
     # Test 1: Does prescribe_deformation complete without error?

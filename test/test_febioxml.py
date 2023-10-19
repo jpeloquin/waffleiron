@@ -204,7 +204,7 @@ def mataxis_local_global_hex8_models(febio_cmd_xml) -> Generator:
     # Model 1: Local basis; material axes given by <mat_axis type="local">
     localb_model = gen_model_single_spiky_Hex8(material=material)
     sequence = wfl.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
-    step = Step(physics="solid", ticker=auto_ticker(sequence))
+    step = Step(physics="solid", dynamics="static", ticker=auto_ticker(sequence))
     localb_model.add_step(step)
     node_set = [i for i in range(len(localb_model.mesh.nodes))]
     prescribe_deformation(localb_model, step, node_set, F, sequence)
@@ -228,7 +228,7 @@ def mataxis_local_global_hex8_models(febio_cmd_xml) -> Generator:
     # ^ dim 0 over basis vectors, dim 1 over X
     globalb_model = gen_model_single_spiky_Hex8(material=material)
     seq = wfl.Sequence(((0, 0), (1, 1)), extrap="linear", interp="linear")
-    step = Step("solid", ticker=auto_ticker(seq))
+    step = Step("solid", dynamics="static", ticker=auto_ticker(seq))
     globalb_model.add_step(step)
     node_set = [i for i in range(len(globalb_model.mesh.nodes))]
     prescribe_deformation(globalb_model, step, node_set, F, sequence)

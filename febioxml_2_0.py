@@ -7,7 +7,7 @@ from lxml import etree as ET
 # Same-package modules
 from .core import ContactConstraint, Interpolant, Extrapolant, NodeSet, Sequence
 from .output import material_to_feb
-from .control import SaveIters
+from .control import Dynamics, SaveIters
 from .febioxml import *
 from .febioxml_2_5 import mesh_xml, sequences, read_domains
 
@@ -141,6 +141,10 @@ def iter_node_conditions(root):
             yield info
 
 
+def read_dynamics_element(e):
+    return Dynamics(e.attrib["type"].lower())
+
+
 def read_fixed_node_bcs(root: etree.Element, model):
     """Return nodesets with fixed degrees of freedom
 
@@ -268,3 +272,9 @@ def node_var_disp_xml(
     for i, sc in zip(nodes, scales):
         ET.SubElement(e_bc, "node", id=str(i + 1)).text = float_to_text(sc)
     return e_bc, e_nodedata
+
+
+def write_dynamics_element(dynamics: Dynamics):
+    e = etree.Element("analysis")
+    e.attrib["type"] = dynamics.value
+    return e
