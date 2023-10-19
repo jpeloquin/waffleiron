@@ -225,6 +225,9 @@ def _(mat: matlib.PoroelasticSolid, model) -> ElementTree:
     """Convert Poroelastic material instance to FEBio XML"""
     e = etree.Element("material", type="biphasic")
     e.append(property_to_xml(mat.solid_fraction, "phi0", model.named["sequences"]))
+    e.append(
+        property_to_xml(mat.fluid_density, "fluid_density", model.named["sequences"])
+    )
     # Add solid material
     e_solid = material_to_feb(mat.solid_material, model)
     e_solid.tag = "solid"
@@ -577,6 +580,10 @@ def xml(model: Model, version="3.0"):
         # have a name; in prior FEBio XML versions this is optional.
         name = material_registry.get_or_create_name("material", mat)
         tag.attrib["name"] = name
+        # Handle density.  This should really be done in `material_to_feb` but it's
+        # tedious to modify every function to do the same thing.
+        if hasattr(mat, "density"):
+            etree.SubElement(tag, "density").text = num_to_text(mat.density)
         e_Material.append(tag)
     # Assemble a list of all implicit rigid bodies used in the model.
     # There is currently no list of rigid bodies in the model or mesh

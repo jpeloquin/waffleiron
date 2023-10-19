@@ -134,7 +134,9 @@ class IsotropicHolmesMowPermeability(Permeability):
 class PoroelasticSolid:
     """Fluid-saturated solid."""
 
-    def __init__(self, solid, permeability: Permeability, solid_fraction):
+    def __init__(
+        self, solid, permeability: Permeability, solid_fraction, fluid_density=0
+    ):
         """Return PoroelasticSolid instance
 
         solid := Solid material instance.
@@ -145,6 +147,7 @@ class PoroelasticSolid:
         solid + volume fraction of fluid = 1.
 
         """
+        self.fluid_density = fluid_density
         self.solid_material = solid
         self.solid_fraction = solid_fraction
         if not isinstance(permeability, Permeability):
@@ -240,8 +243,10 @@ class SolidMixture:
 class Rigid:
     """Rigid body."""
 
+    # TODO: Split rigid nodesets, which have no density and no center of mass,
+    #  from rigid solids, which have a density and a calculable center of mass.
     def __init__(self, props={}, **kwargs):
-        self.density = 1
+        self.density = 0
         if "density" in props:
             self.density = props["density"]
 
@@ -766,3 +771,19 @@ class NeoHookean:
         Cinv = np.linalg.inv(C)
         s = mu * (np.eye(3) - Cinv) + y * log(J) * Cinv
         return s
+
+
+def add_density(material, density=0):
+    """Add a density attribute to a material
+
+    This is implemented as a function rather than as a base class because it is
+    unclear how to handle densities in a mixture material.  Inheritance would give
+    each constituent an individual density, but really only the mixture has a
+    density.  Solving this properly may require metaclasses.  This function is a
+    stopgap measure.
+
+    """
+    if density < 0:
+        raise ValueError(f"Density must be ≥ 0.  Got `{density}`.")
+    material.density = density
+    return material
