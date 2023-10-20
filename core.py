@@ -108,11 +108,11 @@ class ContactConstraint(object):
     follower: FaceSet
 
     two_pass: bool = False
-    penalty_factor: float = 1
+    penalty_factor: float = 1  # penalty in FEBio XML
     auto_penalty: bool = False
-    use_augmented_lagrange: bool = False
+    use_augmented_lagrange: bool = False  # laugon in FEBio XML
     augmented_lagrange_rtol: float = 1.0  # tolerance in FEBio XML
-    augmented_lagrange_gapnorm_atol: Optional[float] = None
+    augmented_lagrange_gapnorm_atol: Optional[float] = None  # gaptol in FEBio XML
     projection_tol: float = 0.01  # search_tol in FEBio XML
 
     @property
@@ -189,6 +189,20 @@ class ContactSlidingElastic(ContactConstraint):
     friction_coefficient: Optional[float] = None
     tension: bool = False
     # tangential_stiffness_scale not supported in FEBio 4.3.0, contrary to docs
+
+
+@dataclass(init=True, eq=False)
+class ContactTiedElastic(ContactConstraint):
+    """Tied elastic contact
+
+    'tied-elastic' in FEBio XML.
+
+    """
+
+    # pressure_penalty_factor: float = 1.0
+    # ^ only recognized by FEBio 4, so I guess treat it as FEBio XML ≥ 4 only?
+    symmetric_stiffness: bool = False
+    search_scale: float = 1.0
 
 
 def _canonical_face(face):

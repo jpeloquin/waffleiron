@@ -12,6 +12,7 @@ from .core import (
     ContactSlidingElastic,
     ContactSlidingFacetOnFacet,
     ContactSlidingNodeOnFacet,
+    ContactTiedElastic,
     ImplicitBody,
     Sequence,
     ScaledSequence,
@@ -738,6 +739,7 @@ physics_compat_by_mat = {
 CONTACT_PARAMS = {
     "tension": OptParameter("tension", text_to_bool, False),
     "penalty_factor": OptParameter("penalty", to_number, 1),
+    "pressure_penalty_factor": OptParameter("pressure_penalty", to_number, 1),
     "two_pass": OptParameter("two_pass", text_to_bool, False),
     "auto_penalty": OptParameter("auto_penalty", text_to_bool, False),
     "update_penalty": OptParameter("update_penalty", text_to_bool, False),
@@ -756,10 +758,13 @@ CONTACT_PARAMS = {
     "gap_tol": OptParameter("gaptol", to_number, 0.0),
     "projection_tol": OptParameter("search_tol", to_number, 0.01),
 }
+
+
 CONTACT_CLASS_FROM_XML = {
     "sliding-node-on-facet": ContactSlidingNodeOnFacet,
     "sliding-facet-on-facet": ContactSlidingFacetOnFacet,
     "sliding-elastic": ContactSlidingElastic,
+    "tied-elastic": ContactTiedElastic,
 }
 CONTACT_NAME_FROM_CLASS = {v: k for k, v in CONTACT_CLASS_FROM_XML.items()}
 
