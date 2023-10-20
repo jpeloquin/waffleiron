@@ -271,7 +271,7 @@ def node_var_disp_xml(
     # Write nodes as children of <Step><Boundary><prescribe>
     for i, sc in zip(nodes, scales):
         ET.SubElement(e_bc, "node", id=str(i + 1)).text = float_to_text(sc)
-    return e_bc, e_nodedata
+    return e_bc
 
 
 def write_dynamics_element(dynamics: Dynamics):
