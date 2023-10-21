@@ -126,7 +126,7 @@ def read_material(e, sequence_registry):
     material_type = read_material_type(e)
     if material_type not in material_from_xml_name:
         warnings.warn(
-            f"Reading material {material_type} from FEBio XML is not yet supported.  Its XML content will be stored in the Waffleiron model.  It will be reproduced verbatim (except for the material ID) if the model is written to FEBio XML."
+            f"Reading material `{material_type}` from FEBio XML is not yet supported.  Its XML content will be stored in the Waffleiron model.  It will be reproduced verbatim (except for the material ID) if the model is written to FEBio XML."
         )
         return VerbatimXMLMaterial(e)
     cls = material_from_xml_name[material_type]
