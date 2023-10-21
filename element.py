@@ -77,7 +77,7 @@ class Element:
         """Create an element from nodal indices."""
         nodes = np.array([nodelist[i] for i in ids])
         element = cls(nodes, mat)
-        element.ids = ids
+        element.ids = np.array(ids)
         return element
 
     def apply_property(self, label, values):
