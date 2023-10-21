@@ -316,6 +316,8 @@ class Mesh:
         proper housekeeping.
 
         """
+        # TODO: Add option to copy rather than modify elements.  Or warn if elements
+        # already belong to a different mesh.
         offset = len(self.nodes)
         self.nodes = np.vstack([self.nodes, nodes])
         for e in elements:
