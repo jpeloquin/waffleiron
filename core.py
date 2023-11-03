@@ -199,6 +199,9 @@ class ContactTiedElastic(ContactConstraint):
 
     """
 
+    augmented_lagrange_minaug: int = 0
+    augmented_lagrange_maxaug: int = 10
+
     # pressure_penalty_factor: float = 1.0
     # ^ only recognized by FEBio 4, so I guess treat it as FEBio XML ≥ 4 only?
     symmetric_stiffness: bool = False
