@@ -3,7 +3,10 @@ from .control import Step, Ticker, IterController, Solver
 from .core import (
     Body,
     ImplicitBody,
-    ContactConstraint,
+    ContactSlidingNodeOnFacet,
+    ContactSlidingFacetOnFacet,
+    ContactSlidingElastic,
+    ContactTiedElastic,
     Interpolant,
     Extrapolant,
     Sequence,
