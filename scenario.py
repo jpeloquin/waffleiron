@@ -70,6 +70,6 @@ def freeswell_cube(h, material, init_duration, swell_duration, init_n=10, swell_
     # Free swell to equilibrium
     time = logspaced(0, swell_duration, swell_n, dmin=swell_duration / (swell_n - 1))
     seq = Sequence([(t, 0) for t in time], interp="linear", extrap="constant")
-    step = Step(feb_module, auto_ticker(seq))
-    model.add_step(step, "static", name="Free swelling")
+    step = Step(feb_module, "static", auto_ticker(seq))
+    model.add_step(step, name="Free swelling")
     return model
