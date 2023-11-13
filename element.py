@@ -60,7 +60,7 @@ class Element:
             calculated by indexing into `mesh`.
 
         """
-        self.ids = np.arange(len(nodes))
+        self._ids = np.arange(len(nodes))
         # ^ Indices of nodes.  For a standalone element, the standard indices.  For
         # an element belonging to a mesh, these will be updated to index into the
         # mesh's node list.
@@ -77,7 +77,7 @@ class Element:
         """Create an element from nodal indices."""
         nodes = np.array([nodelist[i] for i in ids])
         element = cls(nodes, mat)
-        element.ids = np.array(ids)
+        element.ids = ids
         return element
 
     def apply_property(self, label, values):
@@ -85,6 +85,14 @@ class Element:
         assert len(values) == len(self.nodes)
         values = np.array(values)
         self.properties[label] = values
+
+    @property
+    def ids(self):
+        return self._ids
+
+    @ids.setter
+    def ids(self, value):
+        self._ids = np.array(value)
 
     def x(self, config="reference"):
         """Nodal positions in reference or deformed configuration.
