@@ -32,8 +32,8 @@ class Body:
 
     """
 
-    def __init__(self, elements):
-        self.elements = elements
+    def __init__(self, elements: Iterable):
+        self.elements: Iterable = elements
         # self.master_inode = elements[0].ids[0]
 
     def nodes(self):

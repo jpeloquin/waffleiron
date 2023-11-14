@@ -448,7 +448,7 @@ def body_mat_id(body, material_registry, implicit_rb_mats):
     if isinstance(body, Body):
         # If an explicit body, its elements define its
         # materials.  We assume that the body is homogenous.
-        mat = body.elements[0].material
+        mat = next(e for e in body.elements).material
         mat_id = material_registry.names(mat, nametype="ordinal_id")[0]
     elif isinstance(body, ImplicitBody):
         mat = implicit_rb_mats[body]
