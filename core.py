@@ -3,7 +3,7 @@ from copy import copy
 from dataclasses import dataclass
 from enum import Enum
 from operator import itemgetter
-from typing import Hashable, NewType, Union, Optional
+from typing import Hashable, Iterable, NewType, Union, Optional
 from warnings import warn
 
 import numpy as np

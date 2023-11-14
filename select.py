@@ -1,14 +1,14 @@
 """Functions for conveniently selecting nodes and elements.
 
 """
-from math import degrees, radians
+from math import degrees, inf, radians
 import operator
 from copy import copy
 
 import numpy as np
 
 import waffleiron as wfl
-from .core import _canonical_face
+from .core import _canonical_face, Body
 from waffleiron.geometry import inter_face_angle, face_normal
 
 default_tol = 10 * np.finfo(float).eps
@@ -82,6 +82,18 @@ class ElementSelection:
             self.elements = elements
 
 
+def connected_components(mesh):
+    """Return sets of elements that are disconnected from each other"""
+    components = []
+    untouched_elements = set(mesh.elements)
+    while untouched_elements:
+        e = untouched_elements.pop()
+        component_elements = e_grow([e], untouched_elements, inf)
+        components.append(component_elements)
+        untouched_elements = untouched_elements - set(component_elements)
+    return components
+
+
 def elements_containing_point(point, elements, bb=None, tol=default_tol):
     """Return element(s) containing a point
 
@@ -149,10 +161,11 @@ def corner_nodes(mesh):
 def surface_faces(mesh):
     """Return surface faces."""
     surf_faces = set()
-    for body in mesh.bodies:
+    for comp in connected_components(mesh):
         # Pick a node to start. Nodes with minimum/maximum coordinate
         # values must be surfaces nodes.
-        nids, xnodes = body.nodes()
+        comp = Body(comp)
+        nids, xnodes = comp.nodes()
         i, j, k = np.argmin(xnodes, axis=0)
         i = nids[i]  # translate index to node index in mesh
         # Advance across the surface with a "front" of active nodes
