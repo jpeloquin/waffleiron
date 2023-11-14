@@ -2,6 +2,7 @@ import numpy as np
 from scipy.optimize import fmin
 
 import waffleiron as wfl
+from waffleiron.exceptions import InvalidConditionError
 from waffleiron.geometry import cross
 
 
@@ -30,8 +31,8 @@ class Element:
 
     Attributes
     ----------
-    nodes := Nodal positions in reference configuration.  The order
-    follows FEBio convention.
+    nodes := Nodal positions in reference configuration.  The order follows FEBio
+    convention.
 
     ids := (optional) Nodal indices into `mesh.nodes`
 
@@ -54,22 +55,19 @@ class Element:
         Parameters
         ----------
         nodes : n × 3 array-like or n × 1 array-like
-            Coordinates for n nodes.  The second dimension is x, y,
-            and z.  If `mesh` is provided, a list of node indices is
-            instead expected, and the node coordinates will be
-            calculated by indexing into `mesh`.
+            Coordinates for n nodes.  The second dimension is x, y, and z.
 
         """
         self._ids = np.arange(len(nodes))
         # ^ Indices of nodes.  For a standalone element, the standard indices.  For
         # an element belonging to a mesh, these will be updated to index into the
         # mesh's node list.
-        self.mesh = None  # None unless added to a Mesh
+        self._mesh = None  # None unless added to a Mesh
         self.basis = None
         self.material = material
         self.properties = {"displacement": np.array([(0, 0, 0) for i in nodes])}
         # Nodal coordinates
-        self.nodes = np.array(nodes)
+        self._nodes = np.array(nodes)
         assert self.nodes.shape[1] >= 2
 
     @classmethod
@@ -93,6 +91,29 @@ class Element:
     @ids.setter
     def ids(self, value):
         self._ids = np.array(value)
+
+    @property
+    def mesh(self):
+        return self._mesh
+
+    @mesh.setter
+    def mesh(self, value):
+        self._mesh = value
+        self._nodes = None  # will access parent mesh from now on
+
+    @property
+    def nodes(self):
+        if self.mesh is not None:
+            return self.mesh.nodes[self.ids]
+        else:
+            return self._nodes
+
+    @nodes.setter
+    def nodes(self, value):
+        if self.mesh is None:
+            self._nodes = np.array(value)
+        else:
+            self.mesh.nodes[self._ids] = np.array(value)
 
     def x(self, config="reference"):
         """Nodal positions in reference or deformed configuration.
