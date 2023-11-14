@@ -373,13 +373,13 @@ class ExponentialFiber3D:
 class PowerLinearFiber:
     """1D fiber with power–linear law.
 
-    Equivalent to "fiber-pow-lin" or "fiber-power-lin" in FEBio, treated
+    Equivalent to "fiber-pow-linear" or "fiber-power-linear" in FEBio, treated
     as a 1D material.
 
     References
     ----------
     FEBio users manual 2.9, page 173 (not page 146; the manual shows the
-    wrong equations for the "fiber-pow-lin" entry).
+    wrong equations for the "fiber-pow-linear" entry).
 
     """
 
@@ -429,7 +429,7 @@ class PowerLinearFiber:
 class PowerLinearFiber3D:
     """Fiber with piecewise power-law (toe) and linear regions.
 
-    Coupled formulation ("fiber-pow-lin" or "fiber-power-lin" in FEBio).
+    Coupled formulation ("fiber-pow-linear" or "fiber-power-linear" in FEBio).
 
     This is the deprecated 3D implementation that mixes material
     orientation with the fiber's constitutive law.  Prefer
