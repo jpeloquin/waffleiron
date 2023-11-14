@@ -288,6 +288,8 @@ def f_grow_to_edge(faces, mesh, delta=30):
     faces (degrees)
 
     """
+    if len(faces) == 0:
+        raise ValueError("Empty set of faces provided.")
     # work in radians internally
     delta_deg = delta
     delta_rad = radians(delta_deg)
