@@ -732,10 +732,10 @@ physics_compat_by_mat = {
     matlib.NeoHookean: {Physics.SOLID, Physics.BIPHASIC},
 }
 
-# Map of ContactConstraint fields → elements relative to <contact>.  This needs to be
-# done for each contact algorithm, since they don't all support the same parameters.
-# They currently have the same defaults in FEBio, but that doesn't really make sense
-# and may change in the future.
+# Map of ContactConstraint fields → elements relative to <contact>.  This really should
+# be done for each contact algorithm.  According to the FEBio manual, all algorithms
+# have the same defaults, but (a) that doesn't really make sense and (b) is false, at
+# least for `tolerance`.
 CONTACT_PARAMS = {
     "tension": OptParameter("tension", text_to_bool, False),
     "penalty_factor": OptParameter("penalty", to_number, 1),
@@ -745,7 +745,7 @@ CONTACT_PARAMS = {
     "update_penalty": OptParameter("update_penalty", text_to_bool, False),
     "symmetric_stiffness": OptParameter("symmetric_stiffness", text_to_bool, False),
     "use_augmented_lagrange": OptParameter("laugon", text_to_bool, False),
-    "augmented_lagrange_rtol": OptParameter("tolerance", to_number, 1.0),
+    "augmented_lagrange_rtol": OptParameter("tolerance", to_number, 0.1),
     "augmented_lagrange_gapnorm_atol": OptParameter("gaptol", maybe_to_number, 0.0),
     "augmented_lagrange_minaug": OptParameter("minaug", int, 0),
     "augmented_lagrange_maxaug": OptParameter("maxaug", int, 10),

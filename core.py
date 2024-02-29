@@ -111,7 +111,7 @@ class ContactConstraint(object):
     penalty_factor: float = 1  # penalty in FEBio XML
     auto_penalty: bool = False
     use_augmented_lagrange: bool = False  # laugon in FEBio XML
-    augmented_lagrange_rtol: float = 1.0  # tolerance in FEBio XML
+    augmented_lagrange_rtol: float = 0.1  # tolerance in FEBio XML
     augmented_lagrange_gapnorm_atol: Optional[float] = None  # gaptol in FEBio XML
     projection_tol: float = 0.01  # search_tol in FEBio XML
 

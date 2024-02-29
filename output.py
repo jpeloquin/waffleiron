@@ -372,8 +372,11 @@ def contact_section(
         # Fill in the contact parameters (not currently known to be specific to any
         # particular FEBio version)
         for nm, v in contact.values.items():
-            # Handle None values (where the parameter is turned off).  FEBio XML
-            # doesn't have a way to indicate a numeric parameter is disabled.
+            # Handle None values.  In waffleiron, that means the function that parameter
+            # governs is turned off.  FEBio XML doesn't have a systematic convention to
+            # indicate a function is disabled, so we set the parameter to the FEBio
+            # default instead.  Usually the FEBio default is magic value indicating
+            # "off".  So far this hasn't been a problem.
             if v is None:
                 v = CONTACT_PARAMS[nm].default
             etree.SubElement(e_contact, CONTACT_PARAMS[nm].path).text = to_text(v)
