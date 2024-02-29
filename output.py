@@ -580,10 +580,6 @@ def xml(model: Model, version="3.0"):
         # have a name; in prior FEBio XML versions this is optional.
         name = material_registry.get_or_create_name("material", mat)
         tag.attrib["name"] = name
-        # Handle density.  This should really be done in `material_to_feb` but it's
-        # tedious to modify every function to do the same thing.
-        if hasattr(mat, "density"):
-            etree.SubElement(tag, "density").text = num_to_text(mat.density)
         e_Material.append(tag)
     # Assemble a list of all implicit rigid bodies used in the model.
     # There is currently no list of rigid bodies in the model or mesh
