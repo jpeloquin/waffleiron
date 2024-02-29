@@ -4,6 +4,7 @@ This module includes functionality for working with FEBio-specific
 control sections in FEBio xml files.
 
 """
+
 # Base modules
 from copy import deepcopy
 import dataclasses

@@ -1,4 +1,5 @@
 """Create a uniaxial test case that rotates 180°"""
+
 from collections import defaultdict
 from math import pi, cos, sin
 import numpy as np

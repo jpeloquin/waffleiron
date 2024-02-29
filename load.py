@@ -1,4 +1,5 @@
 """Module for adding initial and boundary conditions to models."""
+
 # Third party modules
 import numpy as np
 

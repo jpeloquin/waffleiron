@@ -1,4 +1,5 @@
 """Functions to generate models commonly used in experiments"""
+
 import numpy as np
 
 import waffleiron as wfl

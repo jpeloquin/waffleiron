@@ -1,4 +1,5 @@
 """Module for high-level model-related classes."""
+
 # Built-in packages
 from collections import namedtuple
 from math import inf

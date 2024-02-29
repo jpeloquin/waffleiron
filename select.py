@@ -1,6 +1,7 @@
 """Functions for conveniently selecting nodes and elements.
 
 """
+
 from math import degrees, radians
 import operator
 from copy import copy

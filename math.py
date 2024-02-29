@@ -1,4 +1,5 @@
 """Convenient mathematical operations."""
+
 # Base packages
 from math import radians, degrees, cos, sin, e, pi
 

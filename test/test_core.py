@@ -3,6 +3,7 @@
 Run these tests with pytest.
 
 """
+
 import unittest, os
 from copy import deepcopy
 
@@ -102,7 +103,6 @@ class ElementContainingPointNarrowParallelogram(unittest.TestCase):
 
 
 class ElementContainingPointQuad4(unittest.TestCase):
-
     """Test looking up with element contains a point (x, y, z)"""
 
     def setUp(self):
