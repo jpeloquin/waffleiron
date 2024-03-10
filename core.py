@@ -3,7 +3,7 @@ from copy import copy
 from dataclasses import dataclass
 from enum import Enum
 from operator import itemgetter
-from typing import Hashable, NewType, Union, Optional
+from typing import Hashable, Iterable, NewType, Union, Optional
 from warnings import warn
 
 import numpy as np
@@ -32,8 +32,8 @@ class Body:
 
     """
 
-    def __init__(self, elements):
-        self.elements = elements
+    def __init__(self, elements: Iterable):
+        self.elements: Iterable = elements
         # self.master_inode = elements[0].ids[0]
 
     def nodes(self):

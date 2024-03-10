@@ -50,10 +50,10 @@ def scalar_field(mesh, fn, pts):
                 r = e.to_natural((x, y, z))
                 f = e.f(r)
                 field[i, j] = fn(f, e)
-        sys.stdout.write("\rLine {}/{}".format(i + 1, field.shape[0]))
-        sys.stdout.flush()
-    sys.stdout.write("\n")
-    sys.stdout.flush()
+        sys.stderr.write("\rLine {}/{}".format(i + 1, field.shape[0]))
+        sys.stderr.flush()
+    sys.stderr.write("\n")
+    sys.stderr.flush()
 
     return field
 

@@ -4,6 +4,12 @@ class SelectionException(Exception):
     pass
 
 
+class InvalidConditionError(ValueError):
+    """Raise when an otherwise valid value would break an invariant"""
+
+    pass
+
+
 class UnsupportedFormatError(ValueError):
     """Exception for reads or writes to unsupported file formats.
 

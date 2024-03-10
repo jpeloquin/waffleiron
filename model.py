@@ -251,19 +251,19 @@ class Mesh:
     def __init__(self, nodes, elements):
         """Create mesh from nodes and element objects.
 
-        nodes := list of (x, y, z) points
-        elements := list of Element objects that index into `nodes`
+        :param nodes: Array of (x, y, z) points
+        :param elements: List of Element objects that index into `nodes`
 
         """
-        # Nodes
         nodes = np.array(nodes)
+        # Nodes
         if nodes.size == 0:
-            self.nodes = nodes
+            self._nodes = nodes
         # if nodes are 2D, add z = 0
         elif len(nodes[0]) == 2:
-            self.nodes = np.hstack([nodes, np.zeros((len(nodes), 1))])
+            self._nodes = np.hstack([nodes, np.zeros((len(nodes), 1))])
         else:
-            self.nodes = nodes
+            self._nodes = nodes
         # Elements
         for e in elements:
             # Make sure node ids are consistent with the nodal
@@ -275,9 +275,6 @@ class Mesh:
             # Store reference to this mesh
             e.mesh = self
         self.elements = elements
-
-        # Bodies
-        self.bodies = set()
 
         # Initialize dictionaries to hold named entities
         self.named = {
@@ -309,6 +306,14 @@ class Mesh:
             element_objects.append(e)
         mesh = cls(nodes, element_objects)
         return mesh
+
+    @property
+    def nodes(self):
+        return self._nodes
+
+    @nodes.setter
+    def nodes(self, value):
+        self._nodes = np.array(value)
 
     def add_elements(self, nodes, elements: Iterable[Element]):
         """Add elements to the mesh
@@ -351,21 +356,6 @@ class Mesh:
             for i in e.ids:
                 elem_with_node[i].append(e)
         self.elem_with_node = elem_with_node
-
-        # Create list of bodies.  Each body is a set of elements that
-        # are connected to each other via shared nodes.
-        self.bodies = set()
-        untouched_elements = set(self.elements)
-        while untouched_elements:
-            e = untouched_elements.pop()
-            body_elements = e_grow([e], untouched_elements, inf)
-            self.bodies.add(Body(body_elements))
-            # TODO: It's a little odd to have a list of "bodies" each
-            # defined as the maximal set of connected elements when
-            # other bodies that are not maximal sets also exist to
-            # support rigid body constraints, and these (rigid) bodies
-            # aren't in self.bodies.
-            untouched_elements = untouched_elements - set(body_elements)
 
     def faces_with_node(self, idx):
         """Return face tuples containing node index.
