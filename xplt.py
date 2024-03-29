@@ -223,7 +223,16 @@ element_type_from_id = {
     9: element.Hex27,
 }
 
-item_type_from_id = {0: "float", 1: "vec3f", 2: "mat3fs"}
+item_type_from_id = {
+    0: "float",
+    1: "vec3f",
+    2: "mat3fs",
+    3: "mat3fd",
+    4: "tens4fs",
+    5: "mat3f",
+    6: "array_float",
+    7: "array_vec3f",
+}
 
 # Size of each value type in plotfile data, in bytes
 INT_SZ_B = 4

@@ -40,6 +40,7 @@ class Physics(Enum):
 
     SOLID = "solid"
     BIPHASIC = "biphasic"
+    MULTIPHASIC = "multiphasic"
 
 
 def auto_ticker(seq: Sequence, n_steps: int = 1, r_dtmin=0.1, must_point_fix=True):
