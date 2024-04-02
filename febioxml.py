@@ -734,8 +734,8 @@ physics_compat_by_mat = {
 
 # Map of ContactConstraint fields → elements relative to <contact>.  This really should
 # be done for each contact algorithm.  According to the FEBio manual, all algorithms
-# have the same defaults, but (a) that doesn't really make sense and (b) is false, at
-# least for `tolerance`.
+# have the same defaults, but that (a) doesn't make sense and (b) is false, at least for
+# `tolerance`.
 CONTACT_PARAMS = {
     "tension": OptParameter("tension", text_to_bool, False),
     "penalty_factor": OptParameter("penalty", to_number, 1),
