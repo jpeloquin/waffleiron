@@ -80,6 +80,24 @@ def linspaced(offset, span, n):
     return np.linspace(offset, offset + span, n)
 
 
+def x_biasfactor(start, span, n, factor=1):
+    """Return a sequence of values spaced with compounded scaling by a bias factor
+
+    :param start: Starting value of the sequence.
+
+    :param span: Total length spanned by the sequence.
+
+    :param n: Number of desired divisions (elements) of the sequence.
+
+    :param factor: Bias factor.  Each pair of values has spacing equal to the spacing of the immediately preceding
+    pair multiplied by `factor`.
+
+    """
+    l0 = span / sum([factor ** i for i in range(n)])
+    x = np.cumsum([start] + [l0 * factor ** i for i in range(n)])
+    return x
+
+
 def logspaced(offset, span, n, dmin=None):
     """Return a series of n log-spaced values x.
 
@@ -164,12 +182,12 @@ def powerspaced(offset, span, n, power, dmin=None):
         if dmin is None:
             dmin = (1 / n) ** (-1 / power) * span
         x = np.zeros(n)
-        x[1:] = np.linspace((offset + span) ** power, dmin**power, n - 1)[::-1] ** (
-            1 / power
+        x[1:] = np.linspace((offset + span) ** power, dmin ** power, n - 1)[::-1] ** (
+                1 / power
         )
         # ^ work reversed so linspace generates end point for n = 2.
     else:  # power > 0
-        x = np.linspace(offset**power, (offset + span) ** power, n) ** (1 / power)
+        x = np.linspace(offset ** power, (offset + span) ** power, n) ** (1 / power)
     return x
 
 
