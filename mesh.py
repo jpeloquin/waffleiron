@@ -13,18 +13,21 @@ from .element import Hex27, Hex8, Quad4
 from .model import Mesh
 
 
-def cylinder(t_radius: tuple, t_height: tuple, nc: int, material=None):
+def cylinder(t_radius: tuple, t_height: tuple, nc: int, bias_h=1, material=None):
     """Create an FE mesh of a cylinder
 
-    radius := (length, # elements).  The number of elements must be ≥ 1.
+    :param radius: (length, # elements).  The number of elements must be ≥ 1.
 
-    height := (length, # elements).  The number of elements must be ≥ 1.
+    :param height: (length, # elements).  The number of elements must be ≥ 1.
 
-    nc := int, number of elements along circumference.  Must be ≥ 3.
+    :param nc: number of elements along circumference.  Must be ≥ 3.
 
-    Radius is used instead of diameter because the diameter must have
-    an even number of elements, whereas the radius can have an odd or
-    even number.
+    :param bias_h: Bias factor for element spacing along the z-axis (height) of the
+    cyclinder.  Elements are ordered such that the top layer is first and the bottom
+    layer is last.
+
+    Radius is used instead of diameter because the diameter must have an even number
+    of elements, whereas the radius can have an odd or even number.
 
     Element spacing is linear.
 
@@ -44,10 +47,10 @@ def cylinder(t_radius: tuple, t_height: tuple, nc: int, material=None):
     B = np.array((radius, height / 2))
     C = np.array((0, -height / 2))
     D = np.array((radius, -height / 2))
-    pts_AB = [A + s * (B - A) for s in wfl.math.linspaced(0, 1, n=nr + 1)]
-    pts_CD = [C + s * (D - C) for s in wfl.math.linspaced(0, 1, n=nr + 1)]
-    pts_AC = [A + s * (C - A) for s in wfl.math.linspaced(0, 1, n=nh + 1)]
-    pts_BD = [B + s * (D - B) for s in wfl.math.linspaced(0, 1, n=nh + 1)]
+    pts_AB = [A + s * (B - A) for s in wfl.math.linspaced(0, 1, nr + 1)]
+    pts_CD = [C + s * (D - C) for s in wfl.math.linspaced(0, 1, nr + 1)]
+    pts_AC = [A + s * (C - A) for s in wfl.math.x_biasfactor(0, 1, nh, bias_h)]
+    pts_BD = [B + s * (D - B) for s in wfl.math.x_biasfactor(0, 1, nh, bias_h)]
     pane = quadrilateral(pts_AC, pts_BD, pts_CD, pts_AB)
     cylinder = polar_stack_full(pane, nc)
     if material is not None:
