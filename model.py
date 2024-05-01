@@ -4,7 +4,8 @@
 from collections import namedtuple
 from math import inf
 import sys
-from typing import Iterable, Optional, Union
+from numbers import Real
+from typing import Iterable, Optional, Union, Dict
 
 # Public packages
 import numpy as np
@@ -34,6 +35,7 @@ NamedStep = namedtuple("NamedStep", ["step", "name"])
 
 class Model:
     """An FE model: geometry, boundary conditions, solution."""
+    constants: dict[str, Real]
 
     def __init__(self, mesh):
         if type(mesh) is not Mesh:

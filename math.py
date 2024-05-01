@@ -93,7 +93,7 @@ def x_biasfactor(start, span, n, factor=1):
     of the immediately preceding pair multiplied by `factor`.
 
     """
-    l0 = span / sum([factor ** i for i in range(n)])
+    l0 = span / sum([factor ** i for i in range(n)])  # first interval
     x = np.cumsum([start] + [l0 * factor ** i for i in range(n)])
     return x
 
