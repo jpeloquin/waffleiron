@@ -3,6 +3,7 @@ from collections import namedtuple
 import os
 from pathlib import Path
 from typing import Union
+import urllib
 
 from lxml import etree
 import numpy as np
@@ -370,7 +371,9 @@ def logfile_name(root) -> Path:
             raise TypeError(
                 f"The FEBio XML tree has no file name associated with it, so the default log file name is undefined.  (The XML tree was probably created without reading from a file.)"
             )
-        return Path(root.base).with_suffix(".log")
+        # Decode file URI.  Seems to only be necessary on Windows.
+        local_path = urllib.request.url2pathname(urllib.parse.urlparse(root.base).path)
+        return Path(local_path).with_suffix(".log")
     elif len(paths) == 1:
         return paths[0]
     else:  # len(paths) > 1
