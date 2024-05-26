@@ -231,7 +231,7 @@ def apply_body_bc(model, e_rbc, explicit_bodies, implicit_bodies, step):
         var = "displacement"
         dof = DOF_FROM_XML_RB_DOF[find_unique_tag(e_rbc, "dof").text]
         e_seq = find_unique_tag(e_rbc, "value")
-        seq = read_parameter(e_seq, model.named["sequences"])
+        seq = read_parameter(e_seq, model.named["sequences"].map("ordinal_id"))
         # Relative?
         e_relative = find_unique_tag(e_rbc, "relative")
         if e_relative is None:

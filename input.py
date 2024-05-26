@@ -222,7 +222,9 @@ def read_step(step_xml, model, physics, febioxml_module):
     # Must points, and hence dtmax, take special handling
     e = find_unique_tag(step_xml, "Control/time_stepper/dtmax")
     if e is not None:
-        ticker_kwargs["dtmax"] = read_parameter(e, model.named["sequences"])
+        ticker_kwargs["dtmax"] = read_parameter(
+            e, model.named["sequences"].map("ordinal_id")
+        )
     else:
         ticker_kwargs["dtmax"] = fx.TICKER_PARAMS["dtmax"].default
         controller_kwargs["save_iters"] = SaveIters.MAJOR  # FEBio default
@@ -451,7 +453,7 @@ class FebReader:
         return mats, mat_labels
 
     @property
-    def sequences(self):
+    def sequences(self) -> Dict[int, Sequence]:
         """Return dictionary of sequences (load curves) keyed by ID.
 
         Sequence IDs are integers starting from 0.

@@ -92,7 +92,7 @@ def find_unique_tag(root: etree.Element, path, req=False):
             return None
 
 
-def read_material(e, sequence_registry):
+def read_material(e, sequence_registry: dict):
     """Read a material from an XML element
 
     This function will not mutate `sequence_registry`.
@@ -143,7 +143,7 @@ def read_material(e, sequence_registry):
         e_permeability = find_unique_tag(e, "permeability", req=True)
         perm_type = e_permeability.attrib["type"]
         perm_class = perm_class_from_name[perm_type]
-        props = {c.tag: to_number(c.text) for c in e_permeability}
+        props = {c.tag: read_parameter(c, sequence_registry) for c in e_permeability}
         permeability = perm_class.from_feb(**props)
         # Solid constituent
         constituents = [
@@ -276,7 +276,7 @@ def read_material_type(e):
     return e.attrib["type"]
 
 
-def read_parameter(e, sequence_registry):
+def read_parameter(e, sequence_registry: dict[int, Sequence]):
     """Read a parameter from an XML element.
 
     The parameter may be fixed or variable.  If variable, a Sequence or
@@ -287,7 +287,7 @@ def read_parameter(e, sequence_registry):
     if "lc" in e.attrib:
         # The property is time-varying
         seq_id = int(e.attrib["lc"]) - 1
-        sequence = sequence_registry.obj(seq_id, "ordinal_id")
+        sequence = sequence_registry[seq_id]
         if e.text is not None and e.text.strip() != "":
             scale = to_number(e.text)
             return ScaledSequence(sequence, scale)
