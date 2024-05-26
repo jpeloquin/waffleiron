@@ -35,6 +35,7 @@ NamedStep = namedtuple("NamedStep", ["step", "name"])
 
 class Model:
     """An FE model: geometry, boundary conditions, solution."""
+
     constants: dict[str, Real]
 
     def __init__(self, mesh):
