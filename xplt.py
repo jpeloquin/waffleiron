@@ -350,7 +350,7 @@ def parse_endianness(data):
         msg = (
             "Input data is not valid as an FEBio binary database file.  "
             "The first four bytes are {}, but should be 'BEF\x00' or "
-            "'\x00F\EB'."
+            "'\x00FEB'."
         )
         raise ValueError(msg.format(data[:4]))
 
