@@ -3,7 +3,7 @@ from collections import namedtuple
 import os
 from pathlib import Path
 from typing import Union
-import urllib
+import urllib.request
 
 from lxml import etree
 import numpy as np

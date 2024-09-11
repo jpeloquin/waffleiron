@@ -326,6 +326,9 @@ class NameRegistry:
     def __repr__(self):
         return str(self._from_name)
 
+    def __getitem__(self, namespace):
+        return self.get_namespace(namespace)
+
     def add(self, name, obj, nametype="canonical"):
         """Add a name for an object."""
         # Add the name to the name → object map
@@ -430,7 +433,7 @@ class NameRegistry:
         """
         return self._from_name.setdefault(nametype, {}).items()
 
-    def map(self, nametype="canonical"):
+    def get_namespace(self, nametype="canonical"):
         """Return name → obj map (dict) for nametype."""
         return self._from_name.setdefault(nametype, {})
 

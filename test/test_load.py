@@ -1,18 +1,11 @@
-# Python built-ins
 from pathlib import Path
-from unittest import TestCase
 
-# Public modules
 import numpy as np
 import numpy.testing as npt
 
-# waffleiron' local modules
 import waffleiron as wfl
 from waffleiron import Step
 from waffleiron.control import auto_ticker
-from waffleiron.element import Hex8
-from waffleiron.febioxml import basis_mat_axis_local
-from waffleiron.model import Model, Mesh
 from waffleiron.material import IsotropicElastic
 from waffleiron.test.fixtures import DIR_OUT, febio_cmd_xml, gen_model_single_spiky_Hex8
 

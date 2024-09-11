@@ -309,7 +309,7 @@ def apply_body_bc(model, e_rigid_body, explicit_bodies, implicit_bodies, step):
     for e_dof in e_rigid_body.findall(BC_TYPE_TAG["body"]["variable"]):
         dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
         var = VAR_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
-        seq = read_parameter(e_dof, model.named["sequences"])
+        seq = read_parameter(e_dof, model.named["sequences"]["ordinal_id"])
         if e_dof.get("type", None) == "relative":
             relative = True
         else:

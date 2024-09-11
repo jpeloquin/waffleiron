@@ -2,7 +2,7 @@ import os
 from math import inf
 import numpy as np
 from numpy import dot
-from math import degrees, radians, cos, sin
+from math import radians, cos, sin
 from unittest import TestCase
 
 import pytest
@@ -64,7 +64,7 @@ class FindClosestTimestep(TestCase):
     def test_nonmatching_values(self):
         times = [0.0, 0.5, 1.0, 1.5, 2.0]
         steps = [0, 1, 2, 3]
-        with self.assertRaisesRegex(ValueError, "len\(steps\) ≠ len\(times\)"):
+        with self.assertRaisesRegex(ValueError, r"len\(steps\) ≠ len\(times\)"):
             find_closest_timestep(0.5, times, steps)
 
 

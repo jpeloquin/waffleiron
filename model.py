@@ -280,6 +280,9 @@ class Mesh:
         self.elements = elements
 
         # Initialize dictionaries to hold named entities
+        #
+        # TODO: Do we really need a NameRegistry?  Or can we just have a primary key
+        #  and a few translation tables?
         self.named = {
             "materials": NameRegistry(),
             "node sets": NameRegistry(),
