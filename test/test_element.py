@@ -390,16 +390,16 @@ def test_FEBio_F_Hex8(febio_cmd):
     srcpath = DIR_FIXTURES / "bar_explicit_rb_grip_twist_stretch.feb"
     bname = f"test_element.F_Hex8.{febio_cmd}"
     xml = wfl.input.read_febio_xml(srcpath)
-    xml.find("Output/logfile/element_data").attrib["file"] = f'{bname}_-_elem_data.txt'
-    xml.find("Output/logfile/rigid_body_data").attrib["file"] = f'{bname}_-_body_data.txt'
+    xml.find("Output/logfile/element_data").attrib["file"] = f"{bname}_-_elem_data.txt"
+    xml.find("Output/logfile/rigid_body_data").attrib[
+        "file"
+    ] = f"{bname}_-_body_data.txt"
     runpath = DIR_OUT / f"{bname}.feb"
     with open(runpath, "wb") as f:
         wfl.output.write_xml(xml, f)
     # small model, so multithreading does not help
     wfl.febio.run_febio_checked(runpath, cmd=febio_cmd, threads=1)
-    elemdata = wfl.input.textdata_list(
-        DIR_OUT / f"{bname}_-_elem_data.txt", delim=","
-    )
+    elemdata = wfl.input.textdata_list(DIR_OUT / f"{bname}_-_elem_data.txt", delim=",")
     # Check F tensor values
     model = wfl.load_model(runpath)
     istep = -1

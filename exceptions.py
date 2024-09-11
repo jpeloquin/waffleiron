@@ -22,8 +22,7 @@ class UnsupportedFormatError(ValueError):
 
     """
 
-    def __init__(self, msg, pth, form=None):
-        super(UnsupportedFormatError, self).__init__(msg)
+    def __init__(self, msg, pth, format_version=None):
+        super().__init__(msg)
         self.file_path = pth
-        self.file_format = form
-        self.message = msg
+        self.format_version = format_version

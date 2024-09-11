@@ -1,6 +1,8 @@
 # Base packages
 from collections import defaultdict
-from typing import Dict
+from typing import Dict, List, Tuple, Optional
+
+from numpy import ndarray
 
 # Same-package modules
 from .core import (
@@ -11,12 +13,14 @@ from .core import (
     ImplicitBody,
     Extrapolant,
     Interpolant,
+    ElementSet,
 )
-from .control import Dynamics, SaveIters
+from .control import Dynamics, SaveIters, Solver
 from .febioxml import *
+from .febioxml_2_5 import DYNAMICS_TO_XML, DYNAMICS_FROM_XML, read_elementdata_mat_axis
 
 # These parts work the same as in FEBio XML 2.5
-from .febioxml_2_5 import contact_bare_xml, meshdata_xml
+from .febioxml_2_5 import contact_bare_xml, xml_meshdata, xml_nodeset
 
 # Facts about FEBio XML 3.0
 
@@ -32,6 +36,7 @@ ELEMENTDATA_PARENT = "MeshData"
 NODEDATA_PARENT = "MeshData"
 ELEMENTSET_PARENT = "Mesh"
 NODESET_PARENT = "Mesh"
+SEQUENCE_PARENT = "LoadData"
 SURFACEPAIR_LEADER_NAME = "primary"
 SURFACEPAIR_FOLLOWER_NAME = "secondary"
 STEP_PARENT = "Step"
@@ -41,7 +46,9 @@ BC_TYPE_TAG: Dict[str, dict] = {
     "node": {"variable": "prescribe", "fixed": "fix"},
     "body": {
         ("variable", "displacement"): "prescribe",
+        ("variable", "rotation"): "prescribe",
         ("fixed", "displacement"): "fix",
+        ("fixed", "rotation"): "fix",
         ("variable", "force"): "force",
     },
 }
@@ -88,6 +95,7 @@ CONTROLLER_PARAMS = {
     "save_iters": OptParameter("Control/plot_level", SaveIters, SaveIters.MAJOR),
 }
 # Map of Solver fields → elements relative to <Step>
+SOLVER_PATH_IN_STEP = "Control/solver"
 SOLVER_PARAMS = {
     "dtol": OptParameter("Control/solver/dtol", to_number, 0.001),
     "etol": OptParameter("Control/solver/etol", to_number, 0.01),
@@ -95,14 +103,16 @@ SOLVER_PARAMS = {
     "lstol": OptParameter("Control/solver/lstol", to_number, 0.9),
     "ptol": OptParameter("Control/solver/ptol", to_number, 0.01),
     "min_residual": OptParameter("Control/solver/min_residual", to_number, 1e-20),
-    "update_method": OptParameter("Control/solver/qnmethod", str, "BFGS"),
     "reform_each_time_step": OptParameter(
-        "Control/solver/reform_each_time_step", text_to_bool, True
+        "Control/solver/reform_each_time_step", to_bool, True
     ),
-    "reform_on_diverge": OptParameter(
-        "Control/solver/diverge_reform", text_to_bool, True
-    ),
+    "reform_on_diverge": OptParameter("Control/solver/diverge_reform", to_bool, True),
     "max_refs": OptParameter("Control/solver/max_refs", int, 15),
+    "max_ups": OptParameter("Control/solver/max_ups", int, 10),
+}
+DEFAULT_UPDATE_METHOD = "BFGS"
+QNMETHOD_PATH_IN_STEP = "Control/solver/qnmethod"
+QNMETHOD_PARAMS = {
     "max_ups": OptParameter("Control/solver/max_ups", int, 10),
 }
 
@@ -201,52 +211,12 @@ def read_domains(root: etree.Element):
     return domains
 
 
-def apply_body_bc(model, e_rbc, explicit_bodies, implicit_bodies, step):
-    """Read & apply a <rigid_constraint> element
-
-    model := Model object.
-
-    e_rigid_body := The <rigid_constraint> XML element.
-
-    explicit_bodies := map of material ID → body.
-
-    implicit_bodies := map of material ID → body.
-
-    step := The step to which the rigid body boundary condition belongs.
-
-    """
-    # Each <rigid_body> element defines constraints for one rigid body,
-    # identified by its material ID.  Constraints may be fixed
-    # (atemporal) or time-varying (temporal).
-    #
-    # Get the Body object from the material id
-    mat_id = int(find_unique_tag(e_rbc, "rb").text) - 1
-    if mat_id in explicit_bodies:
-        body = explicit_bodies[mat_id]
-    else:
-        # Assume mat_id refers to an implicit rigid body
-        body = implicit_bodies[mat_id]
-    # Variable displacement case:
-    if e_rbc.attrib["type"] == BC_TYPE_TAG["body"][("variable", "displacement")]:
-        var = "displacement"
-        dof = DOF_FROM_XML_RB_DOF[find_unique_tag(e_rbc, "dof").text]
-        e_seq = find_unique_tag(e_rbc, "value")
-        seq = read_parameter(e_seq, model.named["sequences"]["ordinal_id"])
-        # Relative?
-        e_relative = find_unique_tag(e_rbc, "relative")
-        if e_relative is None:
-            relative = False
-        else:
-            relative = text_to_bool(e_relative.text)
-        model.apply_body_bc(body, dof, var, seq, relative=relative, step=step)
-    # Fixed displacement case:
-    elif e_rbc.attrib["type"] == BC_TYPE_TAG["body"][("fixed", "displacement")]:
-        xml_dofs = (s.strip() for s in find_unique_tag(e_rbc, "dofs").text.split(","))
-        for xml_dof in xml_dofs:
-            dof = DOF_FROM_XML_RB_DOF[xml_dof]
-            var = VAR_FROM_XML_RB_DOF[xml_dof]
-            model.fixed["body"][(dof, var)].add(body)
-    # TODO: variable force
+def read_nodeset(e_nodeset):
+    """Return list of node IDs (zero-indexed) in <NodeSet>"""
+    items = [
+        ZeroIdxID(int(e_item.attrib["id"]) - 1) for e_item in e_nodeset.getchildren()
+    ]
+    return items
 
 
 def get_surface_name(surfacepair_subelement):
@@ -258,10 +228,6 @@ def get_surface_name(surfacepair_subelement):
 
     """
     return surfacepair_subelement.text
-
-
-def read_dynamics_element(e):
-    return Dynamics(e.text.lower())
 
 
 def read_fixed_node_bcs(root: etree.Element, model):
@@ -295,7 +261,67 @@ def read_fixed_node_bcs(root: etree.Element, model):
     return bcs
 
 
-def parse_rigid_interface(e_bc):
+def read_body_bcs(
+    root, explicit_bodies, implicit_bodies, sequences
+) -> List[BodyConstraint]:
+    """Return list of rigid body constraints from FEBio XML 4.0"""
+    body_constraints = []
+    for e_rbc in root.findall(f"{BODY_COND_PARENT}/{BODY_COND_NAME}"):
+        body_constraints += read_body_bc(
+            e_rbc, explicit_bodies, implicit_bodies, sequences
+        )
+    return body_constraints
+
+
+def read_body_bc(
+    e_rigid_bc,
+    explicit_bodies: Dict[int, Body],
+    implicit_bodies: Dict[int, ImplicitBody],
+    sequences: Dict[int, Sequence],
+) -> List[BodyConstraint]:
+    """Return structured data for <rigid_bc>
+
+    Returns a list because a <rigid_bc> element can store more than one DoF.
+
+    """
+    # Each <rigid_body> element defines constraints for one rigid body, identified by
+    # its material ID.  Constraints may be fixed (constant) or time-varying ( variable).
+    constraints = []
+
+    # Get the Body object from the material id
+    mat_id = int(find_unique_tag(e_rigid_bc, "rb").text) - 1
+    if mat_id in explicit_bodies:
+        body = explicit_bodies[mat_id]
+    else:
+        # Assume mat_id refers to an implicit rigid body
+        body = implicit_bodies[mat_id]
+    # Variable displacement (and rotation)
+    if e_rigid_bc.attrib["type"] == "prescribe":
+        var = "displacement"
+        dof = DOF_FROM_XML_RB_DOF[find_unique_tag(e_rigid_bc, "dof").text]
+        e_seq = find_unique_tag(e_rigid_bc, "value")
+        seq = read_parameter(e_seq, sequences)
+        # Is the displacement relative?
+        e_relative = find_unique_tag(e_rigid_bc, "relative")
+        if e_relative is None:
+            is_relative = False
+        else:
+            is_relative = to_bool(e_relative.text)
+        constraints.append(BodyConstraint(body, dof, var, False, seq, is_relative))
+    # Fixed displacement (and rotation)
+    elif e_rigid_bc.attrib["type"] == "fix":
+        xml_dofs = (
+            s.strip() for s in find_unique_tag(e_rigid_bc, "dofs").text.split(",")
+        )
+        for xml_dof in xml_dofs:
+            dof = DOF_FROM_XML_RB_DOF[xml_dof]
+            var = VAR_FROM_XML_RB_DOF[xml_dof]
+            constraints.append(BodyConstraint(body, dof, var, True, None, None))
+    # TODO: variable force
+    return constraints
+
+
+def read_rigid_interface(e_bc):
     """Parse a <bc type="rigid"> element"""
     nodeset_name = e_bc.attrib["node_set"]
     e_rb = find_unique_tag(e_bc, "rb")
@@ -303,7 +329,7 @@ def parse_rigid_interface(e_bc):
     return nodeset_name, mat_id
 
 
-def sequences(root: etree.Element) -> Dict[int, Sequence]:
+def read_sequences(root: etree.Element) -> Dict[int, Sequence]:
     """Return dictionary of sequence ID → sequence from FEBio XML 3.0"""
     sequences = {}
     for ord_id, e_lc in enumerate(root.findall("LoadData/load_controller")):
@@ -335,10 +361,27 @@ def sequences(root: etree.Element) -> Dict[int, Sequence]:
     return sequences
 
 
-# Functions for writing FEBio XML 3.0
+def read_dynamics(e):
+    return DYNAMICS_FROM_XML[e.text.lower()]
 
 
-def body_constraints_xml(
+def read_solver(step_xml):
+    """Return Solver instance from <Step> XML"""
+    solver_kwargs = read_parameters(step_xml, SOLVER_PARAMS)
+    return Solver(**solver_kwargs)
+
+
+######################################################
+# Functions to create XML elements for FEBio XML 3.0 #
+######################################################
+
+# Each of these functions should return one or more XML elements.  As much as possible,
+# their arguments should be data, not a `Model`, the whole XML tree, or other
+# specialized objects.  Even use of name registries should minimized in favor of simple
+# dictionaries when possible.
+
+
+def xml_body_constraints(
     body, constraints: dict, material_registry, implicit_rb_mats, sequence_registry
 ):
     """Return <rigid_constraint> element(s) for body's constraints.
@@ -347,21 +390,16 @@ def body_constraints_xml(
 
     """
     elems = []
-    mat_id = body_mat_id(body, material_registry, implicit_rb_mats)
+    mat_id, _ = body_mat_id(body, material_registry, implicit_rb_mats)
     # Can't put fixed and variable constraints in the same
-    # <rigid_constraint> element, so first we have to group the
-    # constraints by kind
-    fixed_constraints = []
-    variable_constraints = []
-    for dof, bc in constraints.items():
-        if bc["sequence"] == "fixed":
-            fixed_constraints.append((dof, bc))
-        else:  # bc['sequence'] is Sequence
-            variable_constraints.append((dof, bc))
+    # <rigid_constraint> element
+    fixed_constraints, variable_constraints = group_constraints_fixed_variable(
+        constraints
+    )
     # Create <rigid_constraint> element for fixed constraints
     if fixed_constraints:
         e_rb_fixed = etree.Element(BODY_COND_NAME)
-        e_rb_fixed.attrib["type"] = BC_TYPE_TAG["body"][("fixed", "displacement")]
+        e_rb_fixed.attrib["type"] = "fix"
         etree.SubElement(e_rb_fixed, "rb").text = str(mat_id + 1)
         etree.SubElement(e_rb_fixed, "dofs").text = ",".join(
             XML_RB_DOF_FROM_DOF[dof] for dof, _ in fixed_constraints
@@ -399,9 +437,6 @@ def body_constraints_xml(
             )
         elems.append(e_rb)
     return elems
-
-
-# contact_bare_xml is provided by febioxml_2_5
 
 
 def mesh_xml(model, domains, material_registry):
@@ -460,7 +495,7 @@ def node_data_xml(nodes, data, data_name, nodeset_name):
     return e_NodeData
 
 
-def node_fix_disp_xml(fixed_conditions, nodeset_registry):
+def xml_node_fixed_bcs(fixed_conditions, nodeset_registry):
     """Return XML elements for node fixed displacement conditions.
 
     fixed_conditions := The data structure in model.fixed["node"]
@@ -470,33 +505,30 @@ def node_fix_disp_xml(fixed_conditions, nodeset_registry):
     nodesets to the tree.
 
     """
-    # Tag hierarchy: <Boundary><bc type="fix" node_set="set_name">
+    # <Boundary><bc type="fix" node_set="set_name">
+
     e_bcs = []
-    # FEBio XML 3.0 stores the nodal BCs by node set, so we need to do
-    # some collation first.
-    by_nodeset = defaultdict(list)
-    for dofvar, nodeset in fixed_conditions.items():
-        if not nodeset:
-            continue
-        nodeset = NodeSet(nodeset)
-        by_nodeset[nodeset].append(dofvar)
-    for nodeset, dofvar_pairs in by_nodeset.items():
+    # FEBio XML 3.0 stores the nodal BCs by node set
+    by_nodeset = bcs_by_nodeset_and_var(fixed_conditions)
+    for nodeset, dofs_by_var in by_nodeset.items():
         # Get or create a name for the node set
-        base = f"fixed_nodes_{','.join(dof for dof, var in dofvar_pairs)}_auto"
-        nodeset_name = nodeset_registry.get_or_create_name(base, nodeset)
-        # Create element
-        e_bc = etree.Element(
-            "bc", type=BC_TYPE_TAG["node"]["fixed"], node_set=nodeset_name
+        nodeset_name = "fixed_" + "_".join(
+            [f"{'_'.join(dofs)}_{var}" for var, dofs in dofs_by_var.items()]
         )
-        txt = ",".join(XML_BC_FROM_DOF[t] for t in dofvar_pairs)
-        e_dofs = etree.SubElement(e_bc, "dofs").text = txt
-        e_bcs.append(e_bc)
+        # Name may be modified for disambiguation
+        nodeset_name = nodeset_registry.get_or_create_name(nodeset_name, nodeset)
+        for var, dofs in dofs_by_var.items():
+            # Create element
+            e_bc = etree.Element(
+                "bc", type=BC_TYPE_TAG["node"]["fixed"], node_set=nodeset_name
+            )
+            txt = ",".join(XML_BC_FROM_DOF[(dof, var)] for dof in dofs)
+            etree.SubElement(e_bc, "dofs").text = txt
+            e_bcs.append(e_bc)
     return e_bcs
 
 
-def node_var_disp_xml(
-    model, xmlroot, nodes, scales, seq, dof, var, relative, step_name
-):
+def xml_node_var_bc(model, xmlroot, nodes, scales, seq, dof, var, relative, step_name):
     """Return XML elements for nodes variable displacement
 
     model := Model object.  Needed for the name registry.
@@ -584,7 +616,36 @@ def step_xml_factory():
         yield e
 
 
-def write_dynamics_element(dynamics: Dynamics):
-    e = etree.Element("analysis")
-    e.text = dynamics.value
+def xml_rigid_nodeset_bc(name: str, material_name: str = None, material_id: int = None):
+    """Return XML element for a rigid node set (implicit rigid body)
+
+    :param name: Name of node set to be treated as rigid.
+
+    :param material_name: Name of rigid material corresponding to this rigid node set.
+    Not needed in FEBio XML 3.0; included only for call signature compatibility.
+
+    :param material_id: Ordinal ID (in FEBio XML; 1-indexed) of rigid material
+    corresponding to this rigid node set.
+
+    """
+    if material_id is None:
+        raise ValueError("Must provide material_id.")
+    e = etree.Element("bc")
+    e.attrib["type"] = "rigid"
+    e.attrib["node_set"] = name
+    etree.SubElement(e, "rb").text = str(material_id)
     return e
+
+
+def xml_dynamics(dynamics: Dynamics, physics):
+    """Return <analysis> element"""
+    e = etree.Element("analysis")
+    e.text = DYNAMICS_TO_XML[(physics, dynamics)]
+    return e
+
+
+def xml_qnmethod(solver):
+    """Convert Solver.update_method to XML"""
+    conv = {"BFGS": "0", "Broyden": "1", "Newton": "0"}
+    # ^ you only actually get Newton iterations if max_ups = 0
+    return const_property_to_xml(conv[solver.update_method], "qnmethod")

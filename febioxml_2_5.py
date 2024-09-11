@@ -1,9 +1,10 @@
 # Base packages
 from collections import defaultdict
-from typing import Dict
+from typing import Dict, List, Optional, Tuple
 
 # Public packages
-from lxml import etree as ET
+from lxml import etree
+from numpy import ndarray
 
 # Same-package modules
 from .core import (
@@ -15,10 +16,37 @@ from .core import (
     Extrapolant,
     Body,
     ImplicitBody,
+    ScaledSequence,
+    ElementSet,
 )
-from .control import Dynamics, SaveIters
-from .febioxml import *
-
+from .control import Dynamics, SaveIters, Solver, Physics
+from .febioxml import (
+    CONTACT_PARAMS,
+    ReqParameter,
+    OptParameter,
+    to_number,
+    to_bool,
+    DOF_NAME_FROM_XML_NODE_BC,
+    VAR_FROM_XML_NODE_BC,
+    find_unique_tag,
+    EXTRAP_FROM_XML_EXTRAP,
+    read_point,
+    INTERP_FROM_XML_INTERP,
+    read_parameter,
+    body_mat_id,
+    get_or_create_seq_id,
+    XML_BC_FROM_DOF,
+    CONTACT_NAME_FROM_CLASS,
+    vec_to_text,
+    bvec_to_text,
+    read_parameters,
+    float_to_text,
+    XML_INTERP_FROM_INTERP,
+    XML_EXTRAP_FROM_EXTRAP,
+    const_property_to_xml,
+    BodyConstraint,
+    read_mat_axis_xml,
+)
 
 # Facts about FEBio XML 2.5
 
@@ -33,6 +61,7 @@ MESH_PARENT = "Geometry"
 ELEMENTDATA_PARENT = "MeshData"
 NODEDATA_PARENT = "MeshData"
 ELEMENTSET_PARENT = "Geometry"
+SEQUENCE_PARENT = "LoadData"
 STEP_PARENT = "."
 STEP_NAME = "Step"
 SURFACEPAIR_LEADER_NAME = "master"
@@ -42,6 +71,16 @@ BC_TYPE_TAG = {
     "node": {"variable": "prescribe", "fixed": "fix"},
     "body": {"variable": "prescribed", "fixed": "fixed"},
 }
+
+DYNAMICS_TO_XML = {
+    (Physics.SOLID, Dynamics.STATIC): "static",
+    (Physics.SOLID, Dynamics.DYNAMIC): "dynamic",
+    (Physics.BIPHASIC, Dynamics.STATIC): "steady-state",
+    (Physics.BIPHASIC, Dynamics.DYNAMIC): "transient",
+    (Physics.MULTIPHASIC, Dynamics.STATIC): "steady-state",
+    (Physics.MULTIPHASIC, Dynamics.DYNAMIC): "transient",
+}
+DYNAMICS_FROM_XML = {txt: dyn for (phys, dyn), txt in DYNAMICS_TO_XML.items()}
 
 # Map of Ticker fields → elements relative to <Step>
 TICKER_PARAMS = {
@@ -61,6 +100,7 @@ CONTROLLER_PARAMS = {
     "save_iters": OptParameter("Control/plot_level", SaveIters, SaveIters.MAJOR),
 }
 # Map of Solver fields → elements relative to <Step>
+SOLVER_PATH_IN_STEP = "Control"
 SOLVER_PARAMS = {
     "dtol": OptParameter("Control/dtol", to_number, 0.001),
     "etol": OptParameter("Control/etol", to_number, 0.01),
@@ -68,13 +108,17 @@ SOLVER_PARAMS = {
     "lstol": OptParameter("Control/lstol", to_number, 0.9),
     "ptol": OptParameter("Control/ptol", to_number, 0.01),
     "min_residual": OptParameter("Control/min_residual", to_number, 1e-20),
-    "update_method": OptParameter("Control/qnmethod", str, "BFGS"),
     "reform_each_time_step": OptParameter(
-        "Control/reform_each_time_step", text_to_bool, True
+        "Control/reform_each_time_step", to_bool, True
     ),
-    "reform_on_diverge": OptParameter("Control/diverge_reform", text_to_bool, True),
+    "reform_on_diverge": OptParameter("Control/diverge_reform", to_bool, True),
     "max_refs": OptParameter("Control/max_refs", int, 15),
     "max_ups": OptParameter("Control/max_ups", int, 10),
+}
+DEFAULT_UPDATE_METHOD = "BFGS"
+QNMETHOD_PATH_IN_STEP = "Control/qnmethod"
+QNMETHOD_PARAMS = {
+    "max_ups": OptParameter("Control", int, 10),
 }
 
 
@@ -82,7 +126,7 @@ SOLVER_PARAMS = {
 
 
 def elem_var_fiber_xml(e):
-    tag = ET.Element("elem")
+    tag = etree.Element("elem")
     raise NotImplementedError
     # TODO: Implement this.  But it is not clear how the fiber direction
     # element property is supposed to be written in FEBio XML 2.5.
@@ -212,7 +256,33 @@ def read_domains(root: etree.Element):
     return domains
 
 
-def sequences(root: etree.Element) -> Dict[int, Sequence]:
+def read_nodeset(e_nodeset):
+    """Return list of node IDs (zero-indexed) in <NodeSet>"""
+    items = [
+        ZeroIdxID(int(e_item.attrib["id"]) - 1) for e_item in e_nodeset.getchildren()
+    ]
+    return items
+
+
+def read_elementdata_mat_axis(
+    tree_root, element_sets: Optional[Dict[str, ElementSet]] = None
+) -> Dict[str, Tuple[int, ndarray]]:
+    """Return a dictionary of all mat_axis data"""
+    data = defaultdict(list)
+    for e_edata in tree_root.findall(
+        f"{ELEMENTDATA_PARENT}/ElementData[@var='mat_axis']"
+    ):
+        name = e_edata.attrib["elem_set"]
+        if element_sets is not None and name not in element_sets:
+            raise ValueError(
+                f"{e_edata.base}:{e_edata.sourceline} <ElementData> references an element set named '{name}', which is not defined."
+            )
+        for e in e_edata.findall("elem"):
+            data[name].append(read_mat_axis_xml(e))
+    return data
+
+
+def read_sequences(root: etree.Element) -> Dict[int, Sequence]:
     """Return dictionary of sequence ID → sequence from FEBio XML 2.5"""
     sequences = {}
     for ord_id, e_lc in enumerate(root.findall("LoadData/loadcurve")):
@@ -237,8 +307,8 @@ def sequences(root: etree.Element) -> Dict[int, Sequence]:
     return sequences
 
 
-def read_dynamics_element(e):
-    return Dynamics(e.attrib["type"].lower())
+def read_dynamics(e):
+    return DYNAMICS_FROM_XML[e.attrib["type"].lower()]
 
 
 def read_fixed_node_bcs(root: etree.Element, model):
@@ -269,58 +339,83 @@ def read_fixed_node_bcs(root: etree.Element, model):
     return bcs
 
 
-def parse_rigid_interface(e_rigid):
+def read_body_bcs(
+    root, explicit_bodies, implicit_bodies, sequences
+) -> List[BodyConstraint]:
+    """Return list of rigid body constraints from FEBio XML 4.0"""
+    body_constraints = []
+    for e_rbc in root.findall(f"{BODY_COND_PARENT}/{BODY_COND_NAME}"):
+        body_constraints += read_body_bc(
+            e_rbc, explicit_bodies, implicit_bodies, sequences
+        )
+    return body_constraints
+
+
+def read_body_bc(
+    e_rigid_bc,
+    explicit_bodies: Dict[int, Body],
+    implicit_bodies: Dict[int, ImplicitBody],
+    sequences: Dict[int, Sequence],
+) -> List[BodyConstraint]:
+    """Return structured data for <rigid_bc>
+
+    Returns a list because a <rigid_bc> element can store more than one DoF.
+
+    """
+    # Each <rigid_body> element defines constraints for one rigid body, identified by
+    # its material ID.  Constraints may be fixed (constant) or time-varying ( variable).
+    constraints = []
+
+    # Get the Body object from the material id
+    mat_id = int(e_rigid_bc.attrib["mat"]) - 1
+    if mat_id in explicit_bodies:
+        body = explicit_bodies[mat_id]
+    else:
+        # Assume mat_id refers to an implicit rigid body
+        body = implicit_bodies[mat_id]
+    # Variable displacement (and rotation)
+    for e_dof in e_rigid_bc.findall(BC_TYPE_TAG["body"]["variable"]):
+        dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
+        var = VAR_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
+        seq = read_parameter(e_dof, sequences)
+        if e_dof.get("type", None) == "relative":
+            is_relative = True
+        else:
+            is_relative = False
+        constraints.append(BodyConstraint(body, dof, var, False, seq, is_relative))
+    # Fixed displacement (and rotation)
+    for e_dof in e_rigid_bc.findall(BC_TYPE_TAG["body"]["fixed"]):
+        dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
+        var = VAR_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
+        constraints.append(BodyConstraint(body, dof, var, True, None, None))
+    # TODO: variable force
+    return constraints
+
+
+def read_rigid_interface(e_rigid):
     """Parse a <rigid> element"""
     mat_id = int(e_rigid.attrib["rb"]) - 1
     nodeset_name = e_rigid.attrib["node_set"]
     return nodeset_name, mat_id
 
 
-def apply_body_bc(model, e_rigid_body, explicit_bodies, implicit_bodies, step):
-    """Read & apply a <rigid_body> element
-
-    model := Model object.
-
-    e_rigid_body := The <rigid_body> XML element.
-
-    explicit_bodies := map of material ID → body.
-
-    implicit_bodies := map of material ID → body.
-
-    step := The step to which the rigid body boundary condition belongs.
-
-    """
-    # Each <rigid_body> element defines constraints for one rigid body,
-    # identified by its material ID.  Constraints may be fixed
-    # (atemporal) or time-varying (temporal).
-    #
-    # Get the Body object from the material id
-    mat_id = int(e_rigid_body.attrib["mat"]) - 1
-    if mat_id in explicit_bodies:
-        body = explicit_bodies[mat_id]
-    else:
-        # Assume mat_id refers to an implicit rigid body
-        body = implicit_bodies[mat_id]
-    # Read the body's constraints
-    for e_dof in e_rigid_body.findall(BC_TYPE_TAG["body"]["fixed"]):
-        dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
-        var = VAR_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
-        model.fixed["body"][(dof, var)].add(body)
-    for e_dof in e_rigid_body.findall(BC_TYPE_TAG["body"]["variable"]):
-        dof = DOF_NAME_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
-        var = VAR_FROM_XML_NODE_BC[e_dof.attrib["bc"]]
-        seq = read_parameter(e_dof, model.named["sequences"]["ordinal_id"])
-        if e_dof.get("type", None) == "relative":
-            relative = True
-        else:
-            relative = False
-        model.apply_body_bc(body, dof, var, seq, relative=relative, step=step)
+def read_solver(step_xml):
+    """Return Solver instance from <Step> XML"""
+    solver_kwargs = read_parameters(step_xml, SOLVER_PARAMS)
+    return Solver(**solver_kwargs)
 
 
-# Functions for writing XML 2.5
+######################################################
+# Functions to create XML elements for FEBio XML 2.5 #
+######################################################
+
+# Each of these functions should return one or more XML elements.  As much as possible,
+# their arguments should be data, not a `Model`, the whole XML tree, or other
+# specialized objects.  Even use of name registries should minimized in favor of simple
+# dictionaries when possible.
 
 
-def body_constraints_xml(
+def xml_body_constraints(
     body, constraints: dict, material_registry, implicit_rb_mats, sequence_registry
 ):
     """Return <rigid_body> element for a body's constraints.
@@ -328,8 +423,8 @@ def body_constraints_xml(
     The constrained variable can be displacement or rotation.
 
     """
-    mat_id = body_mat_id(body, material_registry, implicit_rb_mats)
-    e_rb_bc = ET.Element("rigid_body", mat=str(mat_id + 1))
+    mat_id, _ = body_mat_id(body, material_registry, implicit_rb_mats)
+    e_rb_bc = etree.Element("rigid_body", mat=str(mat_id + 1))
     for dof, bc in constraints.items():
         if bc["sequence"] == "fixed":
             kind = "fixed"
@@ -352,7 +447,7 @@ def body_constraints_xml(
         else:
             raise ValueError(f"Variable {bc['variable']} not supported for BCs.")
         bc_attr = XML_BC_FROM_DOF[(dof, bc["variable"])]
-        e_bc = ET.SubElement(e_rb_bc, tagname, bc=bc_attr)
+        e_bc = etree.SubElement(e_rb_bc, tagname, bc=bc_attr)
         if kind == "variable":
             seq_id = get_or_create_seq_id(sequence_registry, seq)
             e_bc.attrib["lc"] = str(seq_id + 1)
@@ -370,7 +465,7 @@ def contact_bare_xml(contact, model, named_surface_pairs, contact_name=None):
 
     """
     contact_tag = CONTACT_NAME_FROM_CLASS[contact.__class__]
-    e_contact = ET.Element("contact", type=contact_tag)
+    e_contact = etree.Element("contact", type=contact_tag)
     # Contact name
     if contact_name is not None:
         e_contact.attrib["name"] = str(contact_name)
@@ -401,30 +496,30 @@ def mesh_xml(model, domains, material_registry):
     two XML elements.
 
     """
-    e_geometry = ET.Element(MESH_PARENT)
+    e_geometry = etree.Element(MESH_PARENT)
     # Write <nodes>
-    e_nodes = ET.SubElement(e_geometry, "Nodes")
+    e_nodes = etree.SubElement(e_geometry, "Nodes")
     for i, x in enumerate(model.mesh.nodes):
         feb_nid = i + 1  # 1-indexed
-        e = ET.SubElement(e_nodes, "node", id="{}".format(feb_nid))
+        e = etree.SubElement(e_nodes, "node", id="{}".format(feb_nid))
         e.text = vec_to_text(x)
         e_nodes.append(e)
     # Write <Elements> for each domain
     for i, domain in enumerate(domains):
         if domain["material"] is None:
             raise ValueError("Some elements have no material assigned.")
-        e_elements = ET.SubElement(e_geometry, "Elements", name=f"Domain{i+1}")
+        e_elements = etree.SubElement(e_geometry, "Elements", name=f"Domain{i + 1}")
         e_elements.attrib["type"] = domain["element_type"].feb_name
         mat_id = material_registry.names(domain["material"], "ordinal_id")[0]
         e_elements.attrib["mat"] = str(mat_id + 1)
         for i, e in domain["elements"]:
-            e_element = ET.SubElement(e_elements, "elem")
+            e_element = etree.SubElement(e_elements, "elem")
             e_element.attrib["id"] = str(i + 1)
             e_element.text = ", ".join(str(i + 1) for i in e.ids)
     return (e_geometry,)
 
 
-def meshdata_xml(model):
+def xml_meshdata(model):
     """Return <ElementData> and <ElementSet> XML elements
 
     Currently this function only generates the part of the MeshData
@@ -433,21 +528,21 @@ def meshdata_xml(model):
     """
     e_meshdata = []
     e_elemsets = []
-    e_edata_mat_axis = ET.Element(
+    e_edata_mat_axis = etree.Element(
         "ElementData", var="mat_axis", elem_set="autogen-mat_axis"
     )
-    e_elemset_mat_axis = ET.Element("ElementSet", name="autogen-mat_axis")
+    e_elemset_mat_axis = etree.Element("ElementSet", name="autogen-mat_axis")
     i_elemset = 0
     # ^ index into the extra element set we're forced to construct
     for i, e in enumerate(model.mesh.elements):
         # Write local basis if defined
         if e.basis is not None:
-            e_elem = ET.SubElement(e_edata_mat_axis, "elem", lid=str(i_elemset + 1))
-            e_elem.append(ET.Comment(f"Element {i + 1}"))
+            e_elem = etree.SubElement(e_edata_mat_axis, "elem", lid=str(i_elemset + 1))
+            e_elem.append(etree.Comment(f"Element {i + 1}"))
             i_elemset += 1
-            ET.SubElement(e_elem, "a").text = bvec_to_text(e.basis[:, 0])
-            ET.SubElement(e_elem, "d").text = bvec_to_text(e.basis[:, 1])
-            ET.SubElement(e_elemset_mat_axis, "elem", id=str(i + 1))
+            etree.SubElement(e_elem, "a").text = bvec_to_text(e.basis[:, 0])
+            etree.SubElement(e_elem, "d").text = bvec_to_text(e.basis[:, 1])
+            etree.SubElement(e_elemset_mat_axis, "elem", id=str(i + 1))
     if len(e_edata_mat_axis) != 0:
         e_meshdata.append(e_edata_mat_axis)
         e_elemsets.append(e_elemset_mat_axis)
@@ -456,7 +551,7 @@ def meshdata_xml(model):
 
 def node_data_xml(nodes, data, data_name, nodeset_name):
     """Construct NodeData XML element"""
-    e_NodeData = ET.Element("NodeData")
+    e_NodeData = etree.Element("NodeData")
     e_NodeData.attrib["name"] = data_name
     e_NodeData.attrib["node_set"] = nodeset_name
     # Write NodeData/node elements.  To specify a node, FEBio XML, for
@@ -467,7 +562,7 @@ def node_data_xml(nodes, data, data_name, nodeset_name):
     # order of node ID.
     lid_from_node_id = {node_id: i + 1 for i, node_id in enumerate(sorted(nodes))}
     for i, v in zip(nodes, data):
-        ET.SubElement(
+        etree.SubElement(
             e_NodeData,
             "node",
             lid=str(lid_from_node_id[i]),
@@ -475,7 +570,7 @@ def node_data_xml(nodes, data, data_name, nodeset_name):
     return e_NodeData
 
 
-def node_fix_disp_xml(fixed_conditions, nodeset_registry):
+def xml_node_fixed_bcs(fixed_conditions, nodeset_registry):
     """Return XML elements for node fixed displacement conditions.
 
     fixed_conditions := The data structure in model.fixed["node"]
@@ -494,16 +589,14 @@ def node_fix_disp_xml(fixed_conditions, nodeset_registry):
         base = f"fixed_{dof}_autogen-nodeset"
         name = nodeset_registry.get_or_create_name(base, nodeset)
         # Create the tag
-        e_bc = ET.Element(
+        e_bc = etree.Element(
             BC_TYPE_TAG["node"]["fixed"], bc=XML_BC_FROM_DOF[(dof, var)], node_set=name
         )
         e_bcs.append(e_bc)
     return e_bcs
 
 
-def node_var_disp_xml(
-    model, xmlroot, nodes, scales, seq, dof, var, relative, step_name
-):
+def xml_node_var_bc(model, xmlroot, nodes, scales, seq, dof, var, relative, step_name):
     """Return XML elements for nodal variable displacement
 
     model := Model object.  Needed for the name registry.
@@ -512,9 +605,11 @@ def node_var_disp_xml(
 
     """
     # Hierarchy: <Boundary><prescribe node_set="set_name">
-    e_bc = ET.Element(BC_TYPE_TAG["node"]["variable"], bc=XML_BC_FROM_DOF[(dof, var)])
+    e_bc = etree.Element(
+        BC_TYPE_TAG["node"]["variable"], bc=XML_BC_FROM_DOF[(dof, var)]
+    )
     seq_id = get_or_create_seq_id(model.named["sequences"], seq)
-    e_sc = ET.SubElement(e_bc, "scale", lc=str(seq_id + 1))
+    e_sc = etree.SubElement(e_bc, "scale", lc=str(seq_id + 1))
     e_sc.text = "1.0"
     # Get or create a name for the node set
     nm_base = "nodal_bc_" f"step={step_name}_var={var[0]}_seq={seq_id}_autogen"
@@ -533,9 +628,9 @@ def node_var_disp_xml(
     # Create the <NodeData> element
     e_NodeData = node_data_xml(nodes, scales, data_name, nodeset_name)
     # Reference the node-specific boundary condition scaling factors
-    ET.SubElement(e_bc, "value", node_data=data_name)
+    etree.SubElement(e_bc, "value", node_data=data_name)
     # Other attributes
-    ET.SubElement(e_bc, "relative").text = str(int(relative))
+    etree.SubElement(e_bc, "relative").text = str(int(relative))
     return e_bc, e_NodeData
 
 
@@ -552,26 +647,26 @@ def sequence_xml(sequence: Sequence, sequence_id: int, t0=0.0):
     writing them to XML.  The intended use for this is to translate from global to
 
     """
-    e_loadcurve = ET.Element(
+    e_loadcurve = etree.Element(
         "loadcurve",
         id=str(sequence_id + 1),
         type=XML_INTERP_FROM_INTERP[sequence.interpolant],
         extend=XML_EXTRAP_FROM_EXTRAP[sequence.extrapolant],
     )
     for pt in sequence.points:
-        ET.SubElement(e_loadcurve, "point").text = f"{pt[0] + t0}, {pt[1]}"
+        etree.SubElement(e_loadcurve, "point").text = f"{pt[0] + t0}, {pt[1]}"
     return e_loadcurve
 
 
 def surface_pair_xml(faceset_registry, primary, secondary, name):
     """Return SurfacePair XML element."""
-    e_surfpair = ET.Element("SurfacePair", name=name)
-    ET.SubElement(
+    e_surfpair = etree.Element("SurfacePair", name=name)
+    etree.SubElement(
         e_surfpair,
         "master",
         surface=faceset_registry.names(primary)[0],
     )
-    ET.SubElement(
+    etree.SubElement(
         e_surfpair,
         "slave",
         surface=faceset_registry.names(secondary)[0],
@@ -579,7 +674,46 @@ def surface_pair_xml(faceset_registry, primary, secondary, name):
     return e_surfpair
 
 
-def write_dynamics_element(dynamics: Dynamics):
-    e = etree.Element("analysis")
-    e.attrib["type"] = dynamics.value
+def xml_nodeset(nodes, name):
+    """Return XML element for a (named) node set"""
+    e = etree.Element("NodeSet", name=name)
+    # Sort nodes to be user-friendly (humans often read .feb files) and, more
+    # importantly, so that local IDs in NodeData elements (FEBio XML 2.5) or mesh_data
+    # elements (FEBio XML 3.0) have a stable relationship with actual node IDs.
+    for node_id in sorted(nodes):
+        etree.SubElement(e, "node", id=str(node_id + 1))
     return e
+
+
+def xml_rigid_nodeset_bc(name: str, material_name: str = None, material_id: int = None):
+    """Return XML element for a rigid node set (implicit rigid body)
+
+    :param name: Name of node set to be treated as rigid.
+
+    :param material_name: Name of rigid material corresponding to this rigid node set.
+    Not needed in FEBio XML 2.5; included only for call signature compatibility.
+
+    :param material_id: Ordinal ID (in FEBio XML; 1-indexed) of rigid material
+    corresponding to this rigid node set.
+
+    """
+    if material_id is None:
+        raise ValueError("Must provide material_id.")
+    e = etree.Element(IMPBODY_NAME)
+    e.attrib["rb"] = str(material_id)
+    e.attrib["node_set"] = name
+    return e
+
+
+def xml_dynamics(dynamics: Dynamics, physics):
+    """Return <analysis> element"""
+    e = etree.Element("analysis")
+    e.attrib["type"] = DYNAMICS_TO_XML[(physics, dynamics)]
+    return e
+
+
+def xml_qnmethod(solver):
+    """Convert Solver.update_method to XML"""
+    conv = {"BFGS": "0", "Broyden": "1", "Newton": "0"}
+    # ^ you only actually get Newton iterations if max_ups = 0
+    return const_property_to_xml(conv[solver.update_method], "qnmethod")

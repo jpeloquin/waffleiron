@@ -10,6 +10,7 @@ import numpy as np
 from numpy import array
 import pandas as pd
 from numpy.typing import NDArray
+from waffleiron import febioxml_4_0
 
 import waffleiron.element
 from waffleiron.exceptions import UnsupportedFormatError
@@ -63,7 +64,10 @@ from .febioxml import (
     read_parameters,
     OptParameter,
     ReqParameter,
-    text_to_bool,
+    to_bool,
+    BodyConstraint,
+    vector_from_text,
+    ids_from_text,
 )
 
 
@@ -73,10 +77,6 @@ def _nstrip(string):
         if c == "\x00":
             return string[:i]
     return string
-
-
-def _vec_from_text(s) -> tuple:
-    return tuple(to_number(x.strip()) for x in s.split(","))
 
 
 def read_contacts(root, named_face_sets, febioxml_module):
@@ -172,10 +172,7 @@ def read_named_sets(root: etree.Element, febioxml_module) -> Dict[str, Dict[str,
     # Handle items that are stored by id
     for k in ["node sets", "element sets"]:
         for e_set in root.findall(f"./{fx.MESH_PARENT}/{tag_name[k]}"):
-            items = [
-                ZeroIdxID(int(e_item.attrib["id"]) - 1)
-                for e_item in e_set.getchildren()
-            ]
+            items = fx.read_nodeset(e_set)
             sets[k][e_set.attrib["name"]] = items
     # Handle items that are stored as themselves
     for k in ["face sets"]:
@@ -212,12 +209,11 @@ def read_step(step_xml, model, physics, febioxml_module):
     # Dynamics
     e = find_unique_tag(step_xml, "Control/analysis")
     if e is not None:
-        dynamics = fx.read_dynamics_element(e)
+        dynamics = fx.read_dynamics(e)
     else:
         dynamics = Dynamics.STATIC
 
     ticker_kwargs = read_parameters(step_xml, fx.TICKER_PARAMS)
-    solver_kwargs = read_parameters(step_xml, fx.SOLVER_PARAMS)
     controller_kwargs = read_parameters(step_xml, fx.CONTROLLER_PARAMS)
     # Must points, and hence dtmax, take special handling
     e = find_unique_tag(step_xml, "Control/time_stepper/dtmax")
@@ -230,7 +226,7 @@ def read_step(step_xml, model, physics, febioxml_module):
         controller_kwargs["save_iters"] = SaveIters.MAJOR  # FEBio default
     ticker = Ticker(**ticker_kwargs)
     controller = IterController(**controller_kwargs)
-    solver = Solver(**solver_kwargs)
+    solver = fx.read_solver(step_xml)
     # update_method requires custom conversion
     update_method = {"0": "BFGS", "1": "Broyden", "BFGS": "BFGS", "BROYDEN": "Broyden"}
     if not solver.update_method in ("BFGS", "Broyden"):
@@ -247,7 +243,7 @@ def read_step(step_xml, model, physics, febioxml_module):
     return step, step_name
 
 
-def load_model(fpath, read_xplt=True):
+def load_model(fpath, read_xplt=True, fallback_to_xplt=False):
     """Loads a model (feb) and the solution (xplt) if it exists.
 
     :param read_xplt: If True (default), try to read the xplt file (if any) with the
@@ -274,13 +270,13 @@ def load_model(fpath, read_xplt=True):
         feb_ok = True
     except UnsupportedFormatError as err:
         # The .feb file is some unsupported version
-        msg = (
-            f"{err.message}.  Falling back to defining the model from the .xplt "
-            "file alone.  Values given only in the .feb file will not be "
-            "available."
-        )
-        warnings.warn(msg)
-        feb_ok = False
+        if fallback_to_xplt:
+            warnings.warn(
+                f"{err.message}.  Falling back to defining the model from the .xplt file alone.  Values given only in the .feb file will not be available."
+            )
+            feb_ok = False
+        else:
+            raise err
     # Attempt to read the xplt file, if it exists
     if read_xplt:
         if os.path.exists(fp_xplt):
@@ -303,6 +299,30 @@ def load_model(fpath, read_xplt=True):
             )
     model.name = fpath.stem
     return model
+
+
+def apply_body_bc(model: Model, step: Step, body_bcs: List[BodyConstraint]):
+    """Apply body constraints to model
+
+    :param model: Model to which to add the body constraints.
+
+    :param step: Step to which to add the body constraints.
+
+    :param body_bcs: List of body constraints to apply to the model.
+
+    """
+    for bc in body_bcs:
+        if bc.constant:
+            model.fixed["body"][(bc.dof, bc.variable)].add(bc.body)
+        else:
+            model.apply_body_bc(
+                bc.body,
+                bc.dof,
+                bc.variable,
+                bc.sequence,
+                relative=bc.relative,
+                step=step,
+            )
 
 
 def textdata_list(fpath, delim=" "):
@@ -405,7 +425,7 @@ def textdata_table(fpath, delim=" "):
 
 
 class FebReader:
-    """Read an FEBio xml file."""
+    """Read an FEBio XML file."""
 
     def __init__(self, file):
         """Read a file path as an FEBio xml file."""
@@ -425,17 +445,12 @@ class FebReader:
             msg = f"FEBio XML version {self.feb_version} is not supported by waffleiron"
             raise UnsupportedFormatError(msg, file, self.feb_version)
         # Get the correct FEBio XML module
-        version_major, version_minor = [int(a) for a in self.feb_version.split(".")]
-        if version_major == 2 and version_minor == 0:
-            self.febioxml_module = febioxml_2_0
-        elif version_major == 2 and version_minor == 5:
-            self.febioxml_module = febioxml_2_5
-        elif version_major == 3 and version_minor == 0:
-            self.febioxml_module = febioxml_3_0
-        else:
-            raise NotImplementedError(
-                f"Writing FEBio XML {version_major}.{version_minor} is not supported."
-            )
+        self.febioxml_module = {
+            "2.0": febioxml_2_0,
+            "2.5": febioxml_2_5,
+            "3.0": febioxml_3_0,
+            "4.0": febioxml_4_0,
+        }[self.feb_version]
         self._sequences = None  # memo for sequences()
 
     def materials(self):
@@ -465,7 +480,7 @@ class FebReader:
         """
         fx = self.febioxml_module
         if self._sequences is None:
-            self._sequences = fx.sequences(self.root)
+            self._sequences = fx.read_sequences(self.root)
         return self._sequences
 
     def model(self):
@@ -533,32 +548,16 @@ class FebReader:
                 model.mesh.elements[i].material = material
 
         # Element data: material axes
-        for e_edata in self.root.findall(
-            f"{fx.ELEMENTDATA_PARENT}/ElementData[@var='mat_axis']"
-        ):
-            try:
-                nm_eset = e_edata.attrib["elem_set"]
-            except KeyError:
-                raise ValueError(
-                    f"{e_edata.base}:{e_edata.sourceline} <ElementData> is missing its required 'elem_set' attribute."
-                )
-            elementsets = named_sets["element sets"]
-            try:
-                elementset = elementsets[nm_eset]
-            except KeyError:
-                raise ValueError(
-                    f"{e_edata.base}:{e_edata.sourceline} <ElementData> references an element set named '{nm_eset}', which is not defined."
-                )
-            for e in e_edata.findall("elem"):
-                a = _vec_from_text(e.find("a").text)
-                d = _vec_from_text(e.find("d").text)
-                basis = orthonormal_basis(a, d)
-                idx = ZeroIdxID(int(e.attrib["lid"]) - 1)
-                # ^ positional index in element set list
-                id_ = elementset[idx]
-                # Who thought this much indirection in a data file
-                # format was a good idea?
-                mesh.elements[id_].basis = basis
+        mat_axis_data = fx.read_elementdata_mat_axis(
+            self.root, named_sets["element sets"]
+        )
+        for eset_name, eset_data in mat_axis_data.items():
+            elementset = named_sets["element sets"][eset_name]
+            for local_id, basis in eset_data:
+                # local_id is the positional index in the element set list
+                element_idx = elementset[local_id]
+                # Who thought this much indirection in a data file was a good idea?
+                mesh.elements[element_idx].basis = basis
 
         # Find out what physics are used by the model.  This is a
         # required attribute in FEBio XML 3.0, both as documented and in
@@ -589,9 +588,8 @@ class FebReader:
             # Check if there are multiple <mat_axis type="local">
             # elements; we can't support more than one unless they are
             # all equal.
-            v = _vec_from_text(e_mcs_local[0].text)  # tuple
-            equal = (_vec_from_text(e.text) == v for e in e_mcs_local)
-            if not all(equal):
+            o_ids = ids_from_text(e_mcs_local[0].text)  # tuple
+            if not np.all([ids_from_text(e.text) == o_ids for e in e_mcs_local]):
                 msg = f'{e_mcs_local.base}:{e_mcs_local.sourceline} Multiple <mat_axis type="local"> elements with unequal values are present.  waffleiron does not support this case.'
                 raise ValueError(msg)
             # Convert the node ID encoded local basis to an explicit
@@ -604,7 +602,7 @@ class FebReader:
             for e_mcs in e_mcs_local:
                 mat_id = int(e_mcs.xpath("ancestor::material")[0].attrib["id"]) - 1
                 mat = materials_by_id[mat_id]
-                ids = _vec_from_text(e_mcs_local[0].text)  # 1-indexed
+                ids = ids_from_text(e_mcs_local[0].text)  # 1-indexed
                 for e in elements_by_mat[mat]:
                     e.basis = febioxml.basis_mat_axis_local(e, ids)
 
@@ -623,7 +621,10 @@ class FebReader:
                 elements = []
                 for i in domain["elements"]:
                     elements.append(model.mesh.elements[i])
-                explicit_bodies[mat_id] = Body(elements)
+                body = Body(elements)
+                explicit_bodies[mat_id] = body
+                # FEBio XML 4.0 uses names for rigid bodies
+                explicit_bodies[name] = Body(elements)
 
         # Read (1) implicit rigid bodies and (2) rigid body ↔ node set
         # rigid interfaces.
@@ -635,8 +636,16 @@ class FebReader:
             # represents a rigid interface.  Otherwise it represents an
             # rigid interface that interfaces with itself; i.e., an
             # implicit rigid body.
-            nodeset_name, mat_id = fx.parse_rigid_interface(e_impbod)
-            mat = model.named["materials"].obj(mat_id, nametype="ordinal_id")
+            nodeset_name, mat_identifier = fx.read_rigid_interface(e_impbod)
+            # TODO: Extract material resolution to a function if it needs to be used
+            #  in multiple places
+            if isinstance(mat_identifier, int):
+                mat = model.named["materials"].obj(
+                    mat_identifier, nametype="ordinal_id"
+                )
+            else:
+                mat = model.named["materials"].obj(mat_identifier, nametype="canonical")
+            mat_names = model.named["materials"].names(mat, "canonical")
             node_set = model.named["node sets"].obj(nodeset_name)
             if mat in materials_used:
                 # This <rigid> element represents an explicit rigid body
@@ -645,7 +654,11 @@ class FebReader:
                 model.constraints.append(rigid_interface)
             else:
                 # This <rigid> element represents an implicit rigid body
-                implicit_bodies[mat_id] = ImplicitBody(model.mesh, node_set, mat)
+                body = ImplicitBody(model.mesh, node_set, mat)
+                implicit_bodies[mat_id] = body
+                # FEBio XML 4.0 uses names for rigid bodies
+                for k in mat_names:
+                    implicit_bodies[k] = body
 
         # Read fixed boundary conditions. TODO: Support solutes
         #
@@ -660,19 +673,27 @@ class FebReader:
         # Read global constraints on rigid bodies.  Needs to come after
         # reading sequences, or the relevant sequences won't be in the
         # sequence registry.
-        for e_rb in self.root.findall(f"{fx.BODY_COND_PARENT}/{fx.BODY_COND_NAME}"):
-            fx.apply_body_bc(model, e_rb, explicit_bodies, implicit_bodies, step=None)
+        global_body_bcs = fx.read_body_bcs(
+            self.root,
+            explicit_bodies,
+            implicit_bodies,
+            model.named["sequences"]["ordinal_id"],
+        )
+        apply_body_bc(model, None, global_body_bcs)
 
         # Steps
         for e_step in self.root.findall(f"{fx.STEP_PARENT}/{fx.STEP_NAME}"):
             step, name = read_step(e_step, model, physics, self.febioxml_module)
             model.add_step(step, name)
-        # Rigid body boundary conditions
-        for e_step, (step, name) in zip(
-            self.root.findall(f"{fx.STEP_PARENT}/{fx.STEP_NAME}"), model.steps
-        ):
-            for e_rb in e_step.findall(f"{fx.BODY_COND_PARENT}/{fx.BODY_COND_NAME}"):
-                fx.apply_body_bc(model, e_rb, explicit_bodies, implicit_bodies, step)
+            # Rigid body constraints.  So far, the <Step> tree mirrors the global
+            # tree, so no need for version-specific code.
+            step_body_bcs = fx.read_body_bcs(
+                e_step,
+                explicit_bodies,
+                implicit_bodies,
+                model.named["sequences"]["ordinal_id"],
+            )
+            apply_body_bc(model, step, step_body_bcs)
         # Prescribed nodal conditions.  Has to go after steps are
         # created; otherwise there are no steps to which to attach the
         # applied conditions.

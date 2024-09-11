@@ -3,6 +3,7 @@ from collections import defaultdict
 from copy import copy
 from functools import singledispatch
 from datetime import datetime
+from pathlib import PurePath
 
 # Public packages
 from typing import BinaryIO
@@ -27,6 +28,7 @@ from . import febioxml
 from . import febioxml_2_0
 from . import febioxml_2_5
 from . import febioxml_3_0
+from . import febioxml_4_0
 from .febioxml import (
     CONTACT_NAME_FROM_CLASS,
     CONTACT_PARAMS,
@@ -41,6 +43,8 @@ from .febioxml import (
     property_to_xml,
     num_to_text,
     to_text,
+    list_domains,
+    physics_compat_by_mat,
 )
 
 # ^ The intent here is to eventually be able to switch between FEBio XML
@@ -299,13 +303,8 @@ def add_nodeset(xml_root, name, nodes, febioxml_module):
     e_Mesh = xml_root.find(fx.MESH_PARENT)
     for existing in xml_root.xpath(f"{fx.MESH_PARENT}/NodeSet[@name='{name}']"):
         existing.getparent().remove(existing)
-    e_nodeset = etree.SubElement(e_Mesh, "NodeSet", name=name)
-    # Sort nodes to be user-friendly (humans often read .feb files) and,
-    # more importantly, so that local IDs in NodeData elements (FEBio
-    # XML 2.5) or mesh_data elements (FEBio XML 3.0) have a stable
-    # relationship with actual node IDs.
-    for node_id in sorted(nodes):
-        etree.SubElement(e_nodeset, "node", id=str(node_id + 1))
+    e_nodeset = fx.xml_nodeset(nodes, name)
+    e_Mesh.append(e_nodeset)
 
 
 def sequence_time_offsets(model):
@@ -407,7 +406,9 @@ def step_xml(step, name, seq_registry, physics, febioxml_module):
     e_step = etree.Element(fx.STEP_NAME, name=name)
     e_control = etree.SubElement(e_step, "Control")
     # Dynamics
-    e_control.append(fx.write_dynamics_element(step.dynamics))
+    # TODO: In FEBio XML 4.0, "static" is elastic-only, and "steady-state"
+    #  is biphasic-only
+    e_control.append(fx.xml_dynamics(step.dynamics, physics))
     # Ticker
     for nm, p in fx.TICKER_PARAMS.items():
         parent = get_or_create_parent(e_step, p.path)
@@ -433,11 +434,13 @@ def step_xml(step, name, seq_registry, physics, febioxml_module):
         tag = p.path.split("/")[-1]
         if nm == "ptol" and not physics == Physics.BIPHASIC:
             continue
-        elif nm == "update_method":
-            e = fx.update_method_to_xml(getattr(step.solver, nm), tag)
         else:
             e = property_to_xml(getattr(step.solver, nm), tag, seq_registry)
         parent.append(e)
+    # Handle update method separately, because it has special formatting in some XML
+    # versions
+    e_parent = get_or_create_xml(e_step, PurePath(fx.QNMETHOD_PATH_IN_STEP).parent)
+    e_parent.append(fx.xml_qnmethod(step.solver))
     return e_step
 
 
@@ -494,6 +497,8 @@ def xml(model: Model, version="3.0"):
         fx = febioxml_2_5
     elif version_major == 3 and version_minor == 0:
         fx = febioxml_3_0
+    elif version_major == 4 and version_minor == 0:
+        fx = febioxml_4_0
     else:
         raise NotImplementedError(
             f"Writing FEBio XML {version_major}.{version_minor} is not supported."
@@ -514,22 +519,22 @@ def xml(model: Model, version="3.0"):
             checked_mat = mat.material
         else:
             checked_mat = mat
-        if type(checked_mat) in fx.physics_compat_by_mat:
-            if physics not in fx.physics_compat_by_mat[type(checked_mat)]:
+        if type(checked_mat) in physics_compat_by_mat:
+            if physics not in physics_compat_by_mat[type(checked_mat)]:
                 raise ValueError(
                     f"Material `{type(mat)}` is not listed as compatible with Module {physics}"
                 )
 
     e_Material = etree.SubElement(root, "Material")
 
-    domains = fx.domains(model)
+    domains = list_domains(model)
     for e in fx.mesh_xml(model, domains, material_registry):
         root.append(e)
 
     # Write MeshData.  Have to do this before handling boundary
     # conditions because some boundary conditions have part of their
     # values stored in MeshData.
-    e_meshdata, e_elemsets = fx.meshdata_xml(model)
+    e_meshdata, e_elemsets = fx.xml_meshdata(model)
     meshdata_parent = get_or_create_xml(root, fx.ELEMENTDATA_PARENT)
     for e in e_meshdata:
         meshdata_parent.append(e)
@@ -601,6 +606,7 @@ def xml(model: Model, version="3.0"):
         for body in step.bc["body"]:
             if isinstance(body, ImplicitBody):
                 implicit_bodies_to_process.add(body)
+
     # Create FEBio rigid materials for all implicit rigid bodies and add
     # their rigid interfaces with the mesh.  That the implicit material
     # is rigid is an assumption, but an implicit deformable material in
@@ -622,15 +628,14 @@ def xml(model: Model, version="3.0"):
         material_registry.add(mat_name, mat)
         material_registry.add(mat_id, mat, nametype="ordinal_id")
         implicit_rigid_material_by_body[implicit_body] = mat
-        #
-        # Add the implicit body's rigid interface with the mesh.
-        # Assumes interface is a node set.
+        # Add the implicit body's rigid interface with the mesh. Assumes interface is a
+        # node set.
         if version == "2.0":
             # FEBio XML 2.0 puts rigid bodies under §Constraints
             e_interface = etree.SubElement(e_Contact, "contact", type="rigid")
             for i in implicit_body.interface:
                 etree.SubElement(e_interface, "node", id=str(i + 1), rb=str(mat_id + 1))
-        elif (version_major == 2 and version_minor == 5) or version_major == 3:
+        else:
             # Get or create the nodeset
             try:
                 names = model.named["node sets"].names(implicit_body.interface)
@@ -642,22 +647,8 @@ def xml(model: Model, version="3.0"):
             add_nodeset(root, name, implicit_body.interface, febioxml_module=fx)
             # Add the rigid body interface to the XML
             e_parent = root.find(fx.IMPBODY_PARENT)
-            if version_major == 3:
-                # No simple way to create an XML element object from IMPBODY_NAME =
-                # "bc[@type='rigid']" (?).
-                e_child = etree.Element("bc")
-                e_child.attrib["type"] = "rigid"
-                e_child.attrib["node_set"] = name
-                etree.SubElement(e_child, "rb").text = str(mat_id + 1)
-            else:  # version == 2.5
-                e_child = etree.Element(fx.IMPBODY_NAME)
-                e_child.attrib["rb"] = str(mat_id + 1)
-                e_child.attrib["node_set"] = name
+            e_child = fx.xml_rigid_nodeset_bc(name, mat_name, mat_id + 1)
             e_parent.append(e_child)
-        else:
-            raise ValueError(
-                f"Implicit rigid body not (yet) supported for export to FEBio XML {version_major}.{version_minor}"
-            )
 
     # Write global constraints / conditions / BCs and anything that
     # goes in global <Boundary>
@@ -678,13 +669,13 @@ def xml(model: Model, version="3.0"):
     #
     # Write fixed nodal constraints to global <Boundary>
     e_boundary = root.find("Boundary")
-    for e in fx.node_fix_disp_xml(model.fixed["node"], model.named["node sets"]):
+    for e in fx.xml_node_fixed_bcs(model.fixed["node"], model.named["node sets"]):
         e_boundary.append(e)
     # TODO: Write time-varying nodal constraints to global <Boundary>
 
     # Write global (step-independent) fixed and variable body constraints to global
     # <Boundary> or <Rigid> sections.
-    e_rb_cond_parent = fx.get_or_create_xml(root, fx.BODY_COND_PARENT)
+    e_rb_cond_parent = get_or_create_xml(root, fx.BODY_COND_PARENT)
     # Group fixed rigid body conditions by body, since we'll need to
     # write an XML element for each body.
     body_bcs = defaultdict(dict)
@@ -699,7 +690,7 @@ def xml(model: Model, version="3.0"):
             body_bcs[body][dof] = condition
     # Create the body condition XML elements
     for body, constraints in body_bcs.items():
-        for e_body_cond in fx.body_constraints_xml(
+        for e_body_cond in fx.xml_body_constraints(
             body,
             constraints,
             material_registry,
@@ -789,7 +780,7 @@ def xml(model: Model, version="3.0"):
                         # ScaledSequence has no ID; only its underlying
                         # Sequence gets an ID).
                         node_ids, scales, rel = zip(*bc)
-                        e_bc, e_nodedata = fx.node_var_disp_xml(
+                        e_bc, e_nodedata = fx.xml_node_var_bc(
                             model,
                             root,
                             node_ids,
@@ -818,9 +809,9 @@ def xml(model: Model, version="3.0"):
         e_step.append(e_Contact)
 
         # Add rigid body conditions to <Step>
-        e_rb_cond_parent = fx.get_or_create_xml(e_step, fx.BODY_COND_PARENT)
+        e_rb_cond_parent = get_or_create_xml(e_step, fx.BODY_COND_PARENT)
         for body, constraints in step.bc["body"].items():
-            for e_body_cond in fx.body_constraints_xml(
+            for e_body_cond in fx.xml_body_constraints(
                 body,
                 constraints,
                 material_registry,

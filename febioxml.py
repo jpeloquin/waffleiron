@@ -1,7 +1,9 @@
+"""Helper functions for working with FEBio XML"""
+
 import warnings
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 import os
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Union
 import urllib.request
 
@@ -19,23 +21,51 @@ from .core import (
     ScaledSequence,
     Interpolant,
     Extrapolant,
+    NodeSet,
+    ZeroIdxID,
 )
 from .control import Physics
 from .element import Hex27, Quad4, Tri3, Hex8, Penta6, Element
 from . import material as matlib
 from .math import orthonormal_basis, vec_from_sph
 
-# Helper classes
+# Globals (see also end of file)
 
+SUPPORTED_FEBIO_XML_VERS = ("2.0", "2.5", "3.0", "4.0")
+
+##################
+# Helper classes #
+##################
+
+
+class VerbatimXMLMaterial:
+    """Store FEBio XML for a material that is not yet implemented
+
+    A future enhancement would be to make the object aware of sequences that were used
+    to define time-varying material parameters, and renumber them as appropriately
+    during export.
+
+    """
+
+    def __init__(self, xml: Union[str, etree.ElementTree]):
+        if isinstance(xml, str):
+            xml = etree.fromstring(xml)
+        self.xml = xml
+
+
+BodyConstraint = namedtuple(
+    "BodyConstraint",
+    ["body", "dof", "variable", "constant", "sequence", "relative"],
+    defaults=[None, None],
+)
 OptParameter = namedtuple("OptParameter", ["path", "fun", "default"])
 ReqParameter = namedtuple("ReqParameter", ["path", "fun"])
-
 
 # Functions for traversing a Model in a way that facilitates XML read
 # or write.
 
 
-def domains(model):
+def list_domains(model):
     """Return list of domains.
 
     Here, a domain is defined as the collection of all elements of the
@@ -71,7 +101,70 @@ def domains(model):
     return domains
 
 
-# Functions for reading FEBio XML
+def bcs_by_nodeset_and_var(fixed_conditions: dict):
+    """Return BCs collated by node set name
+
+    Meant to be used with Model.fixed["node"].  Might be useful in other situations.
+
+    """
+    by_nodeset = defaultdict(lambda: defaultdict(list))
+    for (dof, var), nodeset in fixed_conditions.items():
+        # Skip empty node sets
+        if not nodeset:
+            continue
+        nodeset = NodeSet(nodeset)
+        by_nodeset[nodeset][var].append(dof)
+    return by_nodeset
+
+
+def group_constraints_fixed_variable(constraints):
+    fixed_constraints = []
+    variable_constraints = []
+    for dof, bc in constraints.items():
+        if bc["sequence"] == "fixed":
+            fixed_constraints.append((dof, bc))
+        else:  # bc['sequence'] is Sequence
+            variable_constraints.append((dof, bc))
+    return fixed_constraints, variable_constraints
+
+
+###################################
+# Functions for reading FEBio XML #
+###################################
+
+
+def to_bool(s: str) -> bool:
+    """Convert string to boolean"""
+    if not s in ("0", "1"):
+        raise ValueError(
+            f"Cannot convert '{s}' to boolean.  FEBio boolean flags should be '0' or '1'."
+        )
+    return s == "1"
+
+
+def to_number(s):
+    """Convert numeric string to int or float as appropriate."""
+    try:
+        return int(s)
+    except ValueError:
+        return float(s)
+
+
+def to_vec(s):
+    """Convert string to sequence of int or float as appropriate."""
+    tokens = s.split(",")
+    if len(tokens) > 1:
+        return [to_number(t) for t in tokens]
+    else:
+        raise ValueError("Provided string does not appear to be a sequence of values.")
+
+
+def maybe_to_number(s):
+    """Convert string to number if possible, otherwise return string."""
+    try:
+        return to_number(s)
+    except ValueError:
+        return s
 
 
 def find_unique_tag(root: etree.Element, path, req=False):
@@ -181,6 +274,8 @@ def read_material(e, sequence_registry: dict):
 def read_material_orientation(e):
     """Return orientation of a material
 
+    :param e: <material> or <solid> XML element.
+
     The orientation may be returned as a 3-element vector or a matrix of 3
     orthonormal basis vectors.
 
@@ -203,8 +298,12 @@ def read_material_orientation(e):
     # <mat_axis>
     elif e_mat_axis is not None:
         if e_mat_axis.attrib["type"] == "vector":
-            a = read_vector(find_unique_tag(e_mat_axis, "a", req=True).text)
-            d = read_vector(find_unique_tag(e_mat_axis, "d", req=True).text)
+            a = vector_from_text(
+                find_unique_tag(e_mat_axis, "a", req=True).text, f=float
+            )
+            d = vector_from_text(
+                find_unique_tag(e_mat_axis, "d", req=True).text, f=float
+            )
             orientation = orthonormal_basis(a, d)
         elif e_mat_axis.attrib["type"] == "local":
             orientation = None
@@ -219,7 +318,7 @@ def read_material_orientation(e):
     elif e_fiber is not None:
         fiber_orientation_type = e_fiber.attrib["type"]
         if fiber_orientation_type == "vector":
-            orientation = read_vector(e_fiber.text)
+            orientation = vector_from_text(e_fiber.text, f=float)
         elif fiber_orientation_type == "angles":
             θ = to_number(find_unique_tag(e_fiber, "theta", req=True).text)
             φ = to_number(find_unique_tag(e_fiber, "phi", req=True).text)
@@ -277,7 +376,7 @@ def read_material_type(e):
 
 
 def read_parameter(e, sequence_registry: dict[int, Sequence]):
-    """Read a parameter from an XML element.
+    """Read a scalar parameter from an XML element.
 
     The parameter may be fixed or variable.  If variable, a Sequence or
     ScaledSequence will be returned.
@@ -299,7 +398,9 @@ def read_parameter(e, sequence_registry: dict[int, Sequence]):
 
 
 def read_parameters(xml, paramdict):
-    """Return parameters for a dataclass's fields from an XML element"""
+    """Return scalar parameters for a dataclass's fields from an XML element"""
+    # This might be overengineered (doesn't handle XML format revisions when they
+    # introduce new attributes and children to some parameter elements)
     params = {}
     for k, p in paramdict.items():
         if isinstance(p, ReqParameter):
@@ -330,32 +431,31 @@ def read_parameters(xml, paramdict):
     return params
 
 
+def read_mat_axis_xml(e: etree.Element):
+    """Read material axes (basis) from an element in a mat_axis section
+
+    :param e: XML element defining an element's material axes; e.g.,
+    <elem lid="1"><a>1,0,0</a><d><0,1,0></d></elem>.
+
+    """
+    a = vector_from_text(e.find("a").text, f=float)
+    d = vector_from_text(e.find("d").text, f=float)
+    basis = orthonormal_basis(a, d)
+    local_id = ZeroIdxID(int(e.attrib["lid"]) - 1)
+    return local_id, basis
+
+
 def read_point(text):
     x, y = text.split(",")
     return to_number(x), to_number(y)
 
 
-def read_vector(text):
-    return np.array([float(x) for x in text.split(",")])
+def vector_from_text(text, f=to_number):
+    return np.array([f(x) for x in text.split(",")])
 
 
-def basis_mat_axis_local(element: Element, local_ids=(1, 2, 4)):
-    """Return element basis for FEBio XML <mat_axis type="local"> values.
-
-    element is an Element object.
-
-    mat_axis_local is a tuple of 3 element-local node IDs (1-indexed).
-    The default value is (1, 2, 4) to match FEBio.  FEBio /treats/ (0,
-    0, 0) as equal to (1, 2, 4), so this function does the same.
-
-    """
-    # FEBio special-case
-    if local_ids == (0, 0, 0):
-        local_ids = (1, 2, 4)
-    a = element.nodes[local_ids[1] - 1] - element.nodes[local_ids[0] - 1]
-    d = element.nodes[local_ids[2] - 1] - element.nodes[local_ids[0] - 1]
-    basis = orthonormal_basis(a, d)
-    return basis
+def ids_from_text(text):
+    return tuple(int(x) for x in text.split(","))
 
 
 def logfile_name(root) -> Path:
@@ -442,7 +542,35 @@ def normalize_xml(root):
     return root
 
 
-# Functions for writing FEBio XML
+#######################################################################
+# Helper functions to convert data structures to what FEBio XML needs #
+#######################################################################
+
+# These functions do not return XML; they just convert data structures.
+
+
+def basis_mat_axis_local(element: Element, local_ids=(1, 2, 4)):
+    """Return element basis for FEBio XML <mat_axis type="local"> values.
+
+    element is an Element object.
+
+    mat_axis_local is a tuple of 3 element-local node IDs (1-indexed).
+    The default value is (1, 2, 4) to match FEBio.  FEBio /treats/ (0,
+    0, 0) as equal to (1, 2, 4), so this function does the same.
+
+    """
+    # FEBio special-case
+    if local_ids == (0, 0, 0):
+        local_ids = (1, 2, 4)
+    a = element.nodes[local_ids[1] - 1] - element.nodes[local_ids[0] - 1]
+    d = element.nodes[local_ids[2] - 1] - element.nodes[local_ids[0] - 1]
+    basis = orthonormal_basis(a, d)
+    return basis
+
+
+###################################
+# Functions for writing FEBio XML #
+###################################
 
 
 def body_mat_id(body, material_registry, implicit_rb_mats):
@@ -452,25 +580,31 @@ def body_mat_id(body, material_registry, implicit_rb_mats):
         # If an explicit body, its elements define its
         # materials.  We assume that the body is homogenous.
         mat = next(e for e in body.elements).material
-        mat_id = material_registry.names(mat, nametype="ordinal_id")[0]
+
     elif isinstance(body, ImplicitBody):
         mat = implicit_rb_mats[body]
         ids = material_registry.names(mat, nametype="ordinal_id")
-        assert len(ids) == 1
-        mat_id = ids[0]
     else:
         msg = (
             f"body {body} does not have a supported type.  "
             + "Supported body types are Body and ImplicitBody."
         )
         raise ValueError(msg)
-    return mat_id
+    ids = material_registry.names(mat, nametype="ordinal_id")
+    assert len(ids) == 1
+    mat_id = ids[0]
+    mat_name = material_registry.names(mat, nametype="canonical")[0]
+    return mat_id, mat_name
 
 
-def get_or_create_xml(root, path):
+def get_or_create_xml(root, path: Union[str, PurePath]):
     """Return XML element at path, creating it if needed"""
-    parts = [p for p in path.split("/") if p != ""]
+    path = str(path)
+    if path == "" or path == ".":
+        return root
     parent = root
+    current = None
+    parts = [p for p in path.split("/") if p != ""]
     for part in parts:
         current = find_unique_tag(parent, part)
         if current is None:
@@ -479,8 +613,9 @@ def get_or_create_xml(root, path):
     return current
 
 
-def get_or_create_parent(root, path):
+def get_or_create_parent(root, path: Union[str, PurePath]):
     """Return second-to-last XML element from path, creating it if needed"""
+    path = str(path)
     path = "/".join(path.split("/")[:-1])
     return get_or_create_xml(root, path)
 
@@ -524,40 +659,6 @@ def get_or_create_seq_id(registry, sequence):
     if type(sequence) is ScaledSequence:
         sequence = sequence.sequence
     return get_or_create_item_id(registry, sequence)
-
-
-def text_to_bool(s):
-    """Convert string to boolean"""
-    if not s in ("0", "1"):
-        raise ValueError(
-            f"Cannot convert '{s}' to boolean.  FEBio boolean flags should be '0' or '1'."
-        )
-    return s == "1"
-
-
-def to_number(s):
-    """Convert numeric string to int or float as appropriate."""
-    try:
-        return int(s)
-    except ValueError:
-        return float(s)
-
-
-def to_vec(s):
-    """Convert string to sequence of int or float as appropriate."""
-    tokens = s.split(",")
-    if len(tokens) > 1:
-        return [to_number(t) for t in tokens]
-    else:
-        raise ValueError("Provided string does not appear to be a sequence of values.")
-
-
-def maybe_to_number(s):
-    """Convert string to number if possible, otherwise return string."""
-    try:
-        return to_number(s)
-    except ValueError:
-        return s
 
 
 def to_text(v):
@@ -629,19 +730,11 @@ def const_property_to_xml(value, tag):
     return e
 
 
-def update_method_to_xml(value, tag):
-    """Convert Solver.update_method to XML"""
-    conv = {"BFGS": "0", "Broyden": "1", "Newton": "0"}
-    # ^ you only actually get Newton iterations if max_ups = 0
-    return const_property_to_xml(conv[value], tag)
+#########################
+# Facts about FEBio XML #
+#########################
 
-
-# Facts about FEBio XML.  Define this after the function definitions so
-# that the functions can be referenced here.
-
-SUPPORTED_FEBIO_XML_VERS = ("2.0", "2.5", "3.0")
-
-SEQUENCE_PARENT = "LoadData"
+# Define after the function definitions so that those functions can be used here
 
 # Map "bc" attribute value from <prescribe>, <prescribed>, <fix>, or
 # <fixed> element to a variable name.  This list is valid for both node
@@ -721,8 +814,8 @@ perm_class_from_name = {
 }
 perm_name_from_class = {v: k for k, v in perm_class_from_name.items()}
 
-# TODO: Redesign the compatibility system so that compatibility can be
-# derived from the material's type.
+# TODO: Redesign the compatibility system so that compatibility can be derived from
+#  the material's type.
 physics_compat_by_mat = {
     matlib.PoroelasticSolid: {Physics.BIPHASIC},
     matlib.Rigid: {Physics.SOLID, Physics.BIPHASIC},
@@ -740,19 +833,19 @@ physics_compat_by_mat = {
 # have the same defaults, but that (a) doesn't make sense and (b) is false, at least for
 # `tolerance`.
 CONTACT_PARAMS = {
-    "tension": OptParameter("tension", text_to_bool, False),
+    "tension": OptParameter("tension", to_bool, False),
     "penalty_factor": OptParameter("penalty", to_number, 1),
     "pressure_penalty_factor": OptParameter("pressure_penalty", to_number, 1),
-    "two_pass": OptParameter("two_pass", text_to_bool, False),
-    "auto_penalty": OptParameter("auto_penalty", text_to_bool, False),
-    "update_penalty": OptParameter("update_penalty", text_to_bool, False),
-    "symmetric_stiffness": OptParameter("symmetric_stiffness", text_to_bool, False),
-    "use_augmented_lagrange": OptParameter("laugon", text_to_bool, False),
+    "two_pass": OptParameter("two_pass", to_bool, False),
+    "auto_penalty": OptParameter("auto_penalty", to_bool, False),
+    "update_penalty": OptParameter("update_penalty", to_bool, False),
+    "symmetric_stiffness": OptParameter("symmetric_stiffness", to_bool, False),
+    "use_augmented_lagrange": OptParameter("laugon", to_bool, False),
     "augmented_lagrange_rtol": OptParameter("tolerance", to_number, 0.1),
     "augmented_lagrange_gapnorm_atol": OptParameter("gaptol", maybe_to_number, 0.0),
     "augmented_lagrange_minaug": OptParameter("minaug", int, 0),
     "augmented_lagrange_maxaug": OptParameter("maxaug", int, 10),
-    "smoothed_lagrangian": OptParameter("smooth_aug", text_to_bool, False),
+    "smoothed_lagrangian": OptParameter("smooth_aug", to_bool, False),
     "friction_coefficient": OptParameter("fric_coeff", to_number, 0.0),
     "friction_penalty": OptParameter("fric_penalty", to_number, 0.0),
     "search_scale": OptParameter("search_radius", to_number, 1.0),
@@ -770,18 +863,3 @@ CONTACT_CLASS_FROM_XML = {
     "tied-elastic": ContactTiedElastic,
 }
 CONTACT_NAME_FROM_CLASS = {v: k for k, v in CONTACT_CLASS_FROM_XML.items()}
-
-
-class VerbatimXMLMaterial:
-    """Store FEBio XML for a material that is not yet implemented
-
-    A future enhancement would be to make the object aware of sequences that were used
-    to define time-varying material parameters, and renumber them as appropriately
-    during export.
-
-    """
-
-    def __init__(self, xml: Union[str, etree.ElementTree]):
-        if isinstance(xml, str):
-            xml = etree.fromstring(xml)
-        self.xml = xml

@@ -213,15 +213,13 @@ def run_febio_checked(pth_feb, threads=None, cmd=FEBIO_CMD):
     if threads is None:
         threads = febio_thread_count()
     pth_feb = Path(pth_feb)
-    dir_feb = pth_feb.parent
     with open(pth_feb, "rb") as f:
         tree = etree.parse(f)
     root = tree.getroot()
-    # Delete any existing log file and xplt file because we will
-    # later check for the existence of an xplt to determine if the
-    # simulation even started.   Also it is potentially confusing to
-    # have old output still visible even after re-running the
-    # simulation.
+    # Delete any existing log file and xplt file because we will later check for the
+    # existence of an xplt to determine if the simulation even started.   Also it is
+    # potentially confusing to have old output still visible even after re-running
+    # the simulation.
     pth_xplt = pth_feb.with_suffix(".xplt")
     pth_xplt.unlink(missing_ok=True)
     pth_log = logfile_name(root)

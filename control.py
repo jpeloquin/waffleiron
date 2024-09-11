@@ -30,8 +30,9 @@ class Dynamics(Enum):
 
     """
 
+    # Since FEBio 4 shifted to only a static-like and dynamic setting for each
+    # module, I'm doing the same.
     STATIC = "static"
-    STEADYSTATE = "steady-state"
     DYNAMIC = "dynamic"
 
 

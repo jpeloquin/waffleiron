@@ -232,12 +232,11 @@ def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE(febio_cmd_xml):
     for e in model.mesh.elements:
         F = np.mean([e.f(r) for r in e.gloc], axis=0)
         npt.assert_allclose(F, F_applied, rtol=RTOL_F, atol=ATOL_F)
-    ##
+
     ## Test 4.2: Do we the correct output Cauchy stress?
-    ##
-    ## Test 4.2.1: Is the expected stress values in the xplt file?  A
-    ## failure here implies a failure to read or write the heterogeneous
-    ## local basis.
+
+    ## Test 4.2.1: Are the expected stress values present in the xplt file?  A failure
+    ## here implies a failure to read or write the heterogeneous local basis.
     σ_expected_E9 = np.array(
         [
             [2.8196144, 0.15565133, 0.15947175],

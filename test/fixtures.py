@@ -48,7 +48,12 @@ def xml_version(request):
 # Tests that both write FEBio XML *and* run FEBio should use these
 # combinations of of FEBio version and FEBio XML version, as FEBio 2
 # cannot read FEBio XML 3.0.
-FEBIO_CMDS_XMLVERS = (("febio2", "2.5"), ("febio3", "2.5"), ("febio3", "3.0"))
+FEBIO_CMDS_XMLVERS = (
+    ("febio2", "2.5"),
+    ("febio3", "2.5"),
+    ("febio3", "3.0"),
+    ("febio4", "4.0"),
+)
 
 
 @pytest.fixture(

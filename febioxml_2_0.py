@@ -5,11 +5,25 @@ from collections import defaultdict
 from lxml import etree as ET
 
 # Same-package modules
-from .core import ContactConstraint, Interpolant, Extrapolant, NodeSet, Sequence
+from .core import (
+    ContactConstraint,
+    Interpolant,
+    Extrapolant,
+    NodeSet,
+    Sequence,
+    ZeroIdxID,
+)
 from .output import material_to_feb
-from .control import Dynamics, SaveIters
+from .control import Dynamics, SaveIters, Solver
 from .febioxml import *
-from .febioxml_2_5 import mesh_xml, sequences, read_domains
+from .febioxml_2_5 import (
+    mesh_xml,
+    read_domains,
+    read_elementdata_mat_axis,  # not sure this was supported in FEBio XML 2.0
+    read_sequences,
+    read_body_bcs,
+    xml_dynamics,
+)
 
 
 # Facts about FEBio XML 2.0
@@ -25,6 +39,7 @@ MESH_PARENT = "Geometry"
 ELEMENTDATA_PARENT = "Geometry"
 NODEDATA_PARENT = "Geometry"
 ELEMENTSET_PARENT = "Geometry"
+SEQUENCE_PARENT = "LoadData"
 STEP_PARENT = "."
 STEP_NAME = "Step"
 
@@ -67,6 +82,7 @@ CONTROLLER_PARAMS = {
     "save_iters": OptParameter("Control/plot_level", SaveIters, SaveIters.MAJOR),
 }
 # Map of Solver fields → elements relative to <Step>
+SOLVER_PATH_IN_STEP = "Control"
 SOLVER_PARAMS = {
     "dtol": OptParameter("Control/dtol", to_number, 0.001),
     "etol": OptParameter("Control/etol", to_number, 0.01),
@@ -74,13 +90,17 @@ SOLVER_PARAMS = {
     "lstol": OptParameter("Control/lstol", to_number, 0.9),
     "ptol": OptParameter("Control/ptol", to_number, 0.01),
     "min_residual": OptParameter("Control/min_residual", to_number, 1e-20),
-    "update_method": OptParameter("Control/qnmethod", str, "BFGS"),
     "reform_each_time_step": OptParameter(
-        "Control/reform_each_time_step", text_to_bool, True
+        "Control/reform_each_time_step", to_bool, True
     ),
-    "reform_on_diverge": OptParameter("Control/diverge_reform", text_to_bool, True),
+    "reform_on_diverge": OptParameter("Control/diverge_reform", to_bool, True),
     "max_refs": OptParameter("Control/max_refs", int, 15),
     "max_ups": OptParameter("Control/max_ups", int, 10),
+}
+DEFAULT_UPDATE_METHOD = "BFGS"
+QNMETHOD_PATH_IN_STEP = "Control/qnmethod"
+QNMETHOD_PARAMS = {
+    "max_ups": OptParameter("Control", int, 10),
 }
 
 
@@ -141,7 +161,7 @@ def iter_node_conditions(root):
             yield info
 
 
-def read_dynamics_element(e):
+def read_dynamics(e):
     return Dynamics(e.attrib["type"].lower())
 
 
@@ -181,6 +201,14 @@ def read_fixed_node_bcs(root: etree.Element, model):
     return bcs
 
 
+def read_nodeset(e_nodeset):
+    """Return list of node IDs (zero-indexed) in <NodeSet>"""
+    items = [
+        ZeroIdxID(int(e_item.attrib["id"]) - 1) for e_item in e_nodeset.getchildren()
+    ]
+    return items
+
+
 # Functions for writing FEBio XML 2.0
 
 
@@ -205,7 +233,7 @@ def contact_bare_xml(contact, contact_name=None):
     return e_contact
 
 
-def meshdata_xml(model):
+def xml_meshdata(model):
     """Return <ElementData> and <ElementSet> XML element(s)
 
     Technically this function should also return <ElementSet> XML
@@ -230,10 +258,35 @@ def meshdata_xml(model):
     return e_meshdata, e_elemsets
 
 
-def node_fix_disp_xml(fixed_conditions, nodeset_registry):
+def read_solver(step_xml):
+    """Return Solver instance from <Step> XML"""
+    solver_kwargs = read_parameters(step_xml, SOLVER_PARAMS)
+    return Solver(**solver_kwargs)
+
+
+######################################################
+# Functions to create XML elements for FEBio XML 2.0 #
+######################################################
+
+# Each of these functions should return one or more XML elements.  As much as possible,
+# their arguments should be data, not a `Model`, the whole XML tree, or other
+# specialized objects.  Even use of name registries should minimized in favor of simple
+# dictionaries when possible.
+
+
+def xml_nodeset(nodes, name):
+    """Return XML element for a (named) node set"""
+    e = etree.Element("NodeSet", name=name)
+    # Sort nodes to be user-friendly (humans often read .feb files)
+    for node_id in sorted(nodes):
+        etree.SubElement(e, "node", id=str(node_id + 1))
+    return e
+
+
+def xml_node_fixed_bcs(fixed_conditions, nodeset_registry):
     """Return XML elements for node fixed displacement conditions.
 
-    fixed_conditions := The data structure in model.fixed["node"]
+    :param fixed_conditions: The data structure in model.fixed["node"]
 
     This function may create and add new nodesets to the nodeset name
     registry.  If generating a full XML tree, be sure to write these new
@@ -259,9 +312,7 @@ def tag_face(face):
     return tag
 
 
-def node_var_disp_xml(
-    model, xmlroot, nodes, scales, seq, dof, var, relative, step_name
-):
+def xml_node_var_bc(model, xmlroot, nodes, scales, seq, dof, var, relative, step_name):
     e_bc = ET.Element(
         "prescribe",
         bc=XML_BC_FROM_DOF[(dof, var)],
@@ -274,7 +325,8 @@ def node_var_disp_xml(
     return e_bc
 
 
-def write_dynamics_element(dynamics: Dynamics):
-    e = etree.Element("analysis")
-    e.attrib["type"] = dynamics.value
-    return e
+def xml_qnmethod(solver):
+    """Convert Solver.update_method to XML"""
+    conv = {"BFGS": "0", "Broyden": "1", "Newton": "0"}
+    # ^ you only actually get Newton iterations if max_ups = 0
+    return const_property_to_xml(conv[solver.update_method], "qnmethod")
