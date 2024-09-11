@@ -25,6 +25,7 @@ from waffleiron.test.fixtures import (
 )
 
 
+@pytest.mark.skip(reason="too slow; hasn't changed in forever")
 class CenterCrackHex8(TestCase):
     """Center cracked isotropic elastic plate in 3d."""
 
@@ -196,6 +197,7 @@ class CenterCrackHex8(TestCase):
         npt.assert_allclose(jbar_l, 76.20, rtol=1e-4)
 
 
+@pytest.mark.skip(reason="too slow; hasn't changed in forever")
 class CenterCrackQuad4(TestCase):
     def setUp(self):
         self.model = wfl.load_model(

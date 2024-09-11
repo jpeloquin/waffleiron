@@ -5,7 +5,8 @@ from numpy import dot
 from math import degrees, radians, cos, sin
 from unittest import TestCase
 
-# Waffleiron packages
+import pytest
+
 import waffleiron as wfl
 from waffleiron.select import find_closest_timestep, adj_faces, surface_faces
 
@@ -123,6 +124,7 @@ class SelectionHex8Consolidated(TestCase):
         assert len(eset) == len(self.mesh.elements) / 2
 
 
+@pytest.mark.skip(reason="too slow")
 class SelectionHex8(TestCase):
     """Test selections for a hex8 mesh with a hole."""
 

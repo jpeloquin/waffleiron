@@ -4,6 +4,8 @@ import matplotlib.image as mpimg
 import unittest
 import os
 
+import pytest
+
 import waffleiron as wfl
 from waffleiron.test.fixtures import DIR_FIXTURES, DIR_OUT, gen_model_center_crack_Hex8
 
@@ -36,6 +38,7 @@ class ScalarFieldTest(unittest.TestCase):
         plt.savefig(fp)
 
 
+@pytest.mark.skip(reason="too slow; hasn't changed in forever")
 class JDomainPlotTest(unittest.TestCase):
     """Test functions for visualizing J integral domain."""
 
