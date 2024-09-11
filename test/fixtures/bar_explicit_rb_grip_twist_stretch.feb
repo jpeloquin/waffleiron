@@ -225,7 +225,6 @@
 			<time_steps>10</time_steps>
 			<step_size>0.1</step_size>
 			<max_refs>15</max_refs>
-			<max_ups>10</max_ups>
 			<dtol>0.001</dtol>
 			<etol>0.01</etol>
 			<rtol>0</rtol>

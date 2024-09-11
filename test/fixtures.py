@@ -25,7 +25,7 @@ if not DIR_OUT.exists():
 # Versions against which to test.
 
 # All tests that run FEBio should use every supported FEBio version.
-FEBIO_CMDS = ("febio2", "febio3")
+FEBIO_CMDS = ("febio2", "febio3.3", "febio4")
 
 
 @pytest.fixture(scope="session", params=FEBIO_CMDS)

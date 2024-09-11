@@ -99,11 +99,9 @@
       <rtol>0</rtol>
       <lstol>0.9</lstol>
       <min_residual>1e-20</min_residual>
-      <qnmethod>0</qnmethod>
       <reform_each_time_step>1</reform_each_time_step>
       <diverge_reform>1</diverge_reform>
       <max_refs>15</max_refs>
-      <max_ups>10</max_ups>
       <plot_level>PLOT_MUST_POINTS</plot_level>
       <time_stepper>
         <dtmin>0.1</dtmin>
