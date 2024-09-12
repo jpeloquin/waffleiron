@@ -400,10 +400,10 @@ class NameRegistry:
         except KeyError:
             # Find the first integer not already used as a suffix for the name
             i = 1
-            while f"{base_name}{i}" in self.namespace(nametype):
+            while f"{base_name}_{i}" in self.namespace(nametype):
                 i += 1
             # Create a name using the unused integer
-            name = f"{base_name}{i}"
+            name = f"{base_name}_{i}"
             # Update the dictionary so the new name persists
             self.add(name, item, nametype)
             return name
