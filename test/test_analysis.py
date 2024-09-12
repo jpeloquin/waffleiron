@@ -284,9 +284,6 @@ def complex_strain_hex8_model(febio_cmd_xml) -> Generator:
     solved = wfl.load_model(path)
     yield solved
 
-    # Cleanup
-    path.unlink()
-
 
 def test_strain_gauge_nodesets(complex_strain_hex8_model):
     model = complex_strain_hex8_model
