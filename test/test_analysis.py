@@ -280,7 +280,7 @@ def complex_strain_hex8_model(febio_cmd_xml) -> Generator:
     wfl.load.prescribe_deformation(model, step, right, F, seq)
     with open(path, "wb") as f:
         wfl.output.write_feb(model, f, version=xml_version)
-    wfl.febio.run_febio_checked(path, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(path, cmd=febio_cmd, threads=1)
     solved = wfl.load_model(path)
     yield solved
 

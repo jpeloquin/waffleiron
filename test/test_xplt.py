@@ -13,7 +13,7 @@ def test_FEBio_RigidBodyObjectData():
     srcpath = DIR_FIXTURES / "bar_explicit_rb_grip_twist_stretch.feb"
     runpath = DIR_OUT / f"test_xplt.RigidBodyObjectData.{febio_cmd}.feb"
     copyfile(srcpath, runpath)
-    wfl.febio.run_febio_checked(runpath, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(runpath, cmd=febio_cmd, threads=1)
     with open(runpath.with_suffix(".xplt"), "rb") as f:
         xplt = wfl.xplt.XpltData(f.read())
     actual = xplt.values("Force", 0)["Force"]
@@ -45,7 +45,7 @@ def test_FEBio_RigidBodyObjectsData():
     srcpath = DIR_FIXTURES / "bar_explicit_rb_grips_twist_stretch.feb"
     runpath = DIR_OUT / f"test_xplt.RigidBodyObjectsData.{febio_cmd}.feb"
     copyfile(srcpath, runpath)
-    wfl.febio.run_febio_checked(runpath, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(runpath, cmd=febio_cmd, threads=1)
     with open(runpath.with_suffix(".xplt"), "rb") as f:
         xplt = wfl.xplt.XpltData(f.read())
 

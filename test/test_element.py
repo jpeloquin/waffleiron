@@ -407,16 +407,16 @@ def test_FEBio_F_Hex8(febio_cmd):
 def test_FEBio_intraElementHetF_Hex8(febio_cmd):
     """Test handling of intra-element F-tensor heterogeneity.
 
-    FEBio evaluates element data values at the Gauss points and reports
-    the average over the Gauss points in its logfile and plotfile
-    output.  This Gauss point averaging is not readily apparent in the F
-    tensor output, but is very obvious for strain and stress tensors.
+    FEBio evaluates element data values at the Gauss points and reports the average
+    over the Gauss points in its logfile and plotfile output.  This Gauss point
+    averaging is not readily apparent in the F tensor output, but is very obvious in
+    the strain and stress tensors.
 
     """
     pth_in = DIR_FIXTURES / "test_element.intraElementHetF_Hex8.feb"
     pth_out = DIR_OUT / f"test_element.intraElementHetF_Hex8.{febio_cmd}.feb"
     copyfile(pth_in, pth_out)
-    run_febio_checked(pth_out, cmd=febio_cmd)
+    run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
     model = wfl.load_model(pth_out)
     e = model.mesh.elements[0]
     # Does the test case actually different values for evaluation at r =

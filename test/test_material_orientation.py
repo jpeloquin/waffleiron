@@ -104,7 +104,7 @@ def test_FEBio_SOHomFibAng_Hex8_ExpFiber(febio_cmd_xml):
     with open(pth_out, "wb") as f:
         wfl.output.write_feb(model, f, version=xml_version)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    run_febio_checked(pth_out, cmd=febio_cmd)
+    run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
     #
     # Test 4: Is the output as expected?
     model = wfl.load_model(pth_out)
@@ -159,7 +159,7 @@ def test_FEBio_MOHomMatAxVec_Hex8_LinOrtho(febio_cmd_xml):
     with open(pth_out, "wb") as f:
         wfl.output.write_feb(model, f, version=xml_version)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    run_febio_checked(pth_out, cmd=febio_cmd)
+    run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
     #
     # Test 4: Is the output as expected?
     model = wfl.load_model(pth_out)
@@ -218,7 +218,7 @@ def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE(febio_cmd_xml):
     with open(pth_out, "wb") as f:
         wfl.output.write_feb(model, f, version=xml_version)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    run_febio_checked(pth_out, cmd=febio_cmd)
+    run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
     #
     # Test 4: Is the output as expected?
     model = wfl.load_model(pth_out)
@@ -297,7 +297,7 @@ def test_FEBio_LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber(febio_cmd_xml):
     with open(pth_out, "wb") as f:
         wfl.output.write_feb(model, f, version=xml_version)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    run_febio_checked(pth_out, cmd=febio_cmd)
+    run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
     #
     # Test 4: Is the output as expected?
     model = wfl.load_model(pth_out)

@@ -69,7 +69,7 @@ def test_pipeline_prescribe_deformation_singleHex8(febio_cmd_xml):
         wfl.output.write_xml(tree, f)
 
     # Test 3: Can FEBio use the resulting FEBio XML file?
-    wfl.febio.run_febio_checked(pth, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(pth, cmd=febio_cmd, threads=1)
 
     # Test 4: Can the FEBio solution be read by waffleiron?
     solved = wfl.load_model(pth)
@@ -100,7 +100,7 @@ def test_FEBio_tied_elastic_contact_global(febio_cmd_xml):
     with open(pth_out, "wb") as f:
         wfl.output.write_feb(model, f, xml_version)
     # Test 3: Solve - Can FEBio use the roundtripped file?
-    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
     # Test 4: Is the output as expected?
     solved = wfl.load_model(pth_out)
     # Test 4.0: Did the nodes of the rigid indenter move down?
@@ -135,7 +135,7 @@ def test_FEBio_tied_elastic_contact_step(febio_cmd_xml):
     with open(pth_out, "wb") as f:
         wfl.output.write_feb(model, f, xml_version)
     # Test 3: Solve - Can FEBio use the roundtripped file?
-    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
     # Test 4: Is the output as expected?
     solved = wfl.load_model(pth_out)
     # Test 4.0: Did the nodes of the rigid indenter move down?
@@ -184,7 +184,7 @@ def test_FEBio_prescribe_rigid_body_displacement(febio_cmd_xml):
     with open(pth_out, "wb") as f:
         wfl.output.write_feb(model, f, version=xml_version)
     # Test 3: Solve - Can FEBio use the roundtripped file?
-    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
     # Test 4: Is the output as expected?
     solved = wfl.load_model(pth_out)
     δz = solved.solution.values("displacement", 0)["displacement"][-1][2]
@@ -216,7 +216,7 @@ def test_FEBio_prescribe_node_pressure_Hex8(febio_cmd_xml):
     with open(pth_out, "wb") as f:
         wfl.output.write_feb(model, f, version=xml_version)
     # Test 3: Solve: Can FEBio use the roundtripped file?
-    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
     #
     # Test 4: Is the output as expected?
     model = wfl.load_model(pth_out)

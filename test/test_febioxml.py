@@ -48,7 +48,7 @@ def test_FEBio_normalizeXML_bare_Boundary(febio_cmd):
     with open(pth_out, "wb") as f:
         wfl.output.write_xml(normalized_tree, f)
     # Test 1: Can FEBio still read the normalized file?
-    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
     # Test 2: Did the right displacements get applied?
     model = wfl.load_model(pth_out)
     ## Test 2.1: Did node 0 stay fixed?
@@ -221,7 +221,7 @@ def mataxis_local_global_hex8_models(febio_cmd_xml) -> Generator:
     e_mat_axis.text = ", ".join([str(a) for a in basis_code])
     with open(pth_localb_model, "wb") as f:
         write_xml(tree, f)
-    wfl.febio.run_febio_checked(pth_localb_model, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(pth_localb_model, cmd=febio_cmd, threads=1)
     #
     # Model 2: Global basis; material axes are x1, x2, x3
     basis = np.array(basis_mat_axis_local(localb_model.mesh.elements[0], basis_code))
@@ -251,7 +251,7 @@ def mataxis_local_global_hex8_models(febio_cmd_xml) -> Generator:
     e_d.text = ", ".join([str(a) for a in basis[:, 1]])
     with open(pth_globalb_model, "wb") as f:
         write_xml(tree, f)
-    wfl.febio.run_febio_checked(pth_globalb_model, cmd=febio_cmd)
+    wfl.febio.run_febio_checked(pth_globalb_model, cmd=febio_cmd, threads=1)
 
     yield (pth_localb_model, pth_globalb_model)
 

@@ -20,7 +20,7 @@ from waffleiron.test.fixtures import DIR_FIXTURES, DIR_OUT, febio_cmd
 def FixedNodeBC_Solid_Model(febio_cmd):
     """Solve solid model with fixed nodal boundary conditions"""
     pth = DIR_FIXTURES / "cube_hex8_n=1_solid_all_BCs_fixed.feb"
-    run_febio_checked(pth, cmd=febio_cmd)
+    run_febio_checked(pth, cmd=febio_cmd, threads=1)
     yield pth
     # Delete FEBio-generated output
     pth.with_suffix(".log").unlink()
@@ -71,7 +71,7 @@ def test_FEBio_FixedNodeBC_Solid(FixedNodeBC_Solid_Model):
 def FixedNodeBC_Biphasic_Model(febio_cmd):
     """Solve biphasic model with fixed nodal boundary conditions"""
     pth = Path("test") / "fixtures" / "cube_hex8_n=1_biphasic_all_BCs_fixed.feb"
-    run_febio_checked(pth, cmd=febio_cmd)
+    run_febio_checked(pth, cmd=febio_cmd, threads=1)
     yield pth
     # Delete FEBio-generated output
     pth.with_suffix(".log").unlink()
