@@ -655,7 +655,7 @@ class FebReader:
             else:
                 # This <rigid> element represents an implicit rigid body
                 body = ImplicitBody(model.mesh, node_set, mat)
-                implicit_bodies[mat_id] = body
+                implicit_bodies[mat_identifier] = body
                 # FEBio XML 4.0 uses names for rigid bodies
                 for k in mat_names:
                     implicit_bodies[k] = body
