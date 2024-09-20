@@ -640,8 +640,7 @@ class IsotropicElastic:
 class OrthotropicElastic:
     """Orthotropic elastic material definition.
 
-    Matches FEOrthoElastic material in FEBio.  This material is *not*
-    linear.
+    Matches FEOrthoElastic material in FEBio.  This material is *not* linear.
 
     """
 
