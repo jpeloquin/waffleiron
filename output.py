@@ -601,6 +601,11 @@ def xml(model: Model, version="3.0"):
         for body in model.fixed["body"][k]:
             if isinstance(body, ImplicitBody):
                 implicit_bodies_to_process.add(body)
+    # Search variable constraints for rigid bodies
+    # TODO: It's a pain to have variable constrains in both steps and globally
+    for body in model.varying["body"]:
+        if isinstance(body, ImplicitBody):
+            implicit_bodies_to_process.add(body)
     # Search steps' constraints for rigid bodies
     for step, name in model.steps:
         for body in step.bc["body"]:
