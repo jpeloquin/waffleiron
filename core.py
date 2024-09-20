@@ -79,9 +79,11 @@ class ImplicitBody:
         using a list of faces.
 
         """
+        # NameRegistry needs the interface node set to be hashable
+        if not isinstance(interface, NodeSet):
+            interface = NodeSet(interface)
         self.mesh = mesh
         self.interface = interface
-        # ^ TODO: NameRegistry needs this to be hashable
         self.material = material
 
 

@@ -95,6 +95,7 @@ class Model:
         # constrained by some equality).
 
         # TODO: Compose all aspects of mesh into model
+        # TODO: Add a way to clear a NameRegistry
         self.named = self.mesh.named
 
         # initial nodal values
@@ -122,7 +123,7 @@ class Model:
 
     def apply_nodal_bc(
         self,
-        node_ids,
+        node_ids: NodeSet,
         dof,
         variable,
         sequence,
