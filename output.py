@@ -622,8 +622,7 @@ def xml(model: Model, version="3.0"):
         # Create the implicit body's FEBio rigid material
         mat = matlib.Rigid()
         tag = material_to_feb(mat, model)
-        # TODO: Support comments in reader
-        # tag.append(ET.Comment("Implicit rigid body"))
+        tag.insert(0, etree.Comment("Implicit rigid body"))
         mat_id = len(e_Material)
         mat_name = body_name + "_psuedo-material"
         tag.attrib["id"] = str(mat_id + 1)
