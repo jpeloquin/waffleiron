@@ -759,8 +759,8 @@ def xml(model: Model, version="3.0"):
         # dictionary looks like:
         # node_memo['fixed'|'variable'][dof][sequence] = (node_ids, scales, relative)
         #
-        # TODO: Need to split by `relative`, since each <prescribe>
-        # cannot mix relative and non-relative boundary conditions.
+        # TODO: Need to split by `relative`, since each <prescribe> cannot mix
+        #  relative and non-relative boundary conditions.
         node_memo = defaultdict(dict)
         for node_id in step.bc["node"]:
             for dof in step.bc["node"][node_id]:
