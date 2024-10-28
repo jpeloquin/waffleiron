@@ -1,8 +1,6 @@
 # Run these tests with pytest
 import unittest
-import os
 from pathlib import Path
-import subprocess
 
 import numpy.testing as npt
 import numpy as np
@@ -119,3 +117,38 @@ class UniversalConstants(unittest.TestCase):
     def test_Faraday_constant(self):
         model = wfl.load_model(self.path)
         assert model.constants["F"] == 96485e-9
+
+
+#####################################################
+# Test reading boundary conditions of various kinds #
+#####################################################
+
+
+def test_roundtrip_variable_rigid_bc_force():
+    """Test reading a time-varying force BC on an (implicit) rigid body"""
+    pth_original = DIR_FIXTURES / "ccomp_elastic_implicit_rb_force_xml4.feb"
+    model = wfl.load_model(pth_original)
+    febio_cmd = "febio4"
+
+    # Test 1: Read—verify that rigid body force BC in step 1 showed up
+    assert len(model.steps[0].step.bc["body"]) == 1
+    bc = list(model.steps[0].step.bc["body"].values())[0]["x1"]
+    assert bc["variable"] == "force"
+    assert len(bc["sequence"].points) == 2
+    assert bc["sequence"].points[-1] == (1, 1)
+
+    # Test 2: Write
+    pth_write = DIR_OUT / (
+        f"{Path(__file__).with_suffix('').name}."
+        + f"{pth_original.name}.{febio_cmd}.feb"
+    )
+    with open(pth_write, "wb") as f:
+        wfl.output.write_feb(model, f)
+
+    # Test 3: Run
+    wfl.febio.run_febio_checked(pth_write, cmd=febio_cmd, threads=1)
+
+    # Test 4: verify output
+    solved = wfl.load_model(pth_write)
+    force = solved.solution.values("reaction forces", 0)["reaction forces"]
+    npt.assert_allclose(force[-1, :], np.array([2, 0, 0]), rtol=1e-7, atol=5e-7)

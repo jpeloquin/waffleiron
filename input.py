@@ -659,7 +659,8 @@ class FebReader:
                 for k in mat_names:
                     implicit_bodies[k] = body
 
-        # Read fixed boundary conditions. TODO: Support solutes
+        # Read fixed boundary conditions.
+        # TODO: Support solutes
         #
         # Here, no prefix on an axis / BC name means it's named as in
         # waffleiron.  An `xml` prefix means it's named as in FEBio XML.
@@ -693,9 +694,8 @@ class FebReader:
                 model.named["sequences"]["ordinal_id"],
             )
             apply_body_bc(model, step, step_body_bcs)
-        # Prescribed nodal conditions.  Has to go after steps are
-        # created; otherwise there are no steps to which to attach the
-        # applied conditions.
+        # Prescribed nodal conditions.  Has to go after steps are created; otherwise
+        # there are no steps to which to attach the applied conditions.
         for condition in fx.iter_node_conditions(self.root):
             if condition["node set name"] is not None:
                 nodes = model.named["node sets"].obj(condition["node set name"])

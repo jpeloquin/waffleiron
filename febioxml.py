@@ -167,7 +167,7 @@ def maybe_to_number(s):
         return s
 
 
-def find_unique_tag(root: etree.Element, path, req=False):
+def find_unique_tag(root: etree.Element, path, req=False) -> etree.Element:
     """Find and return a tag or an error if > 1 of same."""
     tags = root.findall(path)
     if len(tags) == 1:
