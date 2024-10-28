@@ -4,7 +4,7 @@ import warnings
 from collections import namedtuple, defaultdict
 import os
 from pathlib import Path, PurePath
-from typing import Union
+from typing import Union, Tuple
 import urllib.request
 
 from lxml import etree
@@ -26,7 +26,7 @@ from .core import (
 )
 from .control import Physics
 from .element import Hex27, Quad4, Tri3, Hex8, Penta6, Element
-from . import material as matlib
+from . import material as matlib, FaceSet, ElementSet
 from .math import orthonormal_basis, vec_from_sph
 
 # Globals (see also end of file)
@@ -183,6 +183,39 @@ def find_unique_tag(root: etree.Element, path, req=False):
             )
         else:
             return None
+
+
+def parse_nodeset_ref(s: str) -> Tuple[Union[NodeSet, FaceSet], str]:
+    """Parse a node_set XML attribute's value
+
+    Examples:
+        "foo" → NodeSet named "foo"
+        "@surface:bar": → NodeSet comprising the nodes in the FaceSet "bar"
+
+    """
+    if s.startswith("@surface:"):
+        _, name = s.split(":")
+        return FaceSet, name
+    elif s.startswith("@elem_set:"):
+        raise NotImplementedError
+    else:
+        # As far as I can tell from the FEBio manual, other strings following the
+        # '@type:name' pattern should be interpreted as simple names.  I.e., there is
+        # no grammar, just special cases.
+        return NodeSet, s
+
+
+def read_nodeset_ref(s: str, node_sets=None, face_sets=None, element_sets=None):
+    """Return NodeSet object referenced by a node_set XML attribute"""
+    cls, nm = parse_nodeset_ref(s)
+    match cls.__name__:
+        case NodeSet.__name__:
+            return node_sets.obj(nm)
+        case FaceSet.__name__:
+            face_set = face_sets.obj(nm)
+            return NodeSet(i for f in face_set for i in f)
+        case ElementSet.__name__:
+            raise NotImplementedError
 
 
 def read_material(e, sequence_registry: dict):

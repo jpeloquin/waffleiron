@@ -508,11 +508,10 @@ class FebReader:
         for seq_id, seq in self.sequences.items():
             model.named["sequences"].add(seq_id, seq, nametype="ordinal_id")
 
-        # Read named sets of geometric entities (node sets, element
-        # sets, face sets) as *ordered lists*.  FEBio XML sometimes
-        # makes references into an entity sets using the positional
-        # index of its constituent entitites, so order must be preserved
-        # while we are reading the XML file.
+        # Read named sets of geometric entities (node sets, element sets, face sets)
+        # as *ordered lists*.  FEBio XML sometimes makes references into a set of by
+        # positional index of its constituent entities, so the original XML order
+        # must be preserved until we are done reading the XML file.
         named_sets = read_named_sets(self.root, self.febioxml_module)
         cls_from_entity_type = {
             "node sets": NodeSet,

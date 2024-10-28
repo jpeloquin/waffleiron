@@ -58,7 +58,11 @@ class NodeSet(frozenset):
 
 
 class FaceSet(frozenset):
-    """Set of face IDs."""
+    """Set of facets (tuples of node IDs)"""
+
+    # A FaceSet stores tuples of node IDs because facets are not represented elsewhere
+    # by IDs or objects, so the FaceSet must contain all the information to define each
+    # facet.
 
 
 class ElementSet(frozenset):

@@ -26,6 +26,8 @@ from .febioxml import (
     BodyConstraint,
     read_parameter,
     read_mat_axis_xml,
+    parse_nodeset_ref,
+    read_nodeset_ref,
 )
 from .febioxml_3_0 import (
     CONTACT_PARAMS,
@@ -181,14 +183,22 @@ def read_fixed_node_bcs(root: etree.Element, model):
             # The node set to which the fixed boundary condition is applied is
             # referenced by name.  The name must already be present in the model's
             # name registry.
-            nodeset = model.named["node sets"].obj(e_fix.attrib["node_set"])
-            bcs[(dof, var)] = nodeset
+            bcs[(dof, var)] = read_nodeset_ref(
+                e_fix.attrib["node_set"],
+                node_sets=model.named["node sets"],
+                face_sets=model.named["face sets"],
+                element_sets=model.named["element sets"],
+            )
     # Zero node fluid pressure
     for e_fix in root.findall(f"Boundary/bc[@type='zero fluid pressure']"):
         dof = "fluid"
         var = "pressure"
-        nodeset = model.named["node sets"].obj(e_fix.attrib["node_set"])
-        bcs[(dof, var)] = nodeset
+        bcs[(dof, var)] = read_nodeset_ref(
+            e_fix.attrib["node_set"],
+            node_sets=model.named["node sets"],
+            face_sets=model.named["face sets"],
+            element_sets=model.named["element sets"],
+        )
     return bcs
 
 
