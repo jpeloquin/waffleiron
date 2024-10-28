@@ -316,8 +316,8 @@ class NameRegistry:
 
     """
 
-    # TODO: It's very inconvenient to view all the names.  One of the functions should
-    # list every name in every namespace.
+    # TODO: It's very inconvenient to view all the names.  One of the functions
+    #  should list every name in every namespace.
 
     def __init__(self):
         # Don't use defaultdict because we don't want to create slots accidentally

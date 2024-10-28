@@ -16,9 +16,9 @@ from .model import Mesh
 def cylinder(t_radius: tuple, t_height: tuple, nc: int, bias_h=1, material=None):
     """Create an FE mesh of a cylinder
 
-    :param radius: (length, # elements).  The number of elements must be ≥ 1.
+    :param t_radius: (length, # elements).  The number of elements must be ≥ 1.
 
-    :param height: (length, # elements).  The number of elements must be ≥ 1.
+    :param t_height: (length, # elements).  The number of elements must be ≥ 1.
 
     :param nc: number of elements along circumference.  Must be ≥ 3.
 
@@ -26,14 +26,16 @@ def cylinder(t_radius: tuple, t_height: tuple, nc: int, bias_h=1, material=None)
     cyclinder.  Elements are ordered such that the top layer is first and the bottom
     layer is last.
 
-    Radius is used instead of diameter because the diameter must have an even number
-    of elements, whereas the radius can have an odd or even number.
+    :param material: Material to assign to the cylinder's elements.
 
     Element spacing is linear.
 
     The origin is in the center of the cylinder and the height is along the z axis.
 
     """
+    # Radius is used (instead of diameter) to simplify validation. A diameter with an
+    # odd number of elements would be invalid, but a radius can have an even or odd
+    # number of elements.
     radius, nr = t_radius
     height, nh = t_height
     # Create a mesh of quads, representing one radial slice in the x–z plane.  Points:
