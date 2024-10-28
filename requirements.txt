@@ -1,0 +1,7 @@
+lxml
+mayavi
+numpy
+pandas
+psutil
+scipy
+shapely
