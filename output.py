@@ -3,7 +3,7 @@ from collections import defaultdict
 from copy import copy
 from functools import singledispatch
 from datetime import datetime
-from pathlib import PurePath
+from pathlib import PurePosixPath
 
 # Public packages
 from typing import BinaryIO
@@ -439,7 +439,7 @@ def step_xml(step, name, seq_registry, physics, febioxml_module):
         parent.append(e)
     # Handle update method separately, because it has special formatting in some XML
     # versions
-    e_parent = get_or_create_xml(e_step, PurePath(fx.QNMETHOD_PATH_IN_STEP).parent)
+    e_parent = get_or_create_xml(e_step, PurePosixPath(fx.QNMETHOD_PATH_IN_STEP).parent)
     e_parent.append(fx.xml_qnmethod(step.solver))
     return e_step
 
