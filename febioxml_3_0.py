@@ -264,7 +264,7 @@ def read_fixed_node_bcs(root: etree.Element, model):
 def read_body_bcs(
     root, explicit_bodies, implicit_bodies, sequences
 ) -> List[BodyConstraint]:
-    """Return list of rigid body constraints from FEBio XML 4.0"""
+    """Return list of rigid body constraints from FEBio XML 3.0"""
     body_constraints = []
     for e_rbc in root.findall(f"{BODY_COND_PARENT}/{BODY_COND_NAME}"):
         body_constraints += read_body_bc(
@@ -295,13 +295,26 @@ def read_body_bc(
     else:
         # Assume mat_id refers to an implicit rigid body
         body = implicit_bodies[mat_id]
-    # Variable displacement (and rotation)
-    if e_rigid_bc.attrib["type"] == "prescribe":
-        var = "displacement"
+    # Variable displacement, rotation, or force
+    if e_rigid_bc.attrib["type"] in ("prescribe", "force"):
+        # TODO: Add test for reading variable force BC
+        var = {"prescribe": "displacement", "force": "force"}[e_rigid_bc.attrib["type"]]
         dof = DOF_FROM_XML_RB_DOF[find_unique_tag(e_rigid_bc, "dof").text]
         e_seq = find_unique_tag(e_rigid_bc, "value")
         seq = read_parameter(e_seq, sequences)
         # Is the displacement relative?
+        e_relative = find_unique_tag(e_rigid_bc, "relative")
+        if e_relative is None:
+            is_relative = False
+        else:
+            is_relative = to_bool(e_relative.text)
+        constraints.append(BodyConstraint(body, dof, var, False, seq, is_relative))
+    elif e_rigid_bc.attrib["type"] == "force":
+        var = "force"
+        dof = DOF_FROM_XML_RB_DOF[find_unique_tag(e_rigid_bc, "dof").text]
+        e_seq = find_unique_tag(e_rigid_bc, "value")
+        seq = read_parameter(e_seq, sequences)
+        # Is the force relative?
         e_relative = find_unique_tag(e_rigid_bc, "relative")
         if e_relative is None:
             is_relative = False
@@ -317,7 +330,7 @@ def read_body_bc(
             dof = DOF_FROM_XML_RB_DOF[xml_dof]
             var = VAR_FROM_XML_RB_DOF[xml_dof]
             constraints.append(BodyConstraint(body, dof, var, True, None, None))
-    # TODO: variable force
+    # TODO: variable torque (different from variable force?), fixed force, fixed torque
     return constraints
 
 
