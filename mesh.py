@@ -1,4 +1,5 @@
 from math import ceil, pi, cos, sin
+import sys
 
 # Public repo packages
 import numpy as np
@@ -10,6 +11,7 @@ import waffleiron as wfl
 from .core import FaceSet, NodeSet, _DEFAULT_TOL
 from .geometry import pt_series
 from .element import Hex27, Hex8, Quad4
+from .math import linspaced
 from .model import Mesh
 
 
@@ -330,42 +332,40 @@ def zstack(mesh, zcoords):
     return mesh3d
 
 
-def rectangular_prism(length, width, thickness, material=None):
-    """Create an FE mesh of a rectangular prism.
+def rectangular_prism(
+    n,
+    element_type,
+    bounds=((-1, 1), (-1, 1), (1, 1)),
+    bias_fun=(linspaced, linspaced, linspaced),
+    material=None,
+):
+    """Mesh an axis-aligned rectangular prism domain
 
-    Each key dimension is a tuple of (length, number of elements).
-    Element spacing is linear.
+    :param n: [nx, ny, nz], where nx is the element count along length (x), ny is the
+    element count along the width (y), and nz is the same along the height (z).
 
-    The origin is in the center of the rectangle.
+    :param element_type: "Hex8" and "Hex27" are currently supported.
+
+    :param bounds: ((xmin, xmax), (ymin, ymax), (zmin, zmax)) extent of mesh.
+
+    :bias_fun: Three functions of the form `f(A, B, n)` where `A` and `B` are the
+    endpoints of the line segment AB and the return value is a sequence of points along
+    AB with spacing equal to the desired element spacing.  `f` will be called for each
+    of the three axes with `A` corresponding to the lower bound listed in `bounds` and
+    `B` corresponding to the upper bound.
+
+    Bounds are accepted as arguments to avoid having to apply arithmetic to shift or
+    scale the mesh after creation.  This avoids loss of precision in the node positions.
 
     """
-    l = length[0]
-    nl = length[1]
-    w = width[0]
-    nw = width[1]
-    t = thickness[0]
-    nt = thickness[1]
-    # Create rectangle in xy plane
-    A = np.array([-l / 2, -w / 2])
-    B = np.array([l / 2, -w / 2])
-    C = np.array([l / 2, w / 2])
-    D = np.array([-l / 2, w / 2])
-    AB = pt_series([A, B], nl + 1)
-    DC = pt_series([D, C], nl + 1)
-    AD = pt_series([A, D], nw + 1)
-    BC = pt_series([B, C], nw + 1)
-    mesh = quadrilateral(AD, BC, AB, DC)
-    # Create rectangular prism
-    zi = np.linspace(-t / 2, t / 2, nt + 1)
-    mesh = zstack(mesh, zi)
-    # Label the faces
-    label_rectangular_prism(mesh, [(-l / 2, l / 2), (-w / 2, w / 2), (-t / 2, t / 2)])
-    assert len(mesh.named["node sets"].obj("−x1 face")) == (nw + 1) * (nt + 1)
-    assert len(mesh.named["node sets"].obj("+x1 face")) == (nw + 1) * (nt + 1)
-    assert len(mesh.named["node sets"].obj("−x2 face")) == (nl + 1) * (nt + 1)
-    assert len(mesh.named["node sets"].obj("+x2 face")) == (nl + 1) * (nt + 1)
-    assert len(mesh.named["node sets"].obj("−x3 face")) == (nl + 1) * (nw + 1)
-    assert len(mesh.named["node sets"].obj("+x3 face")) == (nl + 1) * (nw + 1)
+    if isinstance(element_type, str):
+        element_type = getattr(sys.modules[__name__], element_type)
+    if element_type == Hex8:
+        mesh = rectangular_prism_hex8(n, bounds, bias_fun)
+    elif element_type == Hex27:
+        mesh = rectangular_prism_hex27(n, bounds, bias_fun)
+    else:
+        raise ValueError(f"Element type '{element_type}' not supported.")
     # Assign material
     if material is not None:
         for e in mesh.elements:
@@ -373,25 +373,67 @@ def rectangular_prism(length, width, thickness, material=None):
     return mesh
 
 
-def rectangular_prism_hex27(n, bounds=[(0, 1), (0, 1), (0, 1)]):
-    """Return rectangular prism constructed using 3d grid
+def rectangular_prism_hex8(
+    n, bounds=((-1, 1), (-1, 1), (-1, 1)), bias_fun=(linspaced, linspaced, linspaced)
+):
+    """Return a Hex8 mesh of a rectangular prism"""
+    ne = np.array(n)
+    nn = np.array(n) + 1
+    nodes = np.array(
+        np.meshgrid(
+            bias_fun[0](bounds[0][0], bounds[0][1], nn[0]),
+            bias_fun[1](bounds[1][0], bounds[1][1], nn[1]),
+            bias_fun[2](bounds[2][0], bounds[2][1], nn[2]),
+            indexing="ij",
+        )
+    )  # first index over xyz
+    ids_for_element = np.full(ne, None)
+    for i in range(ne[0]):
+        for j in range(ne[1]):
+            for k in range(ne[2]):
+                id3 = np.array(
+                    [
+                        [i, j, k],  # 1
+                        [i + 1, j, k],  # 2
+                        [i + 1, j + 1, k],  # 3
+                        [i, j + 1, k],  # 4
+                        [i, j, k + 1],  # 5
+                        [i + 1, j, k + 1],  # 6
+                        [i + 1, j + 1, k + 1],  # 7
+                        [i, j + 1, k + 1],  # 8
+                    ]
+                )
+                id1 = [np.ravel_multi_index(t, nodes.shape[1:], order="C") for t in id3]
+                ids_for_element[i, j, k] = id1
+    mesh = Mesh.from_ids(
+        nodes.reshape(
+            (3, -1),
+        ).T,
+        ids_for_element.reshape(-1),
+        Hex8,
+    )
+    # Label the faces
+    label_rectangular_prism(mesh, bounds)
+    assert len(mesh.named["node sets"].obj("−x1 face")) == (nn[1] * nn[2])
+    assert len(mesh.named["node sets"].obj("+x1 face")) == (nn[1] * nn[2])
+    assert len(mesh.named["node sets"].obj("−x2 face")) == (nn[0] * nn[2])
+    assert len(mesh.named["node sets"].obj("+x2 face")) == (nn[0] * nn[2])
+    assert len(mesh.named["node sets"].obj("−x3 face")) == (nn[0] * nn[1])
+    assert len(mesh.named["node sets"].obj("+x3 face")) == (nn[0] * nn[1])
+    return mesh
 
-    :param n: [nx, ny, nz], where nx is the element count along length (x), ny is the
-    element count along the width (y), and nz is the same along the height (z).
 
-    :param bounds: [(xmin, xmax), (ymin, ymax), (zmin, zmax)] extent of mesh.
-
-    Bounds are accepted as arguments to avoid having to apply arithmetic to shift or
-    scale the mesh after creation, avoiding loss of precision in the node positions
-
-    """
+def rectangular_prism_hex27(
+    n, bounds=[(-1, 1), (-1, 1), (-1, 1)], bias_fun=[linspaced, linspaced, linspaced]
+):
+    """Return a Hex27 mesh of a rectangular prism"""
     ne = np.array(n)
     nn = 2 * ne + 1  # total number of nodes in each direction
     nodes = np.array(
         np.meshgrid(
-            np.linspace(bounds[0][0], bounds[0][1], nn[0]),
-            np.linspace(bounds[1][0], bounds[1][1], nn[1]),
-            np.linspace(bounds[2][0], bounds[2][1], nn[2]),
+            bias_fun[0](bounds[0][0], bounds[0][1], nn[0]),
+            bias_fun[1](bounds[1][0], bounds[1][1], nn[1]),
+            bias_fun[2](bounds[2][0], bounds[2][1], nn[2]),
             indexing="ij",
         )
     )  # first index over xyz
@@ -432,13 +474,22 @@ def rectangular_prism_hex27(n, bounds=[(0, 1), (0, 1), (0, 1)]):
                 )
                 id1 = [np.ravel_multi_index(t, nodes.shape[1:], order="C") for t in id3]
                 ids_for_element[i, j, k] = id1
-    return Mesh.from_ids(
+    mesh = Mesh.from_ids(
         nodes.reshape(
             (3, -1),
         ).T,
         ids_for_element.reshape(-1),
         Hex27,
     )
+    # Label the faces
+    label_rectangular_prism(mesh, bounds)
+    assert len(mesh.named["node sets"].obj("−x1 face")) == (nn[1]) * (nn[2])
+    assert len(mesh.named["node sets"].obj("+x1 face")) == (nn[1]) * (nn[2])
+    assert len(mesh.named["node sets"].obj("−x2 face")) == (nn[0]) * (nn[2])
+    assert len(mesh.named["node sets"].obj("+x2 face")) == (nn[0]) * (nn[2])
+    assert len(mesh.named["node sets"].obj("−x3 face")) == (nn[0]) * (nn[1])
+    assert len(mesh.named["node sets"].obj("+x3 face")) == (nn[0]) * (nn[1])
+    return mesh
 
 
 def quadrilateral(col1, col2, row1, row2):
