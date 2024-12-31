@@ -487,8 +487,6 @@ def xml(model: Model, version="3.0"):
     assert materials_used - set(material_registry.objects()) == set()
 
     root = etree.Element("febio_spec", version="{}".format(version))
-    msg = f"Exported to FEBio XML by waffleiron prerelease at {datetime.today().strftime('%Y-%m-%dT%H:%M:%S%z')}"
-    root.append(etree.Comment(msg))
 
     version_major, version_minor = [int(a) for a in version.split(".")]
     if version_major == 2 and version_minor == 0:
