@@ -1,5 +1,6 @@
 import dataclasses
 import os
+from multiprocessing.managers import Value
 from pathlib import Path
 from typing import Any, List, Union, Dict, Tuple
 import warnings
@@ -271,7 +272,7 @@ def load_model(fpath, read_xplt=True, fallback_to_xplt=False):
         )
     # Attempt to read the FEBio xml file
     try:
-        model = FebReader(str(fp_feb)).model()
+        model = FebReader(fp_feb).model()
         feb_ok = True
     except UnsupportedFormatError as err:
         # The .feb file is some unsupported version
@@ -434,17 +435,15 @@ class FebReader:
 
     def __init__(self, file):
         """Read a file path as an FEBio xml file."""
-        self.file = file
+        self.file = str(file)
         self.root = normalize_xml(etree.parse(self.file).getroot())
         # Remove comments so iteration over child elements doesn't get
         # tripped up
         etree.strip_tags(self.root, etree.Comment)
         self.feb_version = self.root.attrib["version"]
         if self.root.tag != "febio_spec":
-            raise Exception(
-                "Root node is not 'febio_spec': '"
-                + file.name
-                + "is not an FEBio xml file."
+            raise ValueError(
+                f"Root node is not 'febio_spec': {file} is not an FEBio XML file."
             )
         if self.feb_version not in SUPPORTED_FEBIO_XML_VERS:
             msg = f"FEBio XML version {self.feb_version} is not supported by waffleiron"
