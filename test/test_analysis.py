@@ -11,6 +11,7 @@ import pytest
 
 import waffleiron as wfl
 from waffleiron.control import Step, auto_ticker
+from waffleiron.element import Hex8
 from waffleiron.input import FebReader
 from waffleiron.material import from_Lamé, to_Lamé
 from waffleiron.analysis import *
@@ -269,7 +270,7 @@ def complex_strain_hex8_model(febio_cmd_xml) -> Generator:
         / f"test_analysis.complex_strain_hex8_model.{febio_cmd}.xml{xml_version}.feb"
     )
     mat = wfl.material.HolmesMow(10, 0.3, 4)
-    model = wfl.Model(wfl.mesh.rectangular_prism((2, 2), (2, 2), (2, 2), material=mat))
+    model = wfl.Model(wfl.mesh.rectangular_prism((2, 2, 2), Hex8, material=mat))
     seq = wfl.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
     step = Step("solid", dynamics="static", ticker=auto_ticker(seq, 10))
     model.add_step(step)

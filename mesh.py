@@ -335,7 +335,7 @@ def zstack(mesh, zcoords):
 def rectangular_prism(
     n,
     element_type,
-    bounds=((-1, 1), (-1, 1), (1, 1)),
+    bounds=((-1, 1), (-1, 1), (-1, 1)),
     bias_fun=(linspaced, linspaced, linspaced),
     material=None,
 ):
@@ -358,6 +358,7 @@ def rectangular_prism(
     scale the mesh after creation.  This avoids loss of precision in the node positions.
 
     """
+    # Element type
     if isinstance(element_type, str):
         element_type = getattr(sys.modules[__name__], element_type)
     if element_type == Hex8:
@@ -366,6 +367,10 @@ def rectangular_prism(
         mesh = rectangular_prism_hex27(n, bounds, bias_fun)
     else:
         raise ValueError(f"Element type '{element_type}' not supported.")
+    # Bounds
+    for i, b in enumerate(bounds):
+        if b[1] - b[0] <= 0:
+            raise ValueError(f"{bounds=} has length <= 0 along axis {i}.")
     # Assign material
     if material is not None:
         for e in mesh.elements:
@@ -381,9 +386,9 @@ def rectangular_prism_hex8(
     nn = np.array(n) + 1
     nodes = np.array(
         np.meshgrid(
-            bias_fun[0](bounds[0][0], bounds[0][1], nn[0]),
-            bias_fun[1](bounds[1][0], bounds[1][1], nn[1]),
-            bias_fun[2](bounds[2][0], bounds[2][1], nn[2]),
+            bias_fun[0](bounds[0][0], bounds[0][1] - bounds[0][0], nn[0]),
+            bias_fun[1](bounds[1][0], bounds[1][1] - bounds[1][0], nn[1]),
+            bias_fun[2](bounds[2][0], bounds[2][1] - bounds[2][0], nn[2]),
             indexing="ij",
         )
     )  # first index over xyz
@@ -431,9 +436,9 @@ def rectangular_prism_hex27(
     nn = 2 * ne + 1  # total number of nodes in each direction
     nodes = np.array(
         np.meshgrid(
-            bias_fun[0](bounds[0][0], bounds[0][1], nn[0]),
-            bias_fun[1](bounds[1][0], bounds[1][1], nn[1]),
-            bias_fun[2](bounds[2][0], bounds[2][1], nn[2]),
+            bias_fun[0](bounds[0][0], bounds[0][1] - bounds[0][0], nn[0]),
+            bias_fun[1](bounds[1][0], bounds[1][1] - bounds[1][0], nn[1]),
+            bias_fun[2](bounds[2][0], bounds[2][1] - bounds[2][0], nn[2]),
             indexing="ij",
         )
     )  # first index over xyz
