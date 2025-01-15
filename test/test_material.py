@@ -1,19 +1,20 @@
 from pathlib import Path
-import unittest
-import numpy as np
-from numpy import dot
+from unittest import TestCase
 from numpy.linalg import inv
 import numpy.testing as npt
 
 import waffleiron as wfl
-import os
+from waffleiron import Model, Step
+from waffleiron.control import auto_ticker
+from waffleiron.load import prescribe_deformation
 from waffleiron.material import *
-from waffleiron.test.fixtures import RTOL_F, RTOL_STRESS
+from waffleiron.mesh import rectangular_prism_hex8
+from waffleiron.test.fixtures import RTOL_F, RTOL_STRESS, ATOL_STRESS
 from waffleiron.input import FebReader, textdata_list
 from waffleiron.test.fixtures import DIR_FIXTURES, DIR_OUT, febio_cmd_xml
 
 
-class ExponentialFiberTest(unittest.TestCase):
+class ExponentialFiberTest(TestCase):
     """Test exponential fiber material definition
 
     Since this material is unstable, it must be tested in a mixture.
@@ -51,7 +52,7 @@ class ExponentialFiberTest(unittest.TestCase):
         npt.assert_allclose(t_try, t_true, rtol=1e-5, atol=1e-5)
 
 
-class Unit_CauchyStress_PowerLinearFiber(unittest.TestCase):
+class Unit_CauchyStress_PowerLinearFiber(TestCase):
     """Test piecewise power law – linear fibers.
 
     "True" values taken from PowerLinearFiber3D calculations.
@@ -89,7 +90,7 @@ class Unit_CauchyStress_PowerLinearFiber(unittest.TestCase):
         npt.assert_almost_equal(actual, expected, 5)
 
 
-class Unit_CauchyStress_PowerLinearFiber3D(unittest.TestCase):
+class Unit_CauchyStress_PowerLinearFiber3D(TestCase):
     """Test piecewise power law – linear fibers.
 
     Relevant fixture for "ground truth" values:
@@ -129,7 +130,7 @@ class Unit_CauchyStress_PowerLinearFiber3D(unittest.TestCase):
         npt.assert_array_almost_equal(expected, actual, 5)
 
 
-class IsotropicElasticTest(unittest.TestCase):
+class IsotropicElasticTest(TestCase):
     """Test isotropic elastic material definition"""
 
     def setUp(self):
@@ -210,7 +211,7 @@ class IsotropicElasticTest(unittest.TestCase):
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
 
 
-class HolmesMowTest(unittest.TestCase):
+class HolmesMowTest(TestCase):
     """Test Holmes Mow material definition"""
 
     def setUp(self):
@@ -235,7 +236,7 @@ class HolmesMowTest(unittest.TestCase):
         npt.assert_allclose(t_try, t_true, rtol=1e-5)
 
 
-class NeoHookeanTest(unittest.TestCase):
+class NeoHookeanTest(TestCase):
     """Test Holmes–Mow material definition"""
 
     def setUp(self):
@@ -308,3 +309,73 @@ def test_FEBio_Hex8_OrthoE(febio_cmd_xml):
     # FEBio_cauchy_stress = model.solution.value('stress', -1, 0, 1)
     cauchy_stress_gpt = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
     npt.assert_allclose(cauchy_stress_gpt, FEBio_cauchy_stress, rtol=RTOL_STRESS)
+
+
+class EllipsoidalPowerFiberBasic(TestCase):
+    """Test EllipsoidalPowerFiber"""
+
+    def setUp(self):
+        self.m = EllipsoidalPowerFiber(ξ=(7, 5, 3), β=(3, 2.3, 2))
+
+    def test_zero_strain_zero_stress(self):
+        F = np.eye(3)
+        σ = self.m.tstress(F)
+        npt.assert_allclose(σ, np.zeros((3, 3)), atol=ATOL_STRESS)
+
+    def test_compression_strain_zero_stress(self):
+        F = np.array([[0.99, 0, 0], [0, 0.99, 0], [0, 0, 0.99]])
+        σ = self.m.tstress(F)
+        npt.assert_allclose(σ, np.zeros((3, 3)), atol=1e-7)
+
+    def test_tension_strain_nonzero_stress(self):
+        F = np.array([[1.01, 0, 0], [0, 1, 0], [0, 0, 1]])
+        σ = self.m.tstress(F)
+        assert np.all(np.diag(σ) > 0)
+        npt.assert_allclose(σ[~np.eye(3, dtype=bool)], np.zeros(6), atol=ATOL_STRESS)
+        assert σ[0, 0] == np.max(σ)
+
+
+def test_FEBio_EllipsoidalPowerFiber(febio_cmd_xml):
+    """E2E test of OrthotropicElastic material."""
+    febio_cmd, xml_version = febio_cmd_xml
+
+    # Generate model
+    model = Model(rectangular_prism_hex8((1, 1, 1), ((0, 1), (0, 1), (0, 1))))
+    mat = wfl.material.EllipsoidalPowerFiber(
+        (1.55608279e02, 4.87349748e00, 2.00000000e01), (3, 2, 2.5)
+    )
+    model.mesh.elements[0].material = mat
+    seq = wfl.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
+    step = Step("solid", dynamics="static", ticker=auto_ticker(seq, 1))
+    model.add_step(step)
+    F_applied = np.array([[1.08, 0, 0], [0, 0.97, 0], [0, 0, 0.88]])
+    prescribe_deformation(model, step, np.arange(len(model.mesh.nodes)), F_applied, seq)
+
+    bn = f"{Path(__file__).with_suffix('').name}." + "EllPowFiber"
+
+    # TODO: switch to roundtrip
+
+    # Test 1: Write
+    pth_out = DIR_OUT / (f"{bn}.{febio_cmd}.xml{xml_version}.feb")
+    if not pth_out.parent.exists():
+        pth_out.parent.mkdir()
+    with open(pth_out, "wb") as f:
+        wfl.output.write_feb(model, f, version=xml_version)
+
+    # Test 2: Solve: Can FEBio use the file?
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
+
+    # Test 3: Is the output as expected?
+    model = wfl.load_model(pth_out)
+    e = model.mesh.elements[0]
+
+    # Test 4.1: Do we see the correct applied displacements?  A test failure here
+    # means that there is a defect in the code that reads or writes the model.  Or,
+    # less likely, an FEBio bug.
+    F_obs = np.mean([e.f(r) for r in e.gloc], axis=0)
+    npt.assert_allclose(F_obs, F_applied, rtol=RTOL_F)
+    # Test 4.2: Do we see the correct stresses?
+    # σ_wfl = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
+    σ_wfl = e.material.tstress(F_applied)
+    σ_febio = model.solution.value("stress", step=1, entity_id=0, region_id=1)
+    npt.assert_allclose(σ_wfl, σ_febio, atol=ATOL_STRESS)

@@ -1105,7 +1105,7 @@ class XpltData:
         (containing 0-indexed node IDs), or an element ID (0-indexed).
 
         `region_id` is a plotfile-specific surface or domain ID.  It is
-        used verbatim, which means it is 1-indexed.
+        used verbatim, which means it is *1-indexed*.
 
         `parent_id` is either a canonical face tuple (using 0-indexed node
         IDs) or a 0-indexed element ID.

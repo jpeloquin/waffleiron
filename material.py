@@ -12,6 +12,60 @@ _DEFAULT_ORIENT_RANK1 = np.array([1, 0, 0])
 
 _DEFAULT_ORIENT_RANK2 = (np.array([1, 0, 0]), np.array([0, 1, 0]), np.array([0, 0, 1]))
 
+# Precalculated ellipsoidal fiber orientation distribution integration terms from
+# FEBio geodesic.h.  Each row is cos(Θ) * sin(φ), sin(Θ) * sin(φ), cos(φ), weight;
+# θ ∈ [0, π/2], φ ∈ [0, π/2].
+# TODO: double precision
+FIBER_OCTANT_INTEGRATION_WEIGHTS = np.array(
+    [
+        [1, 0, 0, 0.003394024],
+        [0, 1, 0, 0.003394024],
+        [0, 0, 1, 0.003394024],
+        [0.7071068, 0.7071068, 0, 0.02550091],
+        [0, 0.7071068, 0.7071068, 0.02550091],
+        [0.7071068, 0, 0.7071068, 0.02550091],
+        [0.9486833, 0.3162278, 0, 0.0180476],
+        [0.3162278, 0.9486833, 0, 0.0180476],
+        [0, 0.9486833, 0.3162278, 0.0180476],
+        [0, 0.3162278, 0.9486833, 0.0180476],
+        [0.9486833, 0, 0.3162278, 0.0180476],
+        [0.3162278, 0, 0.9486833, 0.0180476],
+        [0.4082483, 0.8164966, 0.4082483, 0.06535968],
+        [0.4082483, 0.4082483, 0.8164966, 0.06535968],
+        [0.8164966, 0.4082483, 0.4082483, 0.06535968],
+        [0.9899495, 0.1414214, 0, 0.01273219],
+        [0.8574929, 0.5144958, 0, 0.02322682],
+        [0.5144958, 0.8574929, 0, 0.02322682],
+        [0.1414214, 0.9899495, 0, 0.01273219],
+        [0, 0.9899495, 0.1414214, 0.01273219],
+        [0, 0.8574929, 0.5144958, 0.02322682],
+        [0, 0.5144958, 0.8574929, 0.02322682],
+        [0, 0.1414214, 0.9899495, 0.01273219],
+        [0.9899495, 0, 0.1414214, 0.01273219],
+        [0.8574929, 0, 0.5144958, 0.02322682],
+        [0.5144958, 0, 0.8574929, 0.02322682],
+        [0.1414214, 0, 0.9899495, 0.01273219],
+        [0.5883484, 0.7844645, 0.1961161, 0.05866665],
+        [0.1961161, 0.7844645, 0.5883484, 0.05866665],
+        [0.5883484, 0.1961161, 0.7844645, 0.05866665],
+        [0.1961161, 0.5883484, 0.7844645, 0.05866665],
+        [0.7844645, 0.5883484, 0.1961161, 0.05866665],
+        [0.7844645, 0.1961161, 0.5883484, 0.05866665],
+        [0.9128709, 0.3651484, 0.1825742, 0.04814243],
+        [0.9128709, 0.1825742, 0.3651484, 0.04814243],
+        [0.9733285, 0.1622214, 0.1622214, 0.03438731],
+        [0.1622214, 0.9733285, 0.1622214, 0.03438731],
+        [0.1825742, 0.9128709, 0.3651484, 0.04814243],
+        [0.3651484, 0.9128709, 0.1825742, 0.04814243],
+        [0.1825742, 0.3651484, 0.9128709, 0.04814243],
+        [0.1622214, 0.1622214, 0.9733285, 0.03438731],
+        [0.3651484, 0.1825742, 0.9128709, 0.04814243],
+        [0.6396021, 0.4264014, 0.6396021, 0.07332545],
+        [0.4264014, 0.6396021, 0.6396021, 0.07332545],
+        [0.6396021, 0.6396021, 0.4264014, 0.07332545],
+    ]
+)
+
 
 class ParameterValueError(ValueError):
     """Raise when a parameter value is impossible (nonphysical)."""
@@ -485,7 +539,10 @@ class PowerLinearFiber3D:
 class EllipsoidalPowerFiber:
     """Power-law fibers with ellipsoidal orientation distribution.
 
-    Coupled formulation.  FEBio XML name = "ellipsoidal fiber distribution".
+    Coupled formulation.  FEBio XML name = "ellipsoidal fiber distribution".  In both
+    FEBio and Waffleiron, this constitutive law should be part of the general-purpose
+    fiber orientation distribution framework, but in FEBio it's a standalone special
+    case with a unique constitutive law and a unique integeration scheme.
 
     """
 
@@ -503,6 +560,59 @@ class EllipsoidalPowerFiber:
     @classmethod
     def from_feb(cls, ksi, beta):
         return cls(ksi, beta)
+
+    def tstress(self, F):
+        """Return Cauchy stress tensor
+
+        :param F: Deformation gradient tensor.
+
+        """
+        J = np.linalg.det(F)
+
+        def σ_N(N):
+            """Return fiber direction stress
+
+            :param N: Fiber unit vector in the reference configuration.
+
+            Omit 2 / J factor to avoid repeated calculation; add it later.
+
+            """
+            v_n = F @ N  # directed fiber stretch ratio, deformed configuration
+            λ_n = np.linalg.norm(v_n)  # fiber stretch ratio
+            n = v_n / λ_n  # fiber unit vector, deformed configuration
+            I_n = λ_n**2
+            if λ_n <= 1:
+                return np.zeros((3, 3))
+            ξ = sum((N[i] / self.ξ[i]) ** 2 for i in range(3)) ** -0.5
+            β = sum((N[i] / self.β[i]) ** 2 for i in range(3)) ** -0.5
+            dΨ = β * ξ * (I_n - 1) ** (β - 1)
+            return 2 * I_n / J * dΨ * np.outer(n, n)
+
+        def integrate(summand, f):
+            """Integrate f over unit half-sphere
+
+            The surface area of the unit sphere is 4π.
+
+            abs(integrate(0, lambda x: 1) - 2 * pi) < 5e-7
+            """
+            for octant_signs in (
+                np.array([1, 1, 1]),
+                np.array([-1, 1, 1]),
+                np.array([-1, -1, 1]),
+                np.array([1, -1, 1]),
+            ):
+                for i in range(FIBER_OCTANT_INTEGRATION_WEIGHTS.shape[0]):
+                    N = octant_signs * FIBER_OCTANT_INTEGRATION_WEIGHTS[i, :3]
+                    w = FIBER_OCTANT_INTEGRATION_WEIGHTS[i, -1]
+                    summand += w * f(N)
+            return summand
+
+        σ = integrate(np.zeros((3, 3)), σ_N)
+        # The literature integrates over the full sphere, but I think this is a
+        # strange choice because fibers are lines, not rays.  Integrating over the
+        # half sphere would count each fiber family once.  Nevertheless consistency
+        # with FEBio and the literature is probably best.
+        return 2 * σ
 
 
 class HolmesMow:
@@ -541,7 +651,7 @@ class HolmesMow:
         return w
 
     def tstress(self, F):
-        """Cauchy stress tensor."""
+        """Return Cauchy stress tensor"""
         y, mu = to_Lamé(self.E, self.ν)
         J = det(F)
         B = dot(F, F.T)  # left cauchy-green
