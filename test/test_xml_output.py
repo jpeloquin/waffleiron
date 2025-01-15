@@ -109,8 +109,6 @@ def test_repeated_write_gives_same_output(xml_version):
     )
     # Need to remove time stamp or we won't have same output
     xml = wfl.output.xml(model, version=xml_version)
-    tstamp = xml.xpath("//comment()")[0]
-    xml.getroot().remove(tstamp)
     with open(pth_out1, "wb") as f:
         wfl.output.write_xml(xml, f)
     with open(pth_out1, "rb") as f:
@@ -124,8 +122,6 @@ def test_repeated_write_gives_same_output(xml_version):
     )
     # Need to remove time stamp or we won't have same output
     xml = wfl.output.xml(model, version=xml_version)
-    tstamp = xml.xpath("//comment()")[0]
-    xml.getroot().remove(tstamp)
     with open(pth_out2, "wb") as f:
         wfl.output.write_xml(xml, f)
     with open(pth_out2, "rb") as f:
