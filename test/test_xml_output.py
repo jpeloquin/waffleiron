@@ -6,6 +6,7 @@ import numpy.testing as npt
 
 import waffleiron as wfl
 from waffleiron import Model, febioxml_2_5 as febioxml, load_model
+from waffleiron.element import Hex8
 from waffleiron.mesh import rectangular_prism_hex27
 from waffleiron.output import write_feb
 from waffleiron.test.fixtures import DIR_FIXTURES, DIR_OUT, xml_version
@@ -16,7 +17,9 @@ from waffleiron.test.fixtures import DIR_FIXTURES, DIR_OUT, xml_version
 
 def test_write_feb(xml_version):
     mat = wfl.material.NeoHookean(E=1.1, ν=0.3)
-    mesh = wfl.mesh.rectangular_prism((1, 2), (1, 2), (1, 2), material=mat)
+    mesh = wfl.mesh.rectangular_prism(
+        (2, 2, 2), Hex8, ((0, 1), (0, 1), (0, 1)), material=mat
+    )
     model = wfl.Model(mesh)
     basename = Path(__file__).with_suffix("").stem
     pth = DIR_OUT / f"{basename}_xmlver={xml_version}.feb"
@@ -36,7 +39,9 @@ def test_write_feb2p0():
 
 def test_write_temperature_constant(xml_version):
     mat = wfl.material.HolmesMow(1.5, 0.3, 2.0)
-    mesh = wfl.mesh.rectangular_prism((1, 2), (1, 2), (1, 2), material=mat)
+    mesh = wfl.mesh.rectangular_prism(
+        (2, 2, 2), Hex8, ((0, 1), (0, 1), (0, 1)), material=mat
+    )
     model = wfl.Model(mesh)
     model.environment["temperature"] = 341
     xml = wfl.output.xml(model, version=xml_version)
@@ -48,7 +53,9 @@ def test_write_temperature_constant(xml_version):
 
 def test_write_ideal_gas_constant(xml_version):
     mat = wfl.material.HolmesMow(1.5, 0.3, 2.0)
-    mesh = wfl.mesh.rectangular_prism((1, 2), (1, 2), (1, 2), material=mat)
+    mesh = wfl.mesh.rectangular_prism(
+        (2, 2, 2), Hex8, ((0, 1), (0, 1), (0, 1)), material=mat
+    )
     model = wfl.Model(mesh)
     model.constants["R"] = 8.314  # J/mol·K
     xml = wfl.output.xml(model, version=xml_version)
@@ -57,7 +64,9 @@ def test_write_ideal_gas_constant(xml_version):
 
 def test_write_Faraday_constant(xml_version):
     mat = wfl.material.HolmesMow(1.5, 0.3, 2.0)
-    mesh = wfl.mesh.rectangular_prism((1, 2), (1, 2), (1, 2), material=mat)
+    mesh = wfl.mesh.rectangular_prism(
+        (2, 2, 2), Hex8, ((0, 1), (0, 1), (0, 1)), material=mat
+    )
     model = wfl.Model(mesh)
     model.constants["F"] = 26.801  # A·h/mol
     xml = wfl.output.xml(model, version=xml_version)
