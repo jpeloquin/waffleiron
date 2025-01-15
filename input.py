@@ -432,21 +432,20 @@ def textdata_table(fpath, delim=" "):
 class FebReader:
     """Read an FEBio XML file."""
 
-    def __init__(self, file):
+    def __init__(self, file_):
         """Read a file path as an FEBio xml file."""
-        self.file = str(file)
-        self.root = normalize_xml(etree.parse(self.file).getroot())
+        self.root = normalize_xml(etree.parse(file_).getroot())
         # Remove comments so iteration over child elements doesn't get
         # tripped up
         etree.strip_tags(self.root, etree.Comment)
         self.feb_version = self.root.attrib["version"]
         if self.root.tag != "febio_spec":
             raise ValueError(
-                f"Root node is not 'febio_spec': {file} is not an FEBio XML file."
+                f"Root node is not 'febio_spec': {file_} is not an FEBio XML file."
             )
         if self.feb_version not in SUPPORTED_FEBIO_XML_VERS:
             msg = f"FEBio XML version {self.feb_version} is not supported by waffleiron"
-            raise UnsupportedFormatError(msg, file, self.feb_version)
+            raise UnsupportedFormatError(msg, pth, self.feb_version)
         # Get the correct FEBio XML module
         self.febioxml_module = {
             "2.0": febioxml_2_0,
