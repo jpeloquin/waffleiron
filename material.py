@@ -3,7 +3,7 @@ from typing import Tuple
 import numpy as np
 from numpy import dot, trace, eye, outer
 from numpy.linalg import det
-from math import log, exp, sin, cos, radians, pi
+from math import log, exp, sin, cos, radians, pi, inf
 
 # Same-package modules
 from .core import Sequence, ScaledSequence
@@ -163,6 +163,8 @@ child classes should be instantiated as objects."""
 
 class IsotropicConstantPermeability(Permeability):
     """Isotropic strain-independent permeability"""
+
+    bounds = {"k": (0, inf)}
 
     def __init__(self, k, **kwargs):
         self.k = k
@@ -437,6 +439,12 @@ class PowerLinearFiber:
 
     """
 
+    bounds = {
+        "E": (0, inf),
+        "β": (2, inf),  # I don't see why FEBio has 2 is the minimum
+        "λ0": (1, inf),  # FEBio has > 1; I don't see why λ0 = 1 is invalid
+    }
+
     def __init__(self, E, β, λ0):
         self.E = E  # fiber modulus in linear region
         self.β = β  # power law exponent in power law region
@@ -546,6 +554,11 @@ class EllipsoidalPowerFiber:
 
     """
 
+    bounds = {
+        "ξ": ((0, inf), (0, inf), (0, inf)),
+        "β": ((0, inf), (0, inf), (0, inf)),
+    }
+
     def __init__(self, ξ: Tuple[float, float, float], β: Tuple[float, float, float]):
         """Return EllipsoidalPowerFiber instance
 
@@ -621,6 +634,13 @@ class HolmesMow:
     See page 73 of the FEBio theory manual, version 1.8.
 
     """
+
+    # TODO: Support open vs. closed intervals
+    bounds = {
+        "E": (0, inf),
+        "ν": (-1, 0.5),
+        "β": (0, inf),
+    }
 
     def __init__(self, E, ν, β):
         self.E = E
@@ -754,8 +774,22 @@ class OrthotropicElastic:
 
     """
 
-    # Note: I don't recognize the constitutitive model FEBio uses, so
-    # it's unclear if this material is "correct" in a broader sense.
+    # Note: I don't recognize the constitutive model FEBio uses, so it's unclear if
+    # this material is "correct" in a broader sense.
+
+    # Permissible values are interdependent, but these are the ranges of potential
+    # values for each parameter.
+    bounds = {
+        "E1": (0, inf),
+        "E2": (0, inf),
+        "E3": (0, inf),
+        "G12": (0, inf),
+        "G23": (0, inf),
+        "G31": (0, inf),
+        "ν12": (-inf, inf),  # min might be -1
+        "ν23": (-inf, inf),  # min might be -1
+        "ν31": (-inf, inf),  # min might be -1
+    }
 
     def __init__(self, props):
         # Define material properties
@@ -836,6 +870,13 @@ class NeoHookean:
     linear elasticity for small strains and small rotations.
 
     """
+
+    bounds = {
+        "Ε": (0, inf),
+        "ν": (-1, 0.5),  # not absolutely sure of this
+        "μ": (0, inf),  # not absolutely sure of this
+        "λ": (0, inf),  # not absolutely sure of this
+    }
 
     def __init__(self, E, ν):
         y, mu = to_Lamé(E, ν)
