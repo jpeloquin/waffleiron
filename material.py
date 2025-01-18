@@ -880,7 +880,7 @@ class NeoHookean:
     """
 
     bounds = {
-        "Ε": (0, inf),
+        "E": (0, inf),
         "ν": (-1, 0.5),  # not absolutely sure of this
         "μ": (0, inf),  # not absolutely sure of this
         "λ": (0, inf),  # not absolutely sure of this
