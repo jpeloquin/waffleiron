@@ -1,5 +1,11 @@
-class SelectionException(Exception):
-    """Exception for invalid selections."""
+class InvalidParameterError(ValueError):
+    """Exception for invalid (non-physical) parameter values"""
+
+    pass
+
+
+class InvalidSelectionError(Exception):
+    """Exception for invalid selections"""
 
     pass
 

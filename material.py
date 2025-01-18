@@ -7,6 +7,7 @@ from math import log, exp, sin, cos, radians, pi, inf
 
 # Same-package modules
 from .core import Sequence, ScaledSequence
+from .exceptions import InvalidParameterError
 
 _DEFAULT_ORIENT_RANK1 = np.array([1, 0, 0])
 
@@ -65,12 +66,6 @@ FIBER_OCTANT_INTEGRATION_WEIGHTS = np.array(
         [0.6396021, 0.6396021, 0.4264014, 0.07332545],
     ]
 )
-
-
-class ParameterValueError(ValueError):
-    """Raise when a parameter value is impossible (nonphysical)."""
-
-    pass
 
 
 def to_Lamé(E, v):
@@ -219,13 +214,13 @@ class DonnanSwelling:
     def __init__(self, phi0_w, fcd0, ext_osm, osm_coef, **kwargs):
         # Bounds checks
         if _is_fixed_property(phi0_w) and not (0 <= phi0_w <= 1):
-            raise ParameterValueError(
+            raise InvalidParameterError(
                 f"phi0_w = {phi0_w}; it is required that 0 ≤ phi0_w ≤ 1"
             )
         if _is_fixed_property(fcd0) and not (fcd0 >= 0):
-            raise ParameterValueError(f"fcd0 = {fcd0}; it is required that 0 < fcd0")
+            raise InvalidParameterError(f"fcd0 = {fcd0}; it is required that 0 < fcd0")
         if _is_fixed_property(ext_osm) and not (ext_osm >= 0):
-            raise ParameterValueError(
+            raise InvalidParameterError(
                 f"ext_osm = {ext_osm}; it is required that 0 < ext_osm"
             )
         # Store values
@@ -791,7 +786,20 @@ class OrthotropicElastic:
         "ν31": (-inf, inf),  # min might be -1
     }
 
+    @classmethod
+    def check_parameter_values(cls, props):
+        for k in props:
+            if not cls.bounds[k][0] < props[k] < cls.bounds[k][1]:
+                raise InvalidParameterError(
+                    f"{k} = {props[k]} must be inside {cls.bounds[k]}"
+                )
+
     def __init__(self, props):
+        if len(props) != len(self.bounds):
+            raise ValueError(
+                f"{len(props)} parameters provided; expected {len(self.bounds)}"
+            )
+        self.check_parameter_values(props)
         # Define material properties
         self.E1 = props["E1"]
         self.E2 = props["E2"]
@@ -934,6 +942,6 @@ def add_density(material, density=0):
 
     """
     if density < 0:
-        raise ValueError(f"Density must be ≥ 0.  Got `{density}`.")
+        raise InvalidParameterError(f"Density must be ≥ 0.  Got `{density}`.")
     material.density = density
     return material

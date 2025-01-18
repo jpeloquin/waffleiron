@@ -2,7 +2,7 @@ import numpy as np
 
 from waffleiron.core import NodeSet
 from waffleiron.model import Model
-from waffleiron.exceptions import SelectionException
+from waffleiron.exceptions import InvalidSelectionError
 
 
 def eval_fn_x(soln, fn, pt):
@@ -112,7 +112,7 @@ def apply_q_3d(domain, crack_faces, tip_nodes, q=[1, 0, 0], qtype="plateau"):
 
     """
     if not domain:
-        raise SelectionException("Integration domain is an empty set.")
+        raise InvalidSelectionError("Integration domain is an empty set.")
 
     # Define q vector
     q = np.array(q)
@@ -129,7 +129,7 @@ def apply_q_3d(domain, crack_faces, tip_nodes, q=[1, 0, 0], qtype="plateau"):
     boundary_nodes = set(k for k, v in refcount.items() if v < 8) | tip_nodes
     interior_nodes = all_nodes - boundary_nodes
     if not interior_nodes:
-        raise SelectionException("All nodes in `elements` are boundary nodes.")
+        raise InvalidSelectionError("All nodes in `elements` are boundary nodes.")
 
     # Find the moving nodes on the crack line.  Find adjacent faces to
     # the crack tip line (sharing at least 2 nodes), then grow the
