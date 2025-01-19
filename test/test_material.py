@@ -9,7 +9,7 @@ from waffleiron.control import auto_ticker
 from waffleiron.load import prescribe_deformation
 from waffleiron.material import *
 from waffleiron.mesh import rectangular_prism_hex8
-from waffleiron.test.fixtures import RTOL_F, RTOL_STRESS, ATOL_STRESS
+from waffleiron.test.fixtures import ATOL_F, RTOL_F, RTOL_STRESS, ATOL_STRESS
 from waffleiron.input import FebReader, textdata_list
 from waffleiron.test.fixtures import DIR_FIXTURES, DIR_OUT, febio_cmd_xml
 
@@ -373,7 +373,7 @@ def test_FEBio_EllipsoidalPowerFiber(febio_cmd_xml):
     # means that there is a defect in the code that reads or writes the model.  Or,
     # less likely, an FEBio bug.
     F_obs = np.mean([e.f(r) for r in e.gloc], axis=0)
-    npt.assert_allclose(F_obs, F_applied, rtol=RTOL_F)
+    npt.assert_allclose(F_obs, F_applied, atol=ATOL_F)
     # Test 4.2: Do we see the correct stresses?
     # σ_wfl = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
     σ_wfl = e.material.tstress(F_applied)
