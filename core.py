@@ -11,6 +11,9 @@ import numpy as np
 # Set tolerances
 _DEFAULT_TOL = 10 * np.finfo(float).eps
 
+CONSTANT_R = 8.31446261815324  # J/mol·K
+CONSTANT_F = 96485.33212  # C/mol
+
 ZeroIdxID = NewType("ZeroIdxID", int)
 OneIdxID = NewType("OneIdxID", int)
 NodeID = NewType("NodeID", ZeroIdxID)

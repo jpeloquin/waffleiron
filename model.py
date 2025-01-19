@@ -16,6 +16,8 @@ from scipy.spatial.distance import cdist
 from .control import Step, Ticker, IterController, Solver
 from .core import (
     _DEFAULT_TOL,
+    CONSTANT_R,
+    CONSTANT_F,
     Body,
     NodeSet,
     ScaledSequence,
@@ -55,7 +57,7 @@ class Model:
         # variable to be included while retaining the auto-export
 
         self.environment = {"temperature": 294}  # K
-        self.constants = {"R": 8.31446261815324, "F": 96485.33212}  # J/mol·K  # C/mol
+        self.constants = {"R": CONSTANT_R, "F": CONSTANT_F}
 
         # Fixed conditions
         self.fixed = {

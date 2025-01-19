@@ -6,7 +6,7 @@ from numpy.linalg import det
 from math import log, exp, sin, cos, radians, pi, inf
 
 # Same-package modules
-from .core import Sequence, ScaledSequence
+from .core import CONSTANT_R, CONSTANT_F, Sequence, ScaledSequence
 from .exceptions import InvalidParameterError
 
 _DEFAULT_ORIENT_RANK1 = np.array([1, 0, 0])
@@ -111,7 +111,7 @@ class OrientedMaterial:
     def w(self, F):
         return self.material.w(F)
 
-    def tstress(self, F):
+    def tstress(self, F, **kwargs):
         Q = self.orientation
         J = np.linalg.det(F)
         if Q.ndim == 1:
@@ -122,17 +122,17 @@ class OrientedMaterial:
             σ_loc = 1 / J * F @ σ_loc_PK2 @ F.T
         elif Q.ndim == 2:
             # 3D material ("solid")
-            σ_loc = self.material.tstress(F @ Q)
+            σ_loc = self.material.tstress(F @ Q, **kwargs)
             # ^ Stress in own local basis.  This is a change of
             # coordinate system for the material, not an observer
             # change, such that material anisotropy is accounted for.
         return σ_loc
 
-    def pstress(self, F):
+    def pstress(self, F, **kwargs):
         Q = self.orientation
         return Q @ self.material.pstress(Q.T @ F)  # TODO: Check
 
-    def sstress(self, F):
+    def sstress(self, F, **kwargs):
         Q = self.orientation
         if Q.ndim == 1:
             # 1D material ("fiber")
@@ -211,6 +211,13 @@ class PoroelasticSolid:
 class DonnanSwelling:
     """Swelling pressure of the Donnan equilibrium type."""
 
+    bounds = {
+        "fcd0": (0, inf),
+        "phi0_w": (0, 1),  # open interval
+        "ext_osm": (0, inf),
+        "osm_coeff": (0, 1),
+    }
+
     def __init__(self, phi0_w, fcd0, ext_osm, osm_coef, **kwargs):
         # Bounds checks
         if _is_fixed_property(phi0_w) and not (0 <= phi0_w <= 1):
@@ -232,6 +239,16 @@ class DonnanSwelling:
     @classmethod
     def from_feb(cls, phiw0, cF0, bosm, Phi=1, **kwargs):
         return cls(phiw0, cF0, bosm, Phi)
+
+    # TODO: find a way to pass T
+    def tstress(self, F, T, R=CONSTANT_R, **kwargs):
+        """Return Cauchy stress tensor"""
+        # TODO: R units are going to be a constant source of bugs in user code until
+        # waffleiron is fully units-aware
+        J = np.linalg.det(F)
+        FCD = self.phi0_w / (J - 1 + self.phi0_w) * self.fcd0
+        p = R * T * self.osm_coef * ((FCD**2 + self.ext_osm**2) ** 0.5 - self.ext_osm)
+        return -p * np.eye(3)
 
 
 class Multigeneration:
@@ -281,14 +298,16 @@ class SolidMixture:
     def w(self, F):
         return sum(material.w(F) for material in self.materials)
 
-    def tstress(self, F):
-        return sum(material.tstress(F) for material in self.materials)
+    def tstress(self, F, *args, **kwargs):
+        return sum(material.tstress(F, *args, **kwargs) for material in self.materials)
 
-    def pstress(self, F):
-        return sum(material.pstress(F) for material in self.materials)
+    def pstress(self, F, **kwargs):
+        return sum(material.pstress(F, *args, **kwargs) for material in self.materials)
 
-    def sstress(self, F):
-        return sum([material.sstress(F) for material in self.materials])
+    def sstress(self, F, **kwargs):
+        return sum(
+            [material.sstress(F, *args, **kwargs) for material in self.materials]
+        )
 
 
 class Rigid:
@@ -388,7 +407,7 @@ class ExponentialFiber3D:
         w = xi / (a * b) * (exp(a * (In - 1.0) ** b) - 1.0)
         return w
 
-    def tstress(self, F):
+    def tstress(self, F, **kwargs):
         """Return Cauchy stress tensor aligned to local axes."""
         F = np.array(F)
         # Components
@@ -408,13 +427,13 @@ class ExponentialFiber3D:
         t = (2 / J) * unit_step(In - 1.0) * In * dPsi_dIn * outer(n, n)
         return t
 
-    def pstress(self, F):
+    def pstress(self, F, **kwargs):
         """Return 1st Piola–Kirchoff stress tensor in local axes."""
         t = self.tstress(F)
         p = det(F) * dot(t, np.linalg.inv(F).T)
         return p
 
-    def sstress(self, F):
+    def sstress(self, F, **kwargs):
         """Return 2nd Piola-Kirchoff stress tensor in local axes."""
         t = self.tstress(F)
         s = det(F) * dot(np.linalg.inv(F), dot(t, np.linalg.inv(F).T))
@@ -505,7 +524,7 @@ class PowerLinearFiber3D:
         """Return strain energy density"""
         raise NotImplementedError
 
-    def tstress(self, F):
+    def tstress(self, F, **kwargs):
         """Return Cauchy stress tensor aligned to local axes."""
         # Properties
         I0 = self.λ0**2.0
@@ -530,11 +549,11 @@ class PowerLinearFiber3D:
             σ = 2 / J * I_N * (b - E / 2 / np.sqrt(I_N)) * np.outer(n, n)
         return σ
 
-    def pstress(self, F):
+    def pstress(self, F, **kwargs):
         """Return 1st Piola–Kirchoff stress tensor aligned to local axes."""
         raise NotImplementedError
 
-    def sstress(self, F):
+    def sstress(self, F, **kwargs):
         """Return 2nd Piola–Kirchoff stress tensor aligned to local axes."""
         raise NotImplementedError
 
@@ -569,7 +588,7 @@ class EllipsoidalPowerFiber:
     def from_feb(cls, ksi, beta):
         return cls(ksi, beta)
 
-    def tstress(self, F):
+    def tstress(self, F, **kwargs):
         """Return Cauchy stress tensor
 
         :param F: Deformation gradient tensor.
@@ -665,7 +684,7 @@ class HolmesMow:
         w = 0.5 * c * (exp(Q) - 1.0)
         return w
 
-    def tstress(self, F):
+    def tstress(self, F, **kwargs):
         """Return Cauchy stress tensor"""
         y, mu = to_Lamé(self.E, self.ν)
         J = det(F)
@@ -693,13 +712,13 @@ class HolmesMow:
         )
         return t
 
-    def pstress(self, F):
+    def pstress(self, F, **kwargs):
         """1st Piola-Kirchoff stress."""
         t = self.tstress(F)
         p = det(F) * dot(t, np.linalg.inv(F).T)
         return p
 
-    def sstress(self, F):
+    def sstress(self, F, **kwargs):
         """2nd Piola-Kirchoff stress."""
         t = self.tstress(F)
         s = det(F) * dot(np.linalg.inv(F), dot(t, np.linalg.inv(F).T))
@@ -739,20 +758,20 @@ class IsotropicElastic:
         W = 0.5 * y * trE**2.0 + mu * np.sum(E * E)
         return W
 
-    def tstress(self, F):
+    def tstress(self, F, **kwargs):
         """Cauchy stress."""
         s = self.sstress(F)
         J = np.linalg.det(F)
         t = np.dot(np.dot(F, s), F.T) / J
         return t
 
-    def pstress(self, F):
+    def pstress(self, F, **kwargs):
         """1st Piola-Kirchoff stress."""
         s = self.sstress(F)
         p = np.dot(s, F.T)
         return p
 
-    def sstress(self, F):
+    def sstress(self, F, **kwargs):
         """2nd Piola-Kirchoff stress."""
         y = self.y
         mu = self.mu
@@ -847,7 +866,7 @@ class OrthotropicElastic:
             }
         )
 
-    def tstress(self, F):
+    def tstress(self, F, **kwargs):
         """Cauchy stress tensor."""
         C = F.T @ F
         B = F @ F.T
@@ -905,7 +924,7 @@ class NeoHookean:
         w = mu / 2.0 * (i1 - 1) - mu * log(J) + y / 2.0 * (log(J)) ** 2.0
         return w
 
-    def tstress(self, F):
+    def tstress(self, F, **kwargs):
         """Cauchy stress tensor."""
         y = self.y
         mu = self.mu
@@ -914,13 +933,13 @@ class NeoHookean:
         t = mu / J * (B - np.eye(3)) + y / J * log(J) * np.eye(3)
         return t
 
-    def pstress(self, F):
+    def pstress(self, F, **kwargs):
         """1st Piola-Kirchoff stress."""
         s = self.sstress(F)
         p = dot(F, s)
         return p
 
-    def sstress(self, F):
+    def sstress(self, F, **kwargs):
         """2nd Piola-Kirchoff stress."""
         y = self.y
         mu = self.mu
