@@ -1,12 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <febio_spec version="2.0">
-	<Globals>
-		<Constants>
-			<T>0</T>
-			<R>0</R>
-			<Fc>0</Fc>
-		</Constants>
-	</Globals>
 	<Material>
 		<material id="1" name="frst" type="neo-Hookean">
 			<E>1.03103</E>
