@@ -265,11 +265,16 @@ def read_material(e, sequence_registry: dict):
         # TODO: Shouldn't solid mixture support material orientation?
         material = cls(constituents)
     elif material_type == "biphasic":
+        # Get solidity parameter.  FEBio doesn't require solidity in all instances,
+        # but FEBio's default is zero, which is wrong.  So it should be present.
+        e_solid_fraction = find_unique_tag(e, "phi0", req=True)
+        solid_fraction = read_parameter(e_solid_fraction, sequence_registry)
         # Permeability constitutive equation
         e_permeability = find_unique_tag(e, "permeability", req=True)
         perm_type = e_permeability.attrib["type"]
         perm_class = perm_class_from_name[perm_type]
         props = {c.tag: read_parameter(c, sequence_registry) for c in e_permeability}
+        props["phi0"] = solid_fraction
         permeability = perm_class.from_feb(**props)
         # Solid constituent
         constituents = [
@@ -280,10 +285,6 @@ def read_material(e, sequence_registry: dict):
                 f"A porelastic solid was encountered with {len(constituents)} solid constituents.  Poroelastic solids must have exactly one solid constituent.  The relevant poroelastic solid is at {e.base}:{e.sourceline}."
             )
         solid = constituents[0]
-        e_solid_fraction = find_unique_tag(e, "phi0", req=True)
-        # ^ FEBio doesn't require this, but the default is apparently zero, which is
-        # wrong.  So it's de facto required.
-        solid_fraction = read_parameter(e_solid_fraction, sequence_registry)
         material = matlib.PoroelasticSolid(solid, permeability, solid_fraction)
     elif material_type == "multigeneration":
         # Constructing materials for the list of generations works just like a solid
