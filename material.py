@@ -301,10 +301,10 @@ class SolidMixture:
     def tstress(self, F, *args, **kwargs):
         return sum(material.tstress(F, *args, **kwargs) for material in self.materials)
 
-    def pstress(self, F, **kwargs):
+    def pstress(self, F, *args, **kwargs):
         return sum(material.pstress(F, *args, **kwargs) for material in self.materials)
 
-    def sstress(self, F, **kwargs):
+    def sstress(self, F, *args, **kwargs):
         return sum(
             [material.sstress(F, *args, **kwargs) for material in self.materials]
         )
