@@ -49,13 +49,7 @@ class CheckError(Exception):
     pass
 
 
-class MustPointCountError(CheckError):
-    """Raise when FEBio emits extra, missing, or offset time points"""
-
-    pass
-
-
-class MustPointTimeError(CheckError):
+class MustPointError(CheckError):
     """Raise when FEBio emits extra, missing, or offset time points"""
 
     pass
@@ -292,7 +286,7 @@ def check_must_points(model, atol=None):
         ]
         # (1) Check must point count for this step
         if len(t_obs) != len(t_req):
-            raise MustPointCountError(
+            raise MustPointError(
                 f"Model '{model.name}' step {i}: {len(t_req)} time points (\"must points\") were requested but FEBio wrote {len(t_obs)} time points.  This may be caused by a bug in FEBio's time stepper or must point controller, or you may have requested invalid time points that FEBio silently ignored."
             )
         # (2) Check must point times for this step
