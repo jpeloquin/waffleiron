@@ -126,6 +126,8 @@ class OrientedMaterial:
             # ^ Stress in own local basis.  This is a change of
             # coordinate system for the material, not an observer
             # change, such that material anisotropy is accounted for.
+        else:
+            raise ValueError
         return σ_loc
 
     def pstress(self, F, **kwargs):
@@ -143,7 +145,28 @@ class OrientedMaterial:
             raise NotImplementedError  # Needs test case
             # 3D material ("solid")
             s_loc = Q @ self.material.sstress(Q.T @ F) @ Q.T  # TODO: Check
+        else:
+            raise ValueError
         return s_loc
+
+
+class EllipsoidalDistribution:
+
+    def __init__(self, a, b, c, fiber):
+        """Return fibers with ellipsoidal orientation distribution
+
+        a, b, and c are not independent; their ratios matter, their scale does not.
+
+        """
+        self.a = a
+        self.b = b
+        self.c = c
+        self.fiber = fiber
+        # TODO: Parametrize integration scheme.  Not sure it belongs in the material
+        #  itself; perhaps it would be better in some sort of run configuration.
+        #  Waffleiron is currently only used with FEBio, but I don't want to couple
+        #  them too tightly.
+        self.integration = ("fibers-3d-gkt", 27, 31)
 
 
 class Permeability:
@@ -522,9 +545,9 @@ class PowerLinearFiber3D:
 
     Coupled formulation ("fiber-pow-linear" or "fiber-power-linear" in FEBio).
 
-    This is the deprecated 3D implementation that mixes material
-    orientation with the fiber's constitutive law.  Prefer
-    ExponentialFiber, which does not mix concerns in this manner.
+    This is the deprecated 3D implementation that mixes material orientation with the
+    fiber's constitutive law.  Prefer ExponentialFiber, which does not mix concerns
+    in this manner.
 
     """
 

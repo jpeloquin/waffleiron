@@ -124,6 +124,21 @@ def _(mat: matlib.OrientedMaterial, model) -> ElementTree:
 
 
 @material_to_feb.register
+def _(mat: matlib.EllipsoidalDistribution, model) -> ElementTree:
+    """Convert an OrientedMaterial material instance to FEBio XML"""
+    e = etree.Element("solid", type="continuous fiber distribution")
+    e_fibers = material_to_feb(mat.fiber, model)  # <fibers>
+    e_fibers.tag = "fibers"  # was "solid"
+    e.append(e_fibers)
+    e_dist = etree.SubElement(e, "distribution", type="ellipsoidal")
+    etree.SubElement(e_dist, "spa").text = vec_to_text((mat.a, mat.b, mat.c))
+    e_scheme = etree.SubElement(e, "scheme", type=mat.integration[0])
+    etree.SubElement(e_scheme, "nph").text = num_to_text(mat.integration[1])
+    etree.SubElement(e_scheme, "nth").text = num_to_text(mat.integration[2])
+    return e
+
+
+@material_to_feb.register
 def _(mat: matlib.ExponentialFiber, model) -> ElementTree:
     """Convert ExponentialFiber material instance to FEBio XML"""
     e = etree.Element("material", type="fiber-exp-pow")

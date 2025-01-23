@@ -27,6 +27,7 @@ from .core import (
 from .control import Physics
 from .element import Hex27, Quad4, Tri3, Hex8, Penta6, Element
 from . import material as matlib, FaceSet, ElementSet
+from .material import EllipsoidalDistribution
 from .math import orthonormal_basis, vec_from_sph
 
 # Globals (see also end of file)
@@ -251,6 +252,10 @@ def read_material(e, sequence_registry: dict):
 
     # Check if the material type is fully supported
     material_type = read_material_type(e)
+    # TODO: over time, migrate materials to reader functions.  `read_material` itself
+    #  is growing out of control.
+    if material_type in xml_material_reader:
+        return xml_material_reader[material_type](e, sequence_registry)
     if material_type not in material_from_xml_name:
         warnings.warn(
             f"Reading material `{material_type}` from FEBio XML is not yet supported.  Its XML content will be stored in the Waffleiron model.  It will be reproduced verbatim (except for the material ID) if the model is written to FEBio XML."
@@ -603,6 +608,23 @@ def basis_mat_axis_local(element: Element, local_ids=(1, 2, 4)):
 
 
 ###################################
+# Functions for reading materials #
+###################################
+
+
+def read_continuous_fiber_distribution_xml(e, seq: dict):
+    """Return fiber orientation distribution material"""
+    dist_type = e.find("distribution").attrib["type"]
+    fiber = read_material(e.find("fibers"), seq)
+    if dist_type == "ellipsoidal":
+        a, b, c = vector_from_text(e.find("distribution/spa").text)
+        # TODO: Support parametrized integration schemes
+        return EllipsoidalDistribution(a, b, c, fiber)
+    else:
+        return NotImplementedError
+
+
+###################################
 # Functions for writing FEBio XML #
 ###################################
 
@@ -822,6 +844,12 @@ elem_cls_from_feb = {
     "penta6": Penta6,
 }
 
+# Map type attribute of <material>, <solid>, or <fiber> → function that returns
+# waffleiron material class form the XML element
+xml_material_reader = {
+    "continuous fiber distribution": read_continuous_fiber_distribution_xml,
+}
+
 material_from_xml_name = {
     "isotropic elastic": matlib.IsotropicElastic,
     "Holmes-Mow": matlib.HolmesMow,
@@ -837,6 +865,10 @@ material_from_xml_name = {
     "orthotropic elastic": matlib.OrthotropicElastic,
 }
 material_name_from_class = {v: k for k, v in material_from_xml_name.items()}
+
+orientation_distribution_from_xml_type = {
+    "ellipsoidal": matlib.EllipsoidalDistribution,
+}
 
 perm_class_from_name = {
     "perm-Holmes-Mow": matlib.IsotropicHolmesMowPermeability,
