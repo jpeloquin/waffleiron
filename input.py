@@ -445,7 +445,7 @@ class FebReader:
             )
         if self.feb_version not in SUPPORTED_FEBIO_XML_VERS:
             msg = f"FEBio XML version {self.feb_version} is not supported by waffleiron"
-            raise UnsupportedFormatError(msg, pth, self.feb_version)
+            raise UnsupportedFormatError(msg, file_, self.feb_version)
         # Get the correct FEBio XML module
         self.febioxml_module = {
             "2.0": febioxml_2_0,
