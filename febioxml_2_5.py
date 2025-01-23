@@ -38,7 +38,7 @@ from .febioxml import (
     XML_BC_FROM_DOF,
     CONTACT_NAME_FROM_CLASS,
     vec_to_text,
-    bvec_to_text,
+    vec_to_text,
     read_parameters,
     float_to_text,
     XML_INTERP_FROM_INTERP,
@@ -540,8 +540,8 @@ def xml_meshdata(model):
             e_elem = etree.SubElement(e_edata_mat_axis, "elem", lid=str(i_elemset + 1))
             e_elem.append(etree.Comment(f"Element {i + 1}"))
             i_elemset += 1
-            etree.SubElement(e_elem, "a").text = bvec_to_text(e.basis[:, 0])
-            etree.SubElement(e_elem, "d").text = bvec_to_text(e.basis[:, 1])
+            etree.SubElement(e_elem, "a").text = vec_to_text(e.basis[:, 0])
+            etree.SubElement(e_elem, "d").text = vec_to_text(e.basis[:, 1])
             etree.SubElement(e_elemset_mat_axis, "elem", id=str(i + 1))
     if len(e_edata_mat_axis) != 0:
         e_meshdata.append(e_edata_mat_axis)

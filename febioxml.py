@@ -729,10 +729,6 @@ def vec_to_text(v):
     return ", ".join(float_to_text(a) for a in v)
 
 
-def bvec_to_text(v):
-    return ", ".join(float_to_text(a) for a in v)
-
-
 def float_to_text(a):
     return f"{a:.16g}"
 

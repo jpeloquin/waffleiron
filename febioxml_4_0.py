@@ -22,7 +22,7 @@ from .febioxml import (
     DOF_NAME_FROM_XML_NODE_BC,
     VAR_FROM_XML_NODE_BC,
     read_parameters,
-    bvec_to_text,
+    vec_to_text,
     BodyConstraint,
     read_parameter,
     read_mat_axis_xml,
@@ -362,8 +362,8 @@ def xml_meshdata(model):
             e_elem = etree.SubElement(e_edata_mat_axis, "elem", lid=str(i_elemset + 1))
             e_elem.append(etree.Comment(f"Element {i + 1}"))
             i_elemset += 1
-            etree.SubElement(e_elem, "a").text = bvec_to_text(e.basis[:, 0])
-            etree.SubElement(e_elem, "d").text = bvec_to_text(e.basis[:, 1])
+            etree.SubElement(e_elem, "a").text = vec_to_text(e.basis[:, 0])
+            etree.SubElement(e_elem, "d").text = vec_to_text(e.basis[:, 1])
     # Create the named element set
     e_elemset_mat_axis = etree.Element("ElementSet", name=element_set_name)
     e_elemset_mat_axis.text = ", ".join([str(i + 1) for i in element_ids])

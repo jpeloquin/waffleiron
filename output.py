@@ -39,7 +39,7 @@ from .febioxml import (
     get_or_create_parent,
     bool_to_text,
     material_name_from_class,
-    bvec_to_text,
+    vec_to_text,
     property_to_xml,
     num_to_text,
     to_text,
@@ -107,18 +107,14 @@ def _(mat: matlib.OrientedMaterial, model) -> ElementTree:
     if np.array(orientation).ndim == 2:
         # material axes orientation
         e_mat_axis = etree.Element("mat_axis", type="vector")
-        etree.SubElement(e_mat_axis, "a").text = febioxml.bvec_to_text(
-            orientation[:, 0]
-        )
-        etree.SubElement(e_mat_axis, "d").text = febioxml.bvec_to_text(
-            orientation[:, 1]
-        )
+        etree.SubElement(e_mat_axis, "a").text = febioxml.vec_to_text(orientation[:, 0])
+        etree.SubElement(e_mat_axis, "d").text = febioxml.vec_to_text(orientation[:, 1])
         e.insert(0, e_mat_axis)
         e.append(e_mat_axis)
     elif np.array(orientation).ndim == 1:
         # vector orientation
         e_vector = etree.Element("fiber", type="vector")
-        e_vector.text = bvec_to_text(orientation)
+        e_vector.text = vec_to_text(orientation)
         e.append(e_vector)
     else:
         raise ValueError(
@@ -153,9 +149,9 @@ def _(mat: matlib.EllipsoidalPowerFiber, model) -> ElementTree:
     type_ = material_name_from_class[mat.__class__]
     e = etree.Element("material", type=type_)
     e_ksi = etree.SubElement(e, "ksi")
-    e_ksi.text = bvec_to_text(mat.ξ)
+    e_ksi.text = vec_to_text(mat.ξ)
     e_beta = etree.SubElement(e, "beta")
-    e_beta.text = bvec_to_text(mat.β)
+    e_beta.text = vec_to_text(mat.β)
     return e
 
 
