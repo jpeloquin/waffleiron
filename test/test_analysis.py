@@ -275,7 +275,7 @@ def complex_strain_hex8_model(febio_cmd_xml) -> Generator:
     step = Step("solid", dynamics="static", ticker=auto_ticker(seq, 10))
     model.add_step(step)
     F = np.array([[1.5, 0.5, 0], [0, 1, 0], [0, 0, 1]])
-    left = model.named["node sets"].obj("−x1 face")
+    left = model.named["node sets"].obj("-x1 face")
     right = model.named["node sets"].obj("+x1 face")
     wfl.load.prescribe_deformation(model, step, left, np.eye(3), seq)
     wfl.load.prescribe_deformation(model, step, right, F, seq)
@@ -288,7 +288,7 @@ def complex_strain_hex8_model(febio_cmd_xml) -> Generator:
 
 def test_strain_gauge_nodesets(complex_strain_hex8_model):
     model = complex_strain_hex8_model
-    left = model.named["node sets"].obj("−x1 face")
+    left = model.named["node sets"].obj("-x1 face")
     right = model.named["node sets"].obj("+x1 face")
     λ = wfl.analysis.strain_gauge(model, left, right)
     expected = np.array(

@@ -101,7 +101,7 @@ def label_rectangular_prism(mesh: Mesh, bounds=None):
             )
         )[0]
     )
-    mesh.named["node sets"].add("−x1 face", ns)
+    mesh.named["node sets"].add("-x1 face", ns)
     ns = NodeSet(
         np.nonzero(
             np.isclose(
@@ -118,7 +118,7 @@ def label_rectangular_prism(mesh: Mesh, bounds=None):
             )
         )[0]
     )
-    mesh.named["node sets"].add("−x2 face", ns)
+    mesh.named["node sets"].add("-x2 face", ns)
     ns = NodeSet(
         np.nonzero(
             np.isclose(
@@ -135,7 +135,7 @@ def label_rectangular_prism(mesh: Mesh, bounds=None):
             )
         )[0]
     )
-    mesh.named["node sets"].add("−x3 face", ns)
+    mesh.named["node sets"].add("-x3 face", ns)
     ns = NodeSet(
         np.nonzero(
             np.isclose(
@@ -488,11 +488,11 @@ def rectangular_prism_hex27(
     )
     # Label the faces
     label_rectangular_prism(mesh, bounds)
-    assert len(mesh.named["node sets"].obj("−x1 face")) == (nn[1]) * (nn[2])
+    assert len(mesh.named["node sets"].obj("-x1 face")) == (nn[1]) * (nn[2])
     assert len(mesh.named["node sets"].obj("+x1 face")) == (nn[1]) * (nn[2])
-    assert len(mesh.named["node sets"].obj("−x2 face")) == (nn[0]) * (nn[2])
+    assert len(mesh.named["node sets"].obj("-x2 face")) == (nn[0]) * (nn[2])
     assert len(mesh.named["node sets"].obj("+x2 face")) == (nn[0]) * (nn[2])
-    assert len(mesh.named["node sets"].obj("−x3 face")) == (nn[0]) * (nn[1])
+    assert len(mesh.named["node sets"].obj("-x3 face")) == (nn[0]) * (nn[1])
     assert len(mesh.named["node sets"].obj("+x3 face")) == (nn[0]) * (nn[1])
     return mesh
 
@@ -502,8 +502,8 @@ def quadrilateral(col1, col2, row1, row2):
 
     Each input variable is a list of (x, y) points specifying node
     locations on the boundary of the mesh domain.  `col1` and `col2` are
-    opposite edges, as are `row1` and `row2`.  Row1 must be below (−y)
-    row2 and col1 should be left (−x) of col2 in a right hand coordinate
+    opposite edges, as are `row1` and `row2`.  Row1 must be below (-y)
+    row2 and col1 should be left (-x) of col2 in a right hand coordinate
     system.
 
     """
