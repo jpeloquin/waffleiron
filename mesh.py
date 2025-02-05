@@ -283,11 +283,13 @@ def points_on_line(A, B, s):
     """
     A = np.array(A)
     B = np.array(B)
-    if min(s) < 0:
-        raise ValueError(f"s must be in [0, 1].  Min value was {min(s)}.")
-    if max(s) > 1:
-        raise ValueError(f"s must be in [0, 1].  Max value was {max(s)}.")
+    s = (-min(s) + np.array(s)) / (max(s) - min(s))  # standardize to [0, 1]
     return [A + si * (B - A) for si in s]
+
+
+def linspaced_points(A, B, n):
+    """Return n points evenly spaced along and spanning line segment AB"""
+    return points_on_line(A, B, np.linspace(0, 1, n))
 
 
 def zstack(mesh, zcoords):
@@ -336,7 +338,7 @@ def rectangular_prism(
     n,
     element_type,
     bounds=((-1, 1), (-1, 1), (-1, 1)),
-    bias_fun=(linspaced, linspaced, linspaced),
+    bias_fun=(linspaced_points, linspaced_points, linspaced_points),
     material=None,
 ):
     """Mesh an axis-aligned rectangular prism domain
@@ -379,16 +381,23 @@ def rectangular_prism(
 
 
 def rectangular_prism_hex8(
-    n, bounds=((-1, 1), (-1, 1), (-1, 1)), bias_fun=(linspaced, linspaced, linspaced)
+    n,
+    bounds=((-1, 1), (-1, 1), (-1, 1)),
+    bias_fun=(linspaced_points, linspaced_points, linspaced_points),
 ):
-    """Return a Hex8 mesh of a rectangular prism"""
+    """Return a Hex8 mesh of a rectangular prism
+
+    :param n: Element count along each axis.
+
+    """
+
     ne = np.array(n)
     nn = np.array(n) + 1
     nodes = np.array(
         np.meshgrid(
-            bias_fun[0](bounds[0][0], bounds[0][1] - bounds[0][0], nn[0]),
-            bias_fun[1](bounds[1][0], bounds[1][1] - bounds[1][0], nn[1]),
-            bias_fun[2](bounds[2][0], bounds[2][1] - bounds[2][0], nn[2]),
+            bias_fun[0](bounds[0][0], bounds[0][1], nn[0]),
+            bias_fun[1](bounds[1][0], bounds[1][1], nn[1]),
+            bias_fun[2](bounds[2][0], bounds[2][1], nn[2]),
             indexing="ij",
         )
     )  # first index over xyz
@@ -419,26 +428,28 @@ def rectangular_prism_hex8(
     )
     # Label the faces
     label_rectangular_prism(mesh, bounds)
-    assert len(mesh.named["node sets"].obj("−x1 face")) == (nn[1] * nn[2])
-    assert len(mesh.named["node sets"].obj("+x1 face")) == (nn[1] * nn[2])
-    assert len(mesh.named["node sets"].obj("−x2 face")) == (nn[0] * nn[2])
-    assert len(mesh.named["node sets"].obj("+x2 face")) == (nn[0] * nn[2])
-    assert len(mesh.named["node sets"].obj("−x3 face")) == (nn[0] * nn[1])
-    assert len(mesh.named["node sets"].obj("+x3 face")) == (nn[0] * nn[1])
+    assert len(mesh.named["node sets"].obj("-x1 face")) == nn[1] * nn[2]
+    assert len(mesh.named["node sets"].obj("+x1 face")) == nn[1] * nn[2]
+    assert len(mesh.named["node sets"].obj("-x2 face")) == nn[0] * nn[2]
+    assert len(mesh.named["node sets"].obj("+x2 face")) == nn[0] * nn[2]
+    assert len(mesh.named["node sets"].obj("-x3 face")) == nn[0] * nn[1]
+    assert len(mesh.named["node sets"].obj("+x3 face")) == nn[0] * nn[1]
     return mesh
 
 
 def rectangular_prism_hex27(
-    n, bounds=[(-1, 1), (-1, 1), (-1, 1)], bias_fun=[linspaced, linspaced, linspaced]
+    n,
+    bounds=[(-1, 1), (-1, 1), (-1, 1)],
+    bias_fun=(linspaced_points, linspaced_points, linspaced_points),
 ):
     """Return a Hex27 mesh of a rectangular prism"""
     ne = np.array(n)
     nn = 2 * ne + 1  # total number of nodes in each direction
     nodes = np.array(
         np.meshgrid(
-            bias_fun[0](bounds[0][0], bounds[0][1] - bounds[0][0], nn[0]),
-            bias_fun[1](bounds[1][0], bounds[1][1] - bounds[1][0], nn[1]),
-            bias_fun[2](bounds[2][0], bounds[2][1] - bounds[2][0], nn[2]),
+            bias_fun[0](bounds[0][0], bounds[0][1], nn[0]),
+            bias_fun[1](bounds[1][0], bounds[1][1], nn[1]),
+            bias_fun[2](bounds[2][0], bounds[2][1], nn[2]),
             indexing="ij",
         )
     )  # first index over xyz
