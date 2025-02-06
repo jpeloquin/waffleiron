@@ -252,7 +252,7 @@ def check_must_points(model, atol=None):
     t = np.array(model.solution.step_times)
     # Check that time zero exists
     if model.solution.step_times[0] != 0:
-        raise MustPointTimeError(
+        raise MustPointError(
             "Model 'model.name': Solution time points should start at 0, but they start at {model.solution.step_times[0]}"
         )
     # ^ According to Steve, t = 0 s is mandatory if must points are used.
@@ -297,7 +297,7 @@ def check_must_points(model, atol=None):
             tol = np.full(t_req.shape, atol)
         is_wrong = np.abs(err) > tol
         if np.any(is_wrong):
-            raise MustPointTimeError(
+            raise MustPointError(
                 f"Model '{model.name}' step {i}: time points {t_req[is_wrong]} were shifted by {err[is_wrong]}.  This may be an FEBio bug or the error tolerance of the time point check may be too tight."
             )
         # Re-initialize observed times for next step
