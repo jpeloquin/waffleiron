@@ -31,7 +31,7 @@ BODY_COND_PARENT = "Rigid"
 BODY_COND_NAME = "rigid_constraint"
 IMPBODY_PARENT = "Boundary"
 IMPBODY_NAME = "bc[@type='rigid']"
-MESH_PARENT = "Mesh"
+MESH_TAG = "Mesh"
 ELEMENTDATA_PARENT = "MeshData"
 NODEDATA_PARENT = "MeshData"
 ELEMENTSET_PARENT = "Mesh"
@@ -190,13 +190,16 @@ def iter_node_conditions(root):
 
 def read_domains(root: etree.Element):
     """Return list of domains"""
+    element_from_id = {
+        int(e.attrib["id"]): i
+        for i, e in enumerate(root.xpath(f"{MESH_TAG}/Elements/elem"))
+    }
     domains = []
-    e_domains = find_unique_tag(root, "MeshDomains")
-    for e in e_domains:
+    for e in find_unique_tag(root, "MeshDomains"):
         name = e.attrib["name"]
-        e_domain = find_unique_tag(root, f"{MESH_PARENT}/Elements[@name='{name}']")
+        e_domain = find_unique_tag(root, f"{MESH_TAG}/Elements[@name='{name}']")
         elements = [
-            ZeroIdxID(int(e.attrib["id"]) - 1) for e in e_domain.findall("elem")
+            element_from_id[int(e.attrib["id"])] for e in e_domain.findall("elem")
         ]
         if e.attrib["mat"] == "":
             material = None
@@ -458,7 +461,7 @@ def mesh_xml(model, domains, material_registry):
     <Geometry> became <Mesh> in FEBio XML 3.0
 
     """
-    e_geometry = etree.Element(MESH_PARENT)
+    e_geometry = etree.Element(MESH_TAG)
     e_meshdomains = etree.Element("MeshDomains")
     # Write <nodes>
     e_nodes = etree.SubElement(e_geometry, "Nodes")

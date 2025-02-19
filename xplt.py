@@ -337,7 +337,7 @@ entity_type_from_data_type = {
 
 _PARSE_ERROR_GENERIC = "  One of the following is true: (1) the input data is not valid plotfile data, (2) the file format specification has changed, or (3) there is a bug in waffleiron."
 
-_LOOKUP_ERROR_GENERIC = "  Note that nodes and element IDs are 0-indexed, but surface and domain IDs are read from the plotfile verbatim.  FEBio seems to always use 1-indexed surface and domain IDs."
+_LOOKUP_ERROR_GENERIC = "  Note that nodes are 0-indexed, but element, surface, and domain IDs are read from the plotfile verbatim.  Element IDs are non-negative integer labels.  FEBio seems to always use 1-indexed surface and domain IDs."
 
 
 def parse_endianness(data):
@@ -751,10 +751,8 @@ def domains(blocks, version):
         else:
             domain_name = domain_name[0]["data"]
         element_ids = [
-            t[0] - 1 for t in get_bdata_by_name(b_domain, "domain/element_list/element")
-        ]
-        # ^ the element IDs are 1-indexed in the plotfile even though
-        # the node IDs (which we're discarding) are 0-indexed.
+            t[0] for t in get_bdata_by_name(b_domain, "domain/element_list/element")
+        ]  # FEBio treats these are actual labels, not indices
         domain_dict[domain_id] = {
             "name": domain_name,
             "element type": elem_type,
@@ -851,12 +849,12 @@ def variable_metadata(blocks):
     return vars_mdata
 
 
-def _get_nodes_for_face(face, mesh):
+def _get_nodes_for_face(face, mesh, element_from_id):
     return face
 
 
-def _get_nodes_for_elem_ID(elem_id, mesh):
-    return mesh.elements[elem_id].ids
+def _get_nodes_for_element_id(id, mesh, element_from_id):
+    return mesh.elements[element_from_id[id]].ids
 
 
 class XpltData:
@@ -882,10 +880,10 @@ class XpltData:
         # ^ first key is region ID, second key is data layout, third key
         # is entity ID / canonical representation
         #
-        mesh = self.mesh()
+        mesh, element_from_id = self.mesh()
         node_id_getter = {
             "surface": _get_nodes_for_face,
-            "domain": _get_nodes_for_elem_ID,
+            "domain": _get_nodes_for_element_id,
         }
         for region_type, id_field in zip(
             ("surface", "domain"), ("facets", "element IDs")
@@ -908,7 +906,7 @@ class XpltData:
                     # regional index) tuples.
                     d_mult = self._regional_idx[region_type][region_id]["mult"]
                     f = node_id_getter[region_type]
-                    node_ids = f(entity, mesh)
+                    node_ids = f(entity, mesh, element_from_id)
                     idx_mult = (i_mult + i for i in range(len(node_ids)))
                     i_mult += len(node_ids)
                     for idx, node_id in zip(idx_mult, node_ids):
@@ -978,31 +976,31 @@ class XpltData:
         # Get list of elements for each domain.
         b_domains = get_bdata_by_name(self.blocks, f"{MESH_PATH[self.version]}/domains")
         elements = []
+        element_from_id = {}
         for b in b_domains:
             # Get list of elements as tuples of node ids.  Note that the
             # binary database format uses 0-indexing for nodes, same as
             # waffleiron.  The data field for each element's block
             # contains the element ID followed by the element's node
             # IDs.
-            i_elements = get_bdata_by_name(b["data"], "element_list/element")
-            element_ids = [r[0] for r in i_elements]
-            i_elements = [r[1:] for r in i_elements]
+            bdata = get_bdata_by_name(b["data"], "element_list/element")
+            element_from_id = element_from_id | {
+                r[0]: i + len(elements) for i, r in enumerate(bdata)
+            }
+            node_ids = [r[1:] for r in bdata]
             # Get material.  Note that the febio binary database
             # uses 1-indexing for element IDs.
             i_mat = find_one(b["data"], "domain_header/part ID")["data"] - 1
             # Get element type
             ecode = find_one(b["data"], "domain_header/element_type")["data"]
             etype = element_type_from_id[ecode]
-            # Create list of element objects.  TODO: storing the ordinal
-            # ID as the material is non-standard; figure out a better
-            # way to handle the material information available in the
-            # xplt.  Such as returning a list of domains.
-            elements += [
-                etype.from_ids(i_element, x_nodes, mat=i_mat)
-                for i_element in i_elements
-            ]
+            # Create list of element objects.
+            # TODO: storing the ordinal ID as the material is non-standard; figure
+            #  out a better way to handle the material information available in the
+            #  xplt.  Such as returning a list of domains.
+            elements += [etype.from_ids(i, x_nodes, mat=i_mat) for i in node_ids]
         mesh = Mesh(x_nodes, elements)
-        return mesh
+        return mesh, element_from_id
 
     def region_with_entity(self, entity_type, entity_id):
         """Return regions containing given entity.
@@ -1101,8 +1099,8 @@ class XpltData:
     def value(self, var, step, entity_id, region_id=None, parent_id=None):
         """Return a single value for a variable & selected entity.
 
-        `entity_id` is a node ID (0-indexed), a canonical face tuple
-        (containing 0-indexed node IDs), or an element ID (0-indexed).
+        `entity_id` is a node ID (0-indexed), a canonical face tuple (containing
+        0-indexed node IDs), or an element ID (integer label).
 
         `region_id` is a plotfile-specific surface or domain ID.  It is
         used verbatim, which means it is *1-indexed*.

@@ -54,7 +54,7 @@ BODY_COND_PARENT = "Rigid"
 # <rigid_load> (even though a force condition is still a BC).
 IMPBODY_PARENT = "Boundary"
 IMPBODY_NAME = "bc[@type='rigid']"
-MESH_PARENT = "Mesh"
+MESH_TAG = "Mesh"
 ELEMENTDATA_PARENT = "MeshData"
 NODEDATA_PARENT = "MeshData"
 ELEMENTSET_PARENT = "Mesh"

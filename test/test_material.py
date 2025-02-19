@@ -377,5 +377,5 @@ def test_FEBio_EllipsoidalPowerFiber(febio_cmd_xml):
     # Test 4.2: Do we see the correct stresses?
     # σ_wfl = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
     σ_wfl = e.material.tstress(F_applied)
-    σ_febio = model.solution.value("stress", step=1, entity_id=0, region_id=1)
+    σ_febio = model.solution.value("stress", step=1, entity_id=1, region_id=1)
     npt.assert_allclose(σ_wfl, σ_febio, atol=ATOL_STRESS)

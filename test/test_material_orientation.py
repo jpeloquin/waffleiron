@@ -245,7 +245,7 @@ def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE(febio_cmd_xml):
         ],
         dtype=np.float32,
     )
-    σ_xplt_E9 = model.solution.value("stress", -1, 8, 1)
+    σ_xplt_E9 = model.solution.value("stress", -1, 9, 1)
     npt.assert_allclose(σ_xplt_E9, σ_expected_E9, rtol=RTOL_STRESS)
     σ_expected_E12 = np.array(
         [
@@ -255,12 +255,12 @@ def test_FEBio_LOHetMatAxLoc_Hex8_OrthoE(febio_cmd_xml):
         ],
         dtype=np.float32,
     )
-    σ_xplt_E12 = model.solution.value("stress", -1, 11, 1)
+    σ_xplt_E12 = model.solution.value("stress", -1, 12, 1)
     npt.assert_allclose(σ_xplt_E12, σ_expected_E12, rtol=RTOL_STRESS, atol=ATOL_STRESS)
     ## Test 4.2.2: Does waffleiron calculate the same stress as FEBio?
     for i in range(8, 12):
         e = model.mesh.elements[i]
-        σ_FEBio = model.solution.value("stress", -1, i, 1)
+        σ_FEBio = model.solution.value("stress", -1, i + 1, 1)
         # e.material is just OrthotropicElastic; doesn't include local basis
         σ = np.mean([e.tstress(r) for r in e.gloc], axis=0)
         npt.assert_allclose(σ, σ_FEBio, rtol=RTOL_STRESS, atol=ATOL_STRESS)
@@ -324,7 +324,7 @@ def test_FEBio_LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber(febio_cmd_xml):
         ],
         dtype=np.float32,
     )
-    σ_xplt_E9 = model.solution.value("stress", -1, 8, 1)
+    σ_xplt_E9 = model.solution.value("stress", -1, 9, 1)
     npt.assert_allclose(σ_xplt_E9, σ_expected_E9, rtol=RTOL_STRESS, atol=ATOL_STRESS)
     σ_expected_E12 = np.array(
         [
@@ -334,12 +334,12 @@ def test_FEBio_LOHetMatAxLoc_SOHomFibAng_Hex8_PowLinFiber(febio_cmd_xml):
         ],
         dtype=np.float32,
     )
-    σ_xplt_E12 = model.solution.value("stress", -1, 11, 1)
+    σ_xplt_E12 = model.solution.value("stress", -1, 12, 1)
     npt.assert_allclose(σ_xplt_E12, σ_expected_E12, rtol=RTOL_STRESS, atol=ATOL_STRESS)
     ## Test 4.2.2: Does waffleiron calculate the same stress as FEBio?
     for i in range(8, 12):
         e = model.mesh.elements[i]
-        σ_FEBio = model.solution.value("stress", -1, i, 1)
+        σ_FEBio = model.solution.value("stress", -1, i + 1, 1)
         # e.material is just OrthotropicElastic; doesn't include local basis
         σ = np.mean([e.tstress(r) for r in e.gloc], axis=0)
         npt.assert_allclose(σ, σ_FEBio, rtol=RTOL_STRESS, atol=ATOL_STRESS)

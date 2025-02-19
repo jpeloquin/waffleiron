@@ -432,7 +432,7 @@ def test_FEBio_intraElementHetF_Hex8(febio_cmd):
     assert np.all(np.abs(σ_gpt - σ_center) > 0.003)
     # Does waffleiron' stress averaged over Gauss points match FEBio
     # output stress?
-    σ_FEBio = model.solution.value("stress", -1, 0, 1)
+    σ_FEBio = model.solution.value("stress", -1, 1, 1)
     npt.assert_allclose(σ_gpt, σ_FEBio, rtol=RTOL_STRESS, atol=ATOL_STRESS)
 
 

@@ -98,7 +98,7 @@ def read_contact(e_contact: etree.Element, named_face_sets, febioxml_module):
     root = tree.getroot()
     surf_pair = e_contact.attrib["surface_pair"]
     e_SurfacePair = find_unique_tag(
-        root, f"{fx.MESH_PARENT}/SurfacePair[@name='{surf_pair}']"
+        root, f"{fx.MESH_TAG}/SurfacePair[@name='{surf_pair}']"
     )
     e_leader = find_unique_tag(e_SurfacePair, fx.SURFACEPAIR_LEADER_NAME)
     e_follower = find_unique_tag(e_SurfacePair, fx.SURFACEPAIR_FOLLOWER_NAME)
@@ -144,12 +144,12 @@ def read_mesh(root: etree.Element, febioxml_module) -> Tuple[NDArray, List]:
     nodes = np.array(
         [
             [float(a) for a in b.text.split(",")]
-            for b in root.findall(f"./{fx.MESH_PARENT}/Nodes/*")
+            for b in root.findall(f"./{fx.MESH_TAG}/Nodes/*")
         ]
     )
     # Read elements
     elements = []  # nodal index format
-    for elset in root.findall(f"./{fx.MESH_PARENT}/Elements"):
+    for elset in root.findall(f"./{fx.MESH_TAG}/Elements"):
         # map element type strings to classes
         cls = elem_cls_from_feb[elset.attrib["type"]]
         for elem in elset.findall("./elem"):
@@ -170,12 +170,12 @@ def read_named_sets(root: etree.Element, febioxml_module) -> Dict[str, Dict[str,
     }
     # Handle items that are stored by id
     for k in ["node sets", "element sets"]:
-        for e_set in root.findall(f"./{fx.MESH_PARENT}/{tag_name[k]}"):
+        for e_set in root.findall(f"./{fx.MESH_TAG}/{tag_name[k]}"):
             items = fx.read_nodeset(e_set)
             sets[k][e_set.attrib["name"]] = items
     # Handle items that are stored as themselves
     for k in ["face sets"]:
-        for tag_set in root.findall(f"./{fx.MESH_PARENT}/{tag_name[k]}"):
+        for tag_set in root.findall(f"./{fx.MESH_TAG}/{tag_name[k]}"):
             items = [
                 _canonical_face(
                     [ZeroIdxID(int(s.strip()) - 1) for s in tag_item.text.split(",")]

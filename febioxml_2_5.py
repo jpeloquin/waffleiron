@@ -57,7 +57,7 @@ BODY_COND_PARENT = "Boundary"
 BODY_COND_NAME = "rigid_body"
 IMPBODY_PARENT = "Boundary"
 IMPBODY_NAME = "rigid"
-MESH_PARENT = "Geometry"
+MESH_TAG = "Geometry"
 ELEMENTDATA_PARENT = "MeshData"
 NODEDATA_PARENT = "MeshData"
 ELEMENTSET_PARENT = "Geometry"
@@ -241,12 +241,16 @@ def get_surface_name(surfacepair_subelement):
 
 def read_domains(root: etree.Element):
     """Return list of domains"""
+    element_from_id = {
+        int(e.attrib["id"]): i
+        for i, e in enumerate(root.xpath(f"{MESH_TAG}/Elements/elem"))
+    }
     domains = []
-    e_domains = root.findall(f"{MESH_PARENT}/Elements")
+    e_domains = root.findall(f"{MESH_TAG}/Elements")
     for e_domain in e_domains:
         name = e_domain.attrib.get("name", None)
         elements = [
-            ZeroIdxID(int(e.attrib["id"]) - 1) for e in e_domain.findall("elem")
+            element_from_id[int(e.attrib["id"])] for e in e_domain.findall("elem")
         ]
         domain = {
             "name": name,
@@ -497,7 +501,7 @@ def mesh_xml(model, domains, material_registry):
     two XML elements.
 
     """
-    e_geometry = etree.Element(MESH_PARENT)
+    e_geometry = etree.Element(MESH_TAG)
     # Write <nodes>
     e_nodes = etree.SubElement(e_geometry, "Nodes")
     for i, x in enumerate(model.mesh.nodes):

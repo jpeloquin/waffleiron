@@ -311,8 +311,8 @@ def add_nodeset(xml_root, name, nodes, febioxml_module):
             f"Node set '{name}' is empty.  FEBio XML unfortunately does not support empty node sets."
         )
     fx = febioxml_module
-    e_Mesh = xml_root.find(fx.MESH_PARENT)
-    for existing in xml_root.xpath(f"{fx.MESH_PARENT}/NodeSet[@name='{name}']"):
+    e_Mesh = xml_root.find(fx.MESH_TAG)
+    for existing in xml_root.xpath(f"{fx.MESH_TAG}/NodeSet[@name='{name}']"):
         existing.getparent().remove(existing)
     e_nodeset = fx.xml_nodeset(nodes, name)
     e_Mesh.append(e_nodeset)
@@ -875,11 +875,11 @@ def xml(model: Model, version="3.0"):
     #
     # Write any named node sets that were not already written.
     for nm, node_set in model.named["node sets"].pairs():
-        e_nodeset = root.find(f"{fx.MESH_PARENT}/NodeSet[@name='{nm}']")
+        e_nodeset = root.find(f"{fx.MESH_TAG}/NodeSet[@name='{nm}']")
         if e_nodeset is None:
             add_nodeset(root, nm, node_set, febioxml_module=fx)
     # Write *all* named face sets ("surfaces")
-    surface_parent = find_unique_tag(root, fx.MESH_PARENT)
+    surface_parent = find_unique_tag(root, fx.MESH_TAG)
     for nm, face_set in model.named["face sets"].pairs():
         e_surface = etree.SubElement(surface_parent, "Surface", name=nm)
         for i, face in enumerate(face_set):

@@ -35,7 +35,7 @@ BODY_COND_NAME = "rigid_body"
 # Implicit rigid bodies do not seem to be supported in FEBio XML 2.0.
 IMPBODY_PARENT = None
 IMPBODY_NAME = None
-MESH_PARENT = "Geometry"
+MESH_TAG = "Geometry"
 ELEMENTDATA_PARENT = "Geometry"
 NODEDATA_PARENT = "Geometry"
 ELEMENTSET_PARENT = "Geometry"

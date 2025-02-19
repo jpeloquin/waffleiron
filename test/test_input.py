@@ -55,7 +55,7 @@ def test_FEBio_FixedNodeBC_Solid(FixedNodeBC_Solid_Model):
     with open(pth_xplt, "rb") as f:
         xplt = wfl.xplt.XpltData(f.read())
     # Test 3: Read mesh from XPLT?
-    mesh = xplt.mesh()
+    mesh, _ = xplt.mesh()
     # Check node values
     assert len(mesh.nodes) == 8
     assert np.array(mesh.nodes).shape[1] == 3
@@ -85,7 +85,7 @@ def test_FEBio_Fixed_NodeBC_Biphasic(FixedNodeBC_Biphasic_Model):
     with open(str(pth_xplt), "rb") as f:
         xplt = wfl.xplt.XpltData(f.read())
     # Test 3: Read mesh from XPLT?
-    mesh = xplt.mesh()
+    mesh, _ = xplt.mesh()
     # Check node values
     assert len(mesh.nodes) == 8
     assert np.array(mesh.nodes).shape[1] == 3
