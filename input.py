@@ -1,5 +1,6 @@
 import dataclasses
 import os
+from operator import itemgetter
 from pathlib import Path
 from typing import Any, List, Union, Dict, Tuple
 import warnings
@@ -10,12 +11,10 @@ import numpy as np
 from numpy import array
 import pandas as pd
 from numpy.typing import NDArray
-from waffleiron import febioxml_4_0
 
-import waffleiron.element
-from waffleiron.exceptions import UnsupportedFormatError
-from operator import itemgetter
 
+from . import febioxml_4_0, element
+from .exceptions import UnsupportedFormatError
 from .math import orthonormal_basis, vec_from_sph
 from .model import Model, Mesh
 from .core import (
