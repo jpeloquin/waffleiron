@@ -231,8 +231,9 @@ def get_surface_name(surfacepair_subelement):
 
     For example, return "surface1" for the element <primary surface="surface1"/>.
 
-    This function exists because the surface name changed to element content in FEBio
-    XML 3.0.
+    This function exists to maintain API compatibility across FEBio XML modules.  The
+    surface name in FEBio XML 3.0 changed to reference element content so finding the
+    surface name is much more complicated from 3.0 onward.
 
     """
     return surfacepair_subelement.attrib["surface"]
