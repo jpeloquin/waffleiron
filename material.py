@@ -181,7 +181,7 @@ class EllipsoidalDistribution:
         #  itself; perhaps it would be better in some sort of run configuration.
         #  Waffleiron is currently only used with FEBio, but I don't want to couple
         #  them too tightly.
-        self.integration = ("fibers-3d-gkt", 27, 31)
+        self.integration = ("fibers-3d-gkt", 11, 31)  # max needed in Hou_Ateshian_2016
 
 
 class Permeability:
