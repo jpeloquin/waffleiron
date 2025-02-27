@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Callable, Tuple
 
 import numpy as np
 from numpy import dot, trace, eye, outer
@@ -68,6 +68,25 @@ FIBER_OCTANT_INTEGRATION_WEIGHTS = np.array(
 )
 
 
+def stress_1d_N(F, stress: Callable, N):
+    """Return stress along (material config) unit vector N
+
+    :param F: Deformation gradient tensor.
+
+    :param stress: Function of stretch ratio λ that returns 1D stress; scalar → scalar.
+
+    :param N: Unit vector along which to calculate stress.  N is defined in the
+    (unstrained) material configuration.  N is not renormalized during the calculation,
+    so if it is not a unit vector you will get incorrect results.
+
+    """
+    λ = np.linalg.norm(F @ N)  # np.sqrt(Q @ F.T @ F @ Q.T)
+    P = stress(λ) * np.outer(N, N) # PK2 stress
+    J = np.linalg.det(F)
+    σ = 1 / J * F @ P @ F.T
+    return σ
+
+
 def to_Lamé(E, v):
     """Convert Young's modulus & Poisson ratio to Lamé parameters."""
     y = v * E / ((1.0 + v) * (1.0 - 2.0 * v))
@@ -113,13 +132,9 @@ class OrientedMaterial:
 
     def tstress(self, F, **kwargs):
         Q = self.orientation
-        J = np.linalg.det(F)
         if Q.ndim == 1:
             # 1D material ("fiber")
-            λ = np.linalg.norm(F @ Q)  # np.sqrt(Q @ F.T @ F @ Q.T)
-            N = Q
-            σ_loc_PK2 = self.material.stress(λ) * np.outer(N, N)
-            σ_loc = 1 / J * F @ σ_loc_PK2 @ F.T
+            return stress_1d_N(F, self.material.stress, Q)
         elif Q.ndim == 2:
             # 3D material ("solid")
             σ_loc = self.material.tstress(F @ Q, **kwargs)
@@ -512,7 +527,7 @@ class PowerLinearFiber:
         raise NotImplementedError
 
     def stress(self, λ):
-        """Return material stress scalar."""
+        """Return stress scalar"""
         λ0 = self.λ0
         β = self.β
         E = self.E
@@ -533,8 +548,7 @@ class PowerLinearFiber:
     def sstress(self, λ):
         """Synonym for material stress.
 
-        Makes some use cases easier by providing a consistent name with
-        3D materials.
+        Makes some use cases easier by providing a consistent name with 3D materials.
 
         """
         return self.stress(λ)
@@ -673,10 +687,10 @@ class EllipsoidalPowerFiber:
             return summand
 
         σ = integrate(np.zeros((3, 3)), σ_N)
-        # The literature integrates over the full sphere, but I think this is a
-        # strange choice because fibers are lines, not rays.  Integrating over the
-        # half sphere would count each fiber family once.  Nevertheless consistency
-        # with FEBio and the literature is probably best.
+        # The literature integrates over the full sphere (Ateshian & Hung 2009).  I
+        # think this is a strange choice because fibers are lines, not rays.
+        # Integrating over the full sphere counts each fiber family twice.  Nevertheless
+        # consistency with FEBio and the literature is probably best.
         return 2 * σ
 
 
