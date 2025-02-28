@@ -617,9 +617,9 @@ def read_continuous_fiber_distribution_xml(e, seq: dict):
     dist_type = e.find("distribution").attrib["type"]
     fiber = read_material(e.find("fibers"), seq)
     if dist_type == "ellipsoidal":
-        a, b, c = vector_from_text(e.find("distribution/spa").text)
+        d = vector_from_text(e.find("distribution/spa").text)
         # TODO: Support parametrized integration schemes
-        return EllipsoidalDistribution(a, b, c, fiber)
+        return EllipsoidalDistribution(d, fiber)
     else:
         return NotImplementedError
 

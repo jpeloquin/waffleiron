@@ -131,7 +131,7 @@ def _(mat: matlib.EllipsoidalDistribution, model) -> ElementTree:
     e_fibers.tag = "fibers"  # was "solid"
     e.append(e_fibers)
     e_dist = etree.SubElement(e, "distribution", type="ellipsoidal")
-    etree.SubElement(e_dist, "spa").text = vec_to_text((mat.a, mat.b, mat.c))
+    etree.SubElement(e_dist, "spa").text = vec_to_text(mat.d)
     e_scheme = etree.SubElement(e, "scheme", type=mat.integration[0])
     etree.SubElement(e_scheme, "nph").text = num_to_text(mat.integration[1])
     etree.SubElement(e_scheme, "nth").text = num_to_text(mat.integration[2])

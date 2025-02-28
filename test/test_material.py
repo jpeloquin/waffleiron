@@ -389,14 +389,14 @@ def test_FEBio_EllipsoidalDistribution(febio_cmd_xml):
     model = Model(rectangular_prism_hex8((1, 1, 1), ((0, 1), (0, 1), (0, 1))))
     matrix = NeoHookean(1, 0)
     fibers = EllipsoidalDistribution(
-        1, 0.5, 0.1, PowerLinearFiber(E=100, β=2.5, λ0=1.04)
+        [1, 0.1, 0.1], PowerLinearFiber(E=100, β=2.5, λ0=1.01)
     )
     mat = SolidMixture([matrix, fibers])
     model.mesh.elements[0].material = mat
     seq = wfl.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
     step = Step("solid", dynamics="static", ticker=auto_ticker(seq, 1))
     model.add_step(step)
-    F_applied = np.array([[1.08, 0, 0], [0, 0.97, 0], [0, 0, 0.88]])
+    F_applied = np.array([[1.08, 0, 0], [0, 1.08, 0], [0, 0, 1.08]])
     prescribe_deformation(model, step, np.arange(len(model.mesh.nodes)), F_applied, seq)
 
     bn = f"{Path(__file__).with_suffix('').name}." + "EllDist"
@@ -426,5 +426,4 @@ def test_FEBio_EllipsoidalDistribution(febio_cmd_xml):
     # σ_wfl = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
     σ_wfl = e.material.tstress(F_applied)
     σ_febio = model.solution.value("stress", step=1, entity_id=1, region_id=1)
-    # TODO: decrease tolerance after implement GKT rule
-    npt.assert_allclose(σ_wfl, σ_febio, atol=0.03)
+    npt.assert_allclose(σ_wfl, σ_febio, atol=5e-3)

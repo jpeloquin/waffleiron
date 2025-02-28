@@ -1,9 +1,11 @@
+from functools import partial
+from math import log, exp, sin, cos, acos, radians, pi, inf
 from typing import Callable, Tuple
 
+import chaospy  # TODO: just need quadrature points
 import numpy as np
 from numpy import dot, trace, eye, outer
 from numpy.linalg import det
-from math import log, exp, sin, cos, radians, pi, inf
 
 # Same-package modules
 from .core import CONSTANT_R, CONSTANT_F, Sequence, ScaledSequence
@@ -15,7 +17,7 @@ _DEFAULT_ORIENT_RANK2 = (np.array([1, 0, 0]), np.array([0, 1, 0]), np.array([0, 
 
 # Precalculated ellipsoidal fiber orientation distribution integration terms from
 # FEBio geodesic.h.  Each row is cos(Θ) * sin(φ), sin(Θ) * sin(φ), cos(φ), weight;
-# θ ∈ [0, π/2], φ ∈ [0, π/2].
+# θ ∈ [0, π/2], φ ∈ [0, π/2].  The weights sum to π/2.
 # TODO: double precision
 FIBER_OCTANT_INTEGRATION_WEIGHTS = np.array(
     [
@@ -68,12 +70,21 @@ FIBER_OCTANT_INTEGRATION_WEIGHTS = np.array(
 )
 
 
-def integrate_oct(summand, f):
+def pdf3d_spherical():
+    return 1 / 4 / pi
+
+
+def pdf3d_ellipsoidal(r: np.ndarray, d: np.ndarray):
+    # TODO: normalize so this is actually a pdf
+    # return ((r[0] / d[0]) ** 2 + (r[1] / d[1]) ** 2 + (r[2] / d[2]) ** 2) ** -0.5
+    return 1 / np.linalg.norm(r / d)
+
+
+def integrate_sph2_oct(summand, f):
     """Integrate f over unit half-sphere
 
-    The surface area of the unit sphere is 4π.
+    45 points per octant
 
-    abs(integrate(0, lambda x: 1) - 2 * pi) < 5e-7
     """
     for octant_signs in (
         np.array([1, 1, 1]),
@@ -85,6 +96,41 @@ def integrate_oct(summand, f):
             N = octant_signs * FIBER_OCTANT_INTEGRATION_WEIGHTS[i, :3]
             w = FIBER_OCTANT_INTEGRATION_WEIGHTS[i, -1]
             summand += w * f(N)
+    return summand
+
+
+def integrate_sph2_gkt(summand, f, o_φ, n_θ):
+    """Integrate f over unit half-sphere by GKT
+
+    Implemented based on Hou_Ateshian_2016, but integrating the whole sphere.
+
+    """
+    # FEBio weights sum to 2; these weights sum to 1.  That doesn't affect the FEBio
+    # results because they normalize by the integrated fiber density.
+    ζ_points, ζ_weights = chaospy.quadrature.kronrod(o_φ, chaospy.Uniform(-1, 1))
+    # ^ takes 2.2 ms; maybe call it once (cache it?)  Whole integration takes 3 ms.
+    ζ_points = ζ_points.squeeze()
+    ζ_weights = ζ_weights.squeeze()
+
+    def φ_from_ζ(ζ):
+        return acos(0.5 * (ζ * (cos(φb) - cos(φa)) + cos(φa) + cos(φb)))
+
+    # θ is azimuth
+    # φ is declination
+    dθ = 2 * pi / n_θ
+    φa = 0
+    φb = pi / 2
+    # ζa = -1
+    # ζb = 1
+    # h_ζ = 0.5 * (ζb - ζa)
+    # center_ζ = 0.5 * (ζb + ζa)
+    for ζ, w in zip(ζ_points, ζ_weights):
+        for i in range(n_θ):
+            θ = i * dθ
+            φ = φ_from_ζ(ζ)
+            N = np.array([cos(θ) * sin(φ), sin(θ) * sin(φ), cos(φ)])
+            # np.testing.assert_almost_equal(np.linalg.norm(N), 1, decimal=14)
+            summand += w * dθ * f(N)
     return summand
 
 
@@ -187,35 +233,32 @@ class OrientedMaterial:
 
 class EllipsoidalDistribution:
 
-    def __init__(self, a, b, c, fiber):
+    def __init__(self, d, mat_fiber):
         """Return fibers with ellipsoidal orientation distribution
 
         a, b, and c are not independent; their ratios matter, their scale does not.
 
         """
-        self.a = a
-        self.b = b
-        self.c = c
-        self.fiber = fiber
-        # TODO: Parametrize integration scheme.  Not sure it belongs in the material
-        #  itself; perhaps it would be better in some sort of run configuration.
-        #  Waffleiron is currently only used with FEBio, but I don't want to couple
-        #  them too tightly.
+        self.d = np.array(d)
+        self.fiber = mat_fiber
+        # TODO: not sure integration scheme belongs here
         self.integration = ("fibers-3d-gkt", 11, 31)  # max needed in Hou_Ateshian_2016
+        self.o_φ = (self.integration[1] - 1) // 2
+        self.n_θ = self.integration[2]
 
     def tstress(self, F, **kwargs):
-
-        def R(N):
-            return (
-                (N[0] / self.a) ** 2 + (N[1] / self.b) ** 2 + (N[2] / self.c) ** 2
-            ) ** -0.5
 
         def σ(N):
             """Return fiber direction stress"""
             return stress_1d_N(F, self.fiber.stress, N)
 
-        integrated_density = integrate_oct(0, R)
-        σ = integrate_oct(np.zeros((3, 3)), lambda N: R(N) * σ(N)) / integrated_density
+        R = partial(pdf3d_ellipsoidal, d=self.d)
+        integrated_density = integrate_sph2_gkt(0, R, self.o_φ, self.n_θ)
+        σ = (
+            integrate_sph2_gkt(
+                np.zeros((3, 3)), lambda N: R(N) * σ(N), self.o_φ, self.n_θ
+            )
+        ) / integrated_density
         return σ
 
 
@@ -702,7 +745,7 @@ class EllipsoidalPowerFiber:
             dΨ = β * ξ * (I_n - 1) ** (β - 1)
             return 2 * I_n / J * dΨ * np.outer(n, n)
 
-        σ = integrate_oct(np.zeros((3, 3)), σ_N)
+        σ = integrate_sph2_oct(np.zeros((3, 3)), σ_N)
         # The literature integrates over the full sphere (Ateshian & Hung 2009).  I
         # think this is a strange choice because fibers are lines, not rays.
         # Integrating over the full sphere counts each fiber family twice.  Nevertheless
