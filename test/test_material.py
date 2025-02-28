@@ -336,7 +336,7 @@ class EllipsoidalPowerFiberBasic(TestCase):
 
 
 def test_FEBio_EllipsoidalPowerFiber(febio_cmd_xml):
-    """E2E test of OrthotropicElastic material."""
+    """E2E test of EllipsoidalPowerFiber material."""
     febio_cmd, xml_version = febio_cmd_xml
 
     # Generate model
@@ -379,3 +379,52 @@ def test_FEBio_EllipsoidalPowerFiber(febio_cmd_xml):
     σ_wfl = e.material.tstress(F_applied)
     σ_febio = model.solution.value("stress", step=1, entity_id=1, region_id=1)
     npt.assert_allclose(σ_wfl, σ_febio, atol=ATOL_STRESS)
+
+
+def test_FEBio_EllipsoidalDistribution(febio_cmd_xml):
+    """E2E test of EllipsoidalPowerFiber material."""
+    febio_cmd, xml_version = febio_cmd_xml
+
+    # Generate model
+    model = Model(rectangular_prism_hex8((1, 1, 1), ((0, 1), (0, 1), (0, 1))))
+    matrix = NeoHookean(1, 0)
+    fibers = EllipsoidalDistribution(
+        1, 0.5, 0.1, PowerLinearFiber(E=100, β=2.5, λ0=1.04)
+    )
+    mat = SolidMixture([matrix, fibers])
+    model.mesh.elements[0].material = mat
+    seq = wfl.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
+    step = Step("solid", dynamics="static", ticker=auto_ticker(seq, 1))
+    model.add_step(step)
+    F_applied = np.array([[1.08, 0, 0], [0, 0.97, 0], [0, 0, 0.88]])
+    prescribe_deformation(model, step, np.arange(len(model.mesh.nodes)), F_applied, seq)
+
+    bn = f"{Path(__file__).with_suffix('').name}." + "EllDist"
+
+    # TODO: switch to roundtrip
+
+    # Test 1: Write
+    pth_out = DIR_OUT / (f"{bn}.{febio_cmd}.xml{xml_version}.feb")
+    if not pth_out.parent.exists():
+        pth_out.parent.mkdir()
+    with open(pth_out, "wb") as f:
+        wfl.output.write_feb(model, f, version=xml_version)
+
+    # Test 2: Solve: Can FEBio use the file?
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
+
+    # Test 3: Is the output as expected?
+    model = wfl.load_model(pth_out)
+    e = model.mesh.elements[0]
+
+    # Test 4.1: Do we see the correct applied displacements?  A test failure here
+    # means that there is a defect in the code that reads or writes the model.  Or,
+    # less likely, an FEBio bug.
+    F_obs = np.mean([e.f(r) for r in e.gloc], axis=0)
+    npt.assert_allclose(F_obs, F_applied, atol=ATOL_F)
+    # Test 4.2: Do we see the correct stresses?
+    # σ_wfl = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
+    σ_wfl = e.material.tstress(F_applied)
+    σ_febio = model.solution.value("stress", step=1, entity_id=1, region_id=1)
+    # TODO: decrease tolerance after implement GKT rule
+    npt.assert_allclose(σ_wfl, σ_febio, atol=0.03)

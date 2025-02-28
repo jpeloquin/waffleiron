@@ -68,6 +68,26 @@ FIBER_OCTANT_INTEGRATION_WEIGHTS = np.array(
 )
 
 
+def integrate_oct(summand, f):
+    """Integrate f over unit half-sphere
+
+    The surface area of the unit sphere is 4π.
+
+    abs(integrate(0, lambda x: 1) - 2 * pi) < 5e-7
+    """
+    for octant_signs in (
+        np.array([1, 1, 1]),
+        np.array([-1, 1, 1]),
+        np.array([-1, -1, 1]),
+        np.array([1, -1, 1]),
+    ):
+        for i in range(FIBER_OCTANT_INTEGRATION_WEIGHTS.shape[0]):
+            N = octant_signs * FIBER_OCTANT_INTEGRATION_WEIGHTS[i, :3]
+            w = FIBER_OCTANT_INTEGRATION_WEIGHTS[i, -1]
+            summand += w * f(N)
+    return summand
+
+
 def stress_1d_N(F, stress: Callable, N):
     """Return stress along (material config) unit vector N
 
@@ -81,7 +101,7 @@ def stress_1d_N(F, stress: Callable, N):
 
     """
     λ = np.linalg.norm(F @ N)  # np.sqrt(Q @ F.T @ F @ Q.T)
-    P = stress(λ) * np.outer(N, N) # PK2 stress
+    P = stress(λ) * np.outer(N, N)  # PK2 stress
     J = np.linalg.det(F)
     σ = 1 / J * F @ P @ F.T
     return σ
@@ -182,6 +202,21 @@ class EllipsoidalDistribution:
         #  Waffleiron is currently only used with FEBio, but I don't want to couple
         #  them too tightly.
         self.integration = ("fibers-3d-gkt", 11, 31)  # max needed in Hou_Ateshian_2016
+
+    def tstress(self, F, **kwargs):
+
+        def R(N):
+            return (
+                (N[0] / self.a) ** 2 + (N[1] / self.b) ** 2 + (N[2] / self.c) ** 2
+            ) ** -0.5
+
+        def σ(N):
+            """Return fiber direction stress"""
+            return stress_1d_N(F, self.fiber.stress, N)
+
+        integrated_density = integrate_oct(0, R)
+        σ = integrate_oct(np.zeros((3, 3)), lambda N: R(N) * σ(N)) / integrated_density
+        return σ
 
 
 class Permeability:
@@ -667,26 +702,7 @@ class EllipsoidalPowerFiber:
             dΨ = β * ξ * (I_n - 1) ** (β - 1)
             return 2 * I_n / J * dΨ * np.outer(n, n)
 
-        def integrate(summand, f):
-            """Integrate f over unit half-sphere
-
-            The surface area of the unit sphere is 4π.
-
-            abs(integrate(0, lambda x: 1) - 2 * pi) < 5e-7
-            """
-            for octant_signs in (
-                np.array([1, 1, 1]),
-                np.array([-1, 1, 1]),
-                np.array([-1, -1, 1]),
-                np.array([1, -1, 1]),
-            ):
-                for i in range(FIBER_OCTANT_INTEGRATION_WEIGHTS.shape[0]):
-                    N = octant_signs * FIBER_OCTANT_INTEGRATION_WEIGHTS[i, :3]
-                    w = FIBER_OCTANT_INTEGRATION_WEIGHTS[i, -1]
-                    summand += w * f(N)
-            return summand
-
-        σ = integrate(np.zeros((3, 3)), σ_N)
+        σ = integrate_oct(np.zeros((3, 3)), σ_N)
         # The literature integrates over the full sphere (Ateshian & Hung 2009).  I
         # think this is a strange choice because fibers are lines, not rays.
         # Integrating over the full sphere counts each fiber family twice.  Nevertheless
