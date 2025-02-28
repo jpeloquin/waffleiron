@@ -1,7 +1,13 @@
 import os
 import unittest
-from tvtk.api import tvtk
-from tvtk.common import configure_input
+
+import pytest
+
+try:
+    from tvtk.api import tvtk
+    from tvtk.common import configure_input
+except ImportError:
+    pytest.skip(allow_module_level=True)
 
 import waffleiron as wfl
 from waffleiron.vtk import tvtk_ugrid_from_mesh

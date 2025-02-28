@@ -1,13 +1,14 @@
 import numpy as np
-from tvtk.api import tvtk
 from .element import Hex8
-
-# Mapping from waffleiron cell types to vtk cell types
-vtk_cell_type = {Hex8: tvtk.Hexahedron().cell_type}
 
 
 def tvtk_ugrid_from_mesh(mesh):
     """Create tvtk UnstructuredGrid object from mesh."""
+    from tvtk.api import tvtk
+
+    # Mapping from waffleiron cell types to vtk cell types
+    vtk_cell_type = {Hex8: tvtk.Hexahedron().cell_type}
+
     points = np.array(mesh.nodes)
     cells = np.array([[len(e.ids)] + e.ids for e in mesh.elements])
     cells = cells.ravel()
