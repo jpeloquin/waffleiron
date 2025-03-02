@@ -155,7 +155,11 @@ def stress_1d_N(F, stress: Callable, N):
 
 def to_Lamé(E, v):
     """Convert Young's modulus & Poisson ratio to Lamé parameters."""
-    y = v * E / ((1.0 + v) * (1.0 - 2.0 * v))
+    if v <= -1 or v >= 0.5:
+        raise InvalidParameterError(
+            f"ν = {v} cannot be converted to Lamé parameters; -1 < ν < 0.5 required."
+        )
+    y = v * E / ((1.0 + v) * (1.0 - 2.0 * v))  # TODO: handle ν = 0.5 or -1
     mu = E / (2.0 * (1.0 + v))
     return y, mu
 
@@ -609,16 +613,16 @@ class PowerLinearFiber:
         λ0 = self.λ0
         β = self.β
         E = self.E
-        ξ = E / 2 / (β - 1) * λ0 ** (-3) * (λ0**2 - 1) ** (2 - β)
-        b = E / 2 / (λ0**3) * ((λ0**2 - 1) / (2 * (β - 1)) + λ0**2)
         # Stress
         λsq = λ**2
         if λ <= 1:
             σ = 0
         elif λ <= λ0:
+            ξ = E / 2 / (β - 1) * λ0 ** (-3) * (λ0**2 - 1) ** (2 - β)
             dΨ_dλsq = ξ / 2 * (λsq - 1) ** (β - 1)
             σ = 2 * dΨ_dλsq  # equiv to 2 dΨ/dC; PK2
         else:
+            b = E / 2 / (λ0**3) * ((λ0**2 - 1) / (2 * (β - 1)) + λ0**2)
             dΨ_dλsq = b - E / 2 / λ
             σ = 2 * dΨ_dλsq  # equiv to 2 dΨ/dC; PK2
         return σ
