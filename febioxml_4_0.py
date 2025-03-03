@@ -135,9 +135,14 @@ QNMETHOD_PARAMS = {
 # structure or a Waffleiron object.
 
 
-def read_nodeset(e_nodeset):
+def read_elementset(e):
+    """Return list of element IDs (labels, not indices) in <ElementSet>"""
+    return [int(s.strip()) for s in e.text.split(",")]
+
+
+def read_nodeset(e):
     """Return list of node IDs (zero-indexed) in <NodeSet>"""
-    return [ZeroIdxID(int(s.strip()) - 1) for s in e_nodeset.text.split(",")]
+    return [ZeroIdxID(int(s.strip()) - 1) for s in e.text.split(",")]
 
 
 def read_elementdata_mat_axis(
@@ -186,9 +191,7 @@ def read_fixed_node_bcs(root: etree.Element, model):
             # name registry.
             bcs[(dof, var)] = read_nodeset_ref(
                 e_fix.attrib["node_set"],
-                node_sets=model.named["node sets"],
-                face_sets=model.named["face sets"],
-                element_sets=model.named["element sets"],
+                model.mesh,
             )
     # Zero node fluid pressure
     for e_fix in root.findall(f"Boundary/bc[@type='zero fluid pressure']"):
@@ -196,9 +199,7 @@ def read_fixed_node_bcs(root: etree.Element, model):
         var = "pressure"
         bcs[(dof, var)] = read_nodeset_ref(
             e_fix.attrib["node_set"],
-            node_sets=model.named["node sets"],
-            face_sets=model.named["face sets"],
-            element_sets=model.named["element sets"],
+            model.mesh,
         )
     return bcs
 

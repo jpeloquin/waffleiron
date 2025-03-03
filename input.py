@@ -169,10 +169,12 @@ def read_named_sets(root: etree.Element, febioxml_module) -> Dict[str, Dict[str,
         "element sets": "ElementSet",
     }
     # Handle items that are stored by id
-    for k in ["node sets", "element sets"]:
-        for e_set in root.findall(f"./{fx.MESH_TAG}/{tag_name[k]}"):
-            items = fx.read_nodeset(e_set)
-            sets[k][e_set.attrib["name"]] = items
+    for e_set in root.findall(f"./{fx.MESH_TAG}/{tag_name['node sets']}"):
+        items = fx.read_nodeset(e_set)
+        sets["node sets"][e_set.attrib["name"]] = items
+    for e_set in root.findall(f"./{fx.MESH_TAG}/{tag_name['element sets']}"):
+        items = fx.read_elementset(e_set)
+        sets["element sets"][e_set.attrib["name"]] = items
     # Handle items that are stored as themselves
     for k in ["face sets"]:
         for tag_set in root.findall(f"./{fx.MESH_TAG}/{tag_name[k]}"):
@@ -493,7 +495,9 @@ class FebReader:
         # Create model geometry.
         mesh = self.mesh()
         model = Model(mesh)
-        domains = fx.read_domains(self.root)
+        domains, element_index_from_id = fx.read_domains(self.root)
+        for lbl, i in element_index_from_id.items():
+            mesh.named["elements"].add(lbl, model.mesh.elements[i])
 
         # Read Universal Constants.  These will eventually be superseded
         # by units support.
@@ -555,9 +559,9 @@ class FebReader:
             elementset = named_sets["element sets"][eset_name]
             for local_id, basis in eset_data:
                 # local_id is the positional index in the element set list
-                element_idx = elementset[local_id]
+                element_id = elementset[local_id]  # label, not index
                 # Who thought this much indirection in a data file was a good idea?
-                mesh.elements[element_idx].basis = basis
+                mesh.named["elements"].obj(element_id).basis = basis
 
         # Find out what physics are used by the model.  This is a
         # required attribute in FEBio XML 3.0, both as documented and in

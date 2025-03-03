@@ -287,6 +287,7 @@ class Mesh:
         # TODO: Do we really need a NameRegistry?  Or can we just have a primary key
         #  and a few translation tables?
         self.named = {
+            "elements": NameRegistry(),
             "materials": NameRegistry(),
             "node sets": NameRegistry(),
             "face sets": NameRegistry(),

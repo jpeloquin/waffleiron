@@ -17,7 +17,13 @@ from .core import (
 )
 from .control import Dynamics, SaveIters, Solver
 from .febioxml import *
-from .febioxml_2_5 import DYNAMICS_TO_XML, DYNAMICS_FROM_XML, read_elementdata_mat_axis
+from .febioxml_2_5 import (
+    DYNAMICS_TO_XML,
+    DYNAMICS_FROM_XML,
+    read_elementdata_mat_axis,
+    read_nodeset,
+    read_elementset,
+)
 
 # These parts work the same as in FEBio XML 2.5
 from .febioxml_2_5 import contact_bare_xml, xml_meshdata, xml_nodeset
@@ -190,7 +196,7 @@ def iter_node_conditions(root):
 
 def read_domains(root: etree.Element):
     """Return list of domains"""
-    element_from_id = {
+    element_index_from_id = {
         int(e.attrib["id"]): i
         for i, e in enumerate(root.xpath(f"{MESH_TAG}/Elements/elem"))
     }
@@ -199,7 +205,7 @@ def read_domains(root: etree.Element):
         name = e.attrib["name"]
         e_domain = find_unique_tag(root, f"{MESH_TAG}/Elements[@name='{name}']")
         elements = [
-            element_from_id[int(e.attrib["id"])] for e in e_domain.findall("elem")
+            element_index_from_id[int(e.attrib["id"])] for e in e_domain.findall("elem")
         ]
         if e.attrib["mat"] == "":
             material = None
@@ -211,15 +217,7 @@ def read_domains(root: etree.Element):
             "material": material,
         }
         domains.append(domain)
-    return domains
-
-
-def read_nodeset(e_nodeset):
-    """Return list of node IDs (zero-indexed) in <NodeSet>"""
-    items = [
-        ZeroIdxID(int(e_item.attrib["id"]) - 1) for e_item in e_nodeset.getchildren()
-    ]
-    return items
+    return domains, element_index_from_id
 
 
 def get_surface_name(surfacepair_subelement):

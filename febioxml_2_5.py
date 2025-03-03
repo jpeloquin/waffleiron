@@ -241,7 +241,7 @@ def get_surface_name(surfacepair_subelement):
 
 def read_domains(root: etree.Element):
     """Return list of domains"""
-    element_from_id = {
+    element_index_from_id = {
         int(e.attrib["id"]): i
         for i, e in enumerate(root.xpath(f"{MESH_TAG}/Elements/elem"))
     }
@@ -250,7 +250,7 @@ def read_domains(root: etree.Element):
     for e_domain in e_domains:
         name = e_domain.attrib.get("name", None)
         elements = [
-            element_from_id[int(e.attrib["id"])] for e in e_domain.findall("elem")
+            element_index_from_id[int(e.attrib["id"])] for e in e_domain.findall("elem")
         ]
         domain = {
             "name": name,
@@ -258,7 +258,12 @@ def read_domains(root: etree.Element):
             "elements": elements,
         }
         domains.append(domain)
-    return domains
+    return domains, element_index_from_id
+
+
+def read_elementset(e_elementset):
+    """Return list of element IDs (labels, not indices) in <ElementSet>"""
+    return [int(e.attrib["id"].strip()) for e in e_elementset.getchildren()]
 
 
 def read_nodeset(e_nodeset):

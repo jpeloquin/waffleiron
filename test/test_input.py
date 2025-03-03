@@ -45,6 +45,18 @@ def test_Unit_Read_FebioXMLVerbatimMaterial():
     assert e.find("param_b").text == "2"
 
 
+def test_read_FEBio_XML_element_IDs_and_sets():
+    """Test reading an FEBio XML file with element IDs and element sets"""
+    # Test 1: Read XML?
+    model = wfl.load_model(DIR_FIXTURES / "element_IDs_element_sets.feb")
+    # Test 2: Does the element set have the correct element IDs?
+    assert set(lbl for lbl, _ in model.named["elements"].pairs()) == set([2, 3, 4, 5])
+    # Test 3: Does the node set referred to in the BC via an element set name refer
+    # to the correct element nodes?
+    assert model.fixed["node"][("x1", "displacement")] == {10, 1, 2, 14, 11, 5, 6, 19}
+    # TODO: test write–sim–read round trip
+
+
 def test_FEBio_FixedNodeBC_Solid(FixedNodeBC_Solid_Model):
     """Test read of FEBio XML and XPLT files with fixed boundary conditions."""
     pth = FixedNodeBC_Solid_Model
