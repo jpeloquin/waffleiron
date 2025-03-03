@@ -750,9 +750,10 @@ def domains(blocks, version):
             domain_name == ""
         else:
             domain_name = domain_name[0]["data"]
+        # Element IDs in FEBio are actual labels, not indices
         element_ids = [
             t[0] for t in get_bdata_by_name(b_domain, "domain/element_list/element")
-        ]  # FEBio treats these are actual labels, not indices
+        ]
         domain_dict[domain_id] = {
             "name": domain_name,
             "element type": elem_type,

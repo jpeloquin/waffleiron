@@ -186,7 +186,7 @@ def find_unique_tag(root: etree.Element, path, req=False) -> etree.Element:
             return None
 
 
-def parse_nodeset_ref(s: str) -> Tuple[Union[NodeSet, FaceSet], str]:
+def parse_nodeset_ref(s: str) -> Tuple[Union[NodeSet, FaceSet, ElementSet], str]:
     """Parse a node_set XML attribute's value
 
     Examples:
@@ -198,7 +198,8 @@ def parse_nodeset_ref(s: str) -> Tuple[Union[NodeSet, FaceSet], str]:
         _, name = s.split(":")
         return FaceSet, name
     elif s.startswith("@elem_set:"):
-        raise NotImplementedError
+        _, name = s.split(":")
+        return ElementSet, name
     else:
         # As far as I can tell from the FEBio manual, other strings following the
         # '@type:name' pattern should be interpreted as simple names.  I.e., there is
@@ -206,17 +207,27 @@ def parse_nodeset_ref(s: str) -> Tuple[Union[NodeSet, FaceSet], str]:
         return NodeSet, s
 
 
-def read_nodeset_ref(s: str, node_sets=None, face_sets=None, element_sets=None):
-    """Return NodeSet object referenced by a node_set XML attribute"""
+def read_nodeset_ref(s: str, mesh=None) -> NodeSet:
+    """Return NodeSet object referenced by a node_set XML attribute
+
+    :param mesh: Mesh instance.
+
+    """
     cls, nm = parse_nodeset_ref(s)
     match cls.__name__:
         case NodeSet.__name__:
-            return node_sets.obj(nm)
+            return mesh.named["node sets"].obj(nm)
         case FaceSet.__name__:
-            face_set = face_sets.obj(nm)
+            face_set = mesh.named["face sets"].obj(nm)
             return NodeSet(i for f in face_set for i in f)
         case ElementSet.__name__:
-            raise NotImplementedError
+            element_ids = (lbl for lbl in mesh.named["element sets"].obj(nm))
+            node_ids = [
+                i
+                for element_id in element_ids
+                for i in mesh.named["elements"].obj(element_id).ids
+            ]
+            return NodeSet(node_ids)
 
 
 def read_material(e, sequence_registry: dict):
