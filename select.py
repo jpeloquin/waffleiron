@@ -1,6 +1,4 @@
-"""Functions for conveniently selecting nodes and elements.
-
-"""
+"""Functions for conveniently selecting nodes and elements."""
 
 from math import degrees, inf, radians
 import operator
