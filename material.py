@@ -242,6 +242,8 @@ class EllipsoidalDistribution:
 
         a, b, and c are not independent; their ratios matter, their scale does not.
 
+        FEBio XML type attribute = "ellipsoidal".
+
         """
         self.d = np.array(d)
         self.fiber = mat_fiber

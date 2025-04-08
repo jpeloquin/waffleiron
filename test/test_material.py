@@ -1,5 +1,7 @@
 from pathlib import Path
 from unittest import TestCase
+
+import pytest
 from numpy.linalg import inv
 import numpy.testing as npt
 
@@ -381,9 +383,24 @@ def test_FEBio_EllipsoidalPowerFiber(febio_cmd_xml):
     npt.assert_allclose(σ_wfl, σ_febio, atol=ATOL_STRESS)
 
 
-def test_FEBio_EllipsoidalDistribution(febio_cmd_xml):
+@pytest.fixture(
+    params=(
+        np.diag([1.08, 1.08, 1.08]),
+        np.diag([1.08, 0.92, 0.92]),
+        np.diag([1.08, 1.06, 0.94]),
+    ),
+    ids=("T", "TC", "CT"),
+)
+def F_fiber_dist(request):
+    """F tensors for 3 tension–compression cases in Hou_Ateshian_2016"""
+    F = request.param
+    return F
+
+
+def test_FEBio_EllipsoidalDistribution(febio_cmd_xml, F_fiber_dist):
     """E2E test of EllipsoidalPowerFiber material."""
     febio_cmd, xml_version = febio_cmd_xml
+    F_applied = F_fiber_dist
 
     # Generate model
     model = Model(rectangular_prism_hex8((1, 1, 1), ((0, 1), (0, 1), (0, 1))))
@@ -396,7 +413,6 @@ def test_FEBio_EllipsoidalDistribution(febio_cmd_xml):
     seq = wfl.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
     step = Step("solid", dynamics="static", ticker=auto_ticker(seq, 1))
     model.add_step(step)
-    F_applied = np.array([[1.08, 0, 0], [0, 1.08, 0], [0, 0, 1.08]])
     prescribe_deformation(model, step, np.arange(len(model.mesh.nodes)), F_applied, seq)
 
     bn = f"{Path(__file__).with_suffix('').name}." + "EllDist"
