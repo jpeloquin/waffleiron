@@ -119,15 +119,6 @@ def run_febio_unchecked(pth_feb, threads=None, cmd=FEBIO_CMD):
     runs FEBio with added safeguards.
 
     """
-    # FEBio's error handling is interesting, in a bad way.  XML file
-    # read errors are only output to stdout.  If there is a read error,
-    # no log file is created and if an old log file exists, it is not
-    # updated to reflect the file read error.  Model summary info is
-    # only output to the log file.  Time stepper info is output to both
-    # stdout and the log file, but the verbosity of the stdout output
-    # can be adjusted by the user.  We want to ensure (1) the log file
-    # always reflects the last run and (2) all relevant error messages
-    # are written to the log file.
     if threads is None:
         threads = febio_thread_count()
     pth_feb = Path(pth_feb)
@@ -138,56 +129,55 @@ def run_febio_unchecked(pth_feb, threads=None, cmd=FEBIO_CMD):
     # the file doesn't exist FEBio will act as if it was malformed.
     if not pth_feb.exists():
         raise ValueError(f"'{pth_feb}' does not exist or is not accessible.")
+
+    # FEBio's error handling is interesting, in a bad way.  XML file read errors are
+    # only output to stdout.  If there is a read error, no log file is created and if an
+    # old log file exists, it is not updated to reflect the file read error.  Model
+    # summary info is only output to the log file.  Time stepper info is output to both
+    # stdout and the log file, but the verbosity of the stdout output can be adjusted by
+    # the user.  We want to ensure (1) the log file always reflects the last run and (2)
+    # all relevant error messages are written to the log file.
     try:
-        proc = subprocess.run(
+        # If there specifically is a file read error, we need to write capture the
+        # relevant parts of stdout and write it to the log file, because FEBio won't.
+        stdout_only_lines = []
+        reading = True  # True as long as we're still reading stdout-only lines
+        failed = False
+        with subprocess.Popen(
             [cmd, "-i", pth_feb.name],
             # FEBio always writes xplt to current dir
             cwd=pth_feb.parent,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             env=env,
             text=True,
-        )
+            bufsize=1,  # line buffered
+        ) as proc, open(
+            pth_feb.with_suffix(".read.log"), "w", 1, encoding="utf-8"
+        ) as f:
+            for ln in iter(proc.stdout.readline, ""):
+                if reading:
+                    f.write(ln)
+                ln = ln.rstrip()
+                if ln.endswith("SUCCESS!") or ln.endswith("FAILED!"):
+                    reading = False
+                if ln.endswith("FAILED!"):
+                    failed = True
+            if failed:
+                # If reading the file failed, remove any left-over logfile from a
+                # previous run, since its presence can make users think FEBio ran
+                # successfully
+                pth_log.unlink(missing_ok=True)
     except OSError as e:
-        # TODO: Windows, or at least WSL, seems to use different error
-        # codes for files that do not exist.  Saw Errno 13 permission
-        # denied errors for wrong command.
+        # TODO: Windows, or at least WSL, seems to use different error codes for files
+        # that do not exist.  Saw Errno 13 permission denied errors for wrong command.
         if e.errno == errno.ENOENT:
             raise ValueError(
                 f"The OS could not find an executable file named {cmd}; ensure that an FEBio executable with that name exists on the system and is in a directory included in the system PATH variable.  Alternatively, set the environment variable FEBIO_CMD to the command used to run FEBio on your system."
             )
         else:
             raise e
-    # If there specifically is a file read error, we need to write the
-    # captured stdout to the log file, because only stdout has
-    # information about the file read error.  Otherwise, we need to
-    # leave the log file in place, because it contains unique
-    # information.  (FEBio does return a error code of 1 on "Error
-    # Termination" and 0 on "Normal Termination"; I checked.)
-    #
-    # With FEBio 2, a file read error prints "Reading file foo.feb
-    # ...FAILED!" to stdout as a single line.  With FEBio 3, there may
-    # be warnings and blank lines in between "..." and "FAILED!".
-    if proc.returncode != 0:
-        reading = False
-        for ln in proc.stdout.splitlines():
-            if ln.startswith("Reading file "):
-                reading = True
-            if reading and ln.startswith("*"):
-                # Skip warning boxes after "Reading file foo.feb ..."
-                continue
-            if ln.endswith("SUCCESS!"):
-                # No file read error
-                break
-            elif ln.endswith("FAILED!"):
-                # File read error; send it to the log file
-                with open(pth_log, "w", encoding="utf-8") as f:
-                    f.write(proc.stdout)
-                break
-        else:
-            raise NotImplementedError(
-                f"waffleiron failed to parse FEBio file read status message '{ln}' from stdout"
-            )
+    proc.wait()
     return proc
 
 
