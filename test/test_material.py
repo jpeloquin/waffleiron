@@ -8,12 +8,18 @@ import numpy.testing as npt
 import waffleiron as wfl
 from waffleiron import Model, Step
 from waffleiron.control import auto_ticker
+from waffleiron.febioxml import UncoupledHGOFEBio
 from waffleiron.load import prescribe_deformation
 from waffleiron.material import *
 from waffleiron.mesh import rectangular_prism_hex8
 from waffleiron.test.fixtures import ATOL_F, RTOL_F, RTOL_STRESS, ATOL_STRESS
 from waffleiron.input import FebReader, textdata_list
-from waffleiron.test.fixtures import DIR_FIXTURES, DIR_OUT, febio_cmd_xml
+from waffleiron.test.fixtures import (
+    DIR_FIXTURES,
+    DIR_OUT,
+    febio_cmd_xml,
+    febio_3plus_cmd_xml,
+)
 
 
 class ExponentialFiberTest(TestCase):
@@ -385,22 +391,23 @@ def test_FEBio_EllipsoidalPowerFiber(febio_cmd_xml):
 
 @pytest.fixture(
     params=(
-        np.diag([1.08, 1.08, 1.08]),
-        np.diag([1.08, 0.92, 0.92]),
+        np.diag([1.06, 1.08, 1.04]),
+        np.diag([1.08, 0.92, 0.94]),
         np.diag([1.08, 1.06, 0.94]),
+        np.diag([0.94, 0.96, 0.92]),
     ),
-    ids=("T", "TC", "CT"),
+    ids=("T", "TC", "CT", "C"),
 )
-def F_fiber_dist(request):
+def F_cases_fibers(request):
     """F tensors for 3 tension–compression cases in Hou_Ateshian_2016"""
     F = request.param
     return F
 
 
-def test_FEBio_EllipsoidalDistribution(febio_cmd_xml, F_fiber_dist):
-    """E2E test of EllipsoidalPowerFiber material."""
+def test_FEBio_EllipsoidalDistribution(febio_cmd_xml, F_cases_fibers):
+    """E2E test of EllipsoidalPowerFiber material"""
     febio_cmd, xml_version = febio_cmd_xml
-    F_applied = F_fiber_dist
+    F_applied = F_cases_fibers
 
     # Generate model
     model = Model(rectangular_prism_hex8((1, 1, 1), ((0, 1), (0, 1), (0, 1))))
@@ -416,6 +423,60 @@ def test_FEBio_EllipsoidalDistribution(febio_cmd_xml, F_fiber_dist):
     prescribe_deformation(model, step, np.arange(len(model.mesh.nodes)), F_applied, seq)
 
     bn = f"{Path(__file__).with_suffix('').name}." + "EllDist"
+
+    # TODO: switch to roundtrip
+
+    # Test 1: Write
+    pth_out = DIR_OUT / (f"{bn}.{febio_cmd}.xml{xml_version}.feb")
+    if not pth_out.parent.exists():
+        pth_out.parent.mkdir()
+    with open(pth_out, "wb") as f:
+        wfl.output.write_feb(model, f, version=xml_version)
+
+    # Test 2: Solve: Can FEBio use the file?
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
+
+    # Test 3: Is the output as expected?
+    model = wfl.load_model(pth_out)
+    e = model.mesh.elements[0]
+
+    # Test 4.1: Do we see the correct applied displacements?  A test failure here
+    # means that there is a defect in the code that reads or writes the model.  Or,
+    # less likely, an FEBio bug.
+    F_obs = np.mean([e.f(r) for r in e.gloc], axis=0)
+    npt.assert_allclose(F_obs, F_applied, atol=ATOL_F)
+    # Test 4.2: Do we see the correct stresses?
+    σ_wfl = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
+    σ_febio = model.solution.value("stress", step=1, entity_id=1, region_id=1)
+    # rtol = 0 due to underflow with zero stress
+    npt.assert_allclose(σ_wfl, σ_febio, atol=5e-3, rtol=0)
+
+
+def test_FEBio_UncoupledHGO(febio_3plus_cmd_xml, F_cases_fibers):
+    """E2E test of UncoupledHGOFEBio material"""
+    febio_cmd, xml_version = febio_3plus_cmd_xml
+    F_applied = F_cases_fibers
+
+    # Generate model
+    #
+    # TODO: Can probably consolidate model generation with
+    #  test_FEBio_EllipsoidalDistribution and other tests; just parametrize material
+    model = Model(rectangular_prism_hex8((1, 1, 1), ((0, 1), (0, 1), (0, 1))))
+    mat = UncoupledHGOFEBio(
+        c=0.5,  # MPa
+        k1=140,  # MPa,
+        k2=2,
+        γ=15,  # °
+        κ=0.2,
+        K=0.1,  # MPa
+    )
+    model.mesh.elements[0].material = mat
+    seq = wfl.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
+    step = Step("solid", dynamics="static", ticker=auto_ticker(seq, 1))
+    model.add_step(step)
+    prescribe_deformation(model, step, np.arange(len(model.mesh.nodes)), F_applied, seq)
+
+    bn = f"{Path(__file__).with_suffix('').name}." + "UncoupledHGO"
 
     # TODO: switch to roundtrip
 

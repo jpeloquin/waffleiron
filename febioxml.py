@@ -3,6 +3,7 @@
 import warnings
 from collections import namedtuple, defaultdict
 import os
+from math import cos, radians, sin
 from pathlib import Path, PurePath
 from typing import Union, Tuple
 import urllib.request
@@ -27,16 +28,91 @@ from .core import (
 from .control import Physics
 from .element import Hex27, Quad4, Tri3, Hex8, Penta6, Element
 from . import material as matlib, FaceSet, ElementSet
-from .material import EllipsoidalDistribution
+from .material import (
+    EllipsoidalDistribution,
+    UncoupledHGOMatrix,
+    OrientedMaterial,
+    UncoupledHGOFiber3D,
+    SolidMixture,
+    VolumetricHGO,
+)
 from .math import orthonormal_basis, vec_from_sph
 
 # Globals (see also end of file)
 
 SUPPORTED_FEBIO_XML_VERS = ("2.0", "2.5", "3.0", "4.0")
 
-##################
-# Helper classes #
-##################
+#######################
+# Material conversion #
+#######################
+
+# Special-case FEBio materials that don't fit cleanly into the general-purpose material
+# frameworks should be represented here using special classes.
+
+
+class UncoupledHGOFEBio:
+    """Uncoupled Holzapfel–Gasser–Ogden FEBio material
+
+    An uncoupled Holzapfel–Gasser–Ogden material in FEBio is a solid mixture of
+    UncoupledHGOMatrix + 2 × OrientedMaterial UncoupledHGOFiber3D + VolumetricHGO, with
+    the orientated material parts parameterized by a single angle, γ.  This combination
+    would be difficult to convert to/from FEBio XML, so it gets a bespoke class.
+
+    Seems like "Gasser-Ogden–Holzapfel" was added in FEBio 2.2, which used a different
+    bulk model.  The "Holzapfel-Gasser-Ogden" material as represented here was
+    introduced in FEBio 3.2.
+
+    """
+
+    def __init__(self, c, k1, k2, γ, κ, K):
+        self.matrix_modulus = c  # Matrix μ
+        self.fiber_modulus = k1  # Fiber ξ
+        self.fiber_exp_coef = k2  # Fiber α
+        self.fiber_azimuth = γ  # mean fiber angle with e1, in e1–e2 plane [degrees]
+        self.fiber_dispersion = κ
+        self.bulk_modulus = K
+
+        self.matrix = UncoupledHGOMatrix(μ=c)
+        self.fiber_pos = OrientedMaterial(
+            UncoupledHGOFiber3D(ξ=k1, α=k2, κ=κ),
+            np.array(
+                [
+                    [cos(radians(γ)), -sin(radians(γ)), 0],
+                    [sin(radians(γ)), cos(radians(γ)), 0],
+                    [0, 0, 1],
+                ]
+            ),
+        )
+        self.fiber_neg = OrientedMaterial(
+            UncoupledHGOFiber3D(ξ=k1, α=k2, κ=κ),
+            np.array(
+                [
+                    [cos(radians(γ)), sin(radians(γ)), 0],
+                    [-sin(radians(γ)), cos(radians(γ)), 0],
+                    [0, 0, 1],
+                ]
+            ),
+        )
+        self.bulk = VolumetricHGO(K)
+        self.material = SolidMixture(
+            [self.matrix, self.fiber_pos, self.fiber_neg, self.bulk]
+        )
+
+    def tstress(self, F, **kwargs):
+        σ_tilde = sum(
+            [
+                self.matrix.tstress(F),
+                self.fiber_pos.tstress(F),
+                self.fiber_neg.tstress(F),
+            ]
+        )
+        σ_bulk = self.bulk.tstress(F)
+        σ = σ_tilde - np.trace(σ_tilde) / 3 * np.eye(3) + σ_bulk
+        # The np.trace(σ_tilde) / 3 * np.eye(3) forces the stress to be deviatoric. I
+        # think a properly constructed deviatoric constitutive equation should
+        # already produce deviatoric stress.  Simply discarding the hydrostatic part
+        # feels wrong.
+        return σ
 
 
 class VerbatimXMLMaterial:
@@ -54,6 +130,84 @@ class VerbatimXMLMaterial:
         self.xml = xml
 
 
+def read_continuous_fiber_distribution_xml(e, seqs: dict):
+    """Return fiber orientation distribution material"""
+    dist_type = e.find("distribution").attrib["type"]
+    fiber = read_material(e.find("fibers"), seqs)
+    if dist_type == "ellipsoidal":
+        d = vector_from_text(e.find("distribution/spa").text)
+        # TODO: Support parametrized integration schemes
+        return EllipsoidalDistribution(d, fiber)
+    else:
+        return NotImplementedError
+
+
+def read_holzapfel_gasser_ogden_xml(e, seqs: dict):
+    """Return UncoupledHGOFEBio material"""
+    return UncoupledHGOFEBio(
+        c=read_parameter(find_unique_tag(e, "c", req=True), seqs),
+        k1=read_parameter(find_unique_tag(e, "k1", req=True), seqs),
+        k2=read_parameter(find_unique_tag(e, "k2", req=True), seqs),
+        γ=read_parameter(find_unique_tag(e, "gamma", req=True), seqs),
+        κ=read_parameter(find_unique_tag(e, "kappa", req=True), seqs),
+        K=read_parameter(find_unique_tag(e, "k", req=True), seqs),
+    )
+
+
+# Map type attribute of <material>, <solid>, or <fiber> → function that returns
+# waffleiron material class form the XML element
+xml_material_reader = {
+    "continuous fiber distribution": read_continuous_fiber_distribution_xml,
+    "Holzapfel-Gasser-Ogden": read_holzapfel_gasser_ogden_xml,
+}
+
+material_from_xml_name = {
+    "isotropic elastic": matlib.IsotropicElastic,
+    "Holmes-Mow": matlib.HolmesMow,
+    "fiber-exp-pow": matlib.ExponentialFiber,
+    "fiber-pow-linear": matlib.PowerLinearFiber,
+    "ellipsoidal fiber distribution": matlib.EllipsoidalPowerFiber,
+    "neo-Hookean": matlib.NeoHookean,
+    "solid mixture": matlib.SolidMixture,
+    "rigid body": matlib.Rigid,
+    "biphasic": matlib.PoroelasticSolid,
+    "Donnan equilibrium": matlib.DonnanSwelling,
+    "multigeneration": matlib.Multigeneration,
+    "orthotropic elastic": matlib.OrthotropicElastic,
+}
+material_name_from_class = {v: k for k, v in material_from_xml_name.items()}
+
+orientation_distribution_from_xml_type = {
+    "ellipsoidal": matlib.EllipsoidalDistribution,
+}
+
+perm_class_from_name = {
+    "perm-Holmes-Mow": matlib.IsotropicHolmesMowPermeability,
+    "perm-const-iso": matlib.IsotropicConstantPermeability,
+}
+perm_name_from_class = {v: k for k, v in perm_class_from_name.items()}
+
+# TODO: Redesign the compatibility system so that compatibility can be derived from the
+#  material's type.  Although FEBio might not have a clean relationship between a
+#  material's physics and its own support.
+physics_compat_by_mat = {
+    matlib.PoroelasticSolid: {Physics.BIPHASIC},
+    matlib.Rigid: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.OrthotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.IsotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.SolidMixture: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.PowerLinearFiber: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.ExponentialFiber: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.HolmesMow: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.NeoHookean: {Physics.SOLID, Physics.BIPHASIC},
+}
+
+
+##################
+# Helper classes #
+##################
+
+
 BodyConstraint = namedtuple(
     "BodyConstraint",
     ["body", "dof", "variable", "constant", "sequence", "relative"],
@@ -62,8 +216,10 @@ BodyConstraint = namedtuple(
 OptParameter = namedtuple("OptParameter", ["path", "fun", "default"])
 ReqParameter = namedtuple("ReqParameter", ["path", "fun"])
 
-# Functions for traversing a Model in a way that facilitates XML read
-# or write.
+
+##########################################################
+# Model traversal functions to support XML read or write #
+##########################################################
 
 
 def list_domains(model):
@@ -230,6 +386,14 @@ def read_nodeset_ref(s: str, mesh=None) -> NodeSet:
             return NodeSet(node_ids)
 
 
+def read_material_type(e):
+    if "type" not in e.attrib:
+        raise ValueError(
+            f"Material is missing its `type` attribute in {e.base}:{e.sourceline}"
+        )
+    return e.attrib["type"]
+
+
 def read_material(e, sequence_registry: dict):
     """Read a material from an XML element
 
@@ -263,8 +427,8 @@ def read_material(e, sequence_registry: dict):
 
     # Check if the material type is fully supported
     material_type = read_material_type(e)
-    # TODO: over time, migrate materials to reader functions.  `read_material` itself
-    #  is growing out of control.
+    # TODO: over time, migrate materials to reader functions.  `read_material` is
+    #  growing out of control.
     if material_type in xml_material_reader:
         return xml_material_reader[material_type](e, sequence_registry)
     if material_type not in material_from_xml_name:
@@ -415,14 +579,6 @@ def read_material_orientation(e):
                 # transformation from [1, 0, 0] to its value.
                 raise NotImplementedError
     return orientation
-
-
-def read_material_type(e):
-    if "type" not in e.attrib:
-        raise ValueError(
-            f"Material is missing its `type` attribute in {e.base}:{e.sourceline}"
-        )
-    return e.attrib["type"]
 
 
 def read_parameter(e, sequence_registry: dict[int, Sequence]):
@@ -616,23 +772,6 @@ def basis_mat_axis_local(element: Element, local_ids=(1, 2, 4)):
     d = element.nodes[local_ids[2] - 1] - element.nodes[local_ids[0] - 1]
     basis = orthonormal_basis(a, d)
     return basis
-
-
-###################################
-# Functions for reading materials #
-###################################
-
-
-def read_continuous_fiber_distribution_xml(e, seq: dict):
-    """Return fiber orientation distribution material"""
-    dist_type = e.find("distribution").attrib["type"]
-    fiber = read_material(e.find("fibers"), seq)
-    if dist_type == "ellipsoidal":
-        d = vector_from_text(e.find("distribution/spa").text)
-        # TODO: Support parametrized integration schemes
-        return EllipsoidalDistribution(d, fiber)
-    else:
-        return NotImplementedError
 
 
 ###################################
@@ -853,52 +992,6 @@ elem_cls_from_feb = {
     "hex8": Hex8,
     "hex27": Hex27,
     "penta6": Penta6,
-}
-
-# Map type attribute of <material>, <solid>, or <fiber> → function that returns
-# waffleiron material class form the XML element
-xml_material_reader = {
-    "continuous fiber distribution": read_continuous_fiber_distribution_xml,
-}
-
-material_from_xml_name = {
-    "isotropic elastic": matlib.IsotropicElastic,
-    "Holmes-Mow": matlib.HolmesMow,
-    "fiber-exp-pow": matlib.ExponentialFiber,
-    "fiber-pow-linear": matlib.PowerLinearFiber,
-    "ellipsoidal fiber distribution": matlib.EllipsoidalPowerFiber,
-    "neo-Hookean": matlib.NeoHookean,
-    "solid mixture": matlib.SolidMixture,
-    "rigid body": matlib.Rigid,
-    "biphasic": matlib.PoroelasticSolid,
-    "Donnan equilibrium": matlib.DonnanSwelling,
-    "multigeneration": matlib.Multigeneration,
-    "orthotropic elastic": matlib.OrthotropicElastic,
-}
-material_name_from_class = {v: k for k, v in material_from_xml_name.items()}
-
-orientation_distribution_from_xml_type = {
-    "ellipsoidal": matlib.EllipsoidalDistribution,
-}
-
-perm_class_from_name = {
-    "perm-Holmes-Mow": matlib.IsotropicHolmesMowPermeability,
-    "perm-const-iso": matlib.IsotropicConstantPermeability,
-}
-perm_name_from_class = {v: k for k, v in perm_class_from_name.items()}
-
-# TODO: Redesign the compatibility system so that compatibility can be derived from
-#  the material's type.
-physics_compat_by_mat = {
-    matlib.PoroelasticSolid: {Physics.BIPHASIC},
-    matlib.Rigid: {Physics.SOLID, Physics.BIPHASIC},
-    matlib.OrthotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
-    matlib.IsotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
-    matlib.SolidMixture: {Physics.SOLID, Physics.BIPHASIC},
-    matlib.PowerLinearFiber: {Physics.SOLID, Physics.BIPHASIC},
-    matlib.ExponentialFiber: {Physics.SOLID, Physics.BIPHASIC},
-    matlib.HolmesMow: {Physics.SOLID, Physics.BIPHASIC},
-    matlib.NeoHookean: {Physics.SOLID, Physics.BIPHASIC},
 }
 
 # Map of ContactConstraint fields → elements relative to <contact>.  This really should
