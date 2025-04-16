@@ -45,15 +45,16 @@ def xml_version(request):
     return request.param
 
 
-# Tests that both write FEBio XML *and* run FEBio should use these
-# combinations of of FEBio version and FEBio XML version, as FEBio 2
-# cannot read FEBio XML 3.0.
+# Tests that both write FEBio XML *and* run FEBio should use these combinations of
+# FEBio version and FEBio XML version, as FEBio 2 cannot read FEBio XML 3.0.
 FEBIO_CMDS_XMLVERS = (
     ("febio2", "2.5"),
     ("febio3", "2.5"),
-    ("febio3", "3.0"),
+    ("febio3", "3.0"),  # 3.3.3 or 3.8+, since 3.4–3.7 doesn't have node reaction force
     ("febio4", "4.0"),
 )
+# TODO: Figure out some way to filter test parameters by major and minor version,
+#  since some FEBio versions support different things.
 
 
 @pytest.fixture(
@@ -62,6 +63,17 @@ FEBIO_CMDS_XMLVERS = (
     ids=(f"{c},xml{v}" for c, v in FEBIO_CMDS_XMLVERS),
 )
 def febio_cmd_xml(request):
+    """Run test with all supported combinations of FEBio and FEBio XML"""
+    cmd, xml_version = request.param
+    return cmd, xml_version
+
+
+@pytest.fixture(
+    scope="session",
+    params=[(c, v) for c, v in FEBIO_CMDS_XMLVERS if c != "febio2"],
+    ids=[f"{c},xml{v}" for c, v in FEBIO_CMDS_XMLVERS if c != "febio2"],
+)
+def febio_3plus_cmd_xml(request):
     """Run test with all supported combinations of FEBio and FEBio XML"""
     cmd, xml_version = request.param
     return cmd, xml_version

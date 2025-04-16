@@ -1,31 +1,22 @@
-import dataclasses
 import os
-from operator import itemgetter
 from pathlib import Path
-from typing import Any, List, Union, Dict, Tuple
+from typing import List, Dict, Tuple
 import warnings
 
 from lxml import etree
-import struct
 import numpy as np
-from numpy import array
 import pandas as pd
 from numpy.typing import NDArray
 
 
 from . import febioxml_4_0, element
 from .exceptions import UnsupportedFormatError
-from .math import orthonormal_basis, vec_from_sph
 from .model import Model, Mesh
 from .core import (
     _canonical_face,
     ZeroIdxID,
-    OneIdxID,
     Body,
-    ContactConstraint,
     ImplicitBody,
-    Interpolant,
-    Extrapolant,
     Sequence,
     ScaledSequence,
     NodeSet,
@@ -40,32 +31,22 @@ from .control import (
     Ticker,
     IterController,
     SaveIters,
-    Solver,
     Step,
 )
-from .element import Element
 from . import xplt
 from . import febioxml, febioxml_2_0, febioxml_2_5, febioxml_3_0
 from . import material as material_lib
 from .febioxml import (
     CONTACT_CLASS_FROM_XML,
-    VAR_FROM_XML_NODE_BC,
-    DOF_NAME_FROM_XML_NODE_BC,
     SUPPORTED_FEBIO_XML_VERS,
-    VerbatimXMLMaterial,
     elem_cls_from_feb,
     normalize_xml,
     to_number,
-    maybe_to_number,
     find_unique_tag,
     read_material,
     read_parameter,
     read_parameters,
-    OptParameter,
-    ReqParameter,
-    to_bool,
     BodyConstraint,
-    vector_from_text,
     ids_from_text,
 )
 
