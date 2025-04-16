@@ -208,11 +208,13 @@ class OrientedMaterial:
         elif Q.ndim == 2:
             # 3D material ("solid")
             σ_loc = self.material.tstress(F @ Q, **kwargs)
-            # ^ Stress in own local basis.  This is a change of
-            # coordinate system for the material, not an observer
-            # change, such that material anisotropy is accounted for.
+            # ^ Stress in own local basis.  This is a change of coordinate system for
+            # the material, not an observer change, such that material anisotropy is
+            # accounted for.
         else:
-            raise ValueError
+            raise ValueError(
+                f"Orientation matrix should be 1st or 2nd order, not {Q.ndim}"
+            )
         return σ_loc
 
     def pstress(self, F, **kwargs):
