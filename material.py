@@ -511,9 +511,9 @@ class ExponentialFiber3D:
 
     Coupled formulation ("fiber-exp-pow" in FEBio").
 
-    This is the deprecated 3D implementation that mixes material
-    orientation with the fiber's constitutive law.  Prefer
-    ExponentialFiber, which does not mix concerns in this manner.
+    This is a deprecated 3D implementation that mixes material orientation with the
+    fiber's constitutive law.  Prefer ExponentialFiber, which does not mix concerns in
+    this manner.
 
     References
     ----------
@@ -547,7 +547,7 @@ class ExponentialFiber3D:
         return w
 
     def tstress(self, F, **kwargs):
-        """Return Cauchy stress tensor aligned to local axes."""
+        """Return Cauchy stress tensor"""
         F = np.array(F)
         # Components
         J = det(F)
@@ -567,13 +567,13 @@ class ExponentialFiber3D:
         return t
 
     def pstress(self, F, **kwargs):
-        """Return 1st Piola–Kirchoff stress tensor in local axes."""
+        """Return 1st Piola–Kirchoff stress tensor"""
         t = self.tstress(F)
         p = det(F) * dot(t, np.linalg.inv(F).T)
         return p
 
     def sstress(self, F, **kwargs):
-        """Return 2nd Piola-Kirchoff stress tensor in local axes."""
+        """Return 2nd Piola-Kirchoff stress tensor"""
         t = self.tstress(F)
         s = det(F) * dot(np.linalg.inv(F), dot(t, np.linalg.inv(F).T))
         return s
@@ -645,9 +645,9 @@ class PowerLinearFiber3D:
 
     Coupled formulation ("fiber-pow-linear" or "fiber-power-linear" in FEBio).
 
-    This is the deprecated 3D implementation that mixes material orientation with the
-    fiber's constitutive law.  Prefer ExponentialFiber, which does not mix concerns
-    in this manner.
+    This is a deprecated 3D implementation that mixes material orientation with the
+    fiber's constitutive law.  Prefer PowerLinearFiber, which does not mix concerns in
+    this manner.
 
     """
 
@@ -903,7 +903,7 @@ class OrthotropicElastic:
         )
 
     def tstress(self, F, **kwargs):
-        """Cauchy stress tensor."""
+        """Cauchy stress tensor"""
         C = F.T @ F
         B = F @ F.T
         Q = np.eye(3)  # material orientation is handled by OrientedMaterial
