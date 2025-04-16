@@ -1069,6 +1069,96 @@ class HolmesMow:
         return s
 
 
+class UncoupledHGOMatrix:
+    """Matrix part of uncoupled Holzapfel–Gasser–Ogden material
+
+    Matches matrix part of "Holzapfel-Gasser-Ogden" material in FEBio.
+
+    """
+
+    # TODO: support open vs. closed intervals
+    bounds = {
+        "μ": (0, inf),
+    }
+
+    def __init__(self, μ):
+        self.mu = μ
+
+    def tstress(self, F, **kwargs):
+        """Cauchy stress tensor"""
+        J = np.linalg.det(F)
+        # everything defined after here is deviatoric
+        F = np.linalg.det(F) ** (-1 / 3) * F
+        C = F.T @ F
+        I1 = np.trace(C)
+        μ = self.mu
+        # w = 0.5 * μ * (I1 - 3)
+        # t = 2/J F ∂W/∂C F'
+        # ∂W/∂C = μ/2 I
+        σ = 1 / J * μ * F @ F.T  # J is still real J
+        return σ
+
+
+class UncoupledHGOFiber3D:
+    """3D formulation of an uncoupled Holzapfel–Gasser–Ogden fiber family
+
+    Matches one fiber part (one summand) of "Holzapfel-Gasser-Ogden" material in FEBio.
+
+    """
+
+    # TODO: support open vs. closed intervals
+    bounds = {
+        "ξ": (0, inf),  # open
+        "α": (0, inf),  # open
+        "κ": (0, 1 / 3),  # closed
+    }
+
+    def __init__(self, ξ, α, κ):
+        self.modulus = ξ
+        self.exp_coef = α
+        self.dispersion = κ
+
+    def tstress(self, F, **kwargs):
+        """Return Cauchy stress tensor"""
+        ξ = self.modulus
+        α = self.exp_coef
+        κ = self.dispersion
+        J = np.linalg.det(F)
+        # everything defined after here is deviatoric
+        F = np.linalg.det(F) ** (-1 / 3) * F
+        C = F.T @ F
+        I1 = np.trace(C)
+        I4 = C[0, 0]  # e1 · C · e1
+        Ea = κ * (I1 - 3) + (1 - 3 * κ) * (I4 - 1)
+        Ea = Ea * (Ea > 0)  # 〈Ea〉
+        ddC_I1 = np.eye(3)
+        ddC_I4 = np.array([[1, 0, 0], [0, 0, 0], [0, 0, 0]])
+        ddC_W = ξ * Ea * (κ * ddC_I1 + (1 - 3 * κ) * ddC_I4) * np.exp(α * Ea**2)
+        σ = 2 / J * F @ ddC_W @ F.T  # J is still real J
+        return σ
+
+
+class VolumetricHGO:
+    """Holzapfel–Gasser–Ogden hydrostatic (bulk modulus) component"""
+
+    # 1D (pressure) material like DonnanSwelling, but elastic (strain → zero strain)
+
+    bounds = {
+        "K": (0, inf),  # open
+    }
+
+    def __init__(self, K):
+        self.bulk_modulus = K
+
+    def tstress(self, F, **kwargs):
+        """Return Cauchy stress"""
+        # σ = ∂⁄∂J U(J)
+        K = self.bulk_modulus
+        J = np.linalg.det(F)
+        p = 0.5 * K * (J - 1 / J)
+        return p * np.eye(3)
+
+
 def add_density(material, density=0):
     """Add a density attribute to a material
 

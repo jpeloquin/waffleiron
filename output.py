@@ -2,7 +2,6 @@
 from collections import defaultdict
 from copy import copy
 from functools import singledispatch
-from datetime import datetime
 from pathlib import PurePosixPath
 
 # Public packages
@@ -37,12 +36,11 @@ from .febioxml import (
     get_or_create_item_id,
     get_or_create_xml,
     get_or_create_parent,
-    bool_to_text,
-    material_name_from_class,
-    vec_to_text,
-    property_to_xml,
-    num_to_text,
     to_text,
+    num_to_text,
+    vec_to_text,
+    material_name_from_class,
+    property_to_xml,
     list_domains,
     physics_compat_by_mat,
 )
@@ -73,6 +71,11 @@ def _fixup_ordinal_ids(registry):
             max(registry.namespace("ordinal_id"))
             == len(registry.namespace("ordinal_id")) - 1
         )
+
+
+#########################################
+# Material → FEBio XML export functions #
+#########################################
 
 
 @singledispatch
@@ -301,6 +304,26 @@ def donnan_to_feb(mat: matlib.DonnanSwelling, model) -> ElementTree:
     e.append(property_to_xml(mat.ext_osm, "bosm", model.named["sequences"]))
     e.append(property_to_xml(mat.osm_coef, "Phi", model.named["sequences"]))
     return e
+
+
+@material_to_feb.register
+def uncoupled_HGO_to_feb(mat: febioxml.UncoupledHGOFEBio, model) -> ElementTree:
+    """Convert UncoupledHGOFEBio material instance to FEBio XML"""
+    # Holzapfel-Gasser-Ogden was introduced in FEBio 3.2.
+    e = etree.Element("material", type="Holzapfel-Gasser-Ogden")
+    e.append(property_to_xml(mat.matrix_modulus, "c", model.named["sequences"]))
+    e.append(property_to_xml(mat.fiber_modulus, "k1", model.named["sequences"]))
+    e.append(property_to_xml(mat.fiber_exp_coef, "k2", model.named["sequences"]))
+    e.append(property_to_xml(mat.fiber_azimuth, "gamma", model.named["sequences"]))
+    e.append(property_to_xml(mat.fiber_dispersion, "kappa", model.named["sequences"]))
+    e.append(property_to_xml(mat.bulk_modulus, "k", model.named["sequences"]))
+    etree.SubElement(e, "pressure_model").text = "Abaqus (GOH)"
+    return e
+
+
+########################################
+# End of material conversion functions #
+########################################
 
 
 def add_nodeset(xml_root, name, nodes, febioxml_module):
