@@ -759,89 +759,6 @@ class EllipsoidalPowerFiber:
         return 2 * σ
 
 
-class HolmesMow:
-    """Holmes-Mow coupled hyperelastic material.
-
-    See page 73 of the FEBio theory manual, version 1.8.
-
-    """
-
-    # TODO: Support open vs. closed intervals
-    bounds = {
-        "E": (0, inf),
-        "ν": (-1, 0.5),
-        "β": (0, inf),
-    }
-
-    def __init__(self, E, ν, β):
-        self.E = E
-        self.ν = ν
-        self.β = β
-
-    @classmethod
-    def from_feb(cls, E, v, beta, **kwargs):
-        return cls(E=E, ν=v, β=beta)
-
-    def w(self, F):
-        y, mu = to_Lamé(self.E, self.ν)
-        C = np.dot(F.T, F)
-        i1 = np.trace(C)
-        i2 = 0.5 * (i1**2.0 - trace(dot(C, C)))
-        J = np.linalg.det(F)
-        Q = (
-            self.β
-            / (y + 2.0 * mu)
-            * (
-                (2.0 * mu - y) * (i1 - 3.0)
-                + y * (i2 - 3.0)
-                - (y + 2.0 * mu) * log(J**2.0)
-            )
-        )
-        c = (y + 2.0 * mu) / (2.0 * self.β)
-        w = 0.5 * c * (exp(Q) - 1.0)
-        return w
-
-    def tstress(self, F, **kwargs):
-        """Return Cauchy stress tensor"""
-        y, mu = to_Lamé(self.E, self.ν)
-        J = det(F)
-        B = dot(F, F.T)  # left cauchy-green
-        i1 = np.trace(B)
-        i2 = 0.5 * (i1**2.0 - trace(dot(B, B)))
-        Q = (
-            self.β
-            / (y + 2.0 * mu)
-            * (
-                (2.0 * mu - y) * (i1 - 3.0)
-                + y * (i2 - 3.0)
-                - (y + 2.0 * mu) * log(J**2.0)
-            )
-        )
-        t = (
-            1.0
-            / (2.0 * J)
-            * exp(Q)
-            * (
-                (2.0 * mu + y * (i1 - 1.0)) * B
-                - y * dot(B, B)
-                - (y + 2.0 * mu) * eye(3)
-            )
-        )
-        return t
-
-    def pstress(self, F, **kwargs):
-        """1st Piola-Kirchoff stress."""
-        t = self.tstress(F)
-        p = det(F) * dot(t, np.linalg.inv(F).T)
-        return p
-
-    def sstress(self, F, **kwargs):
-        """2nd Piola-Kirchoff stress."""
-        t = self.tstress(F)
-        s = det(F) * dot(np.linalg.inv(F), dot(t, np.linalg.inv(F).T))
-        return s
-
-
 class IsotropicElastic:
     """Isotropic elastic material definition."""
 
@@ -1064,6 +981,89 @@ class NeoHookean:
         C = dot(F.T, F)
         Cinv = np.linalg.inv(C)
         s = mu * (np.eye(3) - Cinv) + y * log(J) * Cinv
+        return s
+
+
+class HolmesMow:
+    """Holmes-Mow coupled hyperelastic material.
+
+    See page 73 of the FEBio theory manual, version 1.8.
+
+    """
+
+    # TODO: Support open vs. closed intervals
+    bounds = {
+        "E": (0, inf),
+        "ν": (-1, 0.5),
+        "β": (0, inf),
+    }
+
+    def __init__(self, E, ν, β):
+        self.E = E
+        self.ν = ν
+        self.β = β
+
+    @classmethod
+    def from_feb(cls, E, v, beta, **kwargs):
+        return cls(E=E, ν=v, β=beta)
+
+    def w(self, F):
+        y, mu = to_Lamé(self.E, self.ν)
+        C = np.dot(F.T, F)
+        i1 = np.trace(C)
+        i2 = 0.5 * (i1**2.0 - trace(dot(C, C)))
+        J = np.linalg.det(F)
+        Q = (
+            self.β
+            / (y + 2.0 * mu)
+            * (
+                (2.0 * mu - y) * (i1 - 3.0)
+                + y * (i2 - 3.0)
+                - (y + 2.0 * mu) * log(J**2.0)
+            )
+        )
+        c = (y + 2.0 * mu) / (2.0 * self.β)
+        w = 0.5 * c * (exp(Q) - 1.0)
+        return w
+
+    def tstress(self, F, **kwargs):
+        """Return Cauchy stress tensor"""
+        y, mu = to_Lamé(self.E, self.ν)
+        J = det(F)
+        B = dot(F, F.T)  # left cauchy-green
+        i1 = np.trace(B)
+        i2 = 0.5 * (i1**2.0 - trace(dot(B, B)))
+        Q = (
+            self.β
+            / (y + 2.0 * mu)
+            * (
+                (2.0 * mu - y) * (i1 - 3.0)
+                + y * (i2 - 3.0)
+                - (y + 2.0 * mu) * log(J**2.0)
+            )
+        )
+        t = (
+            1.0
+            / (2.0 * J)
+            * exp(Q)
+            * (
+                (2.0 * mu + y * (i1 - 1.0)) * B
+                - y * dot(B, B)
+                - (y + 2.0 * mu) * eye(3)
+            )
+        )
+        return t
+
+    def pstress(self, F, **kwargs):
+        """1st Piola-Kirchoff stress."""
+        t = self.tstress(F)
+        p = det(F) * dot(t, np.linalg.inv(F).T)
+        return p
+
+    def sstress(self, F, **kwargs):
+        """2nd Piola-Kirchoff stress."""
+        t = self.tstress(F)
+        s = det(F) * dot(np.linalg.inv(F), dot(t, np.linalg.inv(F).T))
         return s
 
 
