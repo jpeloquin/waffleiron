@@ -202,6 +202,7 @@ MESH_PATH = {
     49: "mesh",
     50: "mesh",
     52: "mesh",
+    53: "mesh",
 }
 # map of xplt version → path for parts (2.0) or materials (1.0) block
 PARTS_PATH = {
