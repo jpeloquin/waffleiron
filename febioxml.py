@@ -35,6 +35,7 @@ from .material import (
     UncoupledHGOFiber3D,
     SolidMixture,
     VolumetricHGO,
+    FungOrthotropic,
 )
 from .math import orthonormal_basis, vec_from_sph
 
@@ -142,6 +143,23 @@ def read_continuous_fiber_distribution_xml(e, seqs: dict):
         return NotImplementedError
 
 
+def read_fung_orthotropic(e, seqs: dict):
+    """Return FungOrthotropic material"""
+    return FungOrthotropic(
+        E1=read_parameter(find_unique_tag(e, "E1", req=True), seqs),
+        E2=read_parameter(find_unique_tag(e, "E2", req=True), seqs),
+        E3=read_parameter(find_unique_tag(e, "E3", req=True), seqs),
+        G12=read_parameter(find_unique_tag(e, "G12", req=True), seqs),
+        G23=read_parameter(find_unique_tag(e, "G23", req=True), seqs),
+        G31=read_parameter(find_unique_tag(e, "G31", req=True), seqs),
+        ν12=read_parameter(find_unique_tag(e, "v12", req=True), seqs),
+        ν23=read_parameter(find_unique_tag(e, "v23", req=True), seqs),
+        ν31=read_parameter(find_unique_tag(e, "v31", req=True), seqs),
+        c=read_parameter(find_unique_tag(e, "c", req=True), seqs),
+        K=read_parameter(find_unique_tag(e, "k", req=True), seqs),
+    )
+
+
 def read_holzapfel_gasser_ogden_xml(e, seqs: dict):
     """Return UncoupledHGOFEBio material"""
     return UncoupledHGOFEBio(
@@ -158,6 +176,7 @@ def read_holzapfel_gasser_ogden_xml(e, seqs: dict):
 # waffleiron material class form the XML element
 xml_material_reader = {
     "continuous fiber distribution": read_continuous_fiber_distribution_xml,
+    "Fung-ortho-compressible": read_fung_orthotropic,
     "Holzapfel-Gasser-Ogden": read_holzapfel_gasser_ogden_xml,
 }
 

@@ -1069,6 +1069,56 @@ class HolmesMow:
         return s
 
 
+class FungOrthotropic:
+    """Fung orthotropic elastic model"""
+
+    # TODO: support open vs. closed intervals
+    bounds = {
+        "E1": (0, inf),
+        "E2": (0, inf),
+        "E3": (0, inf),
+        "G12": (0, inf),
+        "G23": (0, inf),
+        "G31": (0, inf),
+        "ν12": (-inf, inf),  # min might be -1
+        "ν23": (-inf, inf),  # min might be -1
+        "ν31": (-inf, inf),  # min might be -1
+        "c": (0, inf),  # open
+        "K": (0, inf),  # open
+    }
+
+    def __init__(
+        self,
+        E1,
+        E2,
+        E3,
+        G12,
+        G23,
+        G31,
+        ν12,
+        ν23,
+        ν31,
+        c,
+        K,
+    ):
+        self.E1 = E1
+        self.E2 = E2
+        self.E3 = E3
+        self.G12 = G12
+        self.G23 = G23
+        self.G31 = G31
+        self.ν12 = ν12
+        self.ν23 = ν23
+        self.ν31 = ν31
+        self.c = c
+        self.K = K
+
+    def tstress(self, F, **kwargs):
+        """Return Cauchy stress tensor"""
+        # Probably complicated
+        raise NotImplementedError
+
+
 class UncoupledHGOMatrix:
     """Matrix part of uncoupled Holzapfel–Gasser–Ogden material
 

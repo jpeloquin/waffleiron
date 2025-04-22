@@ -211,6 +211,25 @@ def _(mat: matlib.OrthotropicElastic, model) -> ElementTree:
 
 
 @material_to_feb.register
+def _(mat: matlib.FungOrthotropic, model) -> ElementTree:
+    """Convert FungOrthotropic material instance to FEBio XML"""
+    e = etree.Element("material", type="Fung-ortho-compressible")
+    # Material properties
+    e.append(property_to_xml(mat.E1, "E1", model.named["sequences"]))
+    e.append(property_to_xml(mat.E2, "E2", model.named["sequences"]))
+    e.append(property_to_xml(mat.E3, "E3", model.named["sequences"]))
+    e.append(property_to_xml(mat.G12, "G12", model.named["sequences"]))
+    e.append(property_to_xml(mat.G23, "G23", model.named["sequences"]))
+    e.append(property_to_xml(mat.G31, "G31", model.named["sequences"]))
+    e.append(property_to_xml(mat.ν12, "v12", model.named["sequences"]))
+    e.append(property_to_xml(mat.ν23, "v23", model.named["sequences"]))
+    e.append(property_to_xml(mat.ν31, "v31", model.named["sequences"]))
+    e.append(property_to_xml(mat.c, "c", model.named["sequences"]))
+    e.append(property_to_xml(mat.K, "k", model.named["sequences"]))
+    return e
+
+
+@material_to_feb.register
 def _(mat: matlib.NeoHookean, model) -> ElementTree:
     """Convert NeoHookean material instance to FEBio XML"""
     e = etree.Element("material", type="neo-Hookean")
