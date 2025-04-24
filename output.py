@@ -204,9 +204,9 @@ def _(mat: matlib.OrthotropicElastic, model) -> ElementTree:
     e.append(property_to_xml(mat.G12, "G12", model.named["sequences"]))
     e.append(property_to_xml(mat.G23, "G23", model.named["sequences"]))
     e.append(property_to_xml(mat.G31, "G31", model.named["sequences"]))
-    e.append(property_to_xml(mat.v12, "v12", model.named["sequences"]))
-    e.append(property_to_xml(mat.v23, "v23", model.named["sequences"]))
-    e.append(property_to_xml(mat.v31, "v31", model.named["sequences"]))
+    e.append(property_to_xml(mat.ν12, "v12", model.named["sequences"]))
+    e.append(property_to_xml(mat.ν23, "v23", model.named["sequences"]))
+    e.append(property_to_xml(mat.ν31, "v31", model.named["sequences"]))
     return e
 
 

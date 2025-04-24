@@ -186,6 +186,20 @@ def _is_fixed_property(p):
         return True
 
 
+class Material:
+    """Base class for materials"""
+
+    bounds = {}  # stub
+
+    def check_parameter_values(self):
+        for k in self.bounds:
+            v = getattr(self, k)
+            if not self.bounds[k][0] < v < self.bounds[k][1]:
+                raise InvalidParameterError(
+                    f"{k} = {v} must be within {self.bounds[k]}"
+                )
+
+
 class OrientedMaterial:
     """A material with an orientation matrix.
 
@@ -817,7 +831,7 @@ class IsotropicElastic:
         return s
 
 
-class OrthotropicElastic:
+class OrthotropicElastic(Material):
     """Orthotropic elastic material definition.
 
     Matches FEOrthoElastic material in FEBio.  This material is *not* linear.
@@ -841,20 +855,11 @@ class OrthotropicElastic:
         "ν31": (-inf, inf),  # min might be -1
     }
 
-    @classmethod
-    def check_parameter_values(cls, props):
-        for k in props:
-            if not cls.bounds[k][0] < props[k] < cls.bounds[k][1]:
-                raise InvalidParameterError(
-                    f"{k} = {props[k]} must be inside {cls.bounds[k]}"
-                )
-
     def __init__(self, props):
         if len(props) != len(self.bounds):
             raise ValueError(
                 f"{len(props)} parameters provided; expected {len(self.bounds)}"
             )
-        self.check_parameter_values(props)
         # Define material properties
         self.E1 = props["E1"]
         self.E2 = props["E2"]
@@ -862,13 +867,18 @@ class OrthotropicElastic:
         self.G12 = props["G12"]
         self.G23 = props["G23"]
         self.G31 = props["G31"]
-        self.v12 = props["ν12"]
-        self.v23 = props["ν23"]
-        self.v31 = props["ν31"]
+        self.ν12 = props["ν12"]
+        self.ν23 = props["ν23"]
+        self.ν31 = props["ν31"]
+
+        # Verify parameter values
+        self.check_parameter_values()
+        # TODO: Add positive definiteness check
+
         # Derived properties
-        self.v21 = self.v12 * self.E2 / self.E1
-        self.v13 = self.v31 * self.E1 / self.E3
-        self.v32 = self.v23 * self.E3 / self.E2
+        self.v21 = self.ν12 * self.E2 / self.E1
+        self.v13 = self.ν31 * self.E1 / self.E3
+        self.v32 = self.ν23 * self.E3 / self.E2
         # Derived Lamé
         μ1 = self.G12 + self.G31 - self.G23
         μ2 = self.G12 - self.G31 + self.G23
@@ -877,9 +887,9 @@ class OrthotropicElastic:
         # Lamé "coefficients"; for compliance matrix
         self.Sλ = np.array(
             [
-                [1 / self.E1, -self.v12 / self.E1, -self.v31 / self.E3],
-                [-self.v12 / self.E1, 1 / self.E2, -self.v23 / self.E2],
-                [-self.v31 / self.E3, -self.v23 / self.E2, 1 / self.E3],
+                [1 / self.E1, -self.ν12 / self.E1, -self.ν31 / self.E3],
+                [-self.ν12 / self.E1, 1 / self.E2, -self.ν23 / self.E2],
+                [-self.ν31 / self.E3, -self.ν23 / self.E2, 1 / self.E3],
             ]
         )
         # Lamé "constants"; for stiffness matrix
@@ -1069,7 +1079,7 @@ class HolmesMow:
         return s
 
 
-class FungOrthotropic:
+class FungOrthotropic(Material):
     """Fung orthotropic elastic model"""
 
     # TODO: support open vs. closed intervals
@@ -1115,6 +1125,11 @@ class FungOrthotropic:
         # ν32 = ν23 * E3 / E2
         self.c = c
         self.K = K
+
+        # Verify parameter values
+        self.check_parameter_values()
+        # TODO: Add positive definiteness check
+
         # Lamé parameters
         self.μ = np.array(
             [
