@@ -404,6 +404,52 @@ def F_cases_fibers(request):
     return F
 
 
+def test_FEBio_FungOrthotropic(febio_cmd_xml, F_cases_fibers):
+    """E2E test of FungOrthotropic material"""
+    febio_cmd, xml_version = febio_cmd_xml
+    F_applied = F_cases_fibers
+
+    # Generate model
+    model = Model(rectangular_prism_hex8((1, 1, 1), ((0, 1), (0, 1), (0, 1))))
+    mat = FungOrthotropic(
+        E1=10, E2=9, E3=8, G12=5, G23=3, G31=4, ν12=0.3, ν23=0.2, ν31=0.4, c=3, K=0.3
+    )
+    model.mesh.elements[0].material = mat
+    seq = wfl.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
+    step = Step("solid", dynamics="static", ticker=auto_ticker(seq, 1))
+    model.add_step(step)
+    prescribe_deformation(model, step, np.arange(len(model.mesh.nodes)), F_applied, seq)
+
+    bn = f"{Path(__file__).with_suffix('').name}." + "FungOrtho"
+
+    # TODO: switch to roundtrip
+
+    # Test 1: Write
+    pth_out = DIR_OUT / (f"{bn}.{febio_cmd}.xml{xml_version}.feb")
+    if not pth_out.parent.exists():
+        pth_out.parent.mkdir()
+    with open(pth_out, "wb") as f:
+        wfl.output.write_feb(model, f, version=xml_version)
+
+    # Test 2: Solve: Can FEBio use the file?
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
+
+    # Test 3: Is the output as expected?
+    model = wfl.load_model(pth_out)
+    e = model.mesh.elements[0]
+
+    # Test 4.1: Do we see the correct applied displacements?  A test failure here
+    # means that there is a defect in the code that reads or writes the model.  Or,
+    # less likely, an FEBio bug.
+    F_obs = np.mean([e.f(r) for r in e.gloc], axis=0)
+    npt.assert_allclose(F_obs, F_applied, atol=ATOL_F)
+    # Test 4.2: Do we see the correct stresses?
+    σ_wfl = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
+    σ_febio = model.solution.value("stress", step=1, entity_id=1, region_id=1)
+    # rtol = 0 due to underflow with zero stress
+    npt.assert_allclose(σ_wfl, σ_febio, atol=ATOL_STRESS, rtol=0)
+
+
 def test_FEBio_EllipsoidalDistribution(febio_cmd_xml, F_cases_fibers):
     """E2E test of EllipsoidalPowerFiber material"""
     febio_cmd, xml_version = febio_cmd_xml

@@ -1110,13 +1110,70 @@ class FungOrthotropic:
         self.ν12 = ν12
         self.ν23 = ν23
         self.ν31 = ν31
+        # ν21 = ν12 * E2 / E1
+        # ν13 = ν31 * E1 / E3
+        # ν32 = ν23 * E3 / E2
         self.c = c
         self.K = K
+        # Lamé parameters
+        self.μ = np.array(
+            [
+                self.G12 + self.G31 - self.G23,
+                self.G12 - self.G31 + self.G23,
+                -self.G12 + self.G31 + self.G23,
+            ]
+        )
+        uli = np.linalg.inv(
+            np.array(
+                [
+                    [1 / E1, -ν12 / E1, -ν31 / E3],
+                    [-ν12 / E1, 1 / E2, -ν23 / E2],
+                    [-ν31 / E3, -ν23 / E2, 1 / E3],
+                ]
+            )
+        )
+        self.λ = uli - np.diag(2 * self.μ)
+        assert np.allclose(self.λ, self.λ.T)
 
     def tstress(self, F, **kwargs):
         """Return Cauchy stress tensor"""
-        # Probably complicated
-        raise NotImplementedError
+        J = np.linalg.det(F)
+        C = F @ F.T
+        E = 0.5 * (C - np.eye(3))
+        E2 = E @ E
+
+        q = self.c**-1 * (
+            sum(
+                [
+                    2 * self.μ[a] * E2[a, a]
+                    + sum([self.λ[a, b] * E[a, a] * E[b, b] for b in range(3)])
+                    for a in range(3)
+                ]
+            )
+        )
+
+        def ddC_q(i, j):
+            return self.c**-1 * (
+                2 * (self.μ[i] + self.μ[j]) * E[i, j]
+                + (i == j) * sum([self.λ[i, b] * E[b, b] for b in range(3)])
+                + (i == j) * sum([self.λ[a, j] * E[a, a] for a in range(3)])
+            )
+
+        s_mat = (
+            0.5
+            * self.c
+            * np.exp(q)
+            * np.array(
+                [
+                    [ddC_q(0, 0), ddC_q(0, 1), ddC_q(0, 2)],
+                    [ddC_q(1, 0), ddC_q(1, 1), ddC_q(1, 2)],
+                    [ddC_q(2, 0), ddC_q(2, 1), ddC_q(2, 2)],
+                ]
+            )
+        )
+        σ_mat = 1 / J * F @ s_mat @ F.T
+        σ_bulk = 1 / J * self.K * np.log(J) * np.eye(3)  # ∂U/∂J
+        return σ_mat + σ_bulk
 
 
 class UncoupledHGOMatrix:
