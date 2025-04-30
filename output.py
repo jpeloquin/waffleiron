@@ -194,7 +194,7 @@ def _(mat: matlib.IsotropicElastic, model) -> ElementTree:
 
 
 @material_to_feb.register
-def _(mat: matlib.OrthotropicElastic, model) -> ElementTree:
+def _(mat: matlib.OrthotropicLinearElastic, model) -> ElementTree:
     """Convert OrthotropicElastic material instance to FEBio XML"""
     e = etree.Element("material", type="orthotropic elastic")
     # Material properties
@@ -211,7 +211,7 @@ def _(mat: matlib.OrthotropicElastic, model) -> ElementTree:
 
 
 @material_to_feb.register
-def _(mat: matlib.FungOrthotropic, model) -> ElementTree:
+def _(mat: matlib.FungOrthotropicElastic, model) -> ElementTree:
     """Convert FungOrthotropic material instance to FEBio XML"""
     e = etree.Element("material", type="Fung-ortho-compressible")
     # Material properties

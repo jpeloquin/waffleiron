@@ -17,7 +17,7 @@ from waffleiron.control import auto_ticker
 from waffleiron.febioxml import basis_mat_axis_local
 from waffleiron.element import Hex8
 from waffleiron.model import Model, Mesh
-from waffleiron.material import IsotropicElastic, OrthotropicElastic
+from waffleiron.material import IsotropicElastic, OrthotropicLinearElastic
 from waffleiron.output import write_feb, write_xml
 from waffleiron.test.fixtures import (
     DIR_OUT,
@@ -185,7 +185,7 @@ def mataxis_local_global_hex8_models(febio_cmd_xml) -> Generator:
 
     """
     febio_cmd, xml_version = febio_cmd_xml
-    material = OrthotropicElastic(
+    material = OrthotropicLinearElastic(
         {
             "E1": 23,
             "E2": 81,

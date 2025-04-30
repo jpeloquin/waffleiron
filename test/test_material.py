@@ -22,6 +22,26 @@ from waffleiron.test.fixtures import (
 )
 
 
+def test_orthotropic_stiffness_compliance_equivalence():
+    mat = OrthotropicLinearElastic(
+        {
+            "E1": 10,
+            "E2": 9,
+            "E3": 8,
+            "G12": 5,
+            "G23": 3,
+            "G31": 4,
+            "ν12": 0.3,
+            "ν23": 0.2,
+            "ν31": 0.4,
+        }
+    )
+    C = orthotropic_elastic_stiffness_matrix(mat)
+    S = orthotropic_elastic_compliance_matrix(mat)
+    npt.assert_array_almost_equal(C, np.linalg.inv(S))
+    npt.assert_array_almost_equal(S, np.linalg.inv(C))
+
+
 class ExponentialFiberTest(TestCase):
     """Test exponential fiber material definition
 
@@ -411,7 +431,7 @@ def test_FEBio_FungOrthotropic(febio_cmd_xml, F_cases_fibers):
 
     # Generate model
     model = Model(rectangular_prism_hex8((1, 1, 1), ((0, 1), (0, 1), (0, 1))))
-    mat = FungOrthotropic(
+    mat = FungOrthotropicElastic(
         E1=10, E2=9, E3=8, G12=5, G23=3, G31=4, ν12=0.3, ν23=0.2, ν31=0.4, c=3, K=0.3
     )
     model.mesh.elements[0].material = mat

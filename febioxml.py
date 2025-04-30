@@ -35,7 +35,7 @@ from .material import (
     UncoupledHGOFiber3D,
     SolidMixture,
     VolumetricHGO,
-    FungOrthotropic,
+    FungOrthotropicElastic,
 )
 from .math import orthonormal_basis, vec_from_sph
 
@@ -145,7 +145,7 @@ def read_continuous_fiber_distribution_xml(e, seqs: dict):
 
 def read_fung_orthotropic(e, seqs: dict):
     """Return FungOrthotropic material"""
-    return FungOrthotropic(
+    return FungOrthotropicElastic(
         E1=read_parameter(find_unique_tag(e, "E1", req=True), seqs),
         E2=read_parameter(find_unique_tag(e, "E2", req=True), seqs),
         E3=read_parameter(find_unique_tag(e, "E3", req=True), seqs),
@@ -192,7 +192,7 @@ material_from_xml_name = {
     "biphasic": matlib.PoroelasticSolid,
     "Donnan equilibrium": matlib.DonnanSwelling,
     "multigeneration": matlib.Multigeneration,
-    "orthotropic elastic": matlib.OrthotropicElastic,
+    "orthotropic elastic": matlib.OrthotropicLinearElastic,
 }
 material_name_from_class = {v: k for k, v in material_from_xml_name.items()}
 
@@ -212,7 +212,7 @@ perm_name_from_class = {v: k for k, v in perm_class_from_name.items()}
 physics_compat_by_mat = {
     matlib.PoroelasticSolid: {Physics.BIPHASIC},
     matlib.Rigid: {Physics.SOLID, Physics.BIPHASIC},
-    matlib.OrthotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.OrthotropicLinearElastic: {Physics.SOLID, Physics.BIPHASIC},
     matlib.IsotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
     matlib.SolidMixture: {Physics.SOLID, Physics.BIPHASIC},
     matlib.PowerLinearFiber: {Physics.SOLID, Physics.BIPHASIC},

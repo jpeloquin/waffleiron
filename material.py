@@ -171,6 +171,94 @@ def from_Lamé(y, u):
     return E, v
 
 
+def orthotropic_elastic_compliance_matrix(material):
+    """Return stiffness matrix for an orthotropic material with standard E, G, ν"""
+    E1 = material.E1
+    E2 = material.E2
+    E3 = material.E3
+    G12 = material.G12
+    G23 = material.G23
+    G31 = material.G31
+    ν12 = material.ν12
+    ν13 = material.ν31 * material.E1 / material.E3
+    ν21 = material.ν12 * material.E2 / material.E1
+    ν23 = material.ν23
+    ν31 = material.ν31
+    ν32 = material.ν23 * material.E3 / material.E2
+    S = np.array(
+        [
+            [1 / E1, -ν21 / E2, -ν31 / E3, 0, 0, 0],
+            [-ν12 / E1, 1 / E2, -ν32 / E3, 0, 0, 0],
+            [-ν13 / E1, -ν23 / E2, 1 / E3, 0, 0, 0],
+            [0, 0, 0, 1 / G12, 0, 0],
+            [0, 0, 0, 0, 1 / G23, 0],
+            [0, 0, 0, 0, 0, 1 / G31],
+        ]
+    )
+    return S
+
+
+def orthotropic_elastic_stiffness_matrix(material):
+    """Return stiffness matrix for an orthotropic material with standard E, G, ν"""
+    E1 = material.E1
+    E2 = material.E2
+    E3 = material.E3
+    G12 = material.G12
+    G23 = material.G23
+    G31 = material.G31
+    ν12 = material.ν12
+    ν13 = material.ν31 * material.E1 / material.E3
+    ν21 = material.ν12 * material.E2 / material.E1
+    ν23 = material.ν23
+    ν31 = material.ν31
+    ν32 = material.ν23 * material.E3 / material.E2
+    a = 1 - ν12 * ν21 - ν23 * ν32 - ν31 * ν13 - 2 * ν12 * ν23 * ν31
+    C = np.array(
+        [
+            [
+                (1 - ν23 * ν32) * E1 / a,
+                (ν21 + ν31 * ν23) * E1 / a,
+                (ν31 + ν21 * ν32) * E1 / a,
+                0,
+                0,
+                0,
+            ],
+            [
+                (ν12 + ν13 * ν32) * E2 / a,
+                (1 - ν31 * ν13) * E2 / a,
+                (ν32 + ν31 * ν12) * E2 / a,
+                0,
+                0,
+                0,
+            ],
+            [
+                (ν13 + ν12 * ν23) * E3 / a,
+                (ν23 + ν13 * ν21) * E3 / a,
+                (1 - ν21 * ν12) * E3 / a,
+                0,
+                0,
+                0,
+            ],
+            [0, 0, 0, G12, 0, 0],
+            [0, 0, 0, 0, G23, 0],
+            [0, 0, 0, 0, 0, G31],
+        ]
+    )
+    return C
+
+
+def is_positive_definite(A):
+    """Return True if matrix A is positive definite"""
+    if len(A.shape) != 2:
+        return ValueError("Matrix must have two index dimensions.")
+    if A.shape[0] != A.shape[1]:
+        return ValueError("Matrix must be square")
+    for i in range(1, A.shape[0] + 1):
+        if np.linalg.det(A[:i, :i]) <= 0:
+            return False
+    return True
+
+
 def unit_step(x):
     """Unit step function."""
     if x > 0.0:
@@ -191,7 +279,7 @@ class Material:
 
     bounds = {}  # stub
 
-    def check_parameter_values(self):
+    def check_parameters_bounds(self):
         for k in self.bounds:
             v = getattr(self, k)
             if not self.bounds[k][0] < v < self.bounds[k][1]:
@@ -831,7 +919,7 @@ class IsotropicElastic:
         return s
 
 
-class OrthotropicElastic(Material):
+class OrthotropicLinearElastic(Material):
     """Orthotropic elastic material definition.
 
     Matches FEOrthoElastic material in FEBio.  This material is *not* linear.
@@ -872,13 +960,15 @@ class OrthotropicElastic(Material):
         self.ν31 = props["ν31"]
 
         # Verify parameter values
-        self.check_parameter_values()
-        # TODO: Add positive definiteness check
+        self.check_parameters_bounds()
+        S = orthotropic_elastic_compliance_matrix(self)
+        if not is_positive_definite(S):
+            raise InvalidParameterError("Stiffness matrix is not positive definite.")
 
         # Derived properties
-        self.v21 = self.ν12 * self.E2 / self.E1
-        self.v13 = self.ν31 * self.E1 / self.E3
-        self.v32 = self.ν23 * self.E3 / self.E2
+        self.ν21 = self.ν12 * self.E2 / self.E1
+        self.ν13 = self.ν31 * self.E1 / self.E3
+        self.ν32 = self.ν23 * self.E3 / self.E2
         # Derived Lamé
         μ1 = self.G12 + self.G31 - self.G23
         μ2 = self.G12 - self.G31 + self.G23
@@ -1079,7 +1169,7 @@ class HolmesMow:
         return s
 
 
-class FungOrthotropic(Material):
+class FungOrthotropicElastic(Material):
     """Fung orthotropic elastic model"""
 
     # TODO: support open vs. closed intervals
@@ -1120,15 +1210,14 @@ class FungOrthotropic(Material):
         self.ν12 = ν12
         self.ν23 = ν23
         self.ν31 = ν31
-        # ν21 = ν12 * E2 / E1
-        # ν13 = ν31 * E1 / E3
-        # ν32 = ν23 * E3 / E2
         self.c = c
         self.K = K
 
         # Verify parameter values
-        self.check_parameter_values()
-        # TODO: Add positive definiteness check
+        self.check_parameters_bounds()
+        S = orthotropic_elastic_compliance_matrix(self)
+        if not is_positive_definite(S):
+            raise InvalidParameterError("Stiffness matrix is not positive definite.")
 
         # Lamé parameters
         self.μ = np.array(
