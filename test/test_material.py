@@ -564,7 +564,7 @@ def test_FEBio_LogarithmicFiber(febio_4plus_cmd_xml, F_cases_fibers):
     F_applied = F_cases_fibers
 
     mat = OrientedMaterial(
-        LogarithmicFiber(E=0.33, λ0=1.05), Q=np.array([0.5, 0.5, 2**0.5 / 2])
+        LogarithmicFiber(E=0.33, λ0=1.032), Q=np.array([0.5, 0.5, 2**0.5 / 2])
     )
     model = _create_model(mat, F_applied)
     bn = f"{Path(__file__).with_suffix('').name}." + "LogarithmicFiber"

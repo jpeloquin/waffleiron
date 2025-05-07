@@ -181,6 +181,14 @@ def read_continuous_fiber_distribution_xml(e, seqs: dict):
         return NotImplementedError
 
 
+def read_isotropic_exponential_permeability(e, seqs: dict):
+    """Return isotropic exponential permeability law"""
+    return matlib.IsotropicExponentialPermeability(
+        k0=read_parameter(find_unique_tag(e, "perm", req=True), seqs),
+        M=read_parameter(find_unique_tag(e, "M", req=True), seqs),
+    )
+
+
 # Map type attribute of <material>, <solid>, or <fiber> → function that returns
 # waffleiron material class form the XML element
 xml_material_reader = {
@@ -188,6 +196,7 @@ xml_material_reader = {
     "Holzapfel-Gasser-Ogden": read_holzapfel_gasser_ogden_xml,
     "fiber-natural-NH": read_natural_neo_hookean_fiber,
     "continuous fiber distribution": read_continuous_fiber_distribution_xml,
+    "perm-exp-iso": read_isotropic_exponential_permeability,
 }
 
 material_from_xml_name = {
@@ -486,10 +495,17 @@ def read_material(e, sequence_registry: dict):
         # Permeability constitutive equation
         e_permeability = find_unique_tag(e, "permeability", req=True)
         perm_type = e_permeability.attrib["type"]
-        perm_class = perm_class_from_name[perm_type]
-        props = {c.tag: read_parameter(c, sequence_registry) for c in e_permeability}
-        props["phi0"] = solid_fraction
-        permeability = perm_class.from_feb(**props)
+        if perm_type in xml_material_reader:
+            permeability = xml_material_reader[perm_type](
+                e_permeability, sequence_registry
+            )
+        else:
+            perm_class = perm_class_from_name[perm_type]
+            props = {
+                c.tag: read_parameter(c, sequence_registry) for c in e_permeability
+            }
+            props["phi0"] = solid_fraction  # needed for Holmes–Mow permeability
+            permeability = perm_class.from_feb(**props)
         # Solid constituent
         constituents = [
             read_material(c, sequence_registry) for c in e if c.tag == "solid"

@@ -397,6 +397,16 @@ class IsotropicConstantPermeability(Permeability):
         return cls(perm)
 
 
+class IsotropicExponentialPermeability(Permeability):
+    """Isotropic exponential permeability"""
+
+    bounds = {"k0": (0, inf), "M": (0, inf)}
+
+    def __init__(self, k0, M, **kwargs):
+        self.k0 = k0
+        self.M = M
+
+
 class IsotropicHolmesMowPermeability(Permeability):
     """Isotropic Holmes-Mow permeability"""
 

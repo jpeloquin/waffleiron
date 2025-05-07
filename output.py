@@ -257,6 +257,15 @@ def _(mat: matlib.IsotropicConstantPermeability, model):
 
 
 @material_to_feb.register
+def _(mat: matlib.IsotropicExponentialPermeability, model):
+    """Convert IsotropicExponentialPermeability instance to FEBio XML"""
+    e = etree.Element("permeability", type="perm-exp-iso")
+    e.append(property_to_xml(mat.k0, "perm", model.named["sequences"]))
+    e.append(property_to_xml(mat.M, "M", model.named["sequences"]))
+    return e
+
+
+@material_to_feb.register
 def _(mat: matlib.IsotropicHolmesMowPermeability, model) -> ElementTree:
     """Convert IsotropicHolmesMowPermeability instance to FEBio XML"""
     e = etree.Element("permeability", type="perm-Holmes-Mow")
