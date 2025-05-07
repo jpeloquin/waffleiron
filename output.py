@@ -142,6 +142,15 @@ def _(mat: matlib.EllipsoidalDistribution, model) -> ElementTree:
 
 
 @material_to_feb.register
+def _(mat: matlib.LogarithmicFiber, model) -> ElementTree:
+    """Convert ExponentialFiber material instance to FEBio XML"""
+    e = etree.Element("material", type="fiber-natural-NH")
+    e.append(property_to_xml(mat.E, "ksi", model.named["sequences"]))
+    e.append(property_to_xml(mat.λ0, "lam0", model.named["sequences"]))
+    return e
+
+
+@material_to_feb.register
 def _(mat: matlib.ExponentialFiber, model) -> ElementTree:
     """Convert ExponentialFiber material instance to FEBio XML"""
     e = etree.Element("material", type="fiber-exp-pow")

@@ -36,6 +36,7 @@ from .material import (
     SolidMixture,
     VolumetricHGO,
     FungOrthotropicElastic,
+    LogarithmicFiber,
 )
 from .math import orthonormal_basis, vec_from_sph
 
@@ -131,18 +132,6 @@ class VerbatimXMLMaterial:
         self.xml = xml
 
 
-def read_continuous_fiber_distribution_xml(e, seqs: dict):
-    """Return fiber orientation distribution material"""
-    dist_type = e.find("distribution").attrib["type"]
-    fiber = read_material(e.find("fibers"), seqs)
-    if dist_type == "ellipsoidal":
-        d = vector_from_text(e.find("distribution/spa").text)
-        # TODO: Support parametrized integration schemes
-        return EllipsoidalDistribution(d, fiber)
-    else:
-        return NotImplementedError
-
-
 def read_fung_orthotropic(e, seqs: dict):
     """Return FungOrthotropic material"""
     return FungOrthotropicElastic(
@@ -172,12 +161,33 @@ def read_holzapfel_gasser_ogden_xml(e, seqs: dict):
     )
 
 
+def read_natural_neo_hookean_fiber(e, seqs: dict):
+    """Return LogarithmicFiber material"""
+    return LogarithmicFiber(
+        E=read_parameter(find_unique_tag(e, "ksi", req=True), seqs),
+        λ0=read_parameter(find_unique_tag(e, "lam0", req=True), seqs),
+    )
+
+
+def read_continuous_fiber_distribution_xml(e, seqs: dict):
+    """Return fiber orientation distribution material"""
+    dist_type = e.find("distribution").attrib["type"]
+    fiber = read_material(e.find("fibers"), seqs)
+    if dist_type == "ellipsoidal":
+        d = vector_from_text(e.find("distribution/spa").text)
+        # TODO: Support parametrized integration schemes
+        return EllipsoidalDistribution(d, fiber)
+    else:
+        return NotImplementedError
+
+
 # Map type attribute of <material>, <solid>, or <fiber> → function that returns
 # waffleiron material class form the XML element
 xml_material_reader = {
-    "continuous fiber distribution": read_continuous_fiber_distribution_xml,
     "Fung-ortho-compressible": read_fung_orthotropic,
     "Holzapfel-Gasser-Ogden": read_holzapfel_gasser_ogden_xml,
+    "fiber-natural-NH": read_natural_neo_hookean_fiber,
+    "continuous fiber distribution": read_continuous_fiber_distribution_xml,
 }
 
 material_from_xml_name = {
@@ -215,6 +225,7 @@ physics_compat_by_mat = {
     matlib.OrthotropicLinearElastic: {Physics.SOLID, Physics.BIPHASIC},
     matlib.IsotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
     matlib.SolidMixture: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.LogarithmicFiber: {Physics.SOLID, Physics.BIPHASIC},
     matlib.PowerLinearFiber: {Physics.SOLID, Physics.BIPHASIC},
     matlib.ExponentialFiber: {Physics.SOLID, Physics.BIPHASIC},
     matlib.HolmesMow: {Physics.SOLID, Physics.BIPHASIC},
@@ -446,17 +457,21 @@ def read_material(e, sequence_registry: dict):
 
     # Check if the material type is fully supported
     material_type = read_material_type(e)
+    orientation = read_material_orientation(e)
     # TODO: over time, migrate materials to reader functions.  `read_material` is
     #  growing out of control.
     if material_type in xml_material_reader:
-        return xml_material_reader[material_type](e, sequence_registry)
+        mat = xml_material_reader[material_type](e, sequence_registry)
+        if orientation is not None:
+            return OrientedMaterial(mat, orientation)
+        else:
+            return mat
     if material_type not in material_from_xml_name:
         warnings.warn(
             f"Reading material `{material_type}` from FEBio XML is not yet supported.  Its XML content will be stored in the Waffleiron model.  It will be reproduced verbatim (except for the material ID) if the model is written to FEBio XML."
         )
         return VerbatimXMLMaterial(e)
     cls = material_from_xml_name[material_type]
-    orientation = read_material_orientation(e)
     if material_type == "solid mixture":
         constituents = [
             read_material(c, sequence_registry) for c in e if c.tag == "solid"

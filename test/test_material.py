@@ -12,7 +12,13 @@ from waffleiron.febioxml import UncoupledHGOFEBio
 from waffleiron.load import prescribe_deformation
 from waffleiron.material import *
 from waffleiron.mesh import rectangular_prism_hex8
-from waffleiron.test.fixtures import ATOL_F, RTOL_F, RTOL_STRESS, ATOL_STRESS
+from waffleiron.test.fixtures import (
+    ATOL_F,
+    RTOL_F,
+    RTOL_STRESS,
+    ATOL_STRESS,
+    febio_4plus_cmd_xml,
+)
 from waffleiron.input import FebReader, textdata_list
 from waffleiron.test.fixtures import (
     DIR_FIXTURES,
@@ -20,6 +26,17 @@ from waffleiron.test.fixtures import (
     febio_cmd_xml,
     febio_3plus_cmd_xml,
 )
+
+
+def _create_model(mat, F):
+    """Return model for given material and F tensor"""
+    model = Model(rectangular_prism_hex8((1, 1, 1), ((0, 1), (0, 1), (0, 1))))
+    model.mesh.elements[0].material = mat
+    seq = wfl.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
+    step = Step("solid", dynamics="static", ticker=auto_ticker(seq, 1))
+    model.add_step(step)
+    prescribe_deformation(model, step, np.arange(len(model.mesh.nodes)), F, seq)
+    return model
 
 
 def test_orthotropic_stiffness_compliance_equivalence():
@@ -366,19 +383,13 @@ class EllipsoidalPowerFiberBasic(TestCase):
 def test_FEBio_EllipsoidalPowerFiber(febio_cmd_xml):
     """E2E test of EllipsoidalPowerFiber material."""
     febio_cmd, xml_version = febio_cmd_xml
+    F_applied = np.array([[1.08, 0, 0], [0, 0.97, 0], [0, 0, 0.88]])
 
     # Generate model
-    model = Model(rectangular_prism_hex8((1, 1, 1), ((0, 1), (0, 1), (0, 1))))
     mat = wfl.material.EllipsoidalPowerFiber(
         (1.55608279e02, 4.87349748e00, 2.00000000e01), (3, 2, 2.5)
     )
-    model.mesh.elements[0].material = mat
-    seq = wfl.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
-    step = Step("solid", dynamics="static", ticker=auto_ticker(seq, 1))
-    model.add_step(step)
-    F_applied = np.array([[1.08, 0, 0], [0, 0.97, 0], [0, 0, 0.88]])
-    prescribe_deformation(model, step, np.arange(len(model.mesh.nodes)), F_applied, seq)
-
+    model = _create_model(mat, F_applied)
     bn = f"{Path(__file__).with_suffix('').name}." + "EllPowFiber"
 
     # TODO: switch to roundtrip
@@ -393,10 +404,9 @@ def test_FEBio_EllipsoidalPowerFiber(febio_cmd_xml):
     # Test 2: Solve: Can FEBio use the file?
     wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
 
-    # Test 3: Is the output as expected?
+    # Test 4: Is the output as expected?
     model = wfl.load_model(pth_out)
     e = model.mesh.elements[0]
-
     # Test 4.1: Do we see the correct applied displacements?  A test failure here
     # means that there is a defect in the code that reads or writes the model.  Or,
     # less likely, an FEBio bug.
@@ -430,16 +440,10 @@ def test_FEBio_FungOrthotropic(febio_cmd_xml, F_cases_fibers):
     F_applied = F_cases_fibers
 
     # Generate model
-    model = Model(rectangular_prism_hex8((1, 1, 1), ((0, 1), (0, 1), (0, 1))))
     mat = FungOrthotropicElastic(
         E1=10, E2=9, E3=8, G12=5, G23=3, G31=4, ν12=0.3, ν23=0.2, ν31=0.4, c=3, K=0.3
     )
-    model.mesh.elements[0].material = mat
-    seq = wfl.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
-    step = Step("solid", dynamics="static", ticker=auto_ticker(seq, 1))
-    model.add_step(step)
-    prescribe_deformation(model, step, np.arange(len(model.mesh.nodes)), F_applied, seq)
-
+    model = _create_model(mat, F_applied)
     bn = f"{Path(__file__).with_suffix('').name}." + "FungOrtho"
 
     # TODO: switch to roundtrip
@@ -454,10 +458,9 @@ def test_FEBio_FungOrthotropic(febio_cmd_xml, F_cases_fibers):
     # Test 2: Solve: Can FEBio use the file?
     wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
 
-    # Test 3: Is the output as expected?
+    # Test 4: Is the output as expected?
     model = wfl.load_model(pth_out)
     e = model.mesh.elements[0]
-
     # Test 4.1: Do we see the correct applied displacements?  A test failure here
     # means that there is a defect in the code that reads or writes the model.  Or,
     # less likely, an FEBio bug.
@@ -476,18 +479,12 @@ def test_FEBio_EllipsoidalDistribution(febio_cmd_xml, F_cases_fibers):
     F_applied = F_cases_fibers
 
     # Generate model
-    model = Model(rectangular_prism_hex8((1, 1, 1), ((0, 1), (0, 1), (0, 1))))
     matrix = NeoHookean(1, 0)
     fibers = EllipsoidalDistribution(
         [1, 0.1, 0.1], PowerLinearFiber(E=100, β=2.5, λ0=1.01)
     )
     mat = SolidMixture([matrix, fibers])
-    model.mesh.elements[0].material = mat
-    seq = wfl.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
-    step = Step("solid", dynamics="static", ticker=auto_ticker(seq, 1))
-    model.add_step(step)
-    prescribe_deformation(model, step, np.arange(len(model.mesh.nodes)), F_applied, seq)
-
+    model = _create_model(mat, F_applied)
     bn = f"{Path(__file__).with_suffix('').name}." + "EllDist"
 
     # TODO: switch to roundtrip
@@ -502,10 +499,9 @@ def test_FEBio_EllipsoidalDistribution(febio_cmd_xml, F_cases_fibers):
     # Test 2: Solve: Can FEBio use the file?
     wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
 
-    # Test 3: Is the output as expected?
+    # Test 4: Is the output as expected?
     model = wfl.load_model(pth_out)
     e = model.mesh.elements[0]
-
     # Test 4.1: Do we see the correct applied displacements?  A test failure here
     # means that there is a defect in the code that reads or writes the model.  Or,
     # less likely, an FEBio bug.
@@ -524,10 +520,6 @@ def test_FEBio_UncoupledHGO(febio_3plus_cmd_xml, F_cases_fibers):
     F_applied = F_cases_fibers
 
     # Generate model
-    #
-    # TODO: Can probably consolidate model generation with
-    #  test_FEBio_EllipsoidalDistribution and other tests; just parametrize material
-    model = Model(rectangular_prism_hex8((1, 1, 1), ((0, 1), (0, 1), (0, 1))))
     mat = UncoupledHGOFEBio(
         c=0.5,  # MPa
         k1=140,  # MPa,
@@ -536,12 +528,7 @@ def test_FEBio_UncoupledHGO(febio_3plus_cmd_xml, F_cases_fibers):
         κ=0.2,
         K=0.1,  # MPa
     )
-    model.mesh.elements[0].material = mat
-    seq = wfl.Sequence(((0, 0), (1, 1)), interp="linear", extrap="constant")
-    step = Step("solid", dynamics="static", ticker=auto_ticker(seq, 1))
-    model.add_step(step)
-    prescribe_deformation(model, step, np.arange(len(model.mesh.nodes)), F_applied, seq)
-
+    model = _create_model(mat, F_applied)
     bn = f"{Path(__file__).with_suffix('').name}." + "UncoupledHGO"
 
     # TODO: switch to roundtrip
@@ -569,3 +556,40 @@ def test_FEBio_UncoupledHGO(febio_3plus_cmd_xml, F_cases_fibers):
     σ_wfl = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
     σ_febio = model.solution.value("stress", step=1, entity_id=1, region_id=1)
     npt.assert_allclose(σ_wfl, σ_febio, atol=5e-3)
+
+
+def test_FEBio_LogarithmicFiber(febio_4plus_cmd_xml, F_cases_fibers):
+    """E2E test of LogarithmicFiber material"""
+    febio_cmd, xml_version = febio_4plus_cmd_xml
+    F_applied = F_cases_fibers
+
+    mat = OrientedMaterial(
+        LogarithmicFiber(E=0.33, λ0=1.05), Q=np.array([0.5, 0.5, 2**0.5 / 2])
+    )
+    model = _create_model(mat, F_applied)
+    bn = f"{Path(__file__).with_suffix('').name}." + "LogarithmicFiber"
+
+    # TODO: switch to roundtrip
+
+    # Test 1: Write
+    pth_out = DIR_OUT / (f"{bn}.{febio_cmd}.xml{xml_version}.feb")
+    if not pth_out.parent.exists():
+        pth_out.parent.mkdir()
+    with open(pth_out, "wb") as f:
+        wfl.output.write_feb(model, f, version=xml_version)
+
+    # Test 2: Solve: Can FEBio use the file?
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
+
+    # Test 4: Is the output as expected?
+    model = wfl.load_model(pth_out)
+    e = model.mesh.elements[0]
+    # Test 4.1: Do we see the correct applied displacements?  A test failure here
+    # means that there is a defect in the code that reads or writes the model.  Or,
+    # less likely, an FEBio bug.
+    F_obs = np.mean([e.f(r) for r in e.gloc], axis=0)
+    npt.assert_allclose(F_obs, F_applied, atol=ATOL_F)
+    # Test 4.2: Do we see the correct stresses?
+    σ_wfl = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
+    σ_febio = model.solution.value("stress", step=1, entity_id=1, region_id=1)
+    npt.assert_allclose(σ_wfl, σ_febio, atol=ATOL_STRESS)
