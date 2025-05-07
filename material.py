@@ -297,6 +297,8 @@ class OrientedMaterial:
 
     def __init__(self, material, Q=np.eye(3)):
         self.material = material
+        Q = np.array(Q)
+        Q = Q / np.linalg.norm(Q, axis=0)
         self.orientation = Q
 
     def w(self, F):
