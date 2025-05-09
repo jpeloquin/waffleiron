@@ -36,7 +36,7 @@ from .material import (
     SolidMixture,
     VolumetricHGO,
     FungOrthotropicElastic,
-    LogarithmicFiber,
+    NaturalNeoHookeanFiber,
 )
 from .math import orthonormal_basis, vec_from_sph
 
@@ -161,9 +161,16 @@ def read_holzapfel_gasser_ogden_xml(e, seqs: dict):
     )
 
 
+def read_neo_hookean_fiber(e, seqs: dict):
+    """Return NeoHookeanFiber material"""
+    return matlib.NeoHookeanFiber(
+        E=read_parameter(find_unique_tag(e, "mu", req=True), seqs),
+    )
+
+
 def read_natural_neo_hookean_fiber(e, seqs: dict):
-    """Return LogarithmicFiber material"""
-    return LogarithmicFiber(
+    """Return NaturalNeoHookeanFiber material"""
+    return NaturalNeoHookeanFiber(
         E=read_parameter(find_unique_tag(e, "ksi", req=True), seqs),
         λ0=read_parameter(find_unique_tag(e, "lam0", req=True), seqs),
     )
@@ -205,6 +212,7 @@ def read_rigid_material(e, seqs: dict):
 xml_material_reader = {
     "Fung-ortho-compressible": read_fung_orthotropic,
     "Holzapfel-Gasser-Ogden": read_holzapfel_gasser_ogden_xml,
+    "fiber-NH": read_neo_hookean_fiber,
     "fiber-natural-NH": read_natural_neo_hookean_fiber,
     "continuous fiber distribution": read_continuous_fiber_distribution_xml,
     "perm-exp-iso": read_isotropic_exponential_permeability,
@@ -245,7 +253,7 @@ physics_compat_by_mat = {
     matlib.OrthotropicLinearElastic: {Physics.SOLID, Physics.BIPHASIC},
     matlib.IsotropicElastic: {Physics.SOLID, Physics.BIPHASIC},
     matlib.SolidMixture: {Physics.SOLID, Physics.BIPHASIC},
-    matlib.LogarithmicFiber: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.NaturalNeoHookeanFiber: {Physics.SOLID, Physics.BIPHASIC},
     matlib.PowerLinearFiber: {Physics.SOLID, Physics.BIPHASIC},
     matlib.ExponentialFiber: {Physics.SOLID, Physics.BIPHASIC},
     matlib.HolmesMow: {Physics.SOLID, Physics.BIPHASIC},

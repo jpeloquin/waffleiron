@@ -572,8 +572,34 @@ class Rigid:
             self.density = props["density"]
 
 
-class LogarithmicFiber:
-    """1D fiber with logarithmic σ-λ relation
+class NeoHookeanFiber:
+    """1D fiber with σ ~ λ^2 − 1 relation
+
+    Same as "fiber-NH" in FEBio.
+
+    """
+
+    bounds = {
+        "E": (0, inf),
+    }
+
+    def __init__(self, E):
+        self.E = E
+
+    def stress(self, λ):
+        """Return fiber stress scalar along original orientation
+
+        If embedding in R3, treat this as 2nd Piola–Kirchoff stress.
+
+        """
+        if λ <= 1:
+            return 0
+        else:
+            return self.E * (λ**2 - 1)
+
+
+class NaturalNeoHookeanFiber:
+    """1D fiber with σ ~ ln(λ) / λ^2 relation
 
     Also called "natural neo-Hookean".
 
@@ -582,7 +608,7 @@ class LogarithmicFiber:
     """
 
     bounds = {
-        "ξ": (0, inf),
+        "E": (0, inf),
         "λ0": (1, inf),
     }
 

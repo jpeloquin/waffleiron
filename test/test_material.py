@@ -558,13 +558,48 @@ def test_FEBio_UncoupledHGO(febio_3plus_cmd_xml, F_cases_fibers):
     npt.assert_allclose(σ_wfl, σ_febio, atol=5e-3)
 
 
-def test_FEBio_LogarithmicFiber(febio_4plus_cmd_xml, F_cases_fibers):
+def test_FEBio_NeoHookeanFiber(febio_3plus_cmd_xml, F_cases_fibers):
+    """E2E test of LogarithmicFiber material"""
+    febio_cmd, xml_version = febio_3plus_cmd_xml
+    F_applied = F_cases_fibers
+
+    mat = OrientedMaterial(NeoHookeanFiber(E=7), Q=np.array([0.5, 0.5, 2**0.5 / 2]))
+    model = _create_model(mat, F_applied)
+    bn = f"{Path(__file__).with_suffix('').name}." + "LogarithmicFiber"
+
+    # TODO: switch to roundtrip
+
+    # Test 1: Write
+    pth_out = DIR_OUT / (f"{bn}.{febio_cmd}.xml{xml_version}.feb")
+    if not pth_out.parent.exists():
+        pth_out.parent.mkdir()
+    with open(pth_out, "wb") as f:
+        wfl.output.write_feb(model, f, version=xml_version)
+
+    # Test 2: Solve: Can FEBio use the file?
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
+
+    # Test 4: Is the output as expected?
+    model = wfl.load_model(pth_out)
+    e = model.mesh.elements[0]
+    # Test 4.1: Do we see the correct applied displacements?  A test failure here
+    # means that there is a defect in the code that reads or writes the model.  Or,
+    # less likely, an FEBio bug.
+    F_obs = np.mean([e.f(r) for r in e.gloc], axis=0)
+    npt.assert_allclose(F_obs, F_applied, atol=ATOL_F)
+    # Test 4.2: Do we see the correct stresses?
+    σ_wfl = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
+    σ_febio = model.solution.value("stress", step=1, entity_id=1, region_id=1)
+    npt.assert_allclose(σ_wfl, σ_febio, atol=ATOL_STRESS)
+
+
+def test_FEBio_LogInv2Fiber(febio_4plus_cmd_xml, F_cases_fibers):
     """E2E test of LogarithmicFiber material"""
     febio_cmd, xml_version = febio_4plus_cmd_xml
     F_applied = F_cases_fibers
 
     mat = OrientedMaterial(
-        LogarithmicFiber(E=0.33, λ0=1.032), Q=np.array([0.5, 0.5, 2**0.5 / 2])
+        NaturalNeoHookeanFiber(E=0.33, λ0=1.032), Q=np.array([0.5, 0.5, 2**0.5 / 2])
     )
     model = _create_model(mat, F_applied)
     bn = f"{Path(__file__).with_suffix('').name}." + "LogarithmicFiber"
