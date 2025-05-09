@@ -957,7 +957,7 @@ class IsotropicElastic:
         mu = self.mu
         E = 0.5 * (np.dot(F.T, F) - np.eye(3))
         trE = np.trace(E)
-        s = y * trE * np.eye(3) + 2.0 * mu * E
+        s = 2.0 * mu * E + y * trE * np.eye(3)
         return s
 
 
