@@ -477,8 +477,8 @@ class FebReader:
         mesh = self.mesh()
         model = Model(mesh)
         domains, element_index_from_id = fx.read_domains(self.root)
-        for lbl, i in element_index_from_id.items():
-            mesh.named["elements"].add(lbl, model.mesh.elements[i])
+        for mat_label, i in element_index_from_id.items():
+            mesh.named["elements"].add(mat_label, model.mesh.elements[i])
 
         # Read Universal Constants.  These will eventually be superseded
         # by units support.
@@ -601,46 +601,53 @@ class FebReader:
             material = model.named["materials"].obj(name, nametype)
             ids = model.named["materials"].names(material, "ordinal_id")
             assert (len(ids)) == 1
-            mat_id = ids[0]
             if isinstance(material, material_lib.Rigid):
                 elements = []
                 for i in domain["elements"]:
                     elements.append(model.mesh.elements[i])
-                body = Body(elements)
-                explicit_bodies[mat_id] = body
-                # FEBio XML 4.0 uses names for rigid bodies
-                explicit_bodies[name] = Body(elements)
+                body = Body(
+                    elements,
+                    center_of_mass=(
+                        material.center_of_mass
+                        if hasattr(material, "center_of_mass")
+                        else None
+                    ),
+                )
+                mat_label = fx.get_rigid_interface_mat_label(
+                    material, model.named["materials"]
+                )
+                explicit_bodies[mat_label] = body
 
-        # Read (1) implicit rigid bodies and (2) rigid body ↔ node set
-        # rigid interfaces.
+        # Read (1) implicit rigid bodies and (2) rigid body ↔ node set rigid interfaces
         implicit_bodies = {}
         for e_impbod in self.root.findall(f"{fx.IMPBODY_PARENT}/{fx.IMPBODY_NAME}"):
-            # <rigid> elements may refer to implicit rigid bodies or to
-            # rigid interfaces.  If the rigid "material" referenced by
-            # the <rigid> element is assigned to elements, the element
-            # represents a rigid interface.  Otherwise it represents an
-            # rigid interface that interfaces with itself; i.e., an
-            # implicit rigid body.
-            nodeset_name, mat_identifier = fx.read_rigid_interface(e_impbod)
+            # <rigid> elements may refer to implicit rigid bodies or to rigid
+            # interfaces.  If the rigid "material" referenced by the <rigid> element
+            # is assigned to elements, the element represents a rigid interface.
+            # Otherwise it represents an rigid interface that interfaces with itself;
+            # i.e., an implicit rigid body.
+            nodeset_name, mat_label = fx.read_rigid_interface(e_impbod)
             # TODO: Extract material resolution to a function if it needs to be used
             #  in multiple places
-            if isinstance(mat_identifier, int):
-                mat = model.named["materials"].obj(
-                    mat_identifier, nametype="ordinal_id"
-                )
+            if isinstance(mat_label, int):
+                mat = model.named["materials"].obj(mat_label, nametype="ordinal_id")
             else:
-                mat = model.named["materials"].obj(mat_identifier, nametype="canonical")
+                mat = model.named["materials"].obj(mat_label, nametype="canonical")
             mat_names = model.named["materials"].names(mat, "canonical")
             node_set = model.named["node sets"].obj(nodeset_name)
             if mat in materials_used:
-                # This <rigid> element represents an explicit rigid body
-                # ↔ node set interface.
-                rigid_interface = RigidInterface(mat, node_set)
+                # This <rigid> element represents an explicit rigid body ↔ node set
+                # interface.
+                mat_label = fx.get_rigid_interface_mat_label(
+                    mat, model.named["materials"]
+                )
+                rigid_interface = RigidInterface(explicit_bodies[mat_label], node_set)
                 model.constraints.append(rigid_interface)
             else:
                 # This <rigid> element represents an implicit rigid body
+                # TODO: Should this just be a rigid interface?
                 body = ImplicitBody(model.mesh, node_set, mat)
-                implicit_bodies[mat_identifier] = body
+                implicit_bodies[mat_label] = body
                 # FEBio XML 4.0 uses names for rigid bodies
                 for k in mat_names:
                     implicit_bodies[k] = body

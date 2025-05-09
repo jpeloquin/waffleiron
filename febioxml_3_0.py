@@ -20,6 +20,7 @@ from .febioxml import *
 from .febioxml_2_5 import (
     DYNAMICS_TO_XML,
     DYNAMICS_FROM_XML,
+    get_rigid_interface_mat_label,
     read_elementdata_mat_axis,
     read_nodeset,
     read_elementset,
@@ -122,7 +123,10 @@ QNMETHOD_PARAMS = {
     "max_ups": OptParameter("Control/solver/max_ups", int, 10),
 }
 
-# Functions for reading FEBio XML 3.0
+
+#######################################
+# Functions for reading FEBio XML 3.0 #
+#######################################
 
 
 def iter_node_conditions(root):

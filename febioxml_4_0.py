@@ -71,6 +71,7 @@ BC_TYPE_TAG: Dict[str, dict] = {
         ("variable", "displacement"): "rigid_displacement",
         ("fixed", "displacement"): "rigid_fixed",
         ("variable", "force"): "rigid_force",
+        ("variable", "rotation"): "rigid_rotation",
     },
 }
 
@@ -125,6 +126,24 @@ QNMETHOD_PATH_IN_STEP = "Control/solver/qn_method"
 QNMETHOD_PARAMS = {
     "max_ups": OptParameter("Control/solver/qn_method/max_ups", int, 10),
 }
+
+
+###########################################
+# Misc helper functions for FEBio XML 4.0 #
+###########################################
+
+
+def get_rigid_interface_mat_label(mat, material_registry):
+    """Return material identifier for rigid interface
+
+    FEBio XML 4.0 switched to using the material name instead of the material's
+    integer ID in rigid interface XML elements.
+
+    """
+    names = material_registry.names(mat, "canonical")
+    if len(names) != 1:
+        raise ValueError(f"{mat} does not have a unique label.")
+    return names[0]
 
 
 #####################################################
@@ -238,7 +257,7 @@ def read_body_bc(
         body = explicit_bodies[mat_name]
     else:
         # Assume mat_id refers to an implicit rigid body
-        # TODO: Why are these separated anyway?
+        # TODO: Why are these separated anyway?  FEBio demands a 1:1 relationship.
         body = implicit_bodies[mat_name]
 
     # Variable displacement (and rotation)
@@ -404,6 +423,8 @@ def xml_body_constraints(
         if bc["variable"] == "force":
             e_rb = etree.Element("rigid_load")
         elif bc["variable"] == "displacement":
+            e_rb = etree.Element("rigid_bc")
+        elif bc["variable"] == "rotation":
             e_rb = etree.Element("rigid_bc")
         else:
             raise ValueError()

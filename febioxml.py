@@ -189,6 +189,17 @@ def read_isotropic_exponential_permeability(e, seqs: dict):
     )
 
 
+def read_rigid_material(e, seqs: dict):
+    """Return rigid body material"""
+    # Monkey-patch the center of mass into the material object; that seems the most
+    # straightforward way to pass that information along to the Body class.
+    mat = matlib.Rigid()
+    e_com = e.find("center_of_mass")
+    if e_com is not None:
+        mat.center_of_mass = to_vec(e_com.text)
+    return mat
+
+
 # Map type attribute of <material>, <solid>, or <fiber> → function that returns
 # waffleiron material class form the XML element
 xml_material_reader = {
@@ -197,6 +208,7 @@ xml_material_reader = {
     "fiber-natural-NH": read_natural_neo_hookean_fiber,
     "continuous fiber distribution": read_continuous_fiber_distribution_xml,
     "perm-exp-iso": read_isotropic_exponential_permeability,
+    "rigid body": read_rigid_material,
 }
 
 material_from_xml_name = {
@@ -207,7 +219,6 @@ material_from_xml_name = {
     "ellipsoidal fiber distribution": matlib.EllipsoidalPowerFiber,
     "neo-Hookean": matlib.NeoHookean,
     "solid mixture": matlib.SolidMixture,
-    "rigid body": matlib.Rigid,
     "biphasic": matlib.PoroelasticSolid,
     "Donnan equilibrium": matlib.DonnanSwelling,
     "multigeneration": matlib.Multigeneration,

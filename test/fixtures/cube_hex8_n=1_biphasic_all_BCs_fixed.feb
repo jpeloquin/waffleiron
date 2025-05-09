@@ -1,111 +1,123 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
-<febio_spec version="2.5">
-	<Module type="biphasic"/>
-	<Control>
-		<time_steps>10</time_steps>
-		<step_size>0.1</step_size>
-		<max_refs>15</max_refs>
-		<max_ups>10</max_ups>
-		<diverge_reform>1</diverge_reform>
-		<reform_each_time_step>1</reform_each_time_step>
-		<dtol>0.001</dtol>
-		<etol>0.01</etol>
-		<rtol>0</rtol>
-		<lstol>0.9</lstol>
-		<min_residual>1e-20</min_residual>
-		<qnmethod>0</qnmethod>
-		<time_stepper>
-			<dtmin>0.01</dtmin>
-			<dtmax lc="1">0.5</dtmax>
-			<max_retries>5</max_retries>
-			<opt_iter>10</opt_iter>
-		</time_stepper>
-		<analysis type="static"/>
-    <plot_level>PLOT_MUST_POINTS</plot_level>
-	</Control>
-	<Globals>
-		<Constants>
-			<T>298</T>
-			<R>8.315e-06</R>
-      <Fc>96485e-9</Fc>
-		</Constants>
-	</Globals>
-	<Material>
-		<material id="1" name="Material1" type="biphasic">
+<?xml version='1.0' encoding='UTF-8'?>
+<febio_spec version="4.0">
+  <Module type="biphasic"/>
+  <Globals>
+    <Constants>
+      <R>8.315e-06</R>
+      <T>298</T>
+      <Fc>9.6485e-05</Fc>
+    </Constants>
+  </Globals>
+  <Material>
+    <material type="biphasic" id="1" name="Material1">
       <phi0>0.2</phi0>
+      <fluid_density>0</fluid_density>
       <solid type="solid mixture">
-			  <solid type="isotropic elastic">
-				  <density>1</density>
-				  <E>1</E>
-				  <v>0</v>
-  			</solid>
-  			<solid type="fiber-pow-linear">
-  				<E>10</E>
-  				<beta>4</beta>
-  				<lam0>1.02</lam0>
-          <fiber type="angles">
-  				  <theta>45</theta>
-  				  <phi>90</phi>
-          </fiber>
-  			</solid>
+        <solid type="isotropic elastic">
+          <E>1</E>
+          <v>0</v>
+        </solid>
+        <solid type="fiber-pow-linear">
+          <E>10</E>
+          <beta>4</beta>
+          <lam0>1.02</lam0>
+          <fiber type="vector">0.7071067811865476, 0.7071067811865475, 6.123233995736766e-17</fiber>
+        </solid>
         <solid type="Donnan equilibrium">
-  				<phiw0>0.5</phiw0>
-  				<cF0>100</cF0>
-  				<bosm>300</bosm>
-  				<Phi>1</Phi>
-  			</solid>
+          <phiw0>0.5</phiw0>
+          <cF0>100</cF0>
+          <bosm>300</bosm>
+          <Phi>1</Phi>
+        </solid>
       </solid>
-		  <permeability type="perm-Holmes-Mow">
-			  <perm>0.0047</perm>
-			  <M>5.75</M>
-			  <alpha>2</alpha>
-		  </permeability>
+      <permeability type="perm-Holmes-Mow">
+        <perm>0.0047</perm>
+        <M>5.75</M>
+        <alpha>2</alpha>
+      </permeability>
     </material>
-	</Material>
-	<Geometry>
-		<Nodes name="Object01">
-			<node id="1"> -0.5, -0.5,  0.0</node>
-			<node id="2">  0.5, -0.5,  0.0</node>
-			<node id="3">  0.5,  0.5,  0.0</node>
-			<node id="4"> -0.5,  0.5,  0.0</node>
-			<node id="5"> -0.5, -0.5,  1.0</node>
-			<node id="6">  0.5, -0.5,  1.0</node>
-			<node id="7">  0.5,  0.5,  1.0</node>
-			<node id="8"> -0.5,  0.5,  1.0</node>
-		</Nodes>
-		<Elements type="hex8" mat="1" name="Part1">
-			<elem id="1">     1,    2,    3,    4,     5,    6,    7,    8</elem>
-		</Elements>
-		<NodeSet name="AllNodes">
-			<node id="1"/>
-			<node id="2"/>
-			<node id="3"/>
-			<node id="4"/>
-			<node id="5"/>
-			<node id="6"/>
-			<node id="7"/>
-			<node id="8"/>
-		</NodeSet>
-	</Geometry>
-	<Boundary>
-    <fix bc="x" node_set="AllNodes"/>
-    <fix bc="y" node_set="AllNodes"/>
-		<fix bc="z" node_set="AllNodes"/>
-    <fix bc="p" node_set="AllNodes"/>
-	</Boundary>
-	<LoadData>
-		<loadcurve id="1" type="step"> <!--for must points-->
-			<point>0, 0.5</point>
-      <point>0.5, 0.5</point>
-			<point>1, 0.5</point>
-		</loadcurve>
-	</LoadData>
-	<Output>
-		<plotfile type="febio">
-			<var type="displacement"/>
-			<var type="Lagrange strain"/>
-			<var type="stress"/>
+  </Material>
+  <Mesh>
+    <Nodes>
+      <node id="1">-0.5, -0.5, 0</node>
+      <node id="2">0.5, -0.5, 0</node>
+      <node id="3">0.5, 0.5, 0</node>
+      <node id="4">-0.5, 0.5, 0</node>
+      <node id="5">-0.5, -0.5, 1</node>
+      <node id="6">0.5, -0.5, 1</node>
+      <node id="7">0.5, 0.5, 1</node>
+      <node id="8">-0.5, 0.5, 1</node>
+    </Nodes>
+    <Elements name="Domain1" type="hex8">
+      <elem id="1">1, 2, 3, 4, 5, 6, 7, 8</elem>
+    </Elements>
+    <NodeSet name="AllNodes">1, 2, 3, 4, 5, 6, 7, 8</NodeSet>
+  </Mesh>
+  <MeshDomains>
+    <SolidDomain name="Domain1" mat="Material1"/>
+  </MeshDomains>
+  <MeshData/>
+  <Boundary>
+    <bc type="zero displacement" node_set="AllNodes">
+      <x_dof>1</x_dof>
+      <y_dof>1</y_dof>
+      <z_dof>1</z_dof>
+    </bc>
+    <bc type="zero fluid pressure" node_set="AllNodes"/>
+  </Boundary>
+  <Contact/>
+  <Constraints/>
+  <LoadData>
+    <load_controller id="1" type="loadcurve">
+      <interpolate>step</interpolate>
+      <extend>constant</extend>
+      <points>
+        <point>0.0, 0.5</point>
+        <point>0.5, 0.5</point>
+        <point>1.0, 0.5</point>
+      </points>
+    </load_controller>
+  </LoadData>
+  <Output>
+    <plotfile type="febio">
+      <var type="displacement"/>
+      <var type="Lagrange strain"/>
+      <var type="stress"/>
       <var type="fluid pressure"/>
-		</plotfile>
-	</Output>
+    </plotfile>
+  </Output>
+  <Rigid/>
+  <Step>
+    <step name="Step1">
+      <Control>
+        <analysis>0</analysis>
+        <time_steps>10</time_steps>
+        <step_size>0.10000000000000001</step_size>
+        <time_stepper>
+          <dtmin>0.01</dtmin>
+          <dtmax lc="1">0.5</dtmax>
+          <max_retries>5</max_retries>
+          <opt_iter>10</opt_iter>
+        </time_stepper>
+        <plot_level>PLOT_MUST_POINTS</plot_level>
+        <solver>
+          <dtol>0.001</dtol>
+          <etol>0.01</etol>
+          <rtol>0</rtol>
+          <lstol>0.9</lstol>
+          <ptol>0.01</ptol>
+          <min_residual>9.999999999999999e-21</min_residual>
+          <reform_each_time_step>1</reform_each_time_step>
+          <diverge_reform>1</diverge_reform>
+          <max_refs>15</max_refs>
+          <qn_method type="BFGS">
+            <max_ups>10</max_ups>
+          </qn_method>
+        </solver>
+      </Control>
+      <Boundary/>
+      <Contact/>
+      <Rigid/>
+    </step>
+  </Step>
 </febio_spec>

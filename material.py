@@ -564,10 +564,8 @@ class SolidMixture:
 
 
 class Rigid:
-    """Rigid body."""
+    """Pseudo-material used for elements in rigid bodies"""
 
-    # TODO: Split rigid nodesets, which have no density and no center of mass,
-    #  from rigid solids, which have a density and a calculable center of mass.
     def __init__(self, props={}, **kwargs):
         self.density = 0
         if "density" in props:

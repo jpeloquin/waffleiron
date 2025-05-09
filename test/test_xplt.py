@@ -4,19 +4,24 @@ import numpy as np
 import numpy.testing as npt
 
 import waffleiron as wfl
-from waffleiron.test.fixtures import DIR_FIXTURES, DIR_OUT
+from waffleiron.test.fixtures import DIR_FIXTURES, DIR_OUT, xml_version
 
 
 def test_FEBio_RigidBodyObjectData():
     """Test read object data for rigid body force with 1 rigid body"""
     febio_cmd = "febio3.4"  # Need FEBio version ≥ 3.4 to produce object data
     srcpath = DIR_FIXTURES / "bar_explicit_rb_grip_twist_stretch.feb"
+    model = wfl.load_model(srcpath)
     runpath = DIR_OUT / f"test_xplt.RigidBodyObjectData.{febio_cmd}.feb"
-    copyfile(srcpath, runpath)
+    with open(runpath, "wb") as f:
+        wfl.output.write_feb(model, f, version="3.0")
+
     wfl.febio.run_febio_checked(runpath, cmd=febio_cmd, threads=1)
     with open(runpath.with_suffix(".xplt"), "rb") as f:
         xplt = wfl.xplt.XpltData(f.read())
     actual = xplt.values("Force", 0)["Force"]
+    # Since this test uses rigid body rotations, the center of mass matters.  If the
+    # output is wrong, the center of mass may be incorrect.
     expected = np.array(
         [
             [0.0000000e00, 0.0000000e00, 0.0000000e00],

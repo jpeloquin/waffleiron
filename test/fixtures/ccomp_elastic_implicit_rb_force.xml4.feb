@@ -133,8 +133,6 @@
 				<plot_range>0,-1</plot_range>
 				<plot_level>PLOT_MAJOR_ITRS</plot_level>
 				<output_level>OUTPUT_MAJOR_ITRS</output_level>
-				<plot_stride>1</plot_stride>
-				<output_stride>1</output_stride>
 				<adaptor_re_solve>1</adaptor_re_solve>
 				<time_stepper type="default">
 					<max_retries>5</max_retries>

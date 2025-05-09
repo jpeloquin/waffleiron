@@ -1,4 +1,5 @@
 # Run these tests with pytest
+import shutil
 import unittest
 from pathlib import Path
 
@@ -17,12 +18,14 @@ from waffleiron.test.fixtures import DIR_FIXTURES, DIR_OUT, febio_cmd
 @pytest.fixture(scope="module")
 def FixedNodeBC_Solid_Model(febio_cmd):
     """Solve solid model with fixed nodal boundary conditions"""
-    pth = DIR_FIXTURES / "cube_hex8_n=1_solid_all_BCs_fixed.feb"
-    run_febio_checked(pth, cmd=febio_cmd, threads=1)
-    yield pth
+    pth_in = DIR_FIXTURES / "cube_hex8_n=1_solid_all_BCs_fixed.feb"
+    pth_out = DIR_OUT / "cube_hex8_n=1_solid_all_BCs_fixed.feb"
+    shutil.copy(pth_in, pth_out)
+    run_febio_checked(pth_out, threads=1)
+    yield pth_out
     # Delete FEBio-generated output
-    pth.with_suffix(".log").unlink()
-    pth.with_suffix(".xplt").unlink()
+    pth_out.with_suffix(".log").unlink()
+    pth_out.with_suffix(".xplt").unlink()
 
 
 def test_Unit_Read_FebioXMLVerbatimMaterial():
@@ -78,14 +81,16 @@ def test_FEBio_FixedNodeBC_Solid(FixedNodeBC_Solid_Model):
 
 
 @pytest.fixture(scope="module")
-def FixedNodeBC_Biphasic_Model(febio_cmd):
+def FixedNodeBC_Biphasic_Model():
     """Solve biphasic model with fixed nodal boundary conditions"""
-    pth = Path("test") / "fixtures" / "cube_hex8_n=1_biphasic_all_BCs_fixed.feb"
-    run_febio_checked(pth, cmd=febio_cmd, threads=1)
-    yield pth
+    pth_in = DIR_FIXTURES / "cube_hex8_n=1_biphasic_all_BCs_fixed.feb"
+    pth_out = DIR_OUT / "cube_hex8_n=1_biphasic_all_BCs_fixed.feb"
+    shutil.copy(pth_in, pth_out)
+    run_febio_checked(pth_out, threads=1)
+    yield pth_out
     # Delete FEBio-generated output
-    pth.with_suffix(".log").unlink()
-    pth.with_suffix(".xplt").unlink()
+    pth_out.with_suffix(".log").unlink()
+    pth_out.with_suffix(".xplt").unlink()
 
 
 def test_FEBio_Fixed_NodeBC_Biphasic(FixedNodeBC_Biphasic_Model):
@@ -138,7 +143,7 @@ class UniversalConstants(unittest.TestCase):
 
 def test_roundtrip_variable_rigid_bc_force():
     """Test reading a time-varying force BC on an (implicit) rigid body"""
-    pth_original = DIR_FIXTURES / "ccomp_elastic_implicit_rb_force_xml4.feb"
+    pth_original = DIR_FIXTURES / "ccomp_elastic_implicit_rb_force.xml4.feb"
     model = wfl.load_model(pth_original)
     febio_cmd = "febio4"
 
@@ -152,7 +157,7 @@ def test_roundtrip_variable_rigid_bc_force():
     # Test 2: Write
     pth_write = DIR_OUT / (
         f"{Path(__file__).with_suffix('').name}."
-        + f"{pth_original.name}.{febio_cmd}.feb"
+        + f"{pth_original.name.removesuffix(".xml4.feb")}.{febio_cmd}.feb"
     )
     with open(pth_write, "wb") as f:
         wfl.output.write_feb(model, f)

@@ -5,12 +5,17 @@ import unittest
 
 import numpy as np
 import numpy.testing as npt
-import pytest
+from lxml import etree
 
 import waffleiron as wfl
 from waffleiron.febio import run_febio_checked
 
-from waffleiron.test.fixtures import RTOL_STRESS, ATOL_STRESS, DIR_OUT, febio_cmd
+from waffleiron.test.fixtures import (
+    RTOL_STRESS,
+    ATOL_STRESS,
+    DIR_OUT,
+    febio_cmd,
+)
 
 
 DIR_THIS = Path(__file__).parent
@@ -378,7 +383,7 @@ class Quad4ElementTest(unittest.TestCase):
         npt.assert_approx_equal(computed, truth)
 
 
-def test_FEBio_F_Hex8(febio_cmd):
+def test_FEBio_F_Hex8():
     """Test calculation of the F tensor.
 
     F tensors are computed for each element based on the displacement
@@ -387,21 +392,30 @@ def test_FEBio_F_Hex8(febio_cmd):
 
     """
     # Setup
-    srcpath = DIR_FIXTURES / "bar_explicit_rb_grip_twist_stretch.feb"
-    bname = f"test_element.F_Hex8.{febio_cmd}"
-    xml = wfl.input.read_febio_xml(srcpath)
-    xml.find("Output/logfile/element_data").attrib["file"] = f"{bname}_-_elem_data.txt"
-    xml.find("Output/logfile/rigid_body_data").attrib[
-        "file"
-    ] = f"{bname}_-_body_data.txt"
-    runpath = DIR_OUT / f"{bname}.feb"
-    with open(runpath, "wb") as f:
+    bname = "bar_explicit_rb_grip_twist_stretch"
+    pth_in = DIR_FIXTURES / f"{bname}.feb"
+    pth_out = DIR_OUT / pth_in.name
+    model = wfl.load_model(pth_in)
+    with open(pth_out, "wb") as f:
+        wfl.output.write_feb(model, f, version="3.0")
+    xml = wfl.input.read_febio_xml(pth_out)
+    e_logfile = etree.SubElement(xml.find("Output"), "logfile")
+    e_edata = etree.SubElement(e_logfile, "element_data")
+    e_edata.attrib["file"] = f"{bname}_-_elem_data.txt"
+    e_edata.attrib["delim"] = ", "
+    e_edata.attrib["data"] = (
+        "x;y;z;sx;sy;sz;sxy;syz;sxz;s1;s2;s3;Ex;Ey;Ez;Exy;Eyz;Exz;E1;E2;E3;Fxx;Fyy;Fzz;Fxy;Fxz;Fyx;Fyz;Fzx;Fzy;J"
+    )
+    e_rbdata = etree.SubElement(e_logfile, "rigid_body_data")
+    e_rbdata.attrib["file"] = f"{bname}_-_body_data.txt"
+    e_rbdata.attrib["delim"] = ", "
+    e_rbdata.attrib["data"] = "x;y;z;Fx;Fy;Fz;Mx;My;Mz"
+    with open(pth_out, "wb") as f:
         wfl.output.write_xml(xml, f)
-    # small model, so multithreading does not help
-    wfl.febio.run_febio_checked(runpath, cmd=febio_cmd, threads=1)
+    wfl.febio.run_febio_checked(pth_out, threads=1)
     elemdata = wfl.input.textdata_list(DIR_OUT / f"{bname}_-_elem_data.txt", delim=",")
     # Check F tensor values
-    model = wfl.load_model(runpath)
+    model = wfl.load_model(pth_out)
     istep = -1
     for eid in range(len(model.mesh.elements) - 1):
         # ^ Use len - 1 so rigid body (last element) is not checked

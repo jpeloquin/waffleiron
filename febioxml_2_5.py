@@ -122,7 +122,27 @@ QNMETHOD_PARAMS = {
 }
 
 
-# Functions for reading FEBio XML 2.5
+###########################################
+# Misc helper functions for FEBio XML 2.5 #
+###########################################
+
+
+def get_rigid_interface_mat_label(mat, material_registry):
+    """Return material identifier for rigid interface
+
+    FEBio XML 4.0 switched to using the material name instead of the material's
+    integer ID in rigid interface XML elements.
+
+    """
+    names = material_registry.names(mat, "ordinal_id")
+    if len(names) != 1:
+        raise ValueError(f"{mat} does not have a unique label.")
+    return names[0]
+
+
+#######################################
+# Functions for reading FEBio XML 2.5 #
+#######################################
 
 
 def elem_var_fiber_xml(e):
@@ -419,10 +439,10 @@ def read_solver(step_xml):
 # Functions to create XML elements for FEBio XML 2.5 #
 ######################################################
 
-# Each of these functions should return one or more XML elements.  As much as possible,
-# their arguments should be data, not a `Model`, the whole XML tree, or other
-# specialized objects.  Even use of name registries should minimized in favor of simple
-# dictionaries when possible.
+# Each of these functions should return one or more XML elements.  As much as
+# possible, their arguments should be data, not a `Model`, the whole XML tree,
+# or other specialized objects.  Even use of name registries should be minimized in
+# favor of simple dictionaries when possible.
 
 
 def xml_body_constraints(
