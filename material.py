@@ -435,6 +435,47 @@ class IsotropicHolmesMowPermeability(Permeability):
         return cls(perm, M, alpha, phi0)
 
 
+class TransIsoHolmesMowPermeability(Permeability):
+    """Transversely isotropic Holmes-Mow permeability
+
+    "perm-ref-trans-iso" in FEBio.
+
+    """
+
+    # The strain-free solid volume fraction also appears in PoroelasticSolid.  Keeping
+    # them consistent is currently left up to the user.  Should their consistency be
+    # enforced?  Usually the material is not updated in-place and may as well be
+    # immutable.
+    bounds = {
+        "k0": (0, inf),  # cannot be zero
+        "M0": (0, inf),
+        "α0": (0, inf),
+        "k1a": (0, inf),  # *can* be zero
+        "k2a": (0, inf),  # *can* be zero
+        "Ma": (0, inf),
+        "αa": (0, inf),
+        "k1t": (0, inf),  # *can* be zero
+        "k2t": (0, inf),  # *can* be zero
+        "Mt": (0, inf),
+        "αt": (0, inf),
+        "φ0_s": (0, inf),
+    }
+
+    def __init__(self, k0, M0, α0, k1a, k2a, Ma, αa, k1t, k2t, Mt, αt, φ0_s, **kwargs):
+        self.k0 = k0
+        self.M0 = M0
+        self.α0 = α0
+        self.k1a = k1a
+        self.k2a = k2a
+        self.Ma = Ma
+        self.αa = αa
+        self.k1t = k1t
+        self.k2t = k2t
+        self.Mt = Mt
+        self.αt = αt
+        self.φ0_s = φ0_s
+
+
 class PoroelasticSolid:
     """Fluid-saturated solid."""
 

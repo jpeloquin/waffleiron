@@ -285,6 +285,24 @@ def _(mat: matlib.IsotropicHolmesMowPermeability, model) -> ElementTree:
 
 
 @material_to_feb.register
+def _(mat: matlib.TransIsoHolmesMowPermeability, model) -> ElementTree:
+    """Convert IsotropicHolmesMowPermeability instance to FEBio XML"""
+    e = etree.Element("permeability", type="perm-ref-trans-iso")
+    e.append(property_to_xml(mat.k0, "perm0", model.named["sequences"]))
+    e.append(property_to_xml(mat.M0, "M0", model.named["sequences"]))
+    e.append(property_to_xml(mat.α0, "alpha0", model.named["sequences"]))
+    e.append(property_to_xml(mat.k1a, "perm1A", model.named["sequences"]))
+    e.append(property_to_xml(mat.k2a, "perm2A", model.named["sequences"]))
+    e.append(property_to_xml(mat.Ma, "MA", model.named["sequences"]))
+    e.append(property_to_xml(mat.αa, "alphaA", model.named["sequences"]))
+    e.append(property_to_xml(mat.k1t, "perm1T", model.named["sequences"]))
+    e.append(property_to_xml(mat.k2t, "perm2T", model.named["sequences"]))
+    e.append(property_to_xml(mat.Mt, "MT", model.named["sequences"]))
+    e.append(property_to_xml(mat.αt, "alphaT", model.named["sequences"]))
+    return e
+
+
+@material_to_feb.register
 def _(mat: matlib.PoroelasticSolid, model) -> ElementTree:
     """Convert Poroelastic material instance to FEBio XML"""
     e = etree.Element("material", type="biphasic")

@@ -188,11 +188,59 @@ def read_continuous_fiber_distribution_xml(e, seqs: dict):
         return NotImplementedError
 
 
-def read_isotropic_exponential_permeability(e, seqs: dict):
+def read_biphasic(e, seqs: dict):
+    """Return biphasic material"""
+    # Get solidity parameter.  FEBio doesn't require solidity in all instances,
+    # but FEBio's default is zero, which is wrong.  So it should be present.
+    e_solid_fraction = find_unique_tag(e, "phi0", req=True)
+    solid_fraction = read_parameter(e_solid_fraction, seqs)
+    # Permeability constitutive equation
+    e_permeability = find_unique_tag(e, "permeability", req=True)
+    perm_type = e_permeability.attrib["type"]
+    if perm_type in xml_material_reader:
+        permeability = xml_material_reader[perm_type](
+            e_permeability, seqs, solid_fraction
+        )
+    else:
+        perm_class = perm_class_from_name[perm_type]
+        props = {c.tag: read_parameter(c, seqs) for c in e_permeability}
+        props["phi0"] = solid_fraction  # needed for Holmes–Mow permeability
+        permeability = perm_class.from_feb(**props)
+    # Solid constituent
+    constituents = [read_material(c, seqs) for c in e if c.tag == "solid"]
+    if len(constituents) > 1:
+        raise ValueError(
+            f"A porelastic solid was encountered with {len(constituents)} solid constituents.  Poroelastic solids must have exactly one solid constituent.  The relevant poroelastic solid is at {e.base}:{e.sourceline}."
+        )
+    solid = constituents[0]
+    return matlib.PoroelasticSolid(solid, permeability, solid_fraction)
+
+
+def read_isotropic_exponential_permeability(e, seqs: dict, **kwargs):
     """Return isotropic exponential permeability law"""
+    # kwargs needed because some permeability laws need solid volume fraction,
+    # which FEBio does not store in the permeability XML element
     return matlib.IsotropicExponentialPermeability(
         k0=read_parameter(find_unique_tag(e, "perm", req=True), seqs),
         M=read_parameter(find_unique_tag(e, "M", req=True), seqs),
+    )
+
+
+def read_referentially_transiso_permeability(e, seqs: dict, solid_volume_fraction):
+    """Return transversely isotropic Holmes–Mow permeability law"""
+    return matlib.TransIsoHolmesMowPermeability(
+        k0=read_parameter(find_unique_tag(e, "perm0", req=True), seqs),
+        M0=read_parameter(find_unique_tag(e, "M0", req=True), seqs),
+        α0=read_parameter(find_unique_tag(e, "alpha0", req=True), seqs),
+        k1a=read_parameter(find_unique_tag(e, "perm1A", req=True), seqs),
+        k2a=read_parameter(find_unique_tag(e, "perm2A", req=True), seqs),
+        Ma=read_parameter(find_unique_tag(e, "MA", req=True), seqs),
+        αa=read_parameter(find_unique_tag(e, "alphaA", req=True), seqs),
+        k1t=read_parameter(find_unique_tag(e, "perm1T", req=True), seqs),
+        k2t=read_parameter(find_unique_tag(e, "perm2T", req=True), seqs),
+        Mt=read_parameter(find_unique_tag(e, "MT", req=True), seqs),
+        αt=read_parameter(find_unique_tag(e, "alphaT", req=True), seqs),
+        φ0_s=solid_volume_fraction,
     )
 
 
@@ -215,7 +263,9 @@ xml_material_reader = {
     "fiber-NH": read_neo_hookean_fiber,
     "fiber-natural-NH": read_natural_neo_hookean_fiber,
     "continuous fiber distribution": read_continuous_fiber_distribution_xml,
+    "biphasic": read_biphasic,
     "perm-exp-iso": read_isotropic_exponential_permeability,
+    "perm-ref-trans-iso": read_referentially_transiso_permeability,
     "rigid body": read_rigid_material,
 }
 
@@ -227,7 +277,6 @@ material_from_xml_name = {
     "ellipsoidal fiber distribution": matlib.EllipsoidalPowerFiber,
     "neo-Hookean": matlib.NeoHookean,
     "solid mixture": matlib.SolidMixture,
-    "biphasic": matlib.PoroelasticSolid,
     "Donnan equilibrium": matlib.DonnanSwelling,
     "multigeneration": matlib.Multigeneration,
     "orthotropic elastic": matlib.OrthotropicLinearElastic,
@@ -506,35 +555,6 @@ def read_material(e, sequence_registry: dict):
         ]
         # TODO: Shouldn't solid mixture support material orientation?
         material = cls(constituents)
-    elif material_type == "biphasic":
-        # Get solidity parameter.  FEBio doesn't require solidity in all instances,
-        # but FEBio's default is zero, which is wrong.  So it should be present.
-        e_solid_fraction = find_unique_tag(e, "phi0", req=True)
-        solid_fraction = read_parameter(e_solid_fraction, sequence_registry)
-        # Permeability constitutive equation
-        e_permeability = find_unique_tag(e, "permeability", req=True)
-        perm_type = e_permeability.attrib["type"]
-        if perm_type in xml_material_reader:
-            permeability = xml_material_reader[perm_type](
-                e_permeability, sequence_registry
-            )
-        else:
-            perm_class = perm_class_from_name[perm_type]
-            props = {
-                c.tag: read_parameter(c, sequence_registry) for c in e_permeability
-            }
-            props["phi0"] = solid_fraction  # needed for Holmes–Mow permeability
-            permeability = perm_class.from_feb(**props)
-        # Solid constituent
-        constituents = [
-            read_material(c, sequence_registry) for c in e if c.tag == "solid"
-        ]
-        if len(constituents) > 1:
-            raise ValueError(
-                f"A porelastic solid was encountered with {len(constituents)} solid constituents.  Poroelastic solids must have exactly one solid constituent.  The relevant poroelastic solid is at {e.base}:{e.sourceline}."
-            )
-        solid = constituents[0]
-        material = matlib.PoroelasticSolid(solid, permeability, solid_fraction)
     elif material_type == "multigeneration":
         # Constructing materials for the list of generations works just like a solid
         # mixture
