@@ -680,10 +680,16 @@ class ExponentialFiber:
 
     """
 
+    bounds = {
+        "ξ": (0, inf),  # ξ > 0
+        "α": (0, inf),  # α ≥ 0
+        "β": (2, inf),  #  β ≥ 2
+    }
+
     def __init__(self, props):
+        self.ξ = props["ksi"]
         self.α = props["alpha"]
         self.β = props["beta"]
-        self.ξ = props["ksi"]
 
     def w(self, λ):
         """Return pseudo-strain energy density."""
@@ -696,9 +702,9 @@ class ExponentialFiber:
 
     def stress(self, λ):
         """Return material stress scalar."""
+        ξ = self.ξ
         α = self.α
         β = self.β
-        ξ = self.ξ
         dΨ_dλsq = ξ * (λ**2 - 1) ** (β - 1) * exp(α * (λ**2 - 1) ** β)
         # Use dΨ_dλsq instead of dΨ_dλ because this is the equivalent of
         # dΨ/dC.
