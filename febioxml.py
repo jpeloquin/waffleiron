@@ -41,6 +41,7 @@ from .material import (
     VolumetricLogInverse,
     VolumetricLinear,
     DeviatoricMooneyRivlin,
+    ExponentialFiber,
 )
 from .math import orthonormal_basis, vec_from_sph
 
@@ -209,6 +210,15 @@ def read_natural_neo_hookean_fiber(e, seqs: dict):
     )
 
 
+def read_exponential_fiber(e, seqs: dict):
+    """Return ExponentialFiber material"""
+    return ExponentialFiber(
+        ξ=read_parameter(find_unique_tag(e, "ksi", req=True), seqs),
+        α=read_parameter(find_unique_tag(e, "alpha", req=True), seqs),
+        β=read_parameter(find_unique_tag(e, "beta", req=True), seqs),
+    )
+
+
 def read_fiber_exp_linear(e, seqs: dict):
     """Return ExpεAndLinεDEFiber material"""
     return ExpAndLinearDCFiber(
@@ -306,6 +316,7 @@ xml_material_reader = {
     "Holzapfel-Gasser-Ogden": read_holzapfel_gasser_ogden_xml,
     "fiber-NH": read_neo_hookean_fiber,
     "fiber-natural-NH": read_natural_neo_hookean_fiber,
+    "fiber-exp-pow": read_exponential_fiber,
     "fiber-exp-linear": read_fiber_exp_linear,
     "continuous fiber distribution": read_continuous_fiber_distribution_xml,
     "biphasic": read_biphasic,
@@ -317,7 +328,6 @@ xml_material_reader = {
 material_from_xml_name = {
     "isotropic elastic": matlib.IsotropicElastic,
     "Holmes-Mow": matlib.HolmesMow,
-    "fiber-exp-pow": matlib.ExponentialFiber,
     "fiber-pow-linear": matlib.PowerLinearFiber,
     "ellipsoidal fiber distribution": matlib.EllipsoidalPowerFiber,
     "neo-Hookean": matlib.NeoHookean,

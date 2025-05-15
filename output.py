@@ -144,7 +144,7 @@ def _(mat: matlib.EllipsoidalDistribution, model) -> ElementTree:
 
 @material_to_feb.register
 def _(mat: matlib.NeoHookeanFiber, model) -> ElementTree:
-    """Convert ExponentialFiber material instance to FEBio XML"""
+    """Convert NeoHookeanFiber material instance to FEBio XML"""
     e = etree.Element("material", type="fiber-NH")
     e.append(property_to_xml(mat.E, "mu", model.named["sequences"]))
     return e
@@ -152,7 +152,7 @@ def _(mat: matlib.NeoHookeanFiber, model) -> ElementTree:
 
 @material_to_feb.register
 def _(mat: matlib.NaturalNeoHookeanFiber, model) -> ElementTree:
-    """Convert ExponentialFiber material instance to FEBio XML"""
+    """Convert NaturalNeoHookeanFiber material instance to FEBio XML"""
     e = etree.Element("material", type="fiber-natural-NH")
     e.append(property_to_xml(mat.E, "ksi", model.named["sequences"]))
     e.append(property_to_xml(mat.λ0, "lam0", model.named["sequences"]))

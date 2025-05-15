@@ -73,8 +73,7 @@ class ExponentialFiberTest(TestCase):
 
     def w_test(self):
         # This is a very weak test; just a sanity check.
-        matlprops = {"alpha": 65, "beta": 2, "ksi": 0.296}
-        expfib = ExponentialFiber(matlprops)
+        expfib = ExponentialFiber(ξ=0.296, α=65, β=2)
         w = expfib.w(1.1)
         assert w > 0
 

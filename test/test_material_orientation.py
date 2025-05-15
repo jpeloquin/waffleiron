@@ -39,14 +39,14 @@ def _fixture_FEBio_fiberDirectionLocal_Hex8_fiber(xml_version):
     """
     model = gen_model_single_spiky_Hex8()
     matrix = wfl.material.HolmesMow({"E": 0.5, "v": 0, "beta": 3.4})
-    fibers1 = wfl.material.ExponentialFiber(
-        {"alpha": 65, "beta": 2, "ksi": 0.296}, orientation=vec_from_sph(0, 60)
+    fibers1 = wfl.material.ExponentialFiber3D(
+        α=65, β=2, ξ=0.296, orientation=vec_from_sph(0, 60)
     )
-    fibers2 = wfl.material.ExponentialFiber(
-        {"alpha": 65, "beta": 2, "ksi": 0.296}, orientation=vec_from_sph(0, 120)
+    fibers2 = wfl.material.ExponentialFiber3D(
+        α=65, β=2, ξ=0.296, orientation=vec_from_sph(0, 120)
     )
-    fibers3 = wfl.material.ExponentialFiber(
-        {"alpha": 65, "beta": 2, "ksi": 0.296}, orientation=vec_from_sph(100, 90)
+    fibers3 = wfl.material.ExponentialFiber3D(
+        α=65, β=2, ξ=0.296, orientation=vec_from_sph(100, 90)
     )
     material = wfl.material.SolidMixture([fibers1, fibers2, fibers3, matrix])
     for e in model.mesh.elements:

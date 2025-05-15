@@ -679,8 +679,8 @@ class NaturalNeoHookeanFiber:
 class ExponentialFiber:
     """1D fiber with exponential power law.
 
-    Coupled formulation ("fiber-exp-pow" in FEBio in FEBio < 3.5.1; more recent releases
-    have λ0).
+    Coupled formulation ("fiber-exp-pow" in FEBio < 3.5.1; more recent releases have
+    λ0).
 
     References
     ----------
@@ -694,10 +694,10 @@ class ExponentialFiber:
         "β": (2, inf),  #  β ≥ 2
     }
 
-    def __init__(self, props):
-        self.ξ = props["ksi"]
-        self.α = props["alpha"]
-        self.β = props["beta"]
+    def __init__(self, ξ, α, β):
+        self.ξ = ξ
+        self.α = α
+        self.β = β
 
     def w(self, λ):
         """Return pseudo-strain energy density."""
@@ -745,10 +745,10 @@ class ExponentialFiber3D:
 
     """
 
-    def __init__(self, props, orientation=_DEFAULT_ORIENT_RANK1, **kwargs):
-        self.alpha = props["alpha"]
-        self.beta = props["beta"]
-        self.xi = props["ksi"]
+    def __init__(self, ξ, α, β, orientation=_DEFAULT_ORIENT_RANK1, **kwargs):
+        self.ξ = ξ
+        self.α = α
+        self.β = β
         self.orientation = orientation
 
     def w(self, F):
@@ -764,9 +764,9 @@ class ExponentialFiber3D:
         N = self.orientation
         # square of fiber stretch
         In = dot(N, dot(C, N))
-        a = self.alpha
-        b = self.beta
-        xi = self.xi
+        a = self.α
+        b = self.β
+        xi = self.ξ
         w = xi / (a * b) * (exp(a * (In - 1.0) ** b) - 1.0)
         return w
 
@@ -783,9 +783,9 @@ class ExponentialFiber3D:
         yf = In**0.5  # fiber stretch
         n = dot(F, N) / yf
 
-        a = self.alpha
-        b = self.beta
-        xi = self.xi
+        a = self.α
+        b = self.β
+        xi = self.ξ
         dPsi_dIn = xi * (In - 1.0) ** (b - 1.0) * exp(a * (In - 1.0) ** b)
         t = (2 / J) * unit_step(In - 1.0) * In * dPsi_dIn * outer(n, n)
         return t
