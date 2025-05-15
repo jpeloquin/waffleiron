@@ -180,6 +180,17 @@ def _(mat: matlib.PowerLinearFiber, model) -> ElementTree:
 
 
 @material_to_feb.register
+def _(mat: matlib.ExpAndLinearDCFiber, model) -> ElementTree:
+    """Convert ExpεAndLinεDEFiber material instance to FEBio XML"""
+    e = etree.Element("material", type="fiber-exp-linear")
+    e.append(property_to_xml(mat.ξ, "c3", model.named["sequences"]))
+    e.append(property_to_xml(mat.α, "c4", model.named["sequences"]))
+    e.append(property_to_xml(mat.λ0, "lambda", model.named["sequences"]))
+    e.append(property_to_xml(mat.E, "c5", model.named["sequences"]))
+    return e
+
+
+@material_to_feb.register
 def _(mat: matlib.EllipsoidalPowerFiber, model) -> ElementTree:
     """Covert EllipsoidalPowerFiber material instance to FEBio XML"""
     type_ = material_name_from_class[mat.__class__]

@@ -37,6 +37,7 @@ from .material import (
     VolumetricHGO,
     FungOrthotropicElastic,
     NaturalNeoHookeanFiber,
+    ExpAndLinearDCFiber,
 )
 from .math import orthonormal_basis, vec_from_sph
 
@@ -176,6 +177,16 @@ def read_natural_neo_hookean_fiber(e, seqs: dict):
     )
 
 
+def read_fiber_exp_linear(e, seqs: dict):
+    """Return ExpεAndLinεDEFiber material"""
+    return ExpAndLinearDCFiber(
+        ξ=read_parameter(find_unique_tag(e, "c3", req=True), seqs),
+        α=read_parameter(find_unique_tag(e, "c4", req=True), seqs),
+        λ0=read_parameter(find_unique_tag(e, "lambda", req=True), seqs),
+        E=read_parameter(find_unique_tag(e, "c5", req=True), seqs),
+    )
+
+
 def read_continuous_fiber_distribution_xml(e, seqs: dict):
     """Return fiber orientation distribution material"""
     dist_type = e.find("distribution").attrib["type"]
@@ -262,6 +273,7 @@ xml_material_reader = {
     "Holzapfel-Gasser-Ogden": read_holzapfel_gasser_ogden_xml,
     "fiber-NH": read_neo_hookean_fiber,
     "fiber-natural-NH": read_natural_neo_hookean_fiber,
+    "fiber-exp-linear": read_fiber_exp_linear,
     "continuous fiber distribution": read_continuous_fiber_distribution_xml,
     "biphasic": read_biphasic,
     "perm-exp-iso": read_isotropic_exponential_permeability,

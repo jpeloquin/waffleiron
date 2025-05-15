@@ -672,7 +672,8 @@ class NaturalNeoHookeanFiber:
 class ExponentialFiber:
     """1D fiber with exponential power law.
 
-    Coupled formulation ("fiber-exp-pow" in FEBio").
+    Coupled formulation ("fiber-exp-pow" in FEBio in FEBio < 3.5.1; more recent releases
+    have λ0).
 
     References
     ----------
@@ -724,7 +725,8 @@ class ExponentialFiber:
 class ExponentialFiber3D:
     """Fiber with exponential power law.
 
-    Coupled formulation ("fiber-exp-pow" in FEBio").
+    Coupled formulation ("fiber-exp-pow" in FEBio in FEBio < 3.5.1; more recent releases
+    have λ0).
 
     This is a deprecated 3D implementation that mixes material orientation with the
     fiber's constitutive law.  Prefer ExponentialFiber, which does not mix concerns in
@@ -909,6 +911,42 @@ class PowerLinearFiber3D:
     def sstress(self, F, **kwargs):
         """Return 2nd Piola–Kirchoff stress tensor aligned to local axes."""
         raise NotImplementedError
+
+
+class ExpAndLinearDCFiber:
+    """1D fiber with piecewise exponential–linear stress and discontinuous elasticity.
+
+    Equivalent to "fiber-exp-linear" in FEBio, treated as a 1D material.
+
+    """
+
+    bounds = {
+        "ξ": (0, inf),
+        "α": (0, inf),
+        "λ0": (1, inf),  # FEBio has > 1; I don't see why λ0 = 1 is invalid
+        "E": (0, inf),  # linear modulus
+    }
+
+    def __init__(self, ξ, α, λ0, E):
+        self.ξ = ξ  # overall coefficient
+        self.α = α  # exponent's coefficient
+        self.λ0 = λ0  # transition stretch ratio
+        self.E = E  # linear modulus
+        self.σ0 = self.ξ * (np.exp(self.α * (self.λ0 - 1)) - 1) - self.E * self.λ0
+
+    def stress(self, λ):
+        """Return stress scalar"""
+        ξ = self.ξ
+        α = self.α
+        λ0 = self.λ0
+        # Stress
+        if λ <= 1:
+            σ = 0
+        elif λ <= λ0:
+            σ = ξ / λ**2 * (np.exp(α * (λ - 1)) - 1)
+        else:
+            σ = self.E / λ + self.σ0 / λ**2
+        return σ
 
 
 class EllipsoidalPowerFiber:
