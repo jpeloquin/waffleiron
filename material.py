@@ -713,10 +713,13 @@ class ExponentialFiber:
         ξ = self.ξ
         α = self.α
         β = self.β
-        dΨ_dλsq = ξ * (λ**2 - 1) ** (β - 1) * exp(α * (λ**2 - 1) ** β)
-        # Use dΨ_dλsq instead of dΨ_dλ because this is the equivalent of
-        # dΨ/dC.
-        σ = 2 * dΨ_dλsq * unit_step(λ - 1)
+        if λ <= 1:
+            σ = 0
+        else:
+            with np.errstate(invalid="raise"):
+                dΨ_dλsq = ξ * (λ**2 - 1) ** (β - 1) * exp(α * (λ**2 - 1) ** β)
+            # Use dΨ_dλsq instead of dΨ_dλ because this is the equivalent of dΨ/dC.
+            σ = 2 * dΨ_dλsq
         return σ
 
     def sstress(self, λ):
