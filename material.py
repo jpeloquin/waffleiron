@@ -134,6 +134,15 @@ def integrate_sph2_gkt(summand, f, o_φ, n_θ):
     return summand
 
 
+def deviatoric_stress(σ_tilde):
+    """Return deviatoric stress from σ_tilde"""
+    # The np.trace(σ_tilde) / 3 * np.eye(3) forces the stress to be deviatoric.
+    # It feels like a properly constructed deviatoric constitutive equation
+    # should already produce deviatoric stress.  Simply discarding the
+    # hydrostatic part feels wrong.
+    return σ_tilde - np.trace(σ_tilde) / 3 * np.eye(3)
+
+
 def stress_1d_N(F, stress: Callable, N):
     """Return stress along (material config) unit vector N
 
@@ -581,13 +590,11 @@ class SolidMixture:
             defined.
 
         """
-        self.materials = []
         if not solids:
             raise ValueError(
                 "SolidMixture requires at least one solid, but none were provided."
             )
-        for solid in solids:
-            self.materials.append(solid)
+        self.materials = [m for m in solids]
 
     def w(self, F):
         return sum(material.w(F) for material in self.materials)
@@ -725,7 +732,7 @@ class ExponentialFiber:
 class ExponentialFiber3D:
     """Fiber with exponential power law.
 
-    Coupled formulation ("fiber-exp-pow" in FEBio in FEBio < 3.5.1; more recent releases
+    Coupled formulation ("fiber-exp-pow" in FEBio < 3.5.1; more recent releases
     have λ0).
 
     This is a deprecated 3D implementation that mixes material orientation with the
@@ -1431,10 +1438,39 @@ class FungOrthotropicElastic(Material):
         return σ_mat + σ_bulk
 
 
-class UncoupledHGOMatrix:
-    """Matrix part of uncoupled Holzapfel–Gasser–Ogden material
+class DeviatoricMooneyRivlin:
+    """Deviatoric Mooney–Rivlin material
 
-    Matches matrix part of "Holzapfel-Gasser-Ogden" material in FEBio.
+    Matches deviatoric part of "Mooney-Rivlin" material in FEBio.
+
+    """
+
+    # TODO: support open vs. closed intervals
+    bounds = {
+        "c1": (0, inf),
+        "c2": (0, inf),
+    }
+
+    def __init__(self, c1, c2):
+        self.c1 = c1
+        self.c2 = c2
+
+    def tstress(self, F, **kwargs):
+        """Cauchy stress tensor"""
+        J = np.linalg.det(F)
+        # everything defined after here is deviatoric
+        F = np.linalg.det(F) ** (-1 / 3) * F
+        C = F.T @ F
+        I1 = np.trace(C)
+        # ∂W/∂C = c1 I + c2 (I_1 - C.T)
+        σ = 2 / J * (self.c1 + self.c2 * (I1 - C.T)) * F @ F.T  # J is still real J
+        return deviatoric_stress(σ)
+
+
+class DeviatoricHGOMatrix:
+    """Deviatoric part of uncoupled Holzapfel–Gasser–Ogden material
+
+    Matches deviatoric matrix part of "Holzapfel-Gasser-Ogden" material in FEBio.
 
     """
 
@@ -1458,10 +1494,10 @@ class UncoupledHGOMatrix:
         # t = 2/J F ∂W/∂C F'
         # ∂W/∂C = μ/2 I
         σ = 1 / J * μ * F @ F.T  # J is still real J
-        return σ
+        return deviatoric_stress(σ)
 
 
-class UncoupledHGOFiber3D:
+class DeviatoricHGOFiber3D:
     """3D formulation of an uncoupled Holzapfel–Gasser–Ogden fiber family
 
     Matches one fiber part (one summand) of "Holzapfel-Gasser-Ogden" material in FEBio.
@@ -1497,11 +1533,11 @@ class UncoupledHGOFiber3D:
         ddC_I4 = np.array([[1, 0, 0], [0, 0, 0], [0, 0, 0]])
         ddC_W = ξ * Ea * (κ * ddC_I1 + (1 - 3 * κ) * ddC_I4) * np.exp(α * Ea**2)
         σ = 2 / J * F @ ddC_W @ F.T  # J is still real J
-        return σ
+        return deviatoric_stress(σ)
 
 
-class VolumetricHGO:
-    """Holzapfel–Gasser–Ogden hydrostatic (bulk modulus) component"""
+class VolumetricLinear:
+    """Linear hydrostatic (bulk modulus) component"""
 
     # 1D (pressure) material like DonnanSwelling, but elastic (strain → zero strain)
 
@@ -1510,14 +1546,57 @@ class VolumetricHGO:
     }
 
     def __init__(self, K):
-        self.bulk_modulus = K
+        self.K = K
 
     def tstress(self, F, **kwargs):
         """Return Cauchy stress"""
         # σ = ∂⁄∂J U(J)
-        K = self.bulk_modulus
         J = np.linalg.det(F)
-        p = 0.5 * K * (J - 1 / J)
+        p = self.K * (J - 1)
+        return p * np.eye(3)
+
+
+class VolumetricLogInverse:
+    """ln(J)/J hydrostatic (bulk modulus) component"""
+
+    # 1D (pressure) material like DonnanSwelling, but elastic (strain → zero strain)
+
+    bounds = {
+        "K": (0, inf),  # open
+    }
+
+    def __init__(self, K):
+        self.K = K
+
+    def tstress(self, F, **kwargs):
+        """Return Cauchy stress"""
+        # σ = ∂⁄∂J U(J)
+        J = np.linalg.det(F)
+        p = self.K * np.log(J) / J
+        return p * np.eye(3)
+
+
+class VolumetricHGO:
+    """J - J^-1 hydrostatic (bulk modulus) component
+
+    Note that the 1/2 factor that FEBio uses is omitted here.
+
+    """
+
+    # 1D (pressure) material like DonnanSwelling, but elastic (strain → zero strain)
+
+    bounds = {
+        "K": (0, inf),  # open
+    }
+
+    def __init__(self, K):
+        self.K = K
+
+    def tstress(self, F, **kwargs):
+        """Return Cauchy stress"""
+        # σ = ∂⁄∂J U(J)
+        J = np.linalg.det(F)
+        p = self.K * (J - J**-1)
         return p * np.eye(3)
 
 

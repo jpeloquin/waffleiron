@@ -381,17 +381,55 @@ def donnan_to_feb(mat: matlib.DonnanSwelling, model) -> ElementTree:
     return e
 
 
+def uncoupled_bulk_to_feb(e, bulk, model):
+    """Add bulk compressibility model to FEBio XML element for an uncoupled material
+
+    All FEBio versions support integer values; only FEBio supports text values.  So
+    FEBio ≤ 3 will read any text value as its default ln(J)/J law.  Therefore,
+    to be safe, we write integer codes.
+
+    """
+    e.append(property_to_xml(bulk.K, "k", model.named["sequences"]))
+    law = {
+        matlib.VolumetricLogInverse: "0",
+        matlib.VolumetricHGO: "1",
+        matlib.VolumetricLinear: "2",
+    }[type(bulk)]
+    e.append(etree.Comment(f"Bulk: {type(bulk).__name__}"))
+    etree.SubElement(e, "pressure_model").text = law
+
+
+@material_to_feb.register
+def uncoupled_mooney_rivlin_to_feb(
+    mat: febioxml.UncoupledMooneyRivlin, model
+) -> ElementTree:
+    """Convert UncoupledMooneyRivling material instance to FEBio XML"""
+    e = etree.Element("material", type="Mooney-Rivlin")
+    e.append(property_to_xml(mat.deviatoric_solid.c1, "c1", model.named["sequences"]))
+    e.append(property_to_xml(mat.deviatoric_solid.c2, "c2", model.named["sequences"]))
+    uncoupled_bulk_to_feb(e, mat.bulk, model)
+    return e
+
+
 @material_to_feb.register
 def uncoupled_HGO_to_feb(mat: febioxml.UncoupledHGOFEBio, model) -> ElementTree:
     """Convert UncoupledHGOFEBio material instance to FEBio XML"""
     # Holzapfel-Gasser-Ogden was introduced in FEBio 3.2.
     e = etree.Element("material", type="Holzapfel-Gasser-Ogden")
-    e.append(property_to_xml(mat.matrix_modulus, "c", model.named["sequences"]))
-    e.append(property_to_xml(mat.fiber_modulus, "k1", model.named["sequences"]))
-    e.append(property_to_xml(mat.fiber_exp_coef, "k2", model.named["sequences"]))
-    e.append(property_to_xml(mat.fiber_azimuth, "gamma", model.named["sequences"]))
-    e.append(property_to_xml(mat.fiber_dispersion, "kappa", model.named["sequences"]))
-    e.append(property_to_xml(mat.bulk_modulus, "k", model.named["sequences"]))
+    e.append(property_to_xml(mat.matrix.mu, "c", model.named["sequences"]))
+    e.append(
+        property_to_xml(mat.fiber_pos.material.modulus, "k1", model.named["sequences"])
+    )
+    e.append(
+        property_to_xml(mat.fiber_pos.material.exp_coef, "k2", model.named["sequences"])
+    )
+    e.append(
+        property_to_xml(
+            mat.fiber_pos.material.dispersion, "kappa", model.named["sequences"]
+        )
+    )
+    e.append(property_to_xml(mat.azimuth, "gamma", model.named["sequences"]))
+    e.append(property_to_xml(mat.bulk.K, "k", model.named["sequences"]))
     etree.SubElement(e, "pressure_model").text = "Abaqus (GOH)"
     return e
 

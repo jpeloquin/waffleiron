@@ -30,14 +30,17 @@ from .element import Hex27, Quad4, Tri3, Hex8, Penta6, Element
 from . import material as matlib, FaceSet, ElementSet
 from .material import (
     EllipsoidalDistribution,
-    UncoupledHGOMatrix,
+    DeviatoricHGOMatrix,
     OrientedMaterial,
-    UncoupledHGOFiber3D,
+    DeviatoricHGOFiber3D,
     SolidMixture,
     VolumetricHGO,
     FungOrthotropicElastic,
     NaturalNeoHookeanFiber,
     ExpAndLinearDCFiber,
+    VolumetricLogInverse,
+    VolumetricLinear,
+    DeviatoricMooneyRivlin,
 )
 from .math import orthonormal_basis, vec_from_sph
 
@@ -51,6 +54,18 @@ SUPPORTED_FEBIO_XML_VERS = ("2.0", "2.5", "3.0", "4.0")
 
 # Special-case FEBio materials that don't fit cleanly into the general-purpose material
 # frameworks should be represented here using special classes.
+
+
+class UncoupledMooneyRivlin:
+    """Uncoupled Mooney–Rivlin FEBio material"""
+
+    def __init__(self, c1, c2, bulk):
+        self.deviatoric_solid = DeviatoricMooneyRivlin(c1=c1, c2=c2)
+        self.bulk = bulk
+        self.mixture = SolidMixture([self.deviatoric_solid, self.bulk])
+
+    def __getattr__(self, item):
+        return getattr(self.mixture, item)
 
 
 class UncoupledHGOFEBio:
@@ -68,16 +83,10 @@ class UncoupledHGOFEBio:
     """
 
     def __init__(self, c, k1, k2, γ, κ, K):
-        self.matrix_modulus = c  # Matrix μ
-        self.fiber_modulus = k1  # Fiber ξ
-        self.fiber_exp_coef = k2  # Fiber α
-        self.fiber_azimuth = γ  # mean fiber angle with e1, in e1–e2 plane [degrees]
-        self.fiber_dispersion = κ
-        self.bulk_modulus = K
-
-        self.matrix = UncoupledHGOMatrix(μ=c)
+        self.azimuth = γ
+        self.matrix = DeviatoricHGOMatrix(μ=c)
         self.fiber_pos = OrientedMaterial(
-            UncoupledHGOFiber3D(ξ=k1, α=k2, κ=κ),
+            DeviatoricHGOFiber3D(ξ=k1, α=k2, κ=κ),
             np.array(
                 [
                     [cos(radians(γ)), -sin(radians(γ)), 0],
@@ -87,7 +96,7 @@ class UncoupledHGOFEBio:
             ),
         )
         self.fiber_neg = OrientedMaterial(
-            UncoupledHGOFiber3D(ξ=k1, α=k2, κ=κ),
+            DeviatoricHGOFiber3D(ξ=k1, α=k2, κ=κ),
             np.array(
                 [
                     [cos(radians(γ)), sin(radians(γ)), 0],
@@ -96,26 +105,18 @@ class UncoupledHGOFEBio:
                 ]
             ),
         )
-        self.bulk = VolumetricHGO(K)
+        self.bulk = VolumetricHGO(K / 2)
         self.material = SolidMixture(
-            [self.matrix, self.fiber_pos, self.fiber_neg, self.bulk]
+            [
+                self.matrix,
+                self.fiber_pos,
+                self.fiber_neg,
+                self.bulk,
+            ]
         )
 
     def tstress(self, F, **kwargs):
-        σ_tilde = sum(
-            [
-                self.matrix.tstress(F),
-                self.fiber_pos.tstress(F),
-                self.fiber_neg.tstress(F),
-            ]
-        )
-        σ_bulk = self.bulk.tstress(F)
-        σ = σ_tilde - np.trace(σ_tilde) / 3 * np.eye(3) + σ_bulk
-        # The np.trace(σ_tilde) / 3 * np.eye(3) forces the stress to be deviatoric. I
-        # think a properly constructed deviatoric constitutive equation should
-        # already produce deviatoric stress.  Simply discarding the hydrostatic part
-        # feels wrong.
-        return σ
+        return self.material.tstress(F, **kwargs)
 
 
 class VerbatimXMLMaterial:
@@ -148,6 +149,37 @@ def read_fung_orthotropic(e, seqs: dict):
         c=read_parameter(find_unique_tag(e, "c", req=True), seqs),
         K=read_parameter(find_unique_tag(e, "k", req=True), seqs),
     )
+
+
+def read_uncoupled_bulk(e, seqs: dict):
+    """Return bulk compressibility model for uncoupled material"""
+    e_pressure_model = find_unique_tag(e, "pressure_model")
+    K = read_parameter(find_unique_tag(e, "k", req=True), seqs)
+    if e_pressure_model is not None:
+        law = e_pressure_model.text
+    else:
+        law = "default"
+    model = {
+        "default": VolumetricLogInverse,
+        "0": VolumetricLogInverse,
+        "NIKE3D": VolumetricHGO,
+        "1": VolumetricHGO,
+        "Abaqus": VolumetricLinear,
+        "2": VolumetricLinear,
+        "Abaqus (GOH)": VolumetricHGO,
+        "3": VolumetricHGO,
+    }[law]
+    if model is VolumetricHGO:
+        K = 0.5 * K
+    return model(K)
+
+
+def read_mooney_rivlin(e, seqs: dict):
+    """Return UncoupledMooneyRivlin material"""
+    c1 = read_parameter(find_unique_tag(e, "c1", req=True), seqs)
+    c2 = read_parameter(find_unique_tag(e, "c2", req=True), seqs)
+    bulk = read_uncoupled_bulk(e, seqs)
+    return UncoupledMooneyRivlin(c1, c2, bulk)
 
 
 def read_holzapfel_gasser_ogden_xml(e, seqs: dict):
@@ -270,6 +302,7 @@ def read_rigid_material(e, seqs: dict):
 # waffleiron material class form the XML element
 xml_material_reader = {
     "Fung-ortho-compressible": read_fung_orthotropic,
+    "Mooney-Rivlin": read_mooney_rivlin,
     "Holzapfel-Gasser-Ogden": read_holzapfel_gasser_ogden_xml,
     "fiber-NH": read_neo_hookean_fiber,
     "fiber-natural-NH": read_natural_neo_hookean_fiber,
