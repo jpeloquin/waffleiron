@@ -109,8 +109,8 @@ def gen_model_center_crack_Hex8():
     )
 
     material = model.mesh.elements[0].material
-    γ = material.y
-    μ = material.mu
+    γ = material.λ
+    μ = material.μ
     E, ν = from_Lamé(γ, μ)
 
     crack_line = ((-0.001, 0.0, 0.0), (0.001, 0.0, 0.0))

@@ -283,20 +283,32 @@ def _is_fixed_property(p):
         return True
 
 
-class Material:
-    """Base class for materials"""
+class Constituent:
+    """Mixin class for a constitutive law (any object with constitutive parameters)
 
-    bounds = {}  # stub
+    A class that does not have parameters should not inherit from `ConLaw`.  E.g.,
+    mixture classes do not inherit from `ConLaw` because all the parameters are in
+    the constituents.
 
-    # TODO: Make bounds checking automatic, and make all materials inherit.
+    Classes inheriting from Constituent should call `super().__init__()` after setting
+    all constitutive parameters.
+
+    """
+
+    bounds = {}  # expect subclasses to override
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.check_parameters_bounds()
 
     def check_parameters_bounds(self):
         for k in self.bounds:
-            v = getattr(self, k)
-            if not self.bounds[k][0] < v < self.bounds[k][1]:
-                raise InvalidParameterError(
-                    f"{k} = {v} must be within {self.bounds[k]}"
-                )
+            values = np.atleast_1d(getattr(self, k))  # handle vector params
+            for v in values:
+                if not self.bounds[k][0] <= v <= self.bounds[k][1]:
+                    raise InvalidParameterError(
+                        f"{k} = {v} must be within {self.bounds[k]}"
+                    )
 
 
 class Uncoupled:
@@ -306,6 +318,9 @@ class Uncoupled:
     The other stress functions will be provided by `Uncoupled`.
 
     """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def tilde_stress(self, F, **kwargs):
         """Return σ_tilde stress
@@ -326,13 +341,15 @@ class Uncoupled:
 class D1:
     """Marks a 1-dimensional material or fiber"""
 
-    pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class D3:
     """Marks a 3-dimensional material"""
 
-    pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class OrientedMaterial:
@@ -410,14 +427,15 @@ class OrientedMaterial:
         return s_loc
 
 
-class DeviatoricFiber(Material, Uncoupled, D3):
+class DeviatoricFiber(Uncoupled, D3):
 
-    def __init__(self, fiber, Q=np.array([1, 0, 0])):
+    def __init__(self, fiber, Q=np.array([1, 0, 0]), *args, **kwargs):
         self.material = fiber
         Q = np.array(Q)
         if not Q.ndim == 1:
             raise ValueError(f"Fiber orientation must be a direction vector.  Got {Q}.")
         self.orientation = Q
+        super().__init__(*args, **kwargs)
 
     def tilde_stress(self, F, **kwargs):
         F_tilde = np.linalg.det(F) ** (-1 / 3) * F
@@ -438,7 +456,7 @@ class DeviatoricFiber(Material, Uncoupled, D3):
         return getattr(self.material, item)
 
 
-class EllipsoidalDistribution(D3):
+class EllipsoidalDistribution(Constituent, D3):
 
     def __init__(self, d, mat_fiber):
         """Return fibers with ellipsoidal orientation distribution
@@ -454,6 +472,7 @@ class EllipsoidalDistribution(D3):
         self.integration = ("fibers-3d-gkt", 11, 31)  # max needed in Hou_Ateshian_2016
         self.o_φ = (self.integration[1] - 1) // 2
         self.n_θ = self.integration[2]
+        super().__init__()
 
     def tstress(self, F, **kwargs):
 
@@ -474,27 +493,25 @@ class EllipsoidalDistribution(D3):
 class Permeability:
     """Parent type for Permeability implementations."""
 
-    def __init__(self, **kwargs):
-        msg = """The Permeability class is meant only to serve as a supertype for
-child classes that implement the necessary functionality.  Only its
-child classes should be instantiated as objects."""
-        raise NotImplementedError(msg)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
-class IsotropicConstantPermeability(Permeability):
+class IsotropicConstantPermeability(Constituent, Permeability):
     """Isotropic strain-independent permeability"""
 
     bounds = {"k": (0, inf)}
 
     def __init__(self, k, **kwargs):
         self.k = k
+        super().__init__()
 
     @classmethod
     def from_feb(cls, perm, **kwargs):
         return cls(perm)
 
 
-class IsotropicExponentialPermeability(Material, Permeability):
+class IsotropicExponentialPermeability(Constituent, Permeability):
     """Isotropic exponential permeability"""
 
     bounds = {"k0": (0, inf), "M": (0, inf)}
@@ -502,9 +519,10 @@ class IsotropicExponentialPermeability(Material, Permeability):
     def __init__(self, k0, M, **kwargs):
         self.k0 = k0
         self.M = M
+        super().__init__()
 
 
-class IsotropicHolmesMowPermeability(Material, Permeability):
+class IsotropicHolmesMowPermeability(Constituent, Permeability):
     """Isotropic Holmes-Mow permeability"""
 
     # The strain-free solid volume fraction also appears in PoroelasticSolid.  Keeping
@@ -523,6 +541,7 @@ class IsotropicHolmesMowPermeability(Material, Permeability):
         self.M = M
         self.α = α
         self.φ0_s = φ0_s
+        super().__init__()
 
     @classmethod
     def from_feb(cls, perm, M, alpha, phi0, **kwargs):
@@ -532,7 +551,7 @@ class IsotropicHolmesMowPermeability(Material, Permeability):
         return cls(perm, M, alpha, phi0)
 
 
-class TransIsoHolmesMowPermeability(Material, Permeability):
+class TransIsoHolmesMowPermeability(Constituent, Permeability):
     """Transversely isotropic Holmes-Mow permeability
 
     "perm-ref-trans-iso" in FEBio.
@@ -571,9 +590,10 @@ class TransIsoHolmesMowPermeability(Material, Permeability):
         self.Mt = Mt
         self.αt = αt
         self.φ0_s = φ0_s
+        super().__init__()
 
 
-class PoroelasticSolid:
+class PoroelasticSolid(D3):
     """Fluid-saturated solid."""
 
     def __init__(
@@ -589,6 +609,7 @@ class PoroelasticSolid:
         solid + volume fraction of fluid = 1.
 
         """
+        super().__init__()
         self.fluid_density = fluid_density
         self.solid_material = solid
         self.solid_fraction = solid_fraction
@@ -599,7 +620,7 @@ class PoroelasticSolid:
         self.permeability = permeability
 
 
-class DonnanSwelling(Material, D3):
+class DonnanSwelling(Constituent, D3):
     """Swelling pressure of the Donnan equilibrium type."""
 
     bounds = {
@@ -626,6 +647,7 @@ class DonnanSwelling(Material, D3):
         self.fcd0 = fcd0
         self.ext_osm = ext_osm
         self.osm_coef = osm_coef
+        super().__init__(**kwargs)
 
     @classmethod
     def from_feb(cls, phiw0, cF0, bosm, Phi=1, **kwargs):
@@ -677,6 +699,7 @@ class SolidMixture(D3):
                 "SolidMixture requires at least one solid, but none were provided."
             )
         self.materials = [m for m in solids]
+        super().__init__(**kwargs)
 
     def w(self, F):
         return sum(material.w(F) for material in self.materials)
@@ -701,7 +724,7 @@ class DeviatoricSolidMixture(D3, Uncoupled):
 
     """
 
-    def __init__(self, solids, **kwargs):
+    def __init__(self, solids, *args, **kwargs):
         """Mixture of elastic solids
 
         :param solids: List of uncoupled material instances comprising the mixture.
@@ -712,6 +735,7 @@ class DeviatoricSolidMixture(D3, Uncoupled):
                 "DeviatoricSolidMixture requires at least one solid, but none were provided."
             )
         self.materials = [m for m in solids]
+        super().__init__(*args, **kwargs)
 
     def tstress(self, F, *args, **kwargs):
         σ = deviatoric_stress(
@@ -731,7 +755,7 @@ class Rigid:
             self.density = props["density"]
 
 
-class NeoHookeanFiber(D1):
+class NeoHookeanFiber(Constituent, D1):
     """1D fiber with σ ~ λ^2 − 1 relation
 
     Same as "fiber-NH" in FEBio.
@@ -744,6 +768,7 @@ class NeoHookeanFiber(D1):
 
     def __init__(self, E):
         self.E = E
+        super().__init__()
 
     def stress(self, λ):
         """Return fiber stress scalar along original orientation
@@ -757,7 +782,7 @@ class NeoHookeanFiber(D1):
             return self.E * (λ**2 - 1)
 
 
-class NaturalNeoHookeanFiber(D1):
+class NaturalNeoHookeanFiber(Constituent, D1):
     """1D fiber with σ ~ ln(λ) / λ^2 relation
 
     Also called "natural neo-Hookean".
@@ -774,6 +799,7 @@ class NaturalNeoHookeanFiber(D1):
     def __init__(self, E, λ0):
         self.E = E
         self.λ0 = λ0
+        super().__init__()
 
     def stress(self, λ):
         """Return fiber stress scalar along original orientation
@@ -787,7 +813,7 @@ class NaturalNeoHookeanFiber(D1):
             return self.E / λ**2 * np.log(λ / self.λ0)
 
 
-class ExponentialFiber(D1):
+class ExponentialFiber(Constituent, D1):
     """1D fiber with exponential power law.
 
     Coupled formulation ("fiber-exp-pow" in FEBio < 3.5.1; more recent releases have
@@ -809,6 +835,7 @@ class ExponentialFiber(D1):
         self.ξ = ξ
         self.α = α
         self.β = β
+        super().__init__()
 
     def w(self, λ):
         """Return pseudo-strain energy density."""
@@ -843,7 +870,7 @@ class ExponentialFiber(D1):
         return self.stress(λ)
 
 
-class ExponentialFiber3D(D3):
+class ExponentialFiber3D(Constituent, D3):
     """Fiber with exponential power law.
 
     Coupled formulation ("fiber-exp-pow" in FEBio < 3.5.1; more recent releases
@@ -864,6 +891,7 @@ class ExponentialFiber3D(D3):
         self.α = α
         self.β = β
         self.orientation = orientation
+        super().__init__()
 
     def w(self, F):
         """Return strain energy density."""
@@ -917,7 +945,7 @@ class ExponentialFiber3D(D3):
         return s
 
 
-class PowerLinearFiber(D1):
+class PowerLinearFiber(Constituent, D1):
     """1D fiber with power–linear law.
 
     Equivalent to "fiber-pow-linear" or "fiber-power-linear" in FEBio, treated
@@ -939,8 +967,9 @@ class PowerLinearFiber(D1):
     def __init__(self, E, β, λ0):
         self.E = E  # fiber modulus in linear region
         self.β = β  # power law exponent in power law region
-        self.λ0 = λ0  # stretch ratio at which power law region
-        # transitions to linear region
+        self.λ0 = λ0
+        # ^ stretch ratio at which power law region transitions to linear region
+        super().__init__()
 
     @classmethod
     def from_feb(cls, E, beta, lam0, **kwargs):
@@ -978,7 +1007,7 @@ class PowerLinearFiber(D1):
         return self.stress(λ)
 
 
-class PowerLinearFiber3D(D3):
+class PowerLinearFiber3D(Constituent, D3):
     """Fiber with piecewise power-law (toe) and linear regions.
 
     Coupled formulation ("fiber-pow-linear" or "fiber-power-linear" in FEBio).
@@ -995,6 +1024,7 @@ class PowerLinearFiber3D(D3):
         self.λ0 = λ0  # stretch ratio at which power law region
         # transitions to linear region
         self.orientation = orientation
+        super().__init__()
 
     def w(self, F):
         """Return strain energy density"""
@@ -1034,7 +1064,7 @@ class PowerLinearFiber3D(D3):
         raise NotImplementedError
 
 
-class ExpAndLinearDCFiber(D1):
+class ExpAndLinearDCFiber(Constituent, D1):
     """1D fiber with piecewise exponential–linear stress and discontinuous elasticity.
 
     Equivalent to "fiber-exp-linear" in FEBio, treated as a 1D material.
@@ -1054,6 +1084,7 @@ class ExpAndLinearDCFiber(D1):
         self.λ1 = λ1  # transition stretch ratio
         self.E = E  # linear modulus
         self.σ0 = self.ξ * (np.exp(self.α * (self.λ1 - 1)) - 1) - self.E * self.λ1
+        super().__init__()
 
     def stress(self, λ, **kwargs):
         """Return stress scalar"""
@@ -1067,7 +1098,7 @@ class ExpAndLinearDCFiber(D1):
         return σ
 
 
-class EllipsoidalPowerFiber(D3):
+class EllipsoidalPowerFiber(Constituent, D3):
     """Power-law fibers with ellipsoidal orientation distribution.
 
     Coupled formulation.  FEBio XML name = "ellipsoidal fiber distribution".  In both
@@ -1078,8 +1109,8 @@ class EllipsoidalPowerFiber(D3):
     """
 
     bounds = {
-        "ξ": ((0, inf), (0, inf), (0, inf)),
-        "β": ((0, inf), (0, inf), (0, inf)),
+        "ξ": (0, inf),
+        "β": (0, inf),
     }
 
     def __init__(self, ξ: Tuple[float, float, float], β: Tuple[float, float, float]):
@@ -1092,6 +1123,7 @@ class EllipsoidalPowerFiber(D3):
         """
         self.ξ = ξ
         self.β = β
+        super().__init__()
 
     @classmethod
     def from_feb(cls, ksi, beta):
@@ -1132,7 +1164,7 @@ class EllipsoidalPowerFiber(D3):
         return 2 * σ
 
 
-class IsotropicElastic(D3):
+class IsotropicElastic(Constituent, D3):
     """Isotropic elastic material definition."""
 
     def __init__(self, props, **kwargs):
@@ -1149,6 +1181,7 @@ class IsotropicElastic(D3):
             )
         self.mu = mu
         self.y = y
+        super().__init__()
 
     def w(self, F):
         """Strain energy for isotropic elastic material.
@@ -1188,7 +1221,7 @@ class IsotropicElastic(D3):
         return s
 
 
-class OrthotropicLinearElastic(Material, D3):
+class OrthotropicLinearElastic(Constituent, D3):
     """Orthotropic elastic material definition.
 
     Matches FEOrthoElastic material in FEBio.  This material is *not* linear.
@@ -1227,9 +1260,9 @@ class OrthotropicLinearElastic(Material, D3):
         self.ν12 = props["ν12"]
         self.ν23 = props["ν23"]
         self.ν31 = props["ν31"]
+        super().__init__()
 
         # Verify parameter values
-        self.check_parameters_bounds()
         S = orthotropic_elastic_compliance_matrix(self)
         if not is_positive_definite(S):
             raise InvalidParameterError("Stiffness matrix is not positive definite.")
@@ -1292,7 +1325,7 @@ class OrthotropicLinearElastic(Material, D3):
         return 0.5 * σ / np.linalg.det(F)
 
 
-class NeoHookean(Material, D3):
+class NeoHookean(Constituent, D3):
     """Neo-Hookean compressible hyperelastic material.
 
     Specified in FEBio xml as `neo-Hookean`.
@@ -1312,8 +1345,11 @@ class NeoHookean(Material, D3):
 
     def __init__(self, E, ν):
         y, mu = to_Lamé(E, ν)
-        self.mu = mu
-        self.y = y
+        self.E = E
+        self.ν = ν
+        self.μ = mu
+        self.λ = y
+        super().__init__()
 
     @classmethod
     def from_feb(cls, E, v):
@@ -1321,8 +1357,8 @@ class NeoHookean(Material, D3):
         return cls(E, v)
 
     def w(self, F):
-        y = self.y
-        mu = self.mu
+        y = self.λ
+        mu = self.μ
         C = np.dot(F.T, F)
         i1 = np.trace(C)
         J = np.linalg.det(F)
@@ -1331,8 +1367,8 @@ class NeoHookean(Material, D3):
 
     def tstress(self, F, **kwargs):
         """Cauchy stress tensor."""
-        y = self.y
-        mu = self.mu
+        y = self.λ
+        mu = self.μ
         J = det(F)
         B = dot(F, F.T)  # left cauchy-green
         t = mu / J * (B - np.eye(3)) + y / J * log(J) * np.eye(3)
@@ -1346,8 +1382,8 @@ class NeoHookean(Material, D3):
 
     def sstress(self, F, **kwargs):
         """2nd Piola-Kirchoff stress."""
-        y = self.y
-        mu = self.mu
+        y = self.λ
+        mu = self.μ
         J = det(F)
         C = dot(F.T, F)
         Cinv = np.linalg.inv(C)
@@ -1355,7 +1391,7 @@ class NeoHookean(Material, D3):
         return s
 
 
-class HolmesMow(Material, D3):
+class HolmesMow(Constituent, D3):
     """Holmes-Mow coupled hyperelastic material.
 
     See page 73 of the FEBio theory manual, version 1.8.
@@ -1373,6 +1409,7 @@ class HolmesMow(Material, D3):
         self.E = E
         self.ν = ν
         self.β = β
+        super().__init__()
 
     @classmethod
     def from_feb(cls, E, v, beta, **kwargs):
@@ -1438,7 +1475,7 @@ class HolmesMow(Material, D3):
         return s
 
 
-class FungOrthotropicElastic(Material, D3):
+class FungOrthotropicElastic(Constituent, D3):
     """Fung orthotropic elastic model"""
 
     # TODO: support open vs. closed intervals
@@ -1481,9 +1518,9 @@ class FungOrthotropicElastic(Material, D3):
         self.ν31 = ν31
         self.c = c
         self.K = K
+        super().__init__()
 
         # Verify parameter values
-        self.check_parameters_bounds()
         S = orthotropic_elastic_compliance_matrix(self)
         if not is_positive_definite(S):
             raise InvalidParameterError("Stiffness matrix is not positive definite.")
@@ -1550,7 +1587,7 @@ class FungOrthotropicElastic(Material, D3):
         return σ_mat + σ_bulk
 
 
-class DeviatoricMooneyRivlin(Material, Uncoupled, D3):
+class DeviatoricMooneyRivlin(Constituent, Uncoupled, D3):
     """Deviatoric Mooney–Rivlin material
 
     Matches deviatoric part of "Mooney-Rivlin" material in FEBio.
@@ -1566,6 +1603,7 @@ class DeviatoricMooneyRivlin(Material, Uncoupled, D3):
     def __init__(self, c1, c2):
         self.c1 = c1
         self.c2 = c2
+        super().__init__()
 
     def tilde_stress(self, F, **kwargs):
         """Return σ_tilde stress
@@ -1586,7 +1624,7 @@ class DeviatoricMooneyRivlin(Material, Uncoupled, D3):
         return σ
 
 
-class DeviatoricHGOMatrix(Material, Uncoupled, D3):
+class DeviatoricHGOMatrix(Constituent, Uncoupled, D3):
     """Deviatoric part of uncoupled Holzapfel–Gasser–Ogden material
 
     Matches deviatoric matrix part of "Holzapfel-Gasser-Ogden" material in FEBio.
@@ -1600,6 +1638,7 @@ class DeviatoricHGOMatrix(Material, Uncoupled, D3):
 
     def __init__(self, μ):
         self.mu = μ
+        super().__init__()
 
     def tilde_stress(self, F, **kwargs):
         """Cauchy stress tensor"""
@@ -1616,7 +1655,7 @@ class DeviatoricHGOMatrix(Material, Uncoupled, D3):
         return σ
 
 
-class DeviatoricHGOFiber3D(Material, Uncoupled, D3):
+class DeviatoricHGOFiber3D(Constituent, Uncoupled, D3):
     """3D formulation of an uncoupled Holzapfel–Gasser–Ogden fiber family
 
     Matches one fiber part (one summand) of "Holzapfel-Gasser-Ogden" material in FEBio.
@@ -1634,6 +1673,7 @@ class DeviatoricHGOFiber3D(Material, Uncoupled, D3):
         self.modulus = ξ
         self.exp_coef = α
         self.dispersion = κ
+        super().__init__()
 
     def tilde_stress(self, F, **kwargs):
         """Return Cauchy stress tensor"""
@@ -1655,7 +1695,7 @@ class DeviatoricHGOFiber3D(Material, Uncoupled, D3):
         return σ
 
 
-class VolumetricLinear(Material, D3):
+class VolumetricLinear(Constituent, D3):
     """Linear hydrostatic (bulk modulus) component"""
 
     # 1D (pressure) material like DonnanSwelling, but elastic (strain → zero strain)
@@ -1666,6 +1706,7 @@ class VolumetricLinear(Material, D3):
 
     def __init__(self, K):
         self.K = K
+        super().__init__()
 
     def tstress(self, F, **kwargs):
         """Return Cauchy stress"""
@@ -1675,7 +1716,7 @@ class VolumetricLinear(Material, D3):
         return p * np.eye(3)
 
 
-class VolumetricLogInverse(Material, D3):
+class VolumetricLogInverse(Constituent, D3):
     """ln(J)/J hydrostatic (bulk modulus) component"""
 
     # 1D (pressure) material like DonnanSwelling, but elastic (strain → zero strain)
@@ -1686,6 +1727,7 @@ class VolumetricLogInverse(Material, D3):
 
     def __init__(self, K):
         self.K = K
+        super().__init__()
 
     def tstress(self, F, **kwargs):
         """Return Cauchy stress"""
@@ -1695,14 +1737,17 @@ class VolumetricLogInverse(Material, D3):
         return p * np.eye(3)
 
 
-class VolumetricHGO(Material, D3):
+class VolumetricHGO(Constituent, D3):
     """J - J^-1 hydrostatic (bulk modulus) component
 
     Note that the 1/2 factor that FEBio uses is omitted here.
 
     """
 
-    # 1D (pressure) material like DonnanSwelling, but elastic (strain → zero strain)
+    # Pressure material like Donnan Swelling, but elastic (strain → zero strain).
+    # Since we apply the identity tensor here it may as well be a 3D material,
+    # for now.  It would make sense to make it a 1D material so we can test it in
+    # terms of J, not having to construct an F tensor.
 
     bounds = {
         "K": (0, inf),  # open
@@ -1710,6 +1755,7 @@ class VolumetricHGO(Material, D3):
 
     def __init__(self, K):
         self.K = K
+        super().__init__()
 
     def tstress(self, F, **kwargs):
         """Return Cauchy stress"""

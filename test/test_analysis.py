@@ -205,8 +205,8 @@ class CenterCrackQuad4(TestCase):
             DIR_FIXTURES / "center_crack_uniax_isotropic_elastic_quad4.feb"
         )
         material = self.model.mesh.elements[0].material
-        y = material.y
-        mu = material.mu
+        y = material.λ
+        mu = material.μ
         E, nu = from_Lamé(y, mu)
         self.E = E
         self.nu = nu

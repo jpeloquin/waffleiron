@@ -264,7 +264,7 @@ def _(mat: matlib.FungOrthotropicElastic, model) -> ElementTree:
 def _(mat: matlib.NeoHookean, model) -> ElementTree:
     """Convert NeoHookean material instance to FEBio XML"""
     e = etree.Element("material", type="neo-Hookean")
-    E, ν = matlib.from_Lamé(mat.y, mat.mu)
+    E, ν = matlib.from_Lamé(mat.λ, mat.μ)
     e.append(property_to_xml(E, "E", model.named["sequences"]))
     e.append(property_to_xml(ν, "v", model.named["sequences"]))
     return e
@@ -446,7 +446,7 @@ def uncoupled_HGO_to_feb(mat: febioxml.UncoupledHGOFEBio, model) -> ElementTree:
     """Convert UncoupledHGOFEBio material instance to FEBio XML"""
     # Holzapfel-Gasser-Ogden was introduced in FEBio 3.2.
     e = etree.Element("material", type="Holzapfel-Gasser-Ogden")
-    e.append(property_to_xml(mat.matrix.mu, "c", model.named["sequences"]))
+    e.append(property_to_xml(mat.matrix.μ, "c", model.named["sequences"]))
     e.append(
         property_to_xml(mat.fiber_pos.material.modulus, "k1", model.named["sequences"])
     )
