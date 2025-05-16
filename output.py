@@ -5,7 +5,7 @@ from functools import singledispatch
 from pathlib import PurePosixPath
 
 # Public packages
-from typing import BinaryIO
+from typing import BinaryIO, Union
 
 from lxml import etree
 from lxml.etree import ElementTree
@@ -99,7 +99,9 @@ def _(mat: VerbatimXMLMaterial, model) -> ElementTree:
 
 
 @material_to_feb.register
-def _(mat: matlib.OrientedMaterial, model) -> ElementTree:
+def _(
+    mat: Union[matlib.OrientedMaterial, matlib.DeviatoricFiber], model
+) -> ElementTree:
     """Convert an OrientedMaterial material instance to FEBio XML"""
     orientation = mat.orientation
     e = material_to_feb(mat.material, model)
@@ -185,7 +187,7 @@ def _(mat: matlib.ExpAndLinearDCFiber, model) -> ElementTree:
     e = etree.Element("material", type="fiber-exp-linear")
     e.append(property_to_xml(mat.ξ, "c3", model.named["sequences"]))
     e.append(property_to_xml(mat.α, "c4", model.named["sequences"]))
-    e.append(property_to_xml(mat.λ0, "lambda", model.named["sequences"]))
+    e.append(property_to_xml(mat.λ1, "lambda", model.named["sequences"]))
     e.append(property_to_xml(mat.E, "c5", model.named["sequences"]))
     return e
 
@@ -381,7 +383,13 @@ def donnan_to_feb(mat: matlib.DonnanSwelling, model) -> ElementTree:
     return e
 
 
-def uncoupled_bulk_to_feb(e, bulk, model):
+def add_uncoupled_bulk_to_feb(
+    e,
+    bulk: Union[
+        matlib.VolumetricLinear, matlib.VolumetricLogInverse, matlib.VolumetricHGO
+    ],
+    model,
+):
     """Add bulk compressibility model to FEBio XML element for an uncoupled material
 
     All FEBio versions support integer values; only FEBio supports text values.  So
@@ -389,6 +397,8 @@ def uncoupled_bulk_to_feb(e, bulk, model):
     to be safe, we write integer codes.
 
     """
+    # Can't use @material_to_feb.register because we want to add two elements: a
+    # comment and the actual bulk compression law
     e.append(property_to_xml(bulk.K, "k", model.named["sequences"]))
     law = {
         matlib.VolumetricLogInverse: "0",
@@ -405,9 +415,29 @@ def uncoupled_mooney_rivlin_to_feb(
 ) -> ElementTree:
     """Convert UncoupledMooneyRivling material instance to FEBio XML"""
     e = etree.Element("material", type="Mooney-Rivlin")
-    e.append(property_to_xml(mat.deviatoric_solid.c1, "c1", model.named["sequences"]))
-    e.append(property_to_xml(mat.deviatoric_solid.c2, "c2", model.named["sequences"]))
-    uncoupled_bulk_to_feb(e, mat.bulk, model)
+    e.append(property_to_xml(mat.solid.c1, "c1", model.named["sequences"]))
+    e.append(property_to_xml(mat.solid.c2, "c2", model.named["sequences"]))
+    add_uncoupled_bulk_to_feb(e, mat.bulk, model)
+    return e
+
+
+@material_to_feb.register
+def trans_iso_mooney_rivlin_febio_to_feb(
+    mat: febioxml.TransIsoMooneyRivlinFEBio, model
+) -> ElementTree:
+    """Convert UncoupledMooneyRivling material instance to FEBio XML"""
+    e = etree.Element("material", type="trans iso Mooney-Rivlin")
+    e.append(property_to_xml(mat.solid.c1, "c1", model.named["sequences"]))
+    e.append(property_to_xml(mat.solid.c2, "c2", model.named["sequences"]))
+    for ec in material_to_feb(mat.fibers, model):
+        if ec.tag == "lambda":
+            ec.tag = "lam_max"  # FEBio XML inconsistency between materials
+        e.append(ec)
+    # e.append(property_to_xml(mat.fibers.ξ, "c3", model.named["sequences"]))
+    # e.append(property_to_xml(mat.fibers.α, "c4", model.named["sequences"]))
+    # e.append(property_to_xml(mat.fibers.E, "c5", model.named["sequences"]))
+    # e.append(property_to_xml(mat.fibers.λ1, "lam_max", model.named["sequences"]))
+    add_uncoupled_bulk_to_feb(e, mat.bulk, model)
     return e
 
 

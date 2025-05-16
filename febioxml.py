@@ -42,6 +42,9 @@ from .material import (
     VolumetricLinear,
     DeviatoricMooneyRivlin,
     ExponentialFiber,
+    DeviatoricFiber,
+    D3,
+    DeviatoricSolidMixture,
 )
 from .math import orthonormal_basis, vec_from_sph
 
@@ -57,19 +60,47 @@ SUPPORTED_FEBIO_XML_VERS = ("2.0", "2.5", "3.0", "4.0")
 # frameworks should be represented here using special classes.
 
 
-class UncoupledMooneyRivlin:
-    """Uncoupled Mooney–Rivlin FEBio material"""
+class UncoupledMooneyRivlin(D3):
+    """Uncoupled Mooney–Rivlin FEBio material
+
+    Waffleiron treats uncoupled materials as just another solid mixture; FEBio uses
+    special syntax for them.
+
+    """
 
     def __init__(self, c1, c2, bulk):
-        self.deviatoric_solid = DeviatoricMooneyRivlin(c1=c1, c2=c2)
+        self.solid = DeviatoricMooneyRivlin(c1=c1, c2=c2)
         self.bulk = bulk
-        self.mixture = SolidMixture([self.deviatoric_solid, self.bulk])
+        self.mixture = SolidMixture([self.solid, self.bulk])
 
     def __getattr__(self, item):
         return getattr(self.mixture, item)
 
 
-class UncoupledHGOFEBio:
+class TransIsoMooneyRivlinFEBio(D3):
+    """Uncoupled Mooney–Rivlin + uncoupled piecewise exponential–linear fiber with discontinuous elasticity
+
+    Matches "trans iso Mooney-Rivlin" material in FEBio, which is simply a mixture of
+    equisting constitutive models.  Except that the active contraction option is not
+    supported.
+
+    """
+
+    def __init__(self, c1, c2, c3, c4, λ1, c5, bulk):
+        self.solid = DeviatoricMooneyRivlin(c1=c1, c2=c2)
+        self.fibers = DeviatoricFiber(
+            ExpAndLinearDCFiber(ξ=c3, α=c4, λ1=λ1, E=c5), np.array([1, 0, 0])
+        )
+        self.bulk = bulk
+        self.mixture = SolidMixture(
+            [DeviatoricSolidMixture([self.solid, self.fibers]), self.bulk]
+        )
+
+    def __getattr__(self, item):
+        return getattr(self.mixture, item)
+
+
+class UncoupledHGOFEBio(D3):
     """Uncoupled Holzapfel–Gasser–Ogden FEBio material
 
     An uncoupled Holzapfel–Gasser–Ogden material in FEBio is a solid mixture of
@@ -183,6 +214,18 @@ def read_mooney_rivlin(e, seqs: dict):
     return UncoupledMooneyRivlin(c1, c2, bulk)
 
 
+def read_trans_iso_mooney_rivlin(e, seqs: dict):
+    """Return TransIsoMooneyRivlinFEBio (uncoupled) material"""
+    c1 = read_parameter(find_unique_tag(e, "c1", req=True), seqs)
+    c2 = read_parameter(find_unique_tag(e, "c2", req=True), seqs)
+    c3 = read_parameter(find_unique_tag(e, "c3", req=True), seqs)
+    c4 = read_parameter(find_unique_tag(e, "c4", req=True), seqs)
+    λ1 = read_parameter(find_unique_tag(e, "lam_max", req=True), seqs)
+    c5 = read_parameter(find_unique_tag(e, "c5", req=True), seqs)
+    bulk = read_uncoupled_bulk(e, seqs)
+    return TransIsoMooneyRivlinFEBio(c1, c2, c3, c4, λ1, c5, bulk)
+
+
 def read_holzapfel_gasser_ogden_xml(e, seqs: dict):
     """Return UncoupledHGOFEBio material"""
     return UncoupledHGOFEBio(
@@ -224,7 +267,7 @@ def read_fiber_exp_linear(e, seqs: dict):
     return ExpAndLinearDCFiber(
         ξ=read_parameter(find_unique_tag(e, "c3", req=True), seqs),
         α=read_parameter(find_unique_tag(e, "c4", req=True), seqs),
-        λ0=read_parameter(find_unique_tag(e, "lambda", req=True), seqs),
+        λ1=read_parameter(find_unique_tag(e, "lambda", req=True), seqs),
         E=read_parameter(find_unique_tag(e, "c5", req=True), seqs),
     )
 
@@ -313,6 +356,7 @@ def read_rigid_material(e, seqs: dict):
 xml_material_reader = {
     "Fung-ortho-compressible": read_fung_orthotropic,
     "Mooney-Rivlin": read_mooney_rivlin,
+    "trans iso Mooney-Rivlin": read_trans_iso_mooney_rivlin,
     "Holzapfel-Gasser-Ogden": read_holzapfel_gasser_ogden_xml,
     "fiber-NH": read_neo_hookean_fiber,
     "fiber-natural-NH": read_natural_neo_hookean_fiber,

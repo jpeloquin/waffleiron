@@ -143,7 +143,7 @@ def deviatoric_stress(σ_tilde):
     return σ_tilde - np.trace(σ_tilde) / 3 * np.eye(3)
 
 
-def stress_1d_N(F, stress: Callable, N):
+def stress_1d_N(F, stress: Callable, N, **kwargs):
     """Return stress along (material config) unit vector N
 
     :param F: Deformation gradient tensor.
@@ -156,7 +156,7 @@ def stress_1d_N(F, stress: Callable, N):
 
     """
     λ = np.linalg.norm(F @ N)  # np.sqrt(Q @ F.T @ F @ Q.T)
-    P = stress(λ) * np.outer(N, N)  # PK2 stress
+    P = stress(λ, **kwargs) * np.outer(N, N)  # PK2 stress
     J = np.linalg.det(F)
     σ = 1 / J * F @ P @ F.T
     return σ
@@ -288,6 +288,8 @@ class Material:
 
     bounds = {}  # stub
 
+    # TODO: Make bounds checking automatic, and make all materials inherit.
+
     def check_parameters_bounds(self):
         for k in self.bounds:
             v = getattr(self, k)
@@ -297,17 +299,75 @@ class Material:
                 )
 
 
-class OrientedMaterial:
-    """A material with an orientation matrix.
+class Uncoupled:
+    """Mixin class for uncoupled materials
 
-    TODO: Needs unit tests.
+    Classes inheriting from `Uncoupled` need only define `tilde_stress(F, **kwargs)`.
+    The other stress functions will be provided by `Uncoupled`.
 
     """
+
+    def tilde_stress(self, F, **kwargs):
+        """Return σ_tilde stress
+
+        Cauchy stress σ = dev(σ_tilde).  σ_tilde gets a separate function to support
+        use of the material both alone and in a deviatoric mixture.
+
+        This is a stub; override it when subclassing.
+
+        """
+        raise NotImplementedError
+
+    def tstress(self, F, **kwargs):
+        """Cauchy stress tensor"""
+        return deviatoric_stress(self.tilde_stress(F, **kwargs))
+
+
+class D1:
+    """Marks a 1-dimensional material or fiber"""
+
+    pass
+
+
+class D3:
+    """Marks a 3-dimensional material"""
+
+    pass
+
+
+class OrientedMaterial:
+    """A material with an orientation matrix"""
 
     def __init__(self, material, Q=np.eye(3)):
         self.material = material
         Q = np.array(Q)
         Q = Q / np.linalg.norm(Q, axis=0)
+        if isinstance(material, D1):
+            if Q.ndim != 1:
+                raise ValueError(
+                    f"1D materials must have an R3 vector orientation.  Got {Q}."
+                )
+        elif isinstance(material, D3):
+            if Q.ndim == 1:
+                # Inflate orientation matrix to 3D
+                e1 = Q
+                i = np.where(Q)[0][0]
+                j = (i + 1) % len(e1)
+                e2 = np.zeros(3)
+                e2[j] = -e1[i]
+                e2[i] = e1[j]
+                e2 = e2 / np.linalg.norm(e2)
+                e3 = np.linalg.cross(e1, e2)
+                Q = np.stack([e1, e2, e3])
+            else:
+                if Q.ndim != 2:
+                    raise ValueError(
+                        f"A 3D material must have a 3x3 orientation matrix.  Got {Q}."
+                    )
+        else:
+            raise ValueError(
+                f"{type(material)} must inherit from D1 or D3, so it has a known dimensionality, to become an oriented material."
+            )
         self.orientation = Q
 
     def w(self, F):
@@ -350,7 +410,35 @@ class OrientedMaterial:
         return s_loc
 
 
-class EllipsoidalDistribution:
+class DeviatoricFiber(Material, Uncoupled, D3):
+
+    def __init__(self, fiber, Q=np.array([1, 0, 0])):
+        self.material = fiber
+        Q = np.array(Q)
+        if not Q.ndim == 1:
+            raise ValueError(f"Fiber orientation must be a direction vector.  Got {Q}.")
+        self.orientation = Q
+
+    def tilde_stress(self, F, **kwargs):
+        F_tilde = np.linalg.det(F) ** (-1 / 3) * F
+        N = self.orientation
+        λ_tilde = np.linalg.norm(F_tilde @ N)
+        σ_tilde = (
+            F_tilde
+            @ (self.material.stress(λ_tilde) * np.outer(N, N))
+            @ F_tilde.T
+            / np.linalg.det(F)
+        )
+        return σ_tilde
+
+    def __getattr__(self, item):
+        # Intended so parameters of the underlying fiber material can be easily
+        # accessed.  Make sure any functions that do calculation using deviatoric
+        # strain are defined on DeviatoricFiber.
+        return getattr(self.material, item)
+
+
+class EllipsoidalDistribution(D3):
 
     def __init__(self, d, mat_fiber):
         """Return fibers with ellipsoidal orientation distribution
@@ -406,7 +494,7 @@ class IsotropicConstantPermeability(Permeability):
         return cls(perm)
 
 
-class IsotropicExponentialPermeability(Permeability):
+class IsotropicExponentialPermeability(Material, Permeability):
     """Isotropic exponential permeability"""
 
     bounds = {"k0": (0, inf), "M": (0, inf)}
@@ -416,7 +504,7 @@ class IsotropicExponentialPermeability(Permeability):
         self.M = M
 
 
-class IsotropicHolmesMowPermeability(Permeability):
+class IsotropicHolmesMowPermeability(Material, Permeability):
     """Isotropic Holmes-Mow permeability"""
 
     # The strain-free solid volume fraction also appears in PoroelasticSolid.  Keeping
@@ -444,7 +532,7 @@ class IsotropicHolmesMowPermeability(Permeability):
         return cls(perm, M, alpha, phi0)
 
 
-class TransIsoHolmesMowPermeability(Permeability):
+class TransIsoHolmesMowPermeability(Material, Permeability):
     """Transversely isotropic Holmes-Mow permeability
 
     "perm-ref-trans-iso" in FEBio.
@@ -511,7 +599,7 @@ class PoroelasticSolid:
         self.permeability = permeability
 
 
-class DonnanSwelling:
+class DonnanSwelling(Material, D3):
     """Swelling pressure of the Donnan equilibrium type."""
 
     bounds = {
@@ -570,24 +658,18 @@ class Multigeneration:
         self.materials = materials
 
 
-class SolidMixture:
+class SolidMixture(D3):
     """Mixture of solids with no interdependencies or residual stress.
 
-    The strain energy of the mixture is defined as the sum of the
-    strain energies for each component.
+    The strain energy of the mixture is defined as the sum of the strain energies for
+    each component.
 
     """
 
     def __init__(self, solids, **kwargs):
-        """Mixture of solids.
+        """Mixture of elastic solids
 
-        Parameters
-        ----------
-        args : object
-            Each parameter passed to SolidMixture() should be a
-            material object, with functions for strain energy and
-            stresses.  The object must also have material properties
-            defined.
+        :param solids: List of material instances comprising the mixture.
 
         """
         if not solids:
@@ -611,6 +693,35 @@ class SolidMixture:
         )
 
 
+class DeviatoricSolidMixture(D3, Uncoupled):
+    """Mixture of solids with no interdependencies or residual stress.
+
+    The strain energy of the mixture is defined as the sum of the strain energies for
+    each component.
+
+    """
+
+    def __init__(self, solids, **kwargs):
+        """Mixture of elastic solids
+
+        :param solids: List of uncoupled material instances comprising the mixture.
+
+        """
+        if not solids:
+            raise ValueError(
+                "DeviatoricSolidMixture requires at least one solid, but none were provided."
+            )
+        self.materials = [m for m in solids]
+
+    def tstress(self, F, *args, **kwargs):
+        σ = deviatoric_stress(
+            sum(
+                material.tilde_stress(F, *args, **kwargs) for material in self.materials
+            )
+        )
+        return σ
+
+
 class Rigid:
     """Pseudo-material used for elements in rigid bodies"""
 
@@ -620,7 +731,7 @@ class Rigid:
             self.density = props["density"]
 
 
-class NeoHookeanFiber:
+class NeoHookeanFiber(D1):
     """1D fiber with σ ~ λ^2 − 1 relation
 
     Same as "fiber-NH" in FEBio.
@@ -646,7 +757,7 @@ class NeoHookeanFiber:
             return self.E * (λ**2 - 1)
 
 
-class NaturalNeoHookeanFiber:
+class NaturalNeoHookeanFiber(D1):
     """1D fiber with σ ~ ln(λ) / λ^2 relation
 
     Also called "natural neo-Hookean".
@@ -676,7 +787,7 @@ class NaturalNeoHookeanFiber:
             return self.E / λ**2 * np.log(λ / self.λ0)
 
 
-class ExponentialFiber:
+class ExponentialFiber(D1):
     """1D fiber with exponential power law.
 
     Coupled formulation ("fiber-exp-pow" in FEBio < 3.5.1; more recent releases have
@@ -732,7 +843,7 @@ class ExponentialFiber:
         return self.stress(λ)
 
 
-class ExponentialFiber3D:
+class ExponentialFiber3D(D3):
     """Fiber with exponential power law.
 
     Coupled formulation ("fiber-exp-pow" in FEBio < 3.5.1; more recent releases
@@ -806,7 +917,7 @@ class ExponentialFiber3D:
         return s
 
 
-class PowerLinearFiber:
+class PowerLinearFiber(D1):
     """1D fiber with power–linear law.
 
     Equivalent to "fiber-pow-linear" or "fiber-power-linear" in FEBio, treated
@@ -867,7 +978,7 @@ class PowerLinearFiber:
         return self.stress(λ)
 
 
-class PowerLinearFiber3D:
+class PowerLinearFiber3D(D3):
     """Fiber with piecewise power-law (toe) and linear regions.
 
     Coupled formulation ("fiber-pow-linear" or "fiber-power-linear" in FEBio).
@@ -923,7 +1034,7 @@ class PowerLinearFiber3D:
         raise NotImplementedError
 
 
-class ExpAndLinearDCFiber:
+class ExpAndLinearDCFiber(D1):
     """1D fiber with piecewise exponential–linear stress and discontinuous elasticity.
 
     Equivalent to "fiber-exp-linear" in FEBio, treated as a 1D material.
@@ -933,33 +1044,30 @@ class ExpAndLinearDCFiber:
     bounds = {
         "ξ": (0, inf),
         "α": (0, inf),
-        "λ0": (1, inf),  # FEBio has > 1; I don't see why λ0 = 1 is invalid
+        "λ1": (1, inf),  # FEBio has > 1; I don't see why λ0 = 1 is invalid
         "E": (0, inf),  # linear modulus
     }
 
-    def __init__(self, ξ, α, λ0, E):
+    def __init__(self, ξ, α, λ1, E):
         self.ξ = ξ  # overall coefficient
         self.α = α  # exponent's coefficient
-        self.λ0 = λ0  # transition stretch ratio
+        self.λ1 = λ1  # transition stretch ratio
         self.E = E  # linear modulus
-        self.σ0 = self.ξ * (np.exp(self.α * (self.λ0 - 1)) - 1) - self.E * self.λ0
+        self.σ0 = self.ξ * (np.exp(self.α * (self.λ1 - 1)) - 1) - self.E * self.λ1
 
-    def stress(self, λ):
+    def stress(self, λ, **kwargs):
         """Return stress scalar"""
-        ξ = self.ξ
-        α = self.α
-        λ0 = self.λ0
         # Stress
         if λ <= 1:
             σ = 0
-        elif λ <= λ0:
-            σ = ξ / λ**2 * (np.exp(α * (λ - 1)) - 1)
+        elif λ <= self.λ1:
+            σ = self.ξ / λ**2 * (np.exp(self.α * (λ - 1)) - 1)
         else:
             σ = self.E / λ + self.σ0 / λ**2
         return σ
 
 
-class EllipsoidalPowerFiber:
+class EllipsoidalPowerFiber(D3):
     """Power-law fibers with ellipsoidal orientation distribution.
 
     Coupled formulation.  FEBio XML name = "ellipsoidal fiber distribution".  In both
@@ -1024,7 +1132,7 @@ class EllipsoidalPowerFiber:
         return 2 * σ
 
 
-class IsotropicElastic:
+class IsotropicElastic(D3):
     """Isotropic elastic material definition."""
 
     def __init__(self, props, **kwargs):
@@ -1080,7 +1188,7 @@ class IsotropicElastic:
         return s
 
 
-class OrthotropicLinearElastic(Material):
+class OrthotropicLinearElastic(Material, D3):
     """Orthotropic elastic material definition.
 
     Matches FEOrthoElastic material in FEBio.  This material is *not* linear.
@@ -1184,7 +1292,7 @@ class OrthotropicLinearElastic(Material):
         return 0.5 * σ / np.linalg.det(F)
 
 
-class NeoHookean:
+class NeoHookean(Material, D3):
     """Neo-Hookean compressible hyperelastic material.
 
     Specified in FEBio xml as `neo-Hookean`.
@@ -1247,7 +1355,7 @@ class NeoHookean:
         return s
 
 
-class HolmesMow:
+class HolmesMow(Material, D3):
     """Holmes-Mow coupled hyperelastic material.
 
     See page 73 of the FEBio theory manual, version 1.8.
@@ -1330,7 +1438,7 @@ class HolmesMow:
         return s
 
 
-class FungOrthotropicElastic(Material):
+class FungOrthotropicElastic(Material, D3):
     """Fung orthotropic elastic model"""
 
     # TODO: support open vs. closed intervals
@@ -1437,11 +1545,12 @@ class FungOrthotropicElastic(Material):
             )
         )
         σ_mat = 1 / J * F @ s_mat @ F.T
+        # TODO: parametrize bulk compression law; FEBio supports 3 laws
         σ_bulk = 1 / J * self.K * np.log(J) * np.eye(3)  # ∂U/∂J
         return σ_mat + σ_bulk
 
 
-class DeviatoricMooneyRivlin:
+class DeviatoricMooneyRivlin(Material, Uncoupled, D3):
     """Deviatoric Mooney–Rivlin material
 
     Matches deviatoric part of "Mooney-Rivlin" material in FEBio.
@@ -1458,19 +1567,26 @@ class DeviatoricMooneyRivlin:
         self.c1 = c1
         self.c2 = c2
 
-    def tstress(self, F, **kwargs):
-        """Cauchy stress tensor"""
+    def tilde_stress(self, F, **kwargs):
+        """Return σ_tilde stress
+
+        Cauchy stress σ = dev(σ_tilde).  σ_tilde gets a separate function to support
+        use of the material both alone and in a deviatoric mixture.
+
+        """
         J = np.linalg.det(F)
+        F_tilde = np.linalg.det(F) ** (-1 / 3) * F
         # everything defined after here is deviatoric
-        F = np.linalg.det(F) ** (-1 / 3) * F
-        C = F.T @ F
-        I1 = np.trace(C)
-        # ∂W/∂C = c1 I + c2 (I_1 - C.T)
-        σ = 2 / J * (self.c1 + self.c2 * (I1 - C.T)) * F @ F.T  # J is still real J
-        return deviatoric_stress(σ)
+        B = F_tilde @ F_tilde.T
+        I1 = np.trace(B)
+        # TODO: verify ∂W/∂C
+        σ = (
+            2 / J * (self.c1 * B + self.c2 * I1 * B - self.c2 * B @ B)
+        )  # J is still real J
+        return σ
 
 
-class DeviatoricHGOMatrix:
+class DeviatoricHGOMatrix(Material, Uncoupled, D3):
     """Deviatoric part of uncoupled Holzapfel–Gasser–Ogden material
 
     Matches deviatoric matrix part of "Holzapfel-Gasser-Ogden" material in FEBio.
@@ -1485,7 +1601,7 @@ class DeviatoricHGOMatrix:
     def __init__(self, μ):
         self.mu = μ
 
-    def tstress(self, F, **kwargs):
+    def tilde_stress(self, F, **kwargs):
         """Cauchy stress tensor"""
         J = np.linalg.det(F)
         # everything defined after here is deviatoric
@@ -1497,10 +1613,10 @@ class DeviatoricHGOMatrix:
         # t = 2/J F ∂W/∂C F'
         # ∂W/∂C = μ/2 I
         σ = 1 / J * μ * F @ F.T  # J is still real J
-        return deviatoric_stress(σ)
+        return σ
 
 
-class DeviatoricHGOFiber3D:
+class DeviatoricHGOFiber3D(Material, Uncoupled, D3):
     """3D formulation of an uncoupled Holzapfel–Gasser–Ogden fiber family
 
     Matches one fiber part (one summand) of "Holzapfel-Gasser-Ogden" material in FEBio.
@@ -1519,7 +1635,7 @@ class DeviatoricHGOFiber3D:
         self.exp_coef = α
         self.dispersion = κ
 
-    def tstress(self, F, **kwargs):
+    def tilde_stress(self, F, **kwargs):
         """Return Cauchy stress tensor"""
         ξ = self.modulus
         α = self.exp_coef
@@ -1536,10 +1652,10 @@ class DeviatoricHGOFiber3D:
         ddC_I4 = np.array([[1, 0, 0], [0, 0, 0], [0, 0, 0]])
         ddC_W = ξ * Ea * (κ * ddC_I1 + (1 - 3 * κ) * ddC_I4) * np.exp(α * Ea**2)
         σ = 2 / J * F @ ddC_W @ F.T  # J is still real J
-        return deviatoric_stress(σ)
+        return σ
 
 
-class VolumetricLinear:
+class VolumetricLinear(Material, D3):
     """Linear hydrostatic (bulk modulus) component"""
 
     # 1D (pressure) material like DonnanSwelling, but elastic (strain → zero strain)
@@ -1559,7 +1675,7 @@ class VolumetricLinear:
         return p * np.eye(3)
 
 
-class VolumetricLogInverse:
+class VolumetricLogInverse(Material, D3):
     """ln(J)/J hydrostatic (bulk modulus) component"""
 
     # 1D (pressure) material like DonnanSwelling, but elastic (strain → zero strain)
@@ -1579,7 +1695,7 @@ class VolumetricLogInverse:
         return p * np.eye(3)
 
 
-class VolumetricHGO:
+class VolumetricHGO(Material, D3):
     """J - J^-1 hydrostatic (bulk modulus) component
 
     Note that the 1/2 factor that FEBio uses is omitted here.

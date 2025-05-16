@@ -22,6 +22,11 @@ if not DIR_OUT.exists():
     DIR_OUT.mkdir()
 
 
+@pytest.fixture
+def pytest_request(request):
+    return request
+
+
 # Versions against which to test.
 
 # All tests that run FEBio should use every supported FEBio version.

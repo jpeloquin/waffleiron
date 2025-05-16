@@ -8,7 +8,11 @@ import numpy.testing as npt
 import waffleiron as wfl
 from waffleiron import Model, Step
 from waffleiron.control import auto_ticker
-from waffleiron.febioxml import UncoupledHGOFEBio, UncoupledMooneyRivlin
+from waffleiron.febioxml import (
+    UncoupledHGOFEBio,
+    UncoupledMooneyRivlin,
+    TransIsoMooneyRivlinFEBio,
+)
 from waffleiron.load import prescribe_deformation
 from waffleiron.material import *
 from waffleiron.mesh import rectangular_prism_hex8
@@ -25,6 +29,7 @@ from waffleiron.test.fixtures import (
     DIR_OUT,
     febio_cmd_xml,
     febio_3plus_cmd_xml,
+    pytest_request,
 )
 
 
@@ -554,6 +559,57 @@ def test_FEBio_UncoupledMooneyRivlin(febio_3plus_cmd_xml):
     npt.assert_allclose(σ_wfl, σ_febio, atol=ATOL_STRESS, rtol=0)
 
 
+@pytest.mark.parametrize(
+    "F",
+    (
+        np.diag([1.02, 1, 1]),
+        np.diag([1.100, 1, 1]),
+        np.array([[0.75, 0.03, 0.7], [0.025, 1.02, 0.06], [-0.7, 0.07, 0.7]]),
+    ),
+)
+def test_FEBio_UncoupledTransIsoMooneyRivlin(pytest_request, febio_3plus_cmd_xml, F):
+    """E2E test of FEBio "trans iso Mooney-Rivlin" material"""
+    febio_cmd, xml_version = febio_3plus_cmd_xml
+    # Generate model
+    mat = TransIsoMooneyRivlinFEBio(
+        c1=4.61,  # MPa
+        c2=2.91,  # MPa
+        c3=0.1197,
+        c4=150,
+        λ1=1.04,
+        c5=400,
+        bulk=VolumetricLogInverse(1.52e-19),
+    )
+    model = _create_model(mat, F)
+    nm = f"{Path(__file__).with_suffix('').name}." + pytest_request.node.name
+
+    # TODO: switch to roundtrip
+
+    # Test 1: Write
+    pth_out = DIR_OUT / (f"{nm}.feb")
+    if not pth_out.parent.exists():
+        pth_out.parent.mkdir()
+    with open(pth_out, "wb") as f:
+        wfl.output.write_feb(model, f, version=xml_version)
+
+    # Test 2: Solve: Can FEBio use the file?
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
+
+    # Test 3: Is the output as expected?
+    model = wfl.load_model(pth_out)
+    e = model.mesh.elements[0]
+
+    # Test 4.1: Do we see the correct applied displacements?  A test failure here
+    # means that there is a defect in the code that reads or writes the model.  Or,
+    # less likely, an FEBio bug.
+    F_obs = np.mean([e.f(r) for r in e.gloc], axis=0)
+    npt.assert_allclose(F_obs, F, atol=ATOL_F)
+    # Test 4.2: Do we see the correct stresses?
+    σ_wfl = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
+    σ_febio = model.solution.value("stress", step=1, entity_id=1, region_id=1)
+    npt.assert_allclose(σ_wfl, σ_febio, atol=5e-6, rtol=0)
+
+
 def test_FEBio_UncoupledHGO(febio_3plus_cmd_xml, F_cases_fibers):
     """E2E test of UncoupledHGOFEBio material"""
     febio_cmd, xml_version = febio_3plus_cmd_xml
@@ -670,39 +726,39 @@ def test_FEBio_LogInv2Fiber(febio_4plus_cmd_xml, F_cases_fibers):
     npt.assert_allclose(σ_wfl, σ_febio, atol=ATOL_STRESS)
 
 
-def test_FEBio_ExpεAndLinεDEFiber(febio_cmd_xml):
+@pytest.mark.parametrize("F", (np.diag([1.03, 1, 1]), np.diag([1.10, 1, 1])))
+def test_FEBio_ExpεAndLinεDEFiber(febio_cmd_xml, F):
     """E2E test of ExpεAndLinεDEFiber material"""
     febio_cmd, xml_version = febio_cmd_xml
 
-    for F in (np.diag([1.03, 1, 1]), np.diag([1.1, 1, 1])):
-        mat = OrientedMaterial(
-            ExpAndLinearDCFiber(ξ=0.21, α=9, λ0=1.05, E=19),
-            Q=np.array([1, 0, 0]),
-        )
-        model = _create_model(mat, F)
-        bn = f"{Path(__file__).with_suffix('').name}." + "ExpεAndLinεDEFiber"
+    mat = OrientedMaterial(
+        ExpAndLinearDCFiber(ξ=0.21, α=9, λ1=1.05, E=19),
+        Q=np.array([1, 0, 0]),
+    )
+    model = _create_model(mat, F)
+    bn = f"{Path(__file__).with_suffix('').name}." + "ExpεAndLinεDEFiber"
 
-        # TODO: switch to roundtrip
+    # TODO: switch to roundtrip
 
-        # Test 1: Write
-        pth_out = DIR_OUT / (f"{bn}.{febio_cmd}.xml{xml_version}.feb")
-        if not pth_out.parent.exists():
-            pth_out.parent.mkdir()
-        with open(pth_out, "wb") as f:
-            wfl.output.write_feb(model, f, version=xml_version)
+    # Test 1: Write
+    pth_out = DIR_OUT / (f"{bn}.{febio_cmd}.xml{xml_version}.feb")
+    if not pth_out.parent.exists():
+        pth_out.parent.mkdir()
+    with open(pth_out, "wb") as f:
+        wfl.output.write_feb(model, f, version=xml_version)
 
-        # Test 2: Solve: Can FEBio use the file?
-        wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
+    # Test 2: Solve: Can FEBio use the file?
+    wfl.febio.run_febio_checked(pth_out, cmd=febio_cmd, threads=1)
 
-        # Test 4: Is the output as expected?
-        model = wfl.load_model(pth_out)
-        e = model.mesh.elements[0]
-        # Test 4.1: Do we see the correct applied displacements?  A test failure here
-        # means that there is a defect in the code that reads or writes the model.  Or,
-        # less likely, an FEBio bug.
-        F_obs = np.mean([e.f(r) for r in e.gloc], axis=0)
-        npt.assert_allclose(F_obs, F, atol=ATOL_F)
-        # Test 4.2: Do we see the correct stresses?
-        σ_wfl = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
-        σ_febio = model.solution.value("stress", step=1, entity_id=1, region_id=1)
-        npt.assert_allclose(σ_wfl, σ_febio, atol=ATOL_STRESS)
+    # Test 4: Is the output as expected?
+    model = wfl.load_model(pth_out)
+    e = model.mesh.elements[0]
+    # Test 4.1: Do we see the correct applied displacements?  A test failure here
+    # means that there is a defect in the code that reads or writes the model.  Or,
+    # less likely, an FEBio bug.
+    F_obs = np.mean([e.f(r) for r in e.gloc], axis=0)
+    npt.assert_allclose(F_obs, F, atol=ATOL_F)
+    # Test 4.2: Do we see the correct stresses?
+    σ_wfl = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
+    σ_febio = model.solution.value("stress", step=1, entity_id=1, region_id=1)
+    npt.assert_allclose(σ_wfl, σ_febio, atol=ATOL_STRESS)
