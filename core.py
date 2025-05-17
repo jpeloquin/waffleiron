@@ -304,6 +304,9 @@ class Sequence:
         self.steplocal = steplocal
 
 
+# TODO: Make ScaledSequence a Sequence
+
+
 class ScaledSequence:
     """A time-varying sequence proportional to another sequence.
 

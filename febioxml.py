@@ -340,6 +340,32 @@ def read_referentially_transiso_permeability(e, seqs: dict, solid_volume_fractio
     )
 
 
+def read_prony_viscoelasticity(e, seqs: dict):
+    """Return PronyViscoelasticity material"""
+    γ = np.full(6, np.nan)
+    τ = np.full(6, np.nan)
+    n = 0
+    for i in range(0, 6):
+        e_γi = find_unique_tag(e, f"g{i + 1}", req=False)
+        e_τi = find_unique_tag(e, f"t{i + 1}", req=False)
+        if e_γi is not None and e_τi is not None:
+            n = i + 1
+        γ[i] = find_and_read_parameter(e, f"g{i + 1}", seqs, default=0)
+        τ[i] = find_and_read_parameter(e, f"t{i + 1}", seqs, default=1)
+    γ = γ[:n]
+    τ = τ[:n]
+    # γ0
+    e_γ0 = find_unique_tag(e, "g0", req=False)
+    if e_γ0 is not None:
+        γ0 = read_parameter(e_γ0, seqs)
+        if isinstance(γ0, (Sequence, ScaledSequence)):
+            raise ValueError("γ0 should always be 1")
+        γ = γ / γ0
+    e_material = find_unique_tag(e, "elastic", req=True)
+    material = xml_material_reader[e_material.attrib["type"]](e_material, seqs)
+    return matlib.PronyViscoelasticity(material, γ, τ)
+
+
 def read_rigid_material(e, seqs: dict):
     """Return rigid body material"""
     # Monkey-patch the center of mass into the material object; that seems the most
@@ -366,6 +392,7 @@ xml_material_reader = {
     "biphasic": read_biphasic,
     "perm-exp-iso": read_isotropic_exponential_permeability,
     "perm-ref-trans-iso": read_referentially_transiso_permeability,
+    "viscoelastic": read_prony_viscoelasticity,
     "rigid body": read_rigid_material,
 }
 
@@ -406,6 +433,7 @@ physics_compat_by_mat = {
     matlib.ExponentialFiber: {Physics.SOLID, Physics.BIPHASIC},
     matlib.HolmesMow: {Physics.SOLID, Physics.BIPHASIC},
     matlib.NeoHookean: {Physics.SOLID, Physics.BIPHASIC},
+    matlib.PronyViscoelasticity: {Physics.SOLID, Physics.BIPHASIC},
 }
 
 
@@ -789,6 +817,15 @@ def read_parameter(e, sequence_registry: dict[int, Sequence]):
     else:
         # The property is fixed
         return to_number(e.text)
+
+
+def find_and_read_parameter(root, path, seqs: dict[int, Sequence], default=None):
+    """Find a scalar parameter's XML element and return its value"""
+    e = find_unique_tag(root, path, req=default is None)
+    if e is not None:
+        return read_parameter(e, seqs)
+    else:
+        return default
 
 
 def read_parameters(xml, paramdict):

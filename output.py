@@ -464,6 +464,22 @@ def uncoupled_HGO_to_feb(mat: febioxml.UncoupledHGOFEBio, model) -> ElementTree:
     return e
 
 
+@material_to_feb.register
+def prony_viscoelasticity_to_feb(
+    mat: matlib.PronyViscoelasticity, model
+) -> ElementTree:
+    """Convert PronyViscoelasticity material instance to FEBio XML"""
+    e = etree.Element("material", type="viscoelastic")
+    etree.SubElement(e, "g0").text = "1"
+    for i, (γ, τ) in enumerate(zip(mat.γ, mat.τ)):
+        e.append(property_to_xml(γ, f"g{i + 1}", model.named["sequences"]))
+        e.append(property_to_xml(γ, f"t{i + 1}", model.named["sequences"]))
+    e_solid = material_to_feb(mat.material, model)
+    e_solid.tag = "elastic"  # unfortunate that FEBio tag names are context-dependent
+    e.append(e_solid)
+    return e
+
+
 ########################################
 # End of material conversion functions #
 ########################################

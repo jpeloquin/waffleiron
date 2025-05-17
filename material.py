@@ -590,11 +590,36 @@ class TransIsoHolmesMowPermeability(Constituent, Permeability):
         self.Mt = Mt
         self.αt = αt
         self.φ0_s = φ0_s
+
+
+class PronyViscoelasticity(Constituent):
+    """Prony series relaxation fucntion viscoelasticity
+
+    Approximates QLV.
+
+    """
+
+    # TODO: Not sure yet how to implement time-dependent calculations.  Viscoelasticity
+    # needs the whole stress history, which would need an interpolant for numerical
+    # integration.
+    bounds = {
+        "γ": (0, 1),  # 0 ≤ γ ≤ 1
+        "τ": (0, inf),  # 0 < τ < ∞
+    }
+
+    def __init__(self, material, γ, τ):
+        self.material = material
+        self.γ = np.atleast_1d(γ) / sum(γ)
+        self.τ = np.atleast_1d(τ)
+        if len(self.γ) != len(self.τ):
+            raise ValueError(
+                f"len(γ)={len(self.γ)} and len(τ)={len(self.τ)}.  γ and τ must have the same number of values."
+            )
         super().__init__()
 
 
 class PoroelasticSolid(D3):
-    """Fluid-saturated solid."""
+    """Fluid-saturated solid"""
 
     def __init__(
         self, solid, permeability: Permeability, solid_fraction, fluid_density=0
