@@ -362,7 +362,7 @@ def read_prony_viscoelasticity(e, seqs: dict):
             raise ValueError("γ0 should always be 1")
         γ = γ / γ0
     e_material = find_unique_tag(e, "elastic", req=True)
-    material = xml_material_reader[e_material.attrib["type"]](e_material, seqs)
+    material = read_material(e_material, seqs)
     return matlib.PronyViscoelasticity(material, γ, τ)
 
 
@@ -408,6 +408,7 @@ material_from_xml_name = {
     "orthotropic elastic": matlib.OrthotropicLinearElastic,
 }
 material_name_from_class = {v: k for k, v in material_from_xml_name.items()}
+
 
 orientation_distribution_from_xml_type = {
     "ellipsoidal": matlib.EllipsoidalDistribution,
