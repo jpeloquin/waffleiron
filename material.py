@@ -610,6 +610,8 @@ class PronyViscoelasticity(Constituent):
     def __init__(self, material, γ, τ):
         self.material = material
         self.γ = np.atleast_1d(γ)
+        if sum(self.γ) > 1:
+            raise InvalidParameterError(f"sum(γ) ≤ 1 required.")
         self.τ = np.atleast_1d(τ)
         if len(self.γ) != len(self.τ):
             raise ValueError(
