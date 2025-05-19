@@ -514,11 +514,12 @@ class IsotropicConstantPermeability(Constituent, Permeability):
 class IsotropicExponentialPermeability(Constituent, Permeability):
     """Isotropic exponential permeability"""
 
-    bounds = {"k0": (0, inf), "M": (0, inf)}
+    bounds = {"k0": (0, inf), "M": (0, inf), "φ0_s": (0, 1)}
 
-    def __init__(self, k0, M, **kwargs):
+    def __init__(self, k0, M, φ0_s, **kwargs):
         self.k0 = k0
         self.M = M
+        self.φ0_s = φ0_s
         super().__init__()
 
 
@@ -533,7 +534,7 @@ class IsotropicHolmesMowPermeability(Constituent, Permeability):
         "k0": (0, inf),
         "M": (0, inf),
         "α": (0, inf),
-        "φ0_s": (0, inf),
+        "φ0_s": (0, 1),
     }
 
     def __init__(self, k0, M, α, φ0_s, **kwargs):
@@ -574,7 +575,7 @@ class TransIsoHolmesMowPermeability(Constituent, Permeability):
         "k2t": (0, inf),  # *can* be zero
         "Mt": (0, inf),
         "αt": (0, inf),
-        "φ0_s": (0, inf),
+        "φ0_s": (0, 1),
     }
 
     def __init__(self, k0, M0, α0, k1a, k2a, Ma, αa, k1t, k2t, Mt, αt, φ0_s, **kwargs):

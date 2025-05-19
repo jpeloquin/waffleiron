@@ -312,17 +312,22 @@ def read_biphasic(e, seqs: dict):
     return matlib.PoroelasticSolid(solid, permeability, solid_fraction)
 
 
-def read_isotropic_exponential_permeability(e, seqs: dict, **kwargs):
+def read_isotropic_exponential_permeability(
+    e, seqs: dict, solid_volume_fraction, **kwargs
+):
     """Return isotropic exponential permeability law"""
     # kwargs needed because some permeability laws need solid volume fraction,
     # which FEBio does not store in the permeability XML element
     return matlib.IsotropicExponentialPermeability(
         k0=read_parameter(find_unique_tag(e, "perm", req=True), seqs),
         M=read_parameter(find_unique_tag(e, "M", req=True), seqs),
+        φ0_s=solid_volume_fraction,
     )
 
 
-def read_referentially_transiso_permeability(e, seqs: dict, solid_volume_fraction):
+def read_referentially_transiso_permeability(
+    e, seqs: dict, solid_volume_fraction, **kwargs
+):
     """Return transversely isotropic Holmes–Mow permeability law"""
     return matlib.TransIsoHolmesMowPermeability(
         k0=read_parameter(find_unique_tag(e, "perm0", req=True), seqs),
