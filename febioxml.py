@@ -30,7 +30,7 @@ from .element import Hex27, Quad4, Tri3, Hex8, Penta6, Element
 from . import material as matlib, FaceSet, ElementSet
 from .material import (
     EllipsoidalDistribution,
-    DeviatoricHGOMatrix,
+    DeviatoricNeoHookean,
     OrientedMaterial,
     DeviatoricHGOFiber3D,
     SolidMixture,
@@ -116,7 +116,7 @@ class UncoupledHGOFEBio(D3):
 
     def __init__(self, c, k1, k2, γ, κ, K):
         self.azimuth = γ
-        self.matrix = DeviatoricHGOMatrix(μ=c)
+        self.matrix = DeviatoricNeoHookean(μ=c)
         self.fiber_pos = OrientedMaterial(
             DeviatoricHGOFiber3D(ξ=k1, α=k2, κ=κ),
             np.array(

@@ -1652,10 +1652,11 @@ class DeviatoricMooneyRivlin(Constituent, Uncoupled, D3):
         return σ
 
 
-class DeviatoricHGOMatrix(Constituent, Uncoupled, D3):
-    """Deviatoric part of uncoupled Holzapfel–Gasser–Ogden material
+class DeviatoricNeoHookean(Constituent, Uncoupled, D3):
+    """Deviatoric neo-Hookean model
 
     Matches deviatoric matrix part of "Holzapfel-Gasser-Ogden" material in FEBio.
+    FEBio does not provide the deviatoric neo-Hookean material separately.
 
     """
 
@@ -1665,7 +1666,7 @@ class DeviatoricHGOMatrix(Constituent, Uncoupled, D3):
     }
 
     def __init__(self, μ):
-        self.mu = μ
+        self.μ = μ
         super().__init__()
 
     def tilde_stress(self, F, **kwargs):
@@ -1675,7 +1676,7 @@ class DeviatoricHGOMatrix(Constituent, Uncoupled, D3):
         F = np.linalg.det(F) ** (-1 / 3) * F
         C = F.T @ F
         I1 = np.trace(C)
-        μ = self.mu
+        μ = self.μ
         # w = 0.5 * μ * (I1 - 3)
         # t = 2/J F ∂W/∂C F'
         # ∂W/∂C = μ/2 I
@@ -1698,16 +1699,16 @@ class DeviatoricHGOFiber3D(Constituent, Uncoupled, D3):
     }
 
     def __init__(self, ξ, α, κ):
-        self.modulus = ξ
-        self.exp_coef = α
-        self.dispersion = κ
+        self.ξ = ξ  # modulus
+        self.α = α  # exponential coefficient
+        self.κ = κ  # dispersion
         super().__init__()
 
     def tilde_stress(self, F, **kwargs):
         """Return Cauchy stress tensor"""
-        ξ = self.modulus
-        α = self.exp_coef
-        κ = self.dispersion
+        ξ = self.ξ
+        α = self.α
+        κ = self.κ
         J = np.linalg.det(F)
         # everything defined after here is deviatoric
         F = np.linalg.det(F) ** (-1 / 3) * F

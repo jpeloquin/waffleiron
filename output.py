@@ -447,16 +447,10 @@ def uncoupled_HGO_to_feb(mat: febioxml.UncoupledHGOFEBio, model) -> ElementTree:
     # Holzapfel-Gasser-Ogden was introduced in FEBio 3.2.
     e = etree.Element("material", type="Holzapfel-Gasser-Ogden")
     e.append(property_to_xml(mat.matrix.μ, "c", model.named["sequences"]))
+    e.append(property_to_xml(mat.fiber_pos.material.ξ, "k1", model.named["sequences"]))
+    e.append(property_to_xml(mat.fiber_pos.material.α, "k2", model.named["sequences"]))
     e.append(
-        property_to_xml(mat.fiber_pos.material.modulus, "k1", model.named["sequences"])
-    )
-    e.append(
-        property_to_xml(mat.fiber_pos.material.exp_coef, "k2", model.named["sequences"])
-    )
-    e.append(
-        property_to_xml(
-            mat.fiber_pos.material.dispersion, "kappa", model.named["sequences"]
-        )
+        property_to_xml(mat.fiber_pos.material.κ, "kappa", model.named["sequences"])
     )
     e.append(property_to_xml(mat.azimuth, "gamma", model.named["sequences"]))
     e.append(property_to_xml(mat.bulk.K, "k", model.named["sequences"]))
