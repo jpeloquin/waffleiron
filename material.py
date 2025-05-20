@@ -180,6 +180,17 @@ def from_Lamé(y, u):
     return E, v
 
 
+def invariants(F):
+    C = F.T @ F
+    I1 = np.linalg.trace(C)
+    I2 = 0.5 * (I1**2 - np.linalg.trace(C @ C))
+    I3 = np.linalg.det(C)
+    M0 = np.array([[1, 0, 0], [0, 0, 0], [0, 0, 0]])
+    I4 = np.tensordot(M0, C)
+    I5 = np.tensordot(M0, C @ C)
+    return I1, I2, I3, I4, I5, M0
+
+
 def orthotropic_elastic_compliance_matrix(E1, E2, E3, G12, G23, G31, ν12, ν23, ν31):
     """Return stiffness matrix for an orthotropic material with standard E, G, ν"""
     ν13 = ν31 * E1 / E3
@@ -1674,8 +1685,10 @@ class TransIsoExponential(Constituent, D3):
 
     """
 
-    # TOOD: not sure what real bounds are
+    # True bounds are not clear to me.  Almeida_Spilker_1998 and Haemer_Giori_2012 used
+    # negative values for some α.
     bounds = {
+        # α0 should be positive; if it is negative, Ψ will be negative
         "α0": (0, inf),
         "α1": (-inf, inf),
         "α2": (-inf, inf),
@@ -1697,20 +1710,15 @@ class TransIsoExponential(Constituent, D3):
         self.β = α1 + 2 * α2
         super().__init__()
 
-    def tstress(self, F, **kwargs):
-        """Return Cauchy stress tensor"""
-        J = np.linalg.det(F)
-        return 1 / J * F @ self.sstress(F, **kwargs) @ F.T
+        C = self.material_elasticity(np.eye(3))
+        if not is_positive_definite(C):
+            raise InvalidParameterError(
+                "Elasticity tensor is not positive definite at zero strain"
+            )
 
-    def sstress(self, F, **kwargs):
-        """Return 2nd Piola–Kirchoff stress tensor"""
-        C = F.T @ F
-        I1 = np.linalg.trace(C)
-        I2 = 0.5 * (I1**2 - np.linalg.trace(C @ C))
-        I3 = np.linalg.det(C)
-        M0 = np.array([[1, 0, 0], [0, 0, 0], [0, 0, 0]])
-        I4 = np.tensordot(M0, C)
-        I5 = np.tensordot(M0, C @ C)
+    def w(self, F, **kwargs):
+        """Return strain energy density"""
+        I1, I2, I3, I4, I5, M0 = invariants(F)
         Ψ = (
             self.α0
             / I3**self.β
@@ -1724,6 +1732,18 @@ class TransIsoExponential(Constituent, D3):
                 + self.α7 * (I5 - 1)
             )
         )
+        return Ψ
+
+    def tstress(self, F, **kwargs):
+        """Return Cauchy stress tensor"""
+        J = np.linalg.det(F)
+        return 1 / J * F @ self.sstress(F, **kwargs) @ F.T
+
+    def sstress(self, F, **kwargs):
+        """Return 2nd Piola–Kirchoff stress tensor"""
+        C = F.T @ F
+        I1, I2, I3, I4, I5, M0 = invariants(F)
+        Ψ = self.w(F)
         dΨdI1 = Ψ * (self.α1 + 2 * self.α3 * (I1 - 3) + self.α6 * (I4 - 1))
         dΨdI2 = Ψ * self.α2
         dΨdI3 = Ψ * -self.β / I3
@@ -1737,6 +1757,83 @@ class TransIsoExponential(Constituent, D3):
             + dΨdI5 * (M0 @ C + C @ M0)
         )
         return 2 * dΨdC
+
+    def material_elasticity(self, F):
+        """Return elasticity tensor in material configuration"""
+        C = F.T @ F
+        Cinv = np.linalg.inv(C)
+        I1 = np.linalg.trace(C)
+        I2 = 0.5 * (I1**2 - np.linalg.trace(C @ C))
+        I3 = np.linalg.det(C)
+        M0 = np.array([[1, 0, 0], [0, 0, 0], [0, 0, 0]])
+        I4 = np.tensordot(M0, C)
+        I5 = np.tensordot(M0, C @ C)
+        # ψi = ∂Ψ/∂I_i
+        # ψij = ∂Ψ/(∂I_i ∂I_k)
+        Ψ = self.w(F)
+        Ψ1 = Ψ * (self.α1 + 2 * self.α3 * (I1 - 3) + self.α6 * (I4 - 1))
+        Ψ2 = Ψ * self.α2
+        Ψ3 = Ψ * -self.β / I3
+        Ψ4 = Ψ * (self.α4 + 2 * self.α5 * (I4 - 1) + self.α6 * (I1 - 3))
+        Ψ5 = Ψ * self.α7
+        n = self.β
+        Ψ11 = Ψ * 2 * self.α3 + Ψ1 * (
+            self.α1 + 2 * self.α3 * (I1 - 3) + self.α6 * (I4 - 1)
+        )
+        Ψ21 = Ψ2 * (self.α1 + 2 * self.α3 * (I1 - 3) + self.α6 * (I4 - 1))
+        Ψ22 = self.α2 * Ψ2
+        Ψ31 = Ψ3 * (self.α1 + 2 * self.α3 * (I1 - 3) + self.α6 * (I4 - 1))
+        Ψ32 = self.α3 * Ψ3
+        Ψ33 = n / I3**2 * Ψ + -n / I3 * Ψ3
+        Ψ41 = self.α6 + Ψ4 * (self.α1 + 2 * self.α3 * (I1 - 3) + self.α6 * (I4 - 1))
+        Ψ42 = self.α2 * Ψ4
+        Ψ43 = -n / I3 * Ψ4
+        Ψ44 = 2 * self.α5 * Ψ + Ψ4 * (
+            self.α4 + 2 * self.α5 * (I4 - 1) + self.α6 * (I1 - 3)
+        )
+        Ψ51 = Ψ4 * (self.α1 + 2 * self.α3 * (I1 - 3) + self.α6 * (I4 - 1))
+        Ψ52 = self.α2 * Ψ5
+        Ψ53 = -n / I3 * Ψ5
+        Ψ54 = Ψ5 * (self.α4 + 2 * self.α5 * (I4 - 1) + self.α6 * (I1 - 3))
+        Ψ55 = self.α7 * Ψ5
+
+        I = np.einsum("ia,jb->ijab", np.eye(3), np.eye(3))
+        ICinv = np.full((3, 3, 3, 3), np.nan)
+        # probalby a simpler way to express this but I don't recognize the formula
+        for i in range(3):
+            for j in range(3):
+                for a in range(3):
+                    for b in range(3):
+                        ICinv[i, j, a, b] = -0.5 * (
+                            Cinv[i, a] * Cinv[j, b] + Cinv[i, b] * Cinv[j, a]
+                        )
+
+        dyadic = np.multiply.outer
+        d2ΨdCdC = (
+            (Ψ2 + Ψ11 + 2 * I1 * Ψ21 + I1**2 * Ψ22) * dyadic(np.eye(3), np.eye(3))
+            - (Ψ21 + I1 * Ψ22) * (dyadic(np.eye(3), C) + dyadic(C, np.eye(3)))
+            + I3
+            * (Ψ31 + I1 * Ψ32)
+            * (dyadic(np.eye(3), Cinv) + dyadic(Cinv, np.eye(3)))
+            + (Ψ41 + I1 * Ψ42) * (dyadic(np.eye(3), M0) + dyadic(M0, np.eye(3)))
+            + (Ψ51 + I1 * Ψ52)
+            * (dyadic(np.eye(3), M0 @ C + C @ M0) + dyadic(M0 @ C + C @ M0, np.eye(3)))
+            + Ψ22 * dyadic(C, C)
+            - I3 * Ψ32 * (dyadic(C, Cinv) + dyadic(Cinv, C))
+            - Ψ42 * (dyadic(C, M0) + dyadic(M0, C))
+            - Ψ52 * (dyadic(C, M0 @ C + C @ M0) + dyadic(M0 @ C + C @ M0, C))
+            + I3 * (Ψ3 + I3 * Ψ33) * dyadic(Cinv, Cinv)
+            + I3 * Ψ43 * (dyadic(Cinv, M0) + dyadic(M0, Cinv))
+            + I3 * Ψ53 * dyadic(Cinv, M0 @ C + C @ M0)
+            + dyadic(M0 @ C + C @ M0, Cinv)
+            + Ψ44 * dyadic(M0, M0)
+            + Ψ54 * (dyadic(M0, M0 @ C + C @ M0) + dyadic(M0 @ C + C @ M0, M0))
+            + Ψ55 * (dyadic(M0 @ C + C @ M0, M0 @ C + C @ M0))
+            - Ψ2 * I
+            + I3 * Ψ3 * ICinv
+            + Ψ5 * (M0 @ I + I @ M0)
+        )
+        return 4 * d2ΨdCdC
 
 
 class DeviatoricMooneyRivlin(Constituent, Uncoupled, D3):
