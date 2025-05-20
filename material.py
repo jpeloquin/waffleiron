@@ -346,13 +346,21 @@ class Constituent:
         self.check_parameters_bounds()
 
     def check_parameters_bounds(self):
+        def _check(v, bounds):
+            if not bounds[0] <= v <= bounds[1]:
+                raise InvalidParameterError(
+                    f"{k} = {v} must be within {self.bounds[k]}"
+                )
+
         for k in self.bounds:
             values = np.atleast_1d(getattr(self, k))  # handle vector params
             for v in values:
-                if not self.bounds[k][0] <= v <= self.bounds[k][1]:
-                    raise InvalidParameterError(
-                        f"{k} = {v} must be within {self.bounds[k]}"
-                    )
+                if isinstance(v, (Sequence, ScaledSequence)):
+                    # TODO: Figure out how to check whole sequence
+                    for _, y in v.points:
+                        _check(y, self.bounds[k])
+                else:
+                    _check(v, self.bounds[k])
 
 
 class Uncoupled:
