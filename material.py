@@ -699,7 +699,7 @@ class DonnanSwelling(Constituent, D3):
         "fcd0": (0, inf),
         "phi0_w": (0, 1),  # open interval
         "ext_osm": (0, inf),
-        "osm_coeff": (0, 1),
+        "osm_coef": (0, 1),
     }
 
     def __init__(self, phi0_w, fcd0, ext_osm, osm_coef, **kwargs):
