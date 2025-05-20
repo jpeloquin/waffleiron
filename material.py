@@ -1615,6 +1615,67 @@ class FungOrthotropicElastic(Constituent, D3):
         return σ_mat + σ_bulk
 
 
+class TransIsoExponential(Constituent, D3):
+    """Transversely isotropic general exponential material
+
+    From Almeida_Spilker_1998.  Not available in FEBio.
+
+    """
+
+    def __init__(self, α0, α1, α2, α3, α4, α5, α6):
+        self.α0 = α0
+        self.α1 = α1
+        self.α2 = α2
+        self.α3 = α3
+        self.α4 = α4
+        self.α5 = α5
+        self.α6 = α6
+        self.α7 = -α4 / 2
+        self.n = α1 + 2 * α2
+        super().__init__()
+
+    def tstress(self, F, **kwargs):
+        """Return Cauchy stress tensor"""
+        J = np.linalg.det(F)
+        return 1 / J * F @ self.sstress(F, **kwargs) @ F.T
+
+    def sstress(self, F, **kwargs):
+        """Return 2nd Piola–Kirchoff stress tensor"""
+        C = F.T @ F
+        I1 = np.linalg.trace(C)
+        I2 = 0.5 * (I1**2 - np.linalg.trace(C @ C))
+        I3 = np.linalg.det(C)
+        M0 = np.array([[1, 0, 0], [0, 0, 0], [0, 0, 0]])
+        I4 = np.tensordot(M0, C)
+        I5 = np.tensordot(M0, C @ C)
+        Ψ = (
+            self.α0
+            / I3**self.n
+            * np.exp(
+                self.α1 * (I1 - 3)
+                + self.α2 * (I2 - 3)
+                + self.α3 * (I1 - 3) ** 2
+                + self.α4 * (I4 - 1)
+                + self.α5 * (I4 - 1) ** 2
+                + self.α6 * (I1 - 3) * (I4 - 1)
+                + self.α7 * (I5 - 1)
+            )
+        )
+        dΨdI1 = Ψ * (self.α1 + 2 * self.α3 * (I1 - 3) + self.α6 * (I4 - 1))
+        dΨdI2 = Ψ * self.α2
+        dΨdI3 = Ψ * -self.n / I3
+        dΨdI4 = Ψ * (self.α4 + 2 * self.α5 * (I4 - 1) + self.α6 * (I1 - 3))
+        dΨdI5 = Ψ * self.α7
+        dΨdC = (
+            (dΨdI1 + I1 * dΨdI2) * np.eye(3)
+            - dΨdI2 * C
+            + I3 * dΨdI3 * np.linalg.inv(C)
+            + dΨdI4 * M0
+            + dΨdI5 * (M0 @ C + C @ M)
+        )
+        return 2 * dΨdC
+
+
 class DeviatoricMooneyRivlin(Constituent, Uncoupled, D3):
     """Deviatoric Mooney–Rivlin material
 
