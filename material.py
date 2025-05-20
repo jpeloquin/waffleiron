@@ -1676,7 +1676,7 @@ class TransIsoExponential(Constituent, D3):
 
     # TOOD: not sure what real bounds are
     bounds = {
-        "α0": (-inf, inf),
+        "α0": (0, inf),
         "α1": (-inf, inf),
         "α2": (-inf, inf),
         "α3": (-inf, inf),
