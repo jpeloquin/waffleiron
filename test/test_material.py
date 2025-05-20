@@ -58,8 +58,8 @@ def test_orthotropic_stiffness_compliance_equivalence():
             "ν31": 0.4,
         }
     )
-    C = orthotropic_elastic_stiffness_matrix(mat)
-    S = orthotropic_elastic_compliance_matrix(mat)
+    C = orthotropic_elastic_stiffness_matrix_from_mat(mat)
+    S = orthotropic_elastic_compliance_matrix_from_mat(mat)
     npt.assert_array_almost_equal(C, np.linalg.inv(S))
     npt.assert_array_almost_equal(S, np.linalg.inv(C))
 

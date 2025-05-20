@@ -180,20 +180,11 @@ def from_Lamé(y, u):
     return E, v
 
 
-def orthotropic_elastic_compliance_matrix(material):
+def orthotropic_elastic_compliance_matrix(E1, E2, E3, G12, G23, G31, ν12, ν23, ν31):
     """Return stiffness matrix for an orthotropic material with standard E, G, ν"""
-    E1 = material.E1
-    E2 = material.E2
-    E3 = material.E3
-    G12 = material.G12
-    G23 = material.G23
-    G31 = material.G31
-    ν12 = material.ν12
-    ν13 = material.ν31 * material.E1 / material.E3
-    ν21 = material.ν12 * material.E2 / material.E1
-    ν23 = material.ν23
-    ν31 = material.ν31
-    ν32 = material.ν23 * material.E3 / material.E2
+    ν13 = ν31 * E1 / E3
+    ν21 = ν12 * E2 / E1
+    ν32 = ν23 * E3 / E2
     S = np.array(
         [
             [1 / E1, -ν21 / E2, -ν31 / E3, 0, 0, 0],
@@ -207,20 +198,26 @@ def orthotropic_elastic_compliance_matrix(material):
     return S
 
 
-def orthotropic_elastic_stiffness_matrix(material):
+def orthotropic_elastic_compliance_matrix_from_mat(material):
     """Return stiffness matrix for an orthotropic material with standard E, G, ν"""
-    E1 = material.E1
-    E2 = material.E2
-    E3 = material.E3
-    G12 = material.G12
-    G23 = material.G23
-    G31 = material.G31
-    ν12 = material.ν12
-    ν13 = material.ν31 * material.E1 / material.E3
-    ν21 = material.ν12 * material.E2 / material.E1
-    ν23 = material.ν23
-    ν31 = material.ν31
-    ν32 = material.ν23 * material.E3 / material.E2
+    return orthotropic_elastic_compliance_matrix(
+        E1=material.E1,
+        E2=material.E2,
+        E3=material.E3,
+        G12=material.G12,
+        G23=material.G23,
+        G31=material.G31,
+        ν12=material.ν12,
+        ν23=material.ν23,
+        ν31=material.ν31,
+    )
+
+
+def orthotropic_elastic_stiffness_matrix(E1, E2, E3, G12, G23, G31, ν12, ν23, ν31):
+    """Return stiffness matrix for an orthotropic material with standard E, G, ν"""
+    ν13 = ν31 * E1 / E3
+    ν21 = ν12 * E2 / E1
+    ν32 = ν23 * E3 / E2
     a = 1 - ν12 * ν21 - ν23 * ν32 - ν31 * ν13 - 2 * ν12 * ν23 * ν31
     C = np.array(
         [
@@ -254,6 +251,53 @@ def orthotropic_elastic_stiffness_matrix(material):
         ]
     )
     return C
+
+
+def orthotropic_elastic_stiffness_matrix_from_mat(material):
+    """Return stiffness matrix for an orthotropic material with standard E, G, ν"""
+    return orthotropic_elastic_stiffness_matrix(
+        E1=material.E1,
+        E2=material.E2,
+        E3=material.E3,
+        G12=material.G12,
+        G23=material.G23,
+        G31=material.G31,
+        ν12=material.ν12,
+        ν23=material.ν23,
+        ν31=material.ν31,
+    )
+
+
+def trans_iso_elastic_stiffness_matrix(E1, E2, G12, ν12, ν23):
+    """Return stiffness matrix for a transversely isotropic elastic material"""
+    ν21 = ν12 * E2 / E1
+    return orthotropic_elastic_stiffness_matrix(
+        E1=E1,
+        E2=E2,
+        E3=E2,
+        G12=G12,
+        G31=G12,
+        G23=0.5 * E2 / (1 + ν23),
+        ν12=ν12,
+        ν23=ν23,
+        ν31=ν21,
+    )
+
+
+def trans_iso_elastic_compliance_matrix(E1, E2, G12, ν12, ν23):
+    """Return compliance matrix for a transversely isotropic elastic material"""
+    ν21 = ν12 * E2 / E1
+    return orthotropic_elastic_compliance_matrix(
+        E1=E1,
+        E2=E2,
+        E3=E2,
+        G12=G12,
+        G31=G12,
+        G23=0.5 * E2 / (1 + ν23),
+        ν12=ν12,
+        ν23=ν23,
+        ν31=ν21,
+    )
 
 
 def is_positive_definite(A):
@@ -1291,8 +1335,8 @@ class OrthotropicLinearElastic(Constituent, D3):
         super().__init__()
 
         # Verify parameter values
-        S = orthotropic_elastic_compliance_matrix(self)
-        if not is_positive_definite(S):
+        C = orthotropic_elastic_stiffness_matrix_from_mat(self)
+        if not is_positive_definite(C):
             raise InvalidParameterError("Stiffness matrix is not positive definite.")
 
         # Derived properties
@@ -1549,7 +1593,7 @@ class FungOrthotropicElastic(Constituent, D3):
         super().__init__()
 
         # Verify parameter values
-        S = orthotropic_elastic_compliance_matrix(self)
+        S = orthotropic_elastic_compliance_matrix_from_mat(self)
         if not is_positive_definite(S):
             raise InvalidParameterError("Stiffness matrix is not positive definite.")
 
@@ -1622,6 +1666,17 @@ class TransIsoExponential(Constituent, D3):
 
     """
 
+    # TOOD: not sure what real bounds are
+    bounds = {
+        "α0": (-inf, inf),
+        "α1": (-inf, inf),
+        "α2": (-inf, inf),
+        "α3": (-inf, inf),
+        "α4": (-inf, inf),
+        "α5": (-inf, inf),
+        "α6": (-inf, inf),
+    }
+
     def __init__(self, α0, α1, α2, α3, α4, α5, α6):
         self.α0 = α0
         self.α1 = α1
@@ -1631,7 +1686,7 @@ class TransIsoExponential(Constituent, D3):
         self.α5 = α5
         self.α6 = α6
         self.α7 = -α4 / 2
-        self.n = α1 + 2 * α2
+        self.β = α1 + 2 * α2
         super().__init__()
 
     def tstress(self, F, **kwargs):
@@ -1650,7 +1705,7 @@ class TransIsoExponential(Constituent, D3):
         I5 = np.tensordot(M0, C @ C)
         Ψ = (
             self.α0
-            / I3**self.n
+            / I3**self.β
             * np.exp(
                 self.α1 * (I1 - 3)
                 + self.α2 * (I2 - 3)
@@ -1663,7 +1718,7 @@ class TransIsoExponential(Constituent, D3):
         )
         dΨdI1 = Ψ * (self.α1 + 2 * self.α3 * (I1 - 3) + self.α6 * (I4 - 1))
         dΨdI2 = Ψ * self.α2
-        dΨdI3 = Ψ * -self.n / I3
+        dΨdI3 = Ψ * -self.β / I3
         dΨdI4 = Ψ * (self.α4 + 2 * self.α5 * (I4 - 1) + self.α6 * (I1 - 3))
         dΨdI5 = Ψ * self.α7
         dΨdC = (
@@ -1671,7 +1726,7 @@ class TransIsoExponential(Constituent, D3):
             - dΨdI2 * C
             + I3 * dΨdI3 * np.linalg.inv(C)
             + dΨdI4 * M0
-            + dΨdI5 * (M0 @ C + C @ M)
+            + dΨdI5 * (M0 @ C + C @ M0)
         )
         return 2 * dΨdC
 
