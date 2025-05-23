@@ -1356,6 +1356,18 @@ class OrthotropicLinearElastic(Constituent, D3):
         self.ν23 = props["ν23"]
         self.ν31 = props["ν31"]
         super().__init__()
+        if self.E1 == 0:
+            raise InvalidParameterError("E1 = 0")
+        if self.E2 == 0:
+            raise InvalidParameterError("E2 = 0")
+        if self.E3 == 0:
+            raise InvalidParameterError("E3 = 0")
+        if self.G12 == 0:
+            raise InvalidParameterError("G12 = 0")
+        if self.G23 == 0:
+            raise InvalidParameterError("G23 = 0")
+        if self.G31 == 0:
+            raise InvalidParameterError("G31 = 0")
 
         # Verify parameter values
         C = orthotropic_elastic_stiffness_matrix_from_mat(self)
