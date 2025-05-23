@@ -907,12 +907,10 @@ class NaturalNeoHookeanFiber(Constituent, D1):
 class ExponentialFiber(Constituent, D1):
     """1D fiber with exponential power law.
 
-    Coupled formulation ("fiber-exp-pow" in FEBio < 3.5.1; more recent releases have
-    λ0).
+    Reduces to a power law if α = 0.  If β = 2, increasingly resembles neo-Hookean
+    fibers as α → 0.
 
-    References
-    ----------
-    FEBio users manual 2.9, page 144.
+    "fiber-exp-pow" in FEBio.  FEBio < 3.5.1 does not include λ0.
 
     """
 
@@ -920,12 +918,14 @@ class ExponentialFiber(Constituent, D1):
         "ξ": (0, inf),  # ξ > 0
         "α": (0, inf),  # α ≥ 0
         "β": (2, inf),  #  β ≥ 2
+        "λ0": (1, inf),
     }
 
-    def __init__(self, ξ, α, β):
+    def __init__(self, ξ, α, β, λ0=1):
         self.ξ = ξ
         self.α = α
         self.β = β
+        self.λ0 = λ0
         super().__init__()
 
     def w(self, λ):
@@ -934,7 +934,7 @@ class ExponentialFiber(Constituent, D1):
         α = self.α
         β = self.β
         ξ = self.ξ
-        Ψ = ξ / (α * β) * (exp(α * (λ**2 - 1) ** β) - 1)
+        Ψ = ξ / (α * β) * (exp(α * (λ**2 - self.λ0**2) ** β) - 1)
         return Ψ
 
     def stress(self, λ):
@@ -942,11 +942,15 @@ class ExponentialFiber(Constituent, D1):
         ξ = self.ξ
         α = self.α
         β = self.β
-        if λ <= 1:
+        if λ <= self.λ0:
             σ = 0
         else:
             with np.errstate(invalid="raise"):
-                dΨ_dλsq = ξ * (λ**2 - 1) ** (β - 1) * exp(α * (λ**2 - 1) ** β)
+                dΨ_dλsq = (
+                    ξ
+                    * (λ**2 - self.λ0**2) ** (β - 1)
+                    * exp(α * (λ**2 - self.λ0**2) ** β)
+                )
             # Use dΨ_dλsq instead of dΨ_dλ because this is the equivalent of dΨ/dC.
             σ = 2 * dΨ_dλsq
         return σ
