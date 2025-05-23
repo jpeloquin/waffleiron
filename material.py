@@ -1383,6 +1383,26 @@ class OrthotropicLinearElastic(Constituent, D3):
         self.Cλ = np.linalg.inv(self.Sλ) - 2 * np.diag(self.μ)
 
     @classmethod
+    def expand_trans_iso_params(cls, E1, E2, G12, ν12, ν23):
+        """Return orthotropic parameter set from transversely isotropic elastic parameters"""
+        if E1 == 0:
+            raise InvalidParameterError("ν23 = 0")
+
+        if ν23 == -1:
+            raise InvalidParameterError("ν23 = -1")
+        return {
+            "E1": E1,
+            "E2": E2,
+            "E3": E2,
+            "G12": G12,
+            "G23": 0.5 * E2 / (1 + ν23),
+            "G31": 0.5 * E2 / (1 + ν23),
+            "ν12": ν12,
+            "ν23": ν23,
+            "ν31": ν12 * E2 / E1,
+        }
+
+    @classmethod
     def from_feb(cls, E1, E2, E3, G12, G23, G31, v12, v23, v31, **kwargs):
         # parsing FEBio XML may call from_feb with extra kwargs
         return cls(
