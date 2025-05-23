@@ -1169,7 +1169,7 @@ class ExpAndLinearDCFiber(Constituent, D1):
     bounds = {
         "ξ": (0, inf),
         "α": (0, inf),
-        "λ1": (1, inf),  # FEBio has > 1; I don't see why λ0 = 1 is invalid
+        "λ1": (1, inf),  # > 1 or σ0 is negative (necessary, not sufficient)
         "E": (0, inf),  # linear modulus
     }
 
@@ -1179,6 +1179,7 @@ class ExpAndLinearDCFiber(Constituent, D1):
         self.λ1 = λ1  # transition stretch ratio
         self.E = E  # linear modulus
         self.σ0 = self.ξ * (np.exp(self.α * (self.λ1 - 1)) - 1) - self.E * self.λ1
+        # ^ shouldn't this impose a restriction on ξ, α, λ1, and E?
         super().__init__()
 
     def stress(self, λ, **kwargs):
