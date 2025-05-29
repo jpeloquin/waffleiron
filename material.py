@@ -1900,6 +1900,7 @@ class TransIsoExponential(Constituent, D3):
                         )
 
         dyadic = np.multiply.outer
+        # fmt: off
         d2ΨdCdC = (
             (Ψ2 + Ψ11 + 2 * I1 * Ψ21 + I1**2 * Ψ22) * dyadic(np.eye(3), np.eye(3))
             - (Ψ21 + I1 * Ψ22) * (dyadic(np.eye(3), C) + dyadic(C, np.eye(3)))
@@ -1921,6 +1922,7 @@ class TransIsoExponential(Constituent, D3):
             + Ψ5 * (np.tensordot(M0, I, 1) + np.tensordot(I, M0, 1))
             # ^ @ does broadcasting for higher-order tensors; one use it for 2-tensors
         )
+        # fmt: on
         return 4 * d2ΨdCdC
 
 
