@@ -323,6 +323,55 @@ def is_positive_definite(A):
     return True
 
 
+def is_symmetric(C: np.ndarray, permutation, atol=None, rtol=1e-7, as_assert=False):
+    """Return True if tensor A has indicated symmetry
+
+    :param C: 4th-order tensor of shape (n, n, n, n)
+
+    :param permutation: Ordered axis indices after "transpose".
+
+    :param atol: Absolute tolerance passed to numpy.is_allclose.  Default = epsilon for C's data type.
+
+    :param rtol: Relative tolerance passed to numpy.is_allclose.  Default = epsilon for C's data type.
+
+    :param as_assert:  If True, run the comparison as an assertion.  This is useful
+    in tests because it will print the observed difference.
+
+    If C is an array of integers, comparison will be by equality.  If C is an array of
+    floats, comparison will use np.is_allclose.
+
+    """
+    dtype = C.dtype
+    C_T = np.transpose(C, axes=permutation)
+    if np.issubdtype(dtype, np.integer):
+        if as_assert:
+            assert np.all(C == C_T)
+        else:
+            return np.all(C == C_T)
+    else:  # float
+        if atol is None:
+            atol = np.finfo(dtype).resolution
+        if as_assert:
+            np.testing.assert_allclose(C, C_T, atol=atol, rtol=rtol)
+        else:
+            return np.allclose(C, C_T, atol=atol, rtol=rtol)
+
+
+def tens4_is_major_symmetric(C, **kwargs):
+    """Return True if C_ijkl == C_klij"""
+    return is_symmetric(C, (2, 3, 0, 1), **kwargs)
+
+
+def tens4_is_left_minor_symmetric(C, **kwargs):
+    """Return True if C_ijkl == C_jikl"""
+    return is_symmetric(C, (1, 0, 2, 3), **kwargs)
+
+
+def tens4_is_right_minor_symmetric(C, **kwargs):
+    """Return True if C_ijkl == C_ijlk"""
+    return is_symmetric(C, (0, 1, 3, 2), **kwargs)
+
+
 def unit_step(x):
     """Unit step function."""
     if x > 0.0:
@@ -1748,10 +1797,11 @@ class TransIsoExponential(Constituent, D3):
         super().__init__()
 
         C = self.material_elasticity(np.eye(3))
-        if not is_positive_definite(C):
-            raise InvalidParameterError(
-                "Elasticity tensor is not positive definite at zero strain"
-            )
+        # Don't know a way to test positive definiteness of order-4 tensors yet
+        # if not is_positive_definite(C):
+        #     raise InvalidParameterError(
+        #         "Elasticity tensor is not positive definite at zero strain"
+        #     )
 
     def w(self, F, **kwargs):
         """Return strain energy density"""

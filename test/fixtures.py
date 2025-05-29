@@ -1,5 +1,5 @@
 # Python built-ins
-from math import radians
+from math import radians, sin, cos
 import os
 from pathlib import Path
 
@@ -94,6 +94,53 @@ def febio_4plus_cmd_xml(request):
     """Run test with all supported combinations of FEBio and FEBio XML"""
     cmd, xml_version = request.param
     return cmd, xml_version
+
+
+F_monoaxial = (
+    np.diag([1.08, 1, 1]),
+    np.diag([1, 1.08, 1]),
+    np.diag([1, 1, 1.08]),
+    np.diag([0.92, 1, 1]),
+    np.diag([1, 0.94, 1]),
+    np.diag([1, 1, 0.94]),
+)
+F_multiaxial = (
+    np.diag([1.02, 1.03, 1.04]),
+    np.diag([0.98, 1.04, 1.03]),
+    np.diag([1.04, 0.96, 1.03]),
+    np.diag([1.04, 1.02, 0.97]),
+    np.diag([0.98, 0.97, 1.02]),
+    np.diag([0.98, 1.02, 0.97]),
+    np.diag([1.02, 0.97, 0.96]),
+    np.diag([0.96, 0.97, 0.98]),
+)
+F_shear = (
+    np.array([[1, 0.02, 0.03], [-0.022, 1, 0.05], [-0.033, -0.044, 1]]),
+    np.array([[1, -0.02, -0.03], [0.022, 1, -0.05], [0.033, 0.044, 1]]),
+)
+F_rotations = (
+    np.array(
+        [
+            [1, 0, 0],
+            [0, cos(radians(40)), -sin(radians(40))],
+            [0, sin(radians(40)), cos(radians(40))],
+        ]
+    ),
+    np.array(
+        [
+            [cos(radians(30)), 0, sin(radians(30))],
+            [0, 1, 0],
+            [-sin(radians(30)), 0, cos(radians(30))],
+        ]
+    ),
+    np.array(
+        [
+            [cos(radians(25)), -sin(radians(25)), 0],
+            [sin(radians(25)), cos(radians(25)), 0],
+            [0, 0, 1],
+        ]
+    ),
+)
 
 
 def gen_model_center_crack_Hex8():

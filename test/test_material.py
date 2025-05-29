@@ -22,6 +22,10 @@ from waffleiron.test.fixtures import (
     RTOL_STRESS,
     ATOL_STRESS,
     febio_4plus_cmd_xml,
+    F_multiaxial,
+    F_shear,
+    F_rotations,
+    F_monoaxial,
 )
 from waffleiron.input import FebReader, textdata_list
 from waffleiron.test.fixtures import (
@@ -762,3 +766,22 @@ def test_FEBio_ExpεAndLinεDEFiber(febio_cmd_xml, F):
     σ_wfl = np.mean([e.material.tstress(e.f(r)) for r in e.gloc], axis=0)
     σ_febio = model.solution.value("stress", step=1, entity_id=1, region_id=1)
     npt.assert_allclose(σ_wfl, σ_febio, atol=ATOL_STRESS)
+
+
+##############################################
+# Transversely Isotropic General Exponential #
+##############################################
+
+
+@pytest.mark.parametrize(
+    "F", F_monoaxial + F_shear + tuple(R @ F_multiaxial[0] for R in F_rotations)
+)
+def test_material_elasticity_TransIsoExponential(F):
+    """Check elasticity tensor properties"""
+    material = TransIsoExponential(0.08, 47.15, -23.3, 0.56, 47.375, 335.33, -23.7)
+    C = material.material_elasticity(F)
+    tens4_is_major_symmetric(C, as_assert=True)
+    tens4_is_left_minor_symmetric(C, as_assert=True)
+    tens4_is_right_minor_symmetric(C, as_assert=True)
+    # Don't know a way to test positive definiteness of order-4 tensors yet
+    # assert is_positive_definite(C)
