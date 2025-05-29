@@ -311,16 +311,18 @@ def trans_iso_elastic_compliance_matrix(E1, E2, G12, ν12, ν23):
     )
 
 
-def is_positive_definite(A):
+def is_positive_definite(C):
     """Return True if matrix A is positive definite"""
-    if len(A.shape) != 2:
-        return ValueError("Matrix must have two index dimensions.")
-    if A.shape[0] != A.shape[1]:
-        return ValueError("Matrix must be square")
-    for i in range(1, A.shape[0] + 1):
-        if np.linalg.det(A[:i, :i]) <= 0:
-            return False
-    return True
+    if not np.all(np.array(C.shape) == C.shape[0]):
+        raise ValueError(
+            "Matrix must be square (all index dimensions must have equal cardinality)"
+        )
+    if len(C.shape) == 2:
+        # Can use determinant of minors method for order-2 tensors
+        for i in range(1, C.shape[0] + 1):
+            if np.linalg.det(C[:i, :i]) <= 0:
+                return False
+        return True
 
 
 def is_symmetric(C: np.ndarray, permutation, atol=None, rtol=1e-7, as_assert=False):
