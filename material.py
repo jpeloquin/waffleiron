@@ -1834,9 +1834,13 @@ class TransIsoExponential(Constituent, D3):
         Ψ54 = Ψ5 * (self.α4 + 2 * self.α5 * (I4 - 1) + self.α6 * (I1 - 3))
         Ψ55 = self.α7 * Ψ5
 
-        I = np.einsum("ia,jb->ijab", np.eye(3), np.eye(3))
+        I = np.einsum("ik,jl->ijkl", np.eye(3), np.eye(3))
+        Ix2 = 0.5 * (
+            np.einsum("ik,jl->ijkl", np.eye(3), np.eye(3))
+            + np.einsum("il,jk->ijkl", np.eye(3), np.eye(3))
+        )  # defined in Almeida_Spilker_1998 but my derivation indicates I
+        # probably a simpler way to express ICinv but I don't recognize the formula
         ICinv = np.full((3, 3, 3, 3), np.nan)
-        # probalby a simpler way to express this but I don't recognize the formula
         for i in range(3):
             for j in range(3):
                 for a in range(3):
@@ -1849,26 +1853,23 @@ class TransIsoExponential(Constituent, D3):
         d2ΨdCdC = (
             (Ψ2 + Ψ11 + 2 * I1 * Ψ21 + I1**2 * Ψ22) * dyadic(np.eye(3), np.eye(3))
             - (Ψ21 + I1 * Ψ22) * (dyadic(np.eye(3), C) + dyadic(C, np.eye(3)))
-            + I3
-            * (Ψ31 + I1 * Ψ32)
-            * (dyadic(np.eye(3), Cinv) + dyadic(Cinv, np.eye(3)))
+            + I3 * (Ψ31 + I1 * Ψ32) * (dyadic(np.eye(3), Cinv) + dyadic(Cinv, np.eye(3)))
             + (Ψ41 + I1 * Ψ42) * (dyadic(np.eye(3), M0) + dyadic(M0, np.eye(3)))
-            + (Ψ51 + I1 * Ψ52)
-            * (dyadic(np.eye(3), M0 @ C + C @ M0) + dyadic(M0 @ C + C @ M0, np.eye(3)))
+            + (Ψ51 + I1 * Ψ52) * (dyadic(np.eye(3), M0 @ C + C @ M0) + dyadic(M0 @ C + C @ M0, np.eye(3)))
             + Ψ22 * dyadic(C, C)
             - I3 * Ψ32 * (dyadic(C, Cinv) + dyadic(Cinv, C))
             - Ψ42 * (dyadic(C, M0) + dyadic(M0, C))
             - Ψ52 * (dyadic(C, M0 @ C + C @ M0) + dyadic(M0 @ C + C @ M0, C))
             + I3 * (Ψ3 + I3 * Ψ33) * dyadic(Cinv, Cinv)
             + I3 * Ψ43 * (dyadic(Cinv, M0) + dyadic(M0, Cinv))
-            + I3 * Ψ53 * dyadic(Cinv, M0 @ C + C @ M0)
-            + dyadic(M0 @ C + C @ M0, Cinv)
+            + I3 * Ψ53 * (dyadic(Cinv, M0 @ C + C @ M0) + dyadic(M0 @ C + C @ M0, Cinv))
             + Ψ44 * dyadic(M0, M0)
             + Ψ54 * (dyadic(M0, M0 @ C + C @ M0) + dyadic(M0 @ C + C @ M0, M0))
             + Ψ55 * (dyadic(M0 @ C + C @ M0, M0 @ C + C @ M0))
             - Ψ2 * I
             + I3 * Ψ3 * ICinv
-            + Ψ5 * (M0 @ I + I @ M0)
+            + Ψ5 * (np.tensordot(M0, I, 1) + np.tensordot(I, M0, 1))
+            # ^ @ does broadcasting for higher-order tensors; one use it for 2-tensors
         )
         return 4 * d2ΨdCdC
 
