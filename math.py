@@ -7,6 +7,17 @@ from math import radians, degrees, cos, sin, e, pi
 import numpy as np
 
 
+def dyad(A, B):
+    """Standard dyadic product of two tensors"""
+    # np.einsum("ij,kl->ijkl", A, B)
+    return np.multiply.outer(A, B)
+
+
+def dyad_odot(A, B):
+    """⊙ dyadic product of two order-2 tensors"""
+    return 0.5 * (np.einsum("ik,jl->ijkl", A, B) + np.einsum("il,jk->ijkl", A, B))
+
+
 def orthonormal_basis(a, d):
     """Return basis for two vectors.
 

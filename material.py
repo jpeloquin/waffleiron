@@ -10,6 +10,7 @@ from numpy.linalg import det
 # Same-package modules
 from .core import CONSTANT_R, CONSTANT_F, Sequence, ScaledSequence
 from .exceptions import InvalidParameterError
+from .math import dyad, dyad_odot
 
 _DEFAULT_ORIENT_RANK1 = np.array([1, 0, 0])
 
@@ -1312,7 +1313,11 @@ class EllipsoidalPowerFiber(Constituent, D3):
 
 
 class IsotropicElastic(Constituent, D3):
-    """Isotropic elastic material definition."""
+    """Isotropic elastic material definition
+
+    St. Venant–Kirchoff model
+
+    """
 
     def __init__(self, props, **kwargs):
         if "E" in props and "v" in props:
@@ -1366,6 +1371,12 @@ class IsotropicElastic(Constituent, D3):
         trE = np.trace(E)
         s = 2.0 * mu * E + y * trE * np.eye(3)
         return s
+
+    def material_elasticity(self, F, **kwargs):
+        """Elasticity tensor in the material frame"""
+        I = np.eye(3)
+        c = self.y * dyad(I, I) + 2 * self.mu * dyad_odot(I, I)
+        return c
 
 
 class OrthotropicLinearElastic(Constituent, D3):
@@ -1833,17 +1844,17 @@ class TransIsoExponential(Constituent, D3):
         C = F.T @ F
         I1, I2, I3, I4, I5, M0 = invariants(F)
         Ψ = self.w(F)
-        dΨdI1 = Ψ * (self.α1 + 2 * self.α3 * (I1 - 3) + self.α6 * (I4 - 1))
-        dΨdI2 = Ψ * self.α2
-        dΨdI3 = Ψ * -self.β / I3
-        dΨdI4 = Ψ * (self.α4 + 2 * self.α5 * (I4 - 1) + self.α6 * (I1 - 3))
-        dΨdI5 = Ψ * self.α7
+        Ψ1 = Ψ * (self.α1 + 2 * self.α3 * (I1 - 3) + self.α6 * (I4 - 1))
+        Ψ2 = Ψ * self.α2
+        Ψ3 = Ψ * -self.β / I3
+        Ψ4 = Ψ * (self.α4 + 2 * self.α5 * (I4 - 1) + self.α6 * (I1 - 3))
+        Ψ5 = Ψ * self.α7
         dΨdC = (
-            (dΨdI1 + I1 * dΨdI2) * np.eye(3)
-            - dΨdI2 * C
-            + I3 * dΨdI3 * np.linalg.inv(C)
-            + dΨdI4 * M0
-            + dΨdI5 * (M0 @ C + C @ M0)
+            (Ψ1 + I1 * Ψ2) * np.eye(3)
+            - Ψ2 * C
+            + I3 * Ψ3 * np.linalg.inv(C)
+            + Ψ4 * M0
+            + Ψ5 * (M0 @ C + C @ M0)
         )
         return 2 * dΨdC
 
@@ -1886,43 +1897,31 @@ class TransIsoExponential(Constituent, D3):
         Ψ54 = Ψ5 * (self.α4 + 2 * self.α5 * (I4 - 1) + self.α6 * (I1 - 3))
         Ψ55 = self.α7 * Ψ5
 
-        I = np.einsum("ik,jl->ijkl", np.eye(3), np.eye(3))
-        Ix2 = 0.5 * (
-            np.einsum("ik,jl->ijkl", np.eye(3), np.eye(3))
-            + np.einsum("il,jk->ijkl", np.eye(3), np.eye(3))
-        )  # defined in Almeida_Spilker_1998 but my derivation indicates I
-        # probably a simpler way to express ICinv but I don't recognize the formula
-        ICinv = np.full((3, 3, 3, 3), np.nan)
-        for i in range(3):
-            for j in range(3):
-                for a in range(3):
-                    for b in range(3):
-                        ICinv[i, j, a, b] = -0.5 * (
-                            Cinv[i, a] * Cinv[j, b] + Cinv[i, b] * Cinv[j, a]
-                        )
+        I = np.eye(3)
+        IoI = dyad_odot(I, I)
+        Cinv_o_Cinv = dyad_odot(Cinv, Cinv)
 
-        dyadic = np.multiply.outer
         # fmt: off
         d2ΨdCdC = (
-            (Ψ2 + Ψ11 + 2 * I1 * Ψ21 + I1**2 * Ψ22) * dyadic(np.eye(3), np.eye(3))
-            - (Ψ21 + I1 * Ψ22) * (dyadic(np.eye(3), C) + dyadic(C, np.eye(3)))
-            + I3 * (Ψ31 + I1 * Ψ32) * (dyadic(np.eye(3), Cinv) + dyadic(Cinv, np.eye(3)))
-            + (Ψ41 + I1 * Ψ42) * (dyadic(np.eye(3), M0) + dyadic(M0, np.eye(3)))
-            + (Ψ51 + I1 * Ψ52) * (dyadic(np.eye(3), M0 @ C + C @ M0) + dyadic(M0 @ C + C @ M0, np.eye(3)))
-            + Ψ22 * dyadic(C, C)
-            - I3 * Ψ32 * (dyadic(C, Cinv) + dyadic(Cinv, C))
-            - Ψ42 * (dyadic(C, M0) + dyadic(M0, C))
-            - Ψ52 * (dyadic(C, M0 @ C + C @ M0) + dyadic(M0 @ C + C @ M0, C))
-            + I3 * (Ψ3 + I3 * Ψ33) * dyadic(Cinv, Cinv)
-            + I3 * Ψ43 * (dyadic(Cinv, M0) + dyadic(M0, Cinv))
-            + I3 * Ψ53 * (dyadic(Cinv, M0 @ C + C @ M0) + dyadic(M0 @ C + C @ M0, Cinv))
-            + Ψ44 * dyadic(M0, M0)
-            + Ψ54 * (dyadic(M0, M0 @ C + C @ M0) + dyadic(M0 @ C + C @ M0, M0))
-            + Ψ55 * (dyadic(M0 @ C + C @ M0, M0 @ C + C @ M0))
-            - Ψ2 * I
-            + I3 * Ψ3 * ICinv
-            + Ψ5 * (np.tensordot(M0, I, 1) + np.tensordot(I, M0, 1))
-            # ^ @ does broadcasting for higher-order tensors; one use it for 2-tensors
+            (Ψ2 + Ψ11 + 2 * I1 * Ψ21 + I1**2 * Ψ22) * dyad(I, I)
+            - (Ψ21 + I1 * Ψ22) * (dyad(I, C) + dyad(C, I))
+            + I3 * (Ψ31 + I1 * Ψ32) * (dyad(I, Cinv) + dyad(Cinv, I))
+            + (Ψ41 + I1 * Ψ42) * (dyad(I, M0) + dyad(M0, I))
+            + (Ψ51 + I1 * Ψ52) * (dyad(I, M0 @ C + C @ M0) + dyad(M0 @ C + C @ M0, I))
+            + Ψ22 * dyad(C, C)
+            - I3 * Ψ32 * (dyad(C, Cinv) + dyad(Cinv, C))
+            - Ψ42 * (dyad(C, M0) + dyad(M0, C))
+            - Ψ52 * (dyad(C, M0 @ C + C @ M0) + dyad(M0 @ C + C @ M0, C))
+            + I3 * (Ψ3 + I3 * Ψ33) * dyad(Cinv, Cinv)
+            + I3 * Ψ43 * (dyad(Cinv, M0) + dyad(M0, Cinv))
+            + I3 * Ψ53 * (dyad(Cinv, M0 @ C + C @ M0) + dyad(M0 @ C + C @ M0, Cinv))
+            + Ψ44 * dyad(M0, M0)
+            + Ψ54 * (dyad(M0, M0 @ C + C @ M0) + dyad(M0 @ C + C @ M0, M0))
+            + Ψ55 * (dyad(M0 @ C + C @ M0, M0 @ C + C @ M0))
+            - Ψ2 * IoI
+            - I3 * Ψ3 * Cinv_o_Cinv
+            + Ψ5 * dyad(M0 @ I, I @ M0)
+            # last line altered from Almeida_Spilker_1998 for symmetry
         )
         # fmt: on
         return 4 * d2ΨdCdC

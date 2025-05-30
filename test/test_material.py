@@ -772,13 +772,25 @@ def test_FEBio_ExpεAndLinεDEFiber(febio_cmd_xml, F):
 # Transversely Isotropic General Exponential #
 ##############################################
 
+materials_with_material_elasticity = {
+    "IsotropicElastic": lambda: IsotropicElastic({"E": 5, "v": 0.33}),
+    "TransIsoExponential": lambda: TransIsoExponential(
+        0.08, 47.15, -23.3, 0.56, 47.375, 335.33, -23.7
+    ),
+}
 
+
+@pytest.mark.parametrize(
+    "material_factory",
+    list(materials_with_material_elasticity.values()),
+    ids=list(materials_with_material_elasticity.keys()),
+)
 @pytest.mark.parametrize(
     "F", F_monoaxial + F_shear + tuple(R @ F_multiaxial[0] for R in F_rotations)
 )
-def test_material_elasticity_TransIsoExponential(F):
+def test_material_elasticity(material_factory, F):
     """Check elasticity tensor properties"""
-    material = TransIsoExponential(0.08, 47.15, -23.3, 0.56, 47.375, 335.33, -23.7)
+    material = material_factory()
     C = material.material_elasticity(F)
     tens4_is_major_symmetric(C, as_assert=True)
     tens4_is_left_minor_symmetric(C, as_assert=True)
