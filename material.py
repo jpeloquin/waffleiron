@@ -312,18 +312,63 @@ def trans_iso_elastic_compliance_matrix(E1, E2, G12, ν12, ν23):
     )
 
 
+def to_voigt_matrix(C):
+    """Return Voigt matrix representation of elasticity or compliance tensor
+
+    :param C: 3x3x3x3 elasticity or compliance tensor
+
+    Index conversion (full → Voigt):
+    - 00 → 0
+    - 11 → 1
+    - 22 → 2
+    - 12 and 21 → 3
+    - 02 and 20 → 4
+    - 01 and 10 → 5
+
+    """
+    # Voigt notation requires these major and minor symmetries
+    if not tens4_is_major_symmetric(C):
+        raise ValueError("C is not major symmetric")
+    if not tens4_is_left_minor_symmetric(C):
+        raise ValueError("C is not left minor symmetric")
+    if not tens4_is_right_minor_symmetric(C):
+        raise ValueError("C is not right minor symmetric")
+    C_voigt = np.full((6, 6), np.nan)
+    voigt_indices = [(0, 0), (1, 1), (2, 2), (1, 2), (0, 2), (0, 1)]
+    for I, (i, j) in enumerate(voigt_indices):
+        for J, (k, l) in enumerate(voigt_indices):
+            C_voigt[I, J] = C[i, j, k, l]
+    return C_voigt
+
+
 def is_positive_definite(C):
-    """Return True if matrix A is positive definite"""
-    if not np.all(np.array(C.shape) == C.shape[0]):
-        raise ValueError(
-            "Matrix must be square (all index dimensions must have equal cardinality)"
-        )
-    if len(C.shape) == 2:
-        # Can use determinant of minors method for order-2 tensors
-        for i in range(1, C.shape[0] + 1):
-            if np.linalg.det(C[:i, :i]) <= 0:
-                return False
+    """Return True if order-2 or elasticity/compliance tensor is positive definite
+
+    :param C: Order-2 tensor or 3x3x3x3 order-4 (elasticity/compliance) tensor.
+
+    """
+    if len(C.shape) == 4 and np.all(np.array(C.shape) == 3):
+        C = to_voigt_matrix(C)
+    elif len(C.shape) == 2:
+        if not C.shape[0] == C.shape[1]:
+            raise ValueError("Matrix must be square")
+        if not is_symmetric(C, (1, 0)):
+            raise ValueError("Matrix must be symmetric")
+    else:
+        raise ValueError(f"Matrix with shape {C.shape} is not supported")
+
+    # Determinant of minors method
+    # for i in range(1, C.shape[0] + 1):
+    #     if np.linalg.det(C[:i, :i]) <= 0:
+    #         return False
+    # return True
+
+    # Eigenvalue method
+    λ = np.linalg.eigvals(C)
+    if np.all(λ > 0):
         return True
+    else:
+        return False
 
 
 def is_symmetric(C: np.ndarray, permutation, atol=None, rtol=1e-7, as_assert=False):
@@ -1711,9 +1756,11 @@ class FungOrthotropicElastic(Constituent, D3):
         super().__init__()
 
         # Verify parameter values
-        S = orthotropic_elastic_compliance_matrix_from_mat(self)
-        if not is_positive_definite(S):
-            raise InvalidParameterError("Stiffness matrix is not positive definite.")
+        C = orthotropic_elastic_stiffness_matrix_from_mat(self)
+        if not is_positive_definite(C):
+            raise InvalidParameterError(
+                "Elasticity tensor is not positive definite in natural state."
+            )
 
         # Lamé parameters
         self.μ = np.array(
@@ -1785,7 +1832,8 @@ class TransIsoExponential(Constituent, D3):
     """
 
     # True bounds are not clear to me.  Almeida_Spilker_1998 and Haemer_Giori_2012 used
-    # negative values for some α.
+    # negative values for some α, and α6 at least can be negative without causing the
+    # elasticity tensor to not be positive definite.
     bounds = {
         # α0 should be positive; if it is negative, Ψ will be negative
         "α0": (0, inf),
@@ -1810,11 +1858,10 @@ class TransIsoExponential(Constituent, D3):
         super().__init__()
 
         C = self.material_elasticity(np.eye(3))
-        # Don't know a way to test positive definiteness of order-4 tensors yet
-        # if not is_positive_definite(C):
-        #     raise InvalidParameterError(
-        #         "Elasticity tensor is not positive definite at zero strain"
-        #     )
+        if not is_positive_definite(C):
+            raise InvalidParameterError(
+                "Elasticity tensor is not positive definite in natural state."
+            )
 
     def w(self, F, **kwargs):
         """Return strain energy density"""
@@ -1906,15 +1953,15 @@ class TransIsoExponential(Constituent, D3):
             (Ψ2 + Ψ11 + 2 * I1 * Ψ21 + I1**2 * Ψ22) * dyad(I, I)
             - (Ψ21 + I1 * Ψ22) * (dyad(I, C) + dyad(C, I))
             + I3 * (Ψ31 + I1 * Ψ32) * (dyad(I, Cinv) + dyad(Cinv, I))
-            + (Ψ41 + I1 * Ψ42) * (dyad(I, M0) + dyad(M0, I))
-            + (Ψ51 + I1 * Ψ52) * (dyad(I, M0 @ C + C @ M0) + dyad(M0 @ C + C @ M0, I))
+            + (Ψ41 + I1 * Ψ42) * (dyad(I, M0) + dyad(M0, I))  # pdef risk
+            + (Ψ51 + I1 * Ψ52) * (dyad(I, M0 @ C + C @ M0) + dyad(M0 @ C + C @ M0, I))  # pdef risk
             + Ψ22 * dyad(C, C)
             - I3 * Ψ32 * (dyad(C, Cinv) + dyad(Cinv, C))
-            - Ψ42 * (dyad(C, M0) + dyad(M0, C))
-            - Ψ52 * (dyad(C, M0 @ C + C @ M0) + dyad(M0 @ C + C @ M0, C))
+            - Ψ42 * (dyad(C, M0) + dyad(M0, C))  # pdef risk
+            - Ψ52 * (dyad(C, M0 @ C + C @ M0) + dyad(M0 @ C + C @ M0, C))  # pdef risk
             + I3 * (Ψ3 + I3 * Ψ33) * dyad(Cinv, Cinv)
             + I3 * Ψ43 * (dyad(Cinv, M0) + dyad(M0, Cinv))
-            + I3 * Ψ53 * (dyad(Cinv, M0 @ C + C @ M0) + dyad(M0 @ C + C @ M0, Cinv))
+            + I3 * Ψ53 * (dyad(Cinv, M0 @ C + C @ M0) + dyad(M0 @ C + C @ M0, Cinv))  # pdef risk
             + Ψ44 * dyad(M0, M0)
             + Ψ54 * (dyad(M0, M0 @ C + C @ M0) + dyad(M0 @ C + C @ M0, M0))
             + Ψ55 * (dyad(M0 @ C + C @ M0, M0 @ C + C @ M0))

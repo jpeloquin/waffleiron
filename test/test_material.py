@@ -775,7 +775,7 @@ def test_FEBio_ExpεAndLinεDEFiber(febio_cmd_xml, F):
 materials_with_material_elasticity = {
     "IsotropicElastic": lambda: IsotropicElastic({"E": 5, "v": 0.33}),
     "TransIsoExponential": lambda: TransIsoExponential(
-        0.08, 47.15, -23.3, 0.56, 47.375, 335.33, -23.7
+        0.08, 10, 23.3, 2.5, 47, 335, -23
     ),
 }
 
@@ -788,12 +788,16 @@ materials_with_material_elasticity = {
 @pytest.mark.parametrize(
     "F", F_monoaxial + F_shear + tuple(R @ F_multiaxial[0] for R in F_rotations)
 )
-def test_material_elasticity(material_factory, F):
+def test_elasticity_properties(material_factory, F):
     """Check elasticity tensor properties"""
     material = material_factory()
+    # material itself checks for positive definiteness in natural state
     C = material.material_elasticity(F)
+    # np.set_printoptions(linewidth=120, precision=2)
+    # print(f"\n{to_voigt_matrix(C)}")
     tens4_is_major_symmetric(C, as_assert=True)
     tens4_is_left_minor_symmetric(C, as_assert=True)
     tens4_is_right_minor_symmetric(C, as_assert=True)
-    # Don't know a way to test positive definiteness of order-4 tensors yet
-    # assert is_positive_definite(C)
+    # these F and material parameters are chosen so material is stable; if the
+    # compliance matrix is not positive definite, something probably broke somewhere
+    assert is_positive_definite(C)
