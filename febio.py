@@ -1,5 +1,6 @@
 import errno
 import os
+import signal
 from pathlib import Path
 import subprocess
 
@@ -137,24 +138,23 @@ def run_febio_unchecked(pth_feb, threads=None, cmd=FEBIO_CMD):
     # stdout and the log file, but the verbosity of the stdout output can be adjusted by
     # the user.  We want to ensure (1) the log file always reflects the last run and (2)
     # all relevant error messages are written to the log file.
+    proc = subprocess.Popen(
+        [cmd, "-i", pth_feb.name],
+        # FEBio always writes xplt to current dir
+        cwd=pth_feb.parent,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        env=env,
+        text=True,
+        bufsize=1,  # line buffered
+        preexec_fn=os.setsid,  # Python needs to handle SIGINT; FEBio will open prompt
+    )
     try:
         # If there specifically is a file read error, we need to write capture the
         # relevant parts of stdout and write it to the log file, because FEBio won't.
-        stdout_only_lines = []
         reading = True  # True as long as we're still reading stdout-only lines
         failed = False
-        with subprocess.Popen(
-            [cmd, "-i", pth_feb.name],
-            # FEBio always writes xplt to current dir
-            cwd=pth_feb.parent,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            env=env,
-            text=True,
-            bufsize=1,  # line buffered
-        ) as proc, open(
-            pth_feb.with_suffix(".read.log"), "w", 1, encoding="utf-8"
-        ) as f:
+        with open(pth_feb.with_suffix(".read.log"), "w", 1, encoding="utf-8") as f:
             for ln in iter(proc.stdout.readline, ""):
                 if reading:
                     f.write(ln)
@@ -168,6 +168,11 @@ def run_febio_unchecked(pth_feb, threads=None, cmd=FEBIO_CMD):
                 # previous run, since its presence can make users think FEBio ran
                 # successfully
                 pth_log.unlink(missing_ok=True)
+        proc.wait()
+    except KeyboardInterrupt:
+        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+        proc.wait()
+        raise
     except OSError as e:
         # TODO: Windows, or at least WSL, seems to use different error codes for files
         # that do not exist.  Saw Errno 13 permission denied errors for wrong command.
@@ -177,7 +182,6 @@ def run_febio_unchecked(pth_feb, threads=None, cmd=FEBIO_CMD):
             )
         else:
             raise e
-    proc.wait()
     return proc
 
 
